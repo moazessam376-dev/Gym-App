@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Secrets / local env — only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+ios/
+android/
+
+# Logs & misc
+*.log
+npm-debug.*
+coverage/
+.DS_Store

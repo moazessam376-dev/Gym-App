@@ -1,0 +1,18 @@
+title = "Gym-App gitleaks config"
+
+# Start from gitleaks' maintained ruleset, then narrow with an allowlist below.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholders and deterministic test fixtures are not real secrets."
+paths = [
+  '''\.env\.example$''',
+  '''supabase/tests/.*''',
+  '''docs/.*''',
+]
+# Fake values used in templates/fixtures.
+regexes = [
+  '''your-anon-key-here''',
+  '''YOUR-PROJECT-REF''',
+]
