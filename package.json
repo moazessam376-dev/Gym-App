@@ -1,0 +1,42 @@
+{
+  "name": "gym-app",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "expo start",
+    "web": "expo start --web",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "db:local": "bash scripts/db-local.sh",
+    "db:apply": "bash scripts/db-apply.sh",
+    "test:rls": "tsx supabase/tests/rls/runner.ts",
+    "test": "npm run test:rls",
+    "typecheck": "tsc --noEmit",
+    "lint:secrets": "gitleaks detect --config .gitleaks.toml --redact",
+    "prepare": "bash scripts/install-hooks.sh || true"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.17",
+    "dotenv": "^17.4.2",
+    "pg": "^8.22.0",
+    "tsx": "^4.22.4",
+    "typescript": "~5.9.0",
+    "vitest": "^4.1.9"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
+    "expo": "~56.0.12",
+    "expo-router": "~56.2.11",
+    "expo-secure-store": "~56.0.4",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-url-polyfill": "^3.0.0",
+    "react-native-web": "^0.21.2"
+  }
+}
