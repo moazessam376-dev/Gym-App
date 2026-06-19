@@ -2,7 +2,14 @@ name: ci
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+# Least privilege. gitleaks-action lists a PR's commits on pull_request events,
+# which needs pull-requests: read in addition to contents: read.
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   # CLAUDE.md §3 — no secrets in the repo.
