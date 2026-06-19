@@ -65,6 +65,12 @@ export function asService<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
   }, fn);
 }
 
+/** The base maintenance/superuser connection (no SET ROLE). Used to exercise
+ *  things GoTrue/Postgres do server-side, e.g. inserting into auth.users. */
+export function asSuperuser<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
+  return withIdentity(async () => {}, fn);
+}
+
 /** Convenience: row count for a query run under an identity. */
 export async function countRows(c: PoolClient, sql: string, params: unknown[] = []): Promise<number> {
   const res = await c.query(sql, params);

@@ -1,15 +1,17 @@
-import { Text, View } from 'react-native';
-import { supabase } from '../src/lib/supabase';
+import { Text } from 'react-native';
+import { useAuth } from '../src/lib/auth';
+import { Button, Hint, Screen, Title } from '../src/components/ui';
 
-export default function Index() {
-  // Touch the client so the module + env wiring is exercised by the bundler.
-  const ready = Boolean(supabase);
+// Protected home. The root guard redirects unauthenticated users to sign-in.
+// Role-specific areas (coach / client / admin) arrive in Phase 2.
+export default function Home() {
+  const { session, role, fullName, signOut } = useAuth();
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <Text style={{ fontSize: 18, fontWeight: '600' }}>Gym-App — Phase 0 foundation</Text>
-      <Text style={{ marginTop: 8, opacity: 0.7 }}>
-        Supabase client {ready ? 'initialised' : 'unavailable'}.
-      </Text>
-    </View>
+    <Screen>
+      <Title>Welcome{fullName ? `, ${fullName}` : ''} 👋</Title>
+      <Hint>Signed in as {session?.user.email ?? 'unknown'}</Hint>
+      <Text style={{ fontSize: 16 }}>Your role: {role ?? 'loading…'}</Text>
+      <Button label="Sign out" onPress={signOut} />
+    </Screen>
   );
 }

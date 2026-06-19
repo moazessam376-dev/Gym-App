@@ -10,7 +10,7 @@
 // a CI `postgres:16` service container — no Docker / Supabase stack required.
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { Client } from 'pg';
 import 'dotenv/config';
@@ -19,12 +19,11 @@ const root = process.cwd();
 const migrationsDir = join(root, 'supabase', 'migrations');
 const seedPath = join(root, 'supabase', 'tests', 'rls', 'seed.sql');
 
-// Applied in lexical order. 0000 is the LOCAL/CI-only auth shim.
-const migrationFiles = [
-  '0000_auth_shim.sql',
-  '0001_profiles.sql',
-  '0002_progress_entries.sql',
-];
+// Every *.sql in lexical order (0000 is the LOCAL/CI-only auth shim). New
+// migrations are picked up automatically — no need to edit this list.
+const migrationFiles = readdirSync(migrationsDir)
+  .filter((f) => f.endsWith('.sql'))
+  .sort();
 
 const baseUrl =
   process.env.TEST_DATABASE_URL ?? 'postgres://postgres@127.0.0.1:5544/postgres';

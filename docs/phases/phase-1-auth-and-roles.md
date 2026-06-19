@@ -1,7 +1,14 @@
 # Phase 1 — Auth & roles
 
 Maps to CLAUDE.md §1 (roles, role-gated navigation) and §5 (auth & tokens).
-Depends on Phase 0. **Not yet implemented** — this is the spec.
+Depends on Phase 0.
+
+**Status: implemented (email/password).** Shipped: the `on_auth_user_created`
+bootstrap trigger (`0003`), the `custom_access_token_hook` that injects `user_role`
+(`0004`), an `AuthProvider` + sign-in/sign-up screens, and a role-gated router that
+keeps signed-out users in the `(auth)` group. **Deferred to a follow-up:** Google
+& Apple sign-in (they need provider credentials + a dev build for native), and
+splitting the protected area into per-role route groups (begins in Phase 2).
 
 ## Goal
 A user can sign up / sign in, gets a `profiles` row with a role, the role travels

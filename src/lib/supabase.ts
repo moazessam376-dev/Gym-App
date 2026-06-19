@@ -41,12 +41,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase is not configured. Copy .env.example to .env and set EXPO_PUBLIC_* vars.');
 }
 
-export const supabase: SupabaseClient = createClient(supabaseUrl ?? '', supabaseAnonKey ?? '', {
-  auth: {
-    storage,
-    autoRefreshToken: true,
-    persistSession: true,
-    // Only relevant for the web OAuth redirect flow.
-    detectSessionInUrl: Platform.OS === 'web',
+// Inert placeholders when env is missing so the client constructs without
+// throwing at import; calls then fail into a handled, generic error instead of
+// crashing the app (e.g. before .env is created).
+export const supabase: SupabaseClient = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-anon-key',
+  {
+    auth: {
+      storage,
+      autoRefreshToken: true,
+      persistSession: true,
+      // Only relevant for the web OAuth redirect flow.
+      detectSessionInUrl: Platform.OS === 'web',
+    },
   },
-});
+);

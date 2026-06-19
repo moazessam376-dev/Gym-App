@@ -5,7 +5,7 @@
 // table must have RLS enabled. Any failure => non-zero exit => CI red.
 
 import { afterAll, describe, expect, it } from 'vitest';
-import { asAnon, asService, asUser, pool, type Identity } from './helpers';
+import { asAnon, asService, asSuperuser, asUser, pool, type Identity } from './helpers';
 
 // Must match seed.sql.
 const COACH_A: Identity = { sub: '11111111-1111-1111-1111-111111111111', userRole: 'coach' };
@@ -13,7 +13,6 @@ const CLIENT_A1: Identity = { sub: 'aaaa0001-0000-0000-0000-000000000001', userR
 const CLIENT_A2 = 'aaaa0002-0000-0000-0000-000000000002';
 const CLIENT_B1 = 'bbbb0001-0000-0000-0000-000000000001';
 const COACH_B_ID = '22222222-2222-2222-2222-222222222222';
-const NEW_USER: Identity = { sub: 'eeee0001-0000-0000-0000-000000000001', userRole: 'client' };
 
 afterAll(async () => {
   await pool.end();
@@ -104,35 +103,12 @@ describe('privilege escalation & mass-assignment are rejected', () => {
     ).rejects.toThrow();
   });
 
-  it('a new user can self-insert only a plain client profile', async () => {
-    // Elevated self-insert is rejected …
+  it('clients cannot insert profiles directly (creation is trigger-only)', async () => {
     await expect(
-      asUser(NEW_USER, (c) =>
-        c.query("insert into public.profiles (id, role) values ($1, 'admin')", [NEW_USER.sub]),
-      ),
-    ).rejects.toThrow();
-    // … self-assigning a coach is rejected …
-    await expect(
-      asUser(NEW_USER, (c) =>
-        c.query("insert into public.profiles (id, role, coach_id) values ($1, 'client', $2)", [
-          NEW_USER.sub,
-          COACH_B_ID,
+      asUser(CLIENT_A1, (c) =>
+        c.query("insert into public.profiles (id, role) values ($1, 'client')", [
+          'f0000000-0000-0000-0000-0000000000aa',
         ]),
-      ),
-    ).rejects.toThrow();
-    // … but a plain client profile for yourself is allowed.
-    const ok = await asUser(NEW_USER, (c) =>
-      c.query("insert into public.profiles (id, role, full_name) values ($1, 'client', 'New User')", [
-        NEW_USER.sub,
-      ]),
-    );
-    expect(ok.rowCount).toBe(1);
-  });
-
-  it('client cannot insert a profile for another user id', async () => {
-    await expect(
-      asUser(NEW_USER, (c) =>
-        c.query("insert into public.profiles (id, role) values ($1, 'client')", [COACH_B_ID]),
       ),
     ).rejects.toThrow();
   });
@@ -151,6 +127,30 @@ describe('service_role is the trusted server path', () => {
       c.query('update public.profiles set coach_id = $1 where id = $2', [COACH_B_ID, CLIENT_A1.sub]),
     );
     expect(r.rowCount).toBe(1);
+  });
+});
+
+describe('Phase 1 — bootstrap & access-token hook', () => {
+  it('bootstrap trigger creates exactly one client profile for a new auth user', async () => {
+    const id = 'f0000000-0000-0000-0000-0000000000f1';
+    const rows = await asSuperuser(async (c) => {
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [id, 'boot@example.test']);
+      const r = await c.query('select role, coach_id from public.profiles where id = $1', [id]);
+      return r.rows;
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].role).toBe('client');
+    expect(rows[0].coach_id).toBeNull();
+  });
+
+  it('custom_access_token_hook injects user_role from profiles.role', async () => {
+    const event = JSON.stringify({ user_id: COACH_A.sub, claims: { sub: COACH_A.sub } });
+    const out = await asSuperuser((c) =>
+      c
+        .query('select public.custom_access_token_hook($1::jsonb) as e', [event])
+        .then((r) => r.rows[0].e),
+    );
+    expect(out.claims.user_role).toBe('coach');
   });
 });
 

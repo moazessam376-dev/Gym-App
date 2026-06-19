@@ -9,9 +9,7 @@ set -euo pipefail
 URL="${TEST_DATABASE_URL:-postgres://postgres@127.0.0.1:5544/postgres}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-for f in "$HERE"/supabase/migrations/0000_auth_shim.sql \
-         "$HERE"/supabase/migrations/0001_profiles.sql \
-         "$HERE"/supabase/migrations/0002_progress_entries.sql; do
+for f in "$HERE"/supabase/migrations/*.sql; do
   echo "applying $(basename "$f") ..."
   psql "$URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done

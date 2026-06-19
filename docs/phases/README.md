@@ -11,7 +11,7 @@ Each phase maps to sections of the project constitution (CLAUDE.md).
 | Phase | Name | Maps to | Spec |
 |------:|------|---------|------|
 | 0 | Foundation | §2 §3 §5 §10 §11 | [phase-0-foundation.md](./phase-0-foundation.md) ✅ |
-| 1 | Auth & roles | §1 §5 | [phase-1-auth-and-roles.md](./phase-1-auth-and-roles.md) |
+| 1 | Auth & roles | §1 §5 | [phase-1-auth-and-roles.md](./phase-1-auth-and-roles.md) ✅ (email/password; social login deferred) |
 | 2 | Coach ⇄ Client core | §2 | [phase-2-coach-client-core.md](./phase-2-coach-client-core.md) |
 | 3 | Training & nutrition plans | §2 §4 | outline below |
 | 4 | Progress & uploads | §7 | outline below |
