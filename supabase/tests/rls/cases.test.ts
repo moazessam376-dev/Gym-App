@@ -758,3 +758,105 @@ describe('plans v2 (0010) — templates, library, hierarchy, clone (§2)', () =>
     }
   });
 });
+
+describe('coach applications (0011) — client applies, admin reviews, role flip (§2)', () => {
+  const ADMIN: Identity = { sub: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userRole: 'admin' };
+  const SEED_APP = '0bbb0001-0000-0000-0000-000000000001'; // pending, owned by Client A2
+
+  it('a client applies for themselves (own pending insert)', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query('insert into public.coach_applications (user_id) values ($1)', [CLIENT_A1.sub]),
+    );
+    expect(r.rowCount).toBe(1);
+  });
+
+  it('a client cannot apply for another user', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query('insert into public.coach_applications (user_id) values ($1)', [CLIENT_B1]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('a coach cannot apply (role check)', async () => {
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query('insert into public.coach_applications (user_id) values ($1)', [COACH_A.sub]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('rejects a duplicate PENDING application for the same user (dedupe)', async () => {
+    await expect(
+      asUser(CLIENT_A1, async (c) => {
+        await c.query('insert into public.coach_applications (user_id) values ($1)', [CLIENT_A1.sub]);
+        return c.query('insert into public.coach_applications (user_id) values ($1)', [CLIENT_A1.sub]);
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('a client reads only their own application; an admin reads all', async () => {
+    const a1 = await asUser(CLIENT_A1, (c) => c.query('select id from public.coach_applications'));
+    const a2 = await asUser({ sub: CLIENT_A2, userRole: 'client' }, (c) =>
+      c.query('select id from public.coach_applications'),
+    );
+    const admin = await asUser(ADMIN, (c) => c.query('select id from public.coach_applications'));
+    expect(a1.rows).toHaveLength(0); // A1 owns none
+    expect(a2.rows).toHaveLength(1); // A2 owns the seeded pending one
+    expect(admin.rows.length).toBeGreaterThanOrEqual(1); // admin sees it
+  });
+
+  it('review_coach_application is not executable by authenticated/anon', async () => {
+    await expect(
+      asUser(ADMIN, (c) =>
+        c.query('select public.review_coach_application($1, true, $2)', [SEED_APP, ADMIN.sub]),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      asAnon((c) =>
+        c.query('select public.review_coach_application($1, true, $2)', [SEED_APP, ADMIN.sub]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('approve flips the applicant to coach, clears coach_id, marks approved', async () => {
+    const r = await asService(async (c) => {
+      await c.query('select public.review_coach_application($1, true, $2)', [SEED_APP, ADMIN.sub]);
+      const app = await c.query('select status, reviewed_by from public.coach_applications where id = $1', [
+        SEED_APP,
+      ]);
+      const prof = await c.query('select role, coach_id from public.profiles where id = $1', [
+        CLIENT_A2,
+      ]);
+      return { app: app.rows[0], prof: prof.rows[0] };
+    });
+    expect(r.app.status).toBe('approved');
+    expect(r.app.reviewed_by).toBe(ADMIN.sub);
+    expect(r.prof.role).toBe('coach');
+    expect(r.prof.coach_id).toBeNull();
+  });
+
+  it('reject marks the application rejected and leaves the role unchanged', async () => {
+    const r = await asService(async (c) => {
+      await c.query('select public.review_coach_application($1, false, $2)', [SEED_APP, ADMIN.sub]);
+      const app = await c.query('select status from public.coach_applications where id = $1', [SEED_APP]);
+      const prof = await c.query('select role from public.profiles where id = $1', [CLIENT_A2]);
+      return { status: app.rows[0].status, role: prof.rows[0].role };
+    });
+    expect(r.status).toBe('rejected');
+    expect(r.role).toBe('client');
+  });
+
+  it('a non-admin reviewer is rejected', async () => {
+    await expect(
+      asService((c) =>
+        c.query('select public.review_coach_application($1, true, $2)', [SEED_APP, COACH_A.sub]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('anon sees no applications', async () => {
+    const r = await asAnon((c) => c.query('select id from public.coach_applications'));
+    expect(r.rows).toHaveLength(0);
+  });
+});

@@ -103,4 +103,11 @@ insert into public.plan_meal_items
   ('dd000004-0000-0000-0000-000000000004', 'f0000000-0000-0000-0000-000000000007', 'Whole Egg',               155, 13,  1, 11, 1, 150),
   ('dd000011-0000-0000-0000-000000000011', 'f0000000-0000-0000-0000-000000000001', 'Chicken Breast (cooked)', 165, 31,  0,  4, 1, 200);
 
+-- One pending coach application owned by Client A2 — proves an admin can read it
+-- and Client A1 cannot.
+insert into public.coach_applications (id, user_id, message) values
+  ('0bbb0001-0000-0000-0000-000000000001',
+   'aaaa0002-0000-0000-0000-000000000002',
+   'A2 would like to coach');
+
 alter table auth.users enable trigger on_auth_user_created;

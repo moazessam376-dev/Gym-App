@@ -32,6 +32,7 @@ const migrationFiles = [
   '0008_phase2_polish.sql',
   '0009_plans.sql',
   '0010_plan_templates_library.sql',
+  '0011_coach_applications.sql',
 ];
 
 const baseUrl =

@@ -11,3 +11,8 @@ export const acceptInvitationSchema = z.object({
 export const assignClientSchema = z.object({
   client_id: z.string().uuid(),
 });
+
+export const reviewApplicationSchema = z.object({
+  application_id: z.string().uuid(),
+  approve: z.boolean(),
+});

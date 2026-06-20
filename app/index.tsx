@@ -81,8 +81,23 @@ export default function Home() {
             <Pressable style={styles.action} onPress={() => router.push('/client/plans')}>
               <Text style={styles.actionText}>My plans</Text>
             </Pressable>
+            <Pressable style={styles.action} onPress={() => router.push('/become-coach')}>
+              <Text style={styles.actionText}>Become a coach</Text>
+            </Pressable>
           </View>
         ) : null}
+
+        {role === 'admin' ? (
+          <View style={styles.actions}>
+            <Pressable style={styles.action} onPress={() => router.push('/admin/applications')}>
+              <Text style={styles.actionText}>Coach applications</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        <Pressable style={styles.linkBtn} onPress={() => router.push('/profile')}>
+          <Text style={styles.linkText}>Edit profile</Text>
+        </Pressable>
 
         <Pressable style={styles.button} onPress={onSignOut}>
           <Text style={styles.buttonText}>Sign out</Text>
@@ -114,6 +129,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  linkBtn: { paddingVertical: 8 },
+  linkText: { color: '#1f6feb', fontSize: 15, fontWeight: '600' },
   coachCard: {
     backgroundColor: '#eef6ff',
     borderRadius: 12,
