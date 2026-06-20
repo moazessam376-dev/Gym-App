@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../src/lib/auth-context';
 
@@ -13,6 +14,7 @@ const ROLE_COPY = {
 
 export default function Home() {
   const { session, role } = useAuth();
+  const router = useRouter();
   const copy = role ? ROLE_COPY[role] : { tag: '—', title: 'Gym-App' };
 
   async function onSignOut() {
@@ -29,6 +31,25 @@ export default function Home() {
         <Text style={styles.title}>{copy.title}</Text>
         {session?.user?.email ? <Text style={styles.email}>{session.user.email}</Text> : null}
         <Text style={styles.note}>Role read from your signed token, enforced by RLS.</Text>
+
+        {role === 'coach' ? (
+          <View style={styles.actions}>
+            <Pressable style={styles.action} onPress={() => router.push('/coach/roster')}>
+              <Text style={styles.actionText}>My clients</Text>
+            </Pressable>
+            <Pressable style={styles.action} onPress={() => router.push('/coach/invite')}>
+              <Text style={styles.actionText}>Invite a client</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {role === 'client' ? (
+          <View style={styles.actions}>
+            <Pressable style={styles.action} onPress={() => router.push('/accept-invite')}>
+              <Text style={styles.actionText}>Accept an invite</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <Pressable style={styles.button} onPress={onSignOut}>
           <Text style={styles.buttonText}>Sign out</Text>
@@ -52,6 +73,14 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: '800', color: '#111' },
   email: { fontSize: 15, color: '#1f6feb' },
   note: { fontSize: 13, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 16 },
+  actions: { alignSelf: 'stretch', gap: 10, marginBottom: 8 },
+  action: {
+    backgroundColor: '#1f6feb',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  actionText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   button: {
     backgroundColor: '#111',
     borderRadius: 10,
