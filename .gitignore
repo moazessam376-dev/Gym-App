@@ -16,6 +16,9 @@ expo-env.d.ts
 ios/
 android/
 
+# MCP — project-scoped server config (no secret, but not committed)
+.mcp.json
+
 # Logs & misc
 *.log
 npm-debug.*

@@ -28,6 +28,7 @@ const migrationFiles = [
   '0004_access_token_hook.sql',
   '0005_invitations.sql',
   '0006_assignment_functions.sql',
+  '0007_function_hardening.sql',
 ];
 
 const baseUrl =
