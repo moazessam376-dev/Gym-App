@@ -38,10 +38,18 @@ export default function AcceptInvite() {
 
     setSubmitting(true);
     try {
-      await acceptInvitation(parsed.data);
-      setDone(true);
+      const result = await acceptInvitation(parsed.data);
+      if (result.ok) {
+        setDone(true);
+      } else if (result.reason === 'already_has_coach') {
+        setError('You already have a coach. You can only be linked to one at a time.');
+      } else {
+        setError(
+          'This invite couldn’t be accepted. It may be used, expired, or for a different email.',
+        );
+      }
     } catch {
-      setError('This invite couldn’t be accepted. It may be used, expired, or for a different email.');
+      setError('Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }

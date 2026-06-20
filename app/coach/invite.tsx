@@ -20,7 +20,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { createInvitationSchema } from '../../src/schemas/invitation';
-import { createInvitation, listMyInvitations, type Invitation } from '../../src/lib/invitations';
+import {
+  createInvitation,
+  listMyInvitations,
+  DUPLICATE_PENDING_INVITE,
+  type Invitation,
+} from '../../src/lib/invitations';
 
 export default function Invite() {
   const { role, session } = useAuth();
@@ -68,9 +73,13 @@ export default function Invite() {
       setLastToken(inv.token);
       setEmail('');
       await load();
-    } catch {
-      // Generic message — never surface raw DB errors (§4).
-      setFormError('Could not create the invitation. Please try again.');
+    } catch (e) {
+      if (e instanceof Error && e.message === DUPLICATE_PENDING_INVITE) {
+        setFormError('You already have a pending invite for this email.');
+      } else {
+        // Generic message — never surface raw DB errors (§4).
+        setFormError('Could not create the invitation. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }

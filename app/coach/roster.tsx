@@ -66,16 +66,22 @@ export default function Roster() {
               : 'No clients yet. Invite one from the dashboard.'}
           </Text>
         }
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {(item.full_name ?? 'C').trim().charAt(0).toUpperCase()}
-              </Text>
+        renderItem={({ item }) => {
+          const label = item.full_name ?? item.invited_email ?? 'Client';
+          return (
+            <View style={styles.row}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{label.trim().charAt(0).toUpperCase()}</Text>
+              </View>
+              <View style={styles.flex}>
+                <Text style={styles.name}>{label}</Text>
+                {item.full_name && item.invited_email ? (
+                  <Text style={styles.sub}>{item.invited_email}</Text>
+                ) : null}
+              </View>
             </View>
-            <Text style={styles.name}>{item.full_name ?? 'Unnamed client'}</Text>
-          </View>
-        )}
+          );
+        }}
       />
     </SafeAreaView>
   );
@@ -104,5 +110,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  flex: { flex: 1 },
   name: { fontSize: 16, color: '#111', fontWeight: '600' },
+  sub: { fontSize: 13, color: '#6e7781', marginTop: 1 },
 });

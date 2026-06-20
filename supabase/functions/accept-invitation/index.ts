@@ -37,8 +37,14 @@ Deno.serve(async (req: Request) => {
 
   if (error) {
     // Log details server-side; return a generic, opaque error to the client (§4).
+    // Exception: `already_has_coach` concerns only the caller's own state (not
+    // another tenant's data), so it's safe to surface as a distinct reason for a
+    // clearer message. Everything else collapses to one opaque error.
     console.error('accept_invitation failed', { code: error.code, message: error.message });
-    return json({ error: 'invitation_invalid' }, 400);
+    const reason = error.message?.includes('already_has_coach')
+      ? 'already_has_coach'
+      : 'invitation_invalid';
+    return json({ error: reason }, 400);
   }
 
   return json({ ok: true, coach_id: data }, 200);

@@ -1,8 +1,10 @@
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../src/lib/auth-context';
+import { getMyCoach, type Coach } from '../src/lib/invitations';
 
 // The role-gated landing. Content is driven by the role from the verified JWT.
 // As each role grows features, these become full navigation trees (Phase 2+).
@@ -16,6 +18,24 @@ export default function Home() {
   const { session, role } = useAuth();
   const router = useRouter();
   const copy = role ? ROLE_COPY[role] : { tag: '—', title: 'Gym-App' };
+  const [coach, setCoach] = useState<Coach | null>(null);
+
+  // Clients: load their assigned coach (readable via the 0008 own-coach policy).
+  // Refreshes on focus so it reflects a just-accepted invite.
+  const userId = session?.user?.id;
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      if (role === 'client' && userId) {
+        getMyCoach(userId)
+          .then((c) => active && setCoach(c))
+          .catch(() => active && setCoach(null));
+      }
+      return () => {
+        active = false;
+      };
+    }, [role, userId]),
+  );
 
   async function onSignOut() {
     await supabase.auth.signOut();
@@ -45,9 +65,16 @@ export default function Home() {
 
         {role === 'client' ? (
           <View style={styles.actions}>
-            <Pressable style={styles.action} onPress={() => router.push('/accept-invite')}>
-              <Text style={styles.actionText}>Accept an invite</Text>
-            </Pressable>
+            {coach ? (
+              <View style={styles.coachCard}>
+                <Text style={styles.coachLabel}>YOUR COACH</Text>
+                <Text style={styles.coachName}>{coach.full_name ?? 'Your coach'}</Text>
+              </View>
+            ) : (
+              <Pressable style={styles.action} onPress={() => router.push('/accept-invite')}>
+                <Text style={styles.actionText}>Accept an invite</Text>
+              </Pressable>
+            )}
           </View>
         ) : null}
 
@@ -81,6 +108,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  coachCard: {
+    backgroundColor: '#eef6ff',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    gap: 2,
+  },
+  coachLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: '#1f6feb' },
+  coachName: { fontSize: 18, fontWeight: '700', color: '#111' },
   button: {
     backgroundColor: '#111',
     borderRadius: 10,

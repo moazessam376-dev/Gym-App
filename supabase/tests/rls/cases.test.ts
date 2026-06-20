@@ -64,12 +64,29 @@ describe('positive controls — owners and coaches see what they should', () => 
     expect(prog.rows).toHaveLength(3);
   });
 
-  it('client A1 sees their own profile and their own two progress rows', async () => {
+  it('client A1 sees their own profile + their coach, and their own two progress rows', async () => {
+    // The 0008 own-coach policy lets a client read their coach's profile row, so
+    // A1 now sees exactly two profiles: themselves and Coach A.
     const prof = await asUser(CLIENT_A1, (c) => c.query('select id from public.profiles'));
     const prog = await asUser(CLIENT_A1, (c) => c.query('select id from public.progress_entries'));
-    expect(prof.rows).toHaveLength(1);
-    expect(prof.rows[0].id).toBe(CLIENT_A1.sub);
+    const ids = prof.rows.map((r) => r.id);
+    expect(prof.rows).toHaveLength(2);
+    expect(ids).toContain(CLIENT_A1.sub);
+    expect(ids).toContain('11111111-1111-1111-1111-111111111111'); // Coach A
     expect(prog.rows).toHaveLength(2);
+  });
+
+  it('client A1 can read their OWN coach but not another coach (own-coach policy)', async () => {
+    const ownCoach = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.profiles where id = $1', [
+        '11111111-1111-1111-1111-111111111111', // Coach A — A1's coach
+      ]),
+    );
+    const otherCoach = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.profiles where id = $1', [COACH_B_ID]),
+    );
+    expect(ownCoach.rows).toHaveLength(1);
+    expect(otherCoach.rows).toHaveLength(0);
   });
 });
 
@@ -141,6 +158,23 @@ describe('profile bootstrap — signup creates the profile server-side', () => {
       expect(prof.rows).toHaveLength(1);
       expect(prof.rows[0].role).toBe('client');
       expect(prof.rows[0].coach_id).toBeNull();
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('reads full_name from signup metadata into the profile (0008)', async () => {
+    const NEW_ID = 'ffff0002-0000-0000-0000-000000000002';
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query(
+        'insert into auth.users (id, email, raw_user_meta_data) values ($1, $2, $3::jsonb)',
+        [NEW_ID, 'named@example.test', JSON.stringify({ full_name: '  Named User  ' })],
+      );
+      const prof = await c.query('select full_name from public.profiles where id = $1', [NEW_ID]);
+      expect(prof.rows[0].full_name).toBe('Named User'); // trimmed
     } finally {
       await c.query('rollback').catch(() => {});
       c.release();
@@ -411,6 +445,40 @@ describe('assignment functions (0006) — service-side coach_id writes (§2)', (
     ).rejects.toThrow();
     await expect(
       asUser(COACH_A, (c) => c.query('select public.assign_client($1, $2)', [COACH_A.sub, CLIENT_A2])),
+    ).rejects.toThrow();
+  });
+
+  it('accept_invitation refuses a client who already has a coach (one-coach lock)', async () => {
+    // CLIENT_A1 already belongs to Coach A; a Coach B invite to their email must
+    // be rejected with the distinct already_has_coach signal.
+    const TOKEN2 = '0a000004-0000-0000-0000-000000000004';
+    await expect(
+      asService(async (c) => {
+        await c.query(
+          'insert into public.invitations (coach_id, email, token) values ($1, $2, $3)',
+          [COACH_B_ID, 'client.a1@example.test', TOKEN2],
+        );
+        return c.query('select public.accept_invitation($1, $2, $3)', [
+          TOKEN2,
+          CLIENT_A1.sub,
+          'client.a1@example.test',
+        ]);
+      }),
+    ).rejects.toThrow(/already_has_coach/);
+  });
+
+  it('rejects a duplicate PENDING invite to the same (coach, email) — 0008 dedupe', async () => {
+    await expect(
+      asUser(COACH_A, async (c) => {
+        await c.query(
+          "insert into public.invitations (coach_id, email) values ($1, 'dup@example.test')",
+          [COACH_A.sub],
+        );
+        return c.query(
+          "insert into public.invitations (coach_id, email) values ($1, 'DUP@example.test')",
+          [COACH_A.sub],
+        );
+      }),
     ).rejects.toThrow();
   });
 });
