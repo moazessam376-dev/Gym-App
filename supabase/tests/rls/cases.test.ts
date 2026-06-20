@@ -596,18 +596,18 @@ describe('plans v2 (0010) — templates, library, hierarchy, clone (§2)', () =>
 
   it('coach writes meal items only on plans they own (grandchild helper chain)', async () => {
     const ok = await asUser(COACH_A, (c) =>
-      c.query('insert into public.plan_meal_items (meal_id, food_id, grams) values ($1, $2, 100)', [
-        MEAL_A1_PUB_NUT,
-        GLOBAL_FOOD,
-      ]),
+      c.query(
+        "insert into public.plan_meal_items (meal_id, food_id, food_name, grams) values ($1, $2, 'X', 100)",
+        [MEAL_A1_PUB_NUT, GLOBAL_FOOD],
+      ),
     );
     expect(ok.rowCount).toBe(1);
     await expect(
       asUser(CLIENT_A1, (c) =>
-        c.query('insert into public.plan_meal_items (meal_id, food_id, grams) values ($1, $2, 100)', [
-          MEAL_A1_DRAFT,
-          GLOBAL_FOOD,
-        ]),
+        c.query(
+          "insert into public.plan_meal_items (meal_id, food_id, food_name, grams) values ($1, $2, 'X', 100)",
+          [MEAL_A1_DRAFT, GLOBAL_FOOD],
+        ),
       ),
     ).rejects.toThrow();
   });

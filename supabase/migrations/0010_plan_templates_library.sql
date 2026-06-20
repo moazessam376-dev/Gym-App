@@ -230,6 +230,11 @@ create table if not exists public.plan_exercises (
   id           uuid primary key default gen_random_uuid(),
   day_id       uuid not null references public.plan_days (id) on delete cascade,
   exercise_id  uuid not null references public.exercise_library (id) on delete restrict,
+  -- Display-name SNAPSHOT taken from the library at authoring time. Lets the
+  -- assigned client render the plan without reading exercise_library (they can't
+  -- read a coach's CUSTOM entries), and keeps the plan stable if the library
+  -- entry is later renamed. Copied verbatim by the clone.
+  exercise_name text not null,
   block        public.training_block not null default 'primary',
   position     integer not null default 0 check (position >= 0),
   sets         integer check (sets is null or sets >= 0),
@@ -241,6 +246,8 @@ create table if not exists public.plan_exercises (
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
+-- Defensive for an already-applied DB (idempotent re-paste); empty table so NOT NULL is safe.
+alter table public.plan_exercises add column if not exists exercise_name text not null default '';
 create index if not exists plan_exercises_day_id_idx on public.plan_exercises (day_id);
 create index if not exists plan_exercises_exercise_id_idx on public.plan_exercises (exercise_id);
 
@@ -339,12 +346,14 @@ create table if not exists public.plan_meal_items (
   id         uuid primary key default gen_random_uuid(),
   meal_id    uuid not null references public.plan_meals (id) on delete cascade,
   food_id    uuid not null references public.food_library (id) on delete restrict,
+  food_name  text not null,  -- display snapshot (see plan_exercises.exercise_name)
   position   integer not null default 0 check (position >= 0),
   grams      integer not null check (grams >= 0),  -- integer, never float
   note       text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table public.plan_meal_items add column if not exists food_name text not null default '';
 create index if not exists plan_meal_items_meal_id_idx on public.plan_meal_items (meal_id);
 create index if not exists plan_meal_items_food_id_idx on public.plan_meal_items (food_id);
 
@@ -424,8 +433,8 @@ begin
       returning id into v_new_day;
 
       insert into public.plan_exercises
-        (day_id, exercise_id, block, position, sets, reps, rest_seconds, tempo, note, progression)
-      select v_new_day, e.exercise_id, e.block, e.position, e.sets, e.reps,
+        (day_id, exercise_id, exercise_name, block, position, sets, reps, rest_seconds, tempo, note, progression)
+      select v_new_day, e.exercise_id, e.exercise_name, e.block, e.position, e.sets, e.reps,
              e.rest_seconds, e.tempo, e.note, e.progression
       from public.plan_exercises e
       where e.day_id = r_day.id;
@@ -438,8 +447,8 @@ begin
       values (v_new, r_meal.position, r_meal.name, r_meal.note)
       returning id into v_new_meal;
 
-      insert into public.plan_meal_items (meal_id, food_id, position, grams, note)
-      select v_new_meal, mi.food_id, mi.position, mi.grams, mi.note
+      insert into public.plan_meal_items (meal_id, food_id, food_name, position, grams, note)
+      select v_new_meal, mi.food_id, mi.food_name, mi.position, mi.grams, mi.note
       from public.plan_meal_items mi
       where mi.meal_id = r_meal.id;
     end loop;

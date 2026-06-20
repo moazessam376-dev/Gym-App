@@ -52,6 +52,8 @@ const repsSchema = z.string().max(40).nullable().optional();
 export const createExerciseRowSchema = z.object({
   day_id: z.string().uuid(),
   exercise_id: z.string().uuid(),
+  // Display snapshot from the library at authoring time (see migration 0010).
+  exercise_name: z.string().min(1).max(120),
   block: trainingBlockSchema.optional(),
   position: z.number().int().min(0).optional(),
   sets: z.number().int().min(0).max(99).nullable().optional(),
@@ -92,6 +94,7 @@ export type UpdateMeal = z.infer<typeof updateMealSchema>;
 export const createMealItemSchema = z.object({
   meal_id: z.string().uuid(),
   food_id: z.string().uuid(),
+  food_name: z.string().min(1).max(120), // display snapshot (see migration 0010)
   grams: z.number().int().min(0).max(5000),
   note: z.string().max(2000).nullable().optional(),
   position: z.number().int().min(0).optional(),

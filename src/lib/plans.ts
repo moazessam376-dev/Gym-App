@@ -49,6 +49,7 @@ export type ExerciseRow = {
   id: string;
   day_id: string;
   exercise_id: string;
+  exercise_name: string;
   block: TrainingBlock;
   position: number;
   sets: number | null;
@@ -64,6 +65,7 @@ export type MealItem = {
   id: string;
   meal_id: string;
   food_id: string;
+  food_name: string;
   position: number;
   grams: number;
   note: string | null;
@@ -73,9 +75,9 @@ const PLAN_COLS =
   'id, coach_id, client_id, type, title, status, version, source_plan_id, created_at, updated_at';
 const DAY_COLS = 'id, plan_id, position, name';
 const EX_COLS =
-  'id, day_id, exercise_id, block, position, sets, reps, rest_seconds, tempo, note';
+  'id, day_id, exercise_id, exercise_name, block, position, sets, reps, rest_seconds, tempo, note';
 const MEAL_COLS = 'id, plan_id, position, name, note';
-const MEAL_ITEM_COLS = 'id, meal_id, food_id, position, grams, note';
+const MEAL_ITEM_COLS = 'id, meal_id, food_id, food_name, position, grams, note';
 
 // ── Plans / templates ────────────────────────────────────────────────────────
 
@@ -202,6 +204,7 @@ export async function createExerciseRow(input: CreateExerciseRow): Promise<Exerc
     .insert({
       day_id: v.day_id,
       exercise_id: v.exercise_id,
+      exercise_name: v.exercise_name,
       block: v.block ?? 'primary',
       position: v.position ?? 0,
       sets: v.sets ?? null,
@@ -278,6 +281,7 @@ export async function createMealItem(input: CreateMealItem): Promise<MealItem> {
     .insert({
       meal_id: v.meal_id,
       food_id: v.food_id,
+      food_name: v.food_name,
       grams: v.grams,
       note: v.note ?? null,
       position: v.position ?? 0,
