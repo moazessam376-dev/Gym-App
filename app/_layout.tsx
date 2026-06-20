@@ -44,6 +44,10 @@ function RootNavigator() {
       <Stack.Screen name="index" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="onboarding" />
+      {/* Phase 2 sub-screens get a native header + back button. */}
+      <Stack.Screen name="coach/roster" options={{ headerShown: true, title: 'My clients' }} />
+      <Stack.Screen name="coach/invite" options={{ headerShown: true, title: 'Invite a client' }} />
+      <Stack.Screen name="accept-invite" options={{ headerShown: true, title: 'Accept an invite' }} />
     </Stack>
   );
 }

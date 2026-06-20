@@ -1,7 +1,10 @@
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../src/lib/auth-context';
+import { getMyCoach, type Coach } from '../src/lib/invitations';
 
 // The role-gated landing. Content is driven by the role from the verified JWT.
 // As each role grows features, these become full navigation trees (Phase 2+).
@@ -13,7 +16,26 @@ const ROLE_COPY = {
 
 export default function Home() {
   const { session, role } = useAuth();
+  const router = useRouter();
   const copy = role ? ROLE_COPY[role] : { tag: '—', title: 'Gym-App' };
+  const [coach, setCoach] = useState<Coach | null>(null);
+
+  // Clients: load their assigned coach (readable via the 0008 own-coach policy).
+  // Refreshes on focus so it reflects a just-accepted invite.
+  const userId = session?.user?.id;
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      if (role === 'client' && userId) {
+        getMyCoach(userId)
+          .then((c) => active && setCoach(c))
+          .catch(() => active && setCoach(null));
+      }
+      return () => {
+        active = false;
+      };
+    }, [role, userId]),
+  );
 
   async function onSignOut() {
     await supabase.auth.signOut();
@@ -29,6 +51,32 @@ export default function Home() {
         <Text style={styles.title}>{copy.title}</Text>
         {session?.user?.email ? <Text style={styles.email}>{session.user.email}</Text> : null}
         <Text style={styles.note}>Role read from your signed token, enforced by RLS.</Text>
+
+        {role === 'coach' ? (
+          <View style={styles.actions}>
+            <Pressable style={styles.action} onPress={() => router.push('/coach/roster')}>
+              <Text style={styles.actionText}>My clients</Text>
+            </Pressable>
+            <Pressable style={styles.action} onPress={() => router.push('/coach/invite')}>
+              <Text style={styles.actionText}>Invite a client</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {role === 'client' ? (
+          <View style={styles.actions}>
+            {coach ? (
+              <View style={styles.coachCard}>
+                <Text style={styles.coachLabel}>YOUR COACH</Text>
+                <Text style={styles.coachName}>{coach.full_name ?? 'Your coach'}</Text>
+              </View>
+            ) : (
+              <Pressable style={styles.action} onPress={() => router.push('/accept-invite')}>
+                <Text style={styles.actionText}>Accept an invite</Text>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
 
         <Pressable style={styles.button} onPress={onSignOut}>
           <Text style={styles.buttonText}>Sign out</Text>
@@ -52,6 +100,24 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: '800', color: '#111' },
   email: { fontSize: 15, color: '#1f6feb' },
   note: { fontSize: 13, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 16 },
+  actions: { alignSelf: 'stretch', gap: 10, marginBottom: 8 },
+  action: {
+    backgroundColor: '#1f6feb',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  actionText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  coachCard: {
+    backgroundColor: '#eef6ff',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    gap: 2,
+  },
+  coachLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: '#1f6feb' },
+  coachName: { fontSize: 18, fontWeight: '700', color: '#111' },
   button: {
     backgroundColor: '#111',
     borderRadius: 10,

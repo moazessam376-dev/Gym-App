@@ -43,6 +43,9 @@ create schema if not exists auth;
 create table if not exists auth.users (
   id uuid primary key,
   email text,
+  -- Mirrors Supabase: signup metadata (e.g. full_name) lands here and the
+  -- profile bootstrap trigger reads it (see 0008).
+  raw_user_meta_data jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
 

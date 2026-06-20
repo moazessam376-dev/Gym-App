@@ -15,6 +15,7 @@ import { supabase } from '../../src/lib/supabase';
 import { credentialsSchema } from '../../src/schemas/auth';
 
 export default function SignUp() {
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -24,13 +25,24 @@ export default function SignUp() {
   async function onSubmit() {
     setError(null);
     setInfo(null);
+    const name = fullName.trim();
+    if (name.length < 2) {
+      setError('Enter your name.');
+      return;
+    }
     const parsed = credentialsSchema.safeParse({ email: email.trim(), password });
     if (!parsed.success) {
       setError('Enter a valid email and a password of at least 8 characters.');
       return;
     }
     setLoading(true);
-    const { data, error: authError } = await supabase.auth.signUp(parsed.data);
+    // full_name rides along in user metadata; the profile bootstrap trigger
+    // (0008) reads it server-side at signup, so it works even with email
+    // confirmation on (no client session yet).
+    const { data, error: authError } = await supabase.auth.signUp({
+      ...parsed.data,
+      options: { data: { full_name: name } },
+    });
     setLoading(false);
     if (authError) {
       const msg = authError.message?.toLowerCase() ?? '';
@@ -59,6 +71,16 @@ export default function SignUp() {
           <Text style={styles.title}>Create your account</Text>
           <Text style={styles.subtitle}>Start your Gym-App journey</Text>
 
+          <TextInput
+            style={styles.input}
+            placeholder="Full name"
+            placeholderTextColor="#999"
+            autoCapitalize="words"
+            autoComplete="name"
+            value={fullName}
+            onChangeText={setFullName}
+            editable={!loading}
+          />
           <TextInput
             style={styles.input}
             placeholder="Email"
