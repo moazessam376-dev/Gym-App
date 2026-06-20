@@ -7,18 +7,20 @@ import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Redirect, useFocusEffect } from 'expo-router';
+import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { listMyClients, type Client } from '../../src/lib/invitations';
 
 export default function Roster() {
   const { role } = useAuth();
+  const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -69,7 +71,12 @@ export default function Roster() {
         renderItem={({ item }) => {
           const label = item.full_name ?? item.invited_email ?? 'Client';
           return (
-            <View style={styles.row}>
+            <Pressable
+              style={styles.row}
+              onPress={() =>
+                router.push({ pathname: '/coach/client/[id]', params: { id: item.id, name: label } })
+              }
+            >
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{label.trim().charAt(0).toUpperCase()}</Text>
               </View>
@@ -79,7 +86,8 @@ export default function Roster() {
                   <Text style={styles.sub}>{item.invited_email}</Text>
                 ) : null}
               </View>
-            </View>
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
           );
         }}
       />
@@ -113,4 +121,5 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   name: { fontSize: 16, color: '#111', fontWeight: '600' },
   sub: { fontSize: 13, color: '#6e7781', marginTop: 1 },
+  chevron: { fontSize: 24, color: '#b0b7c0', marginLeft: 4 },
 });

@@ -75,6 +75,9 @@ export default function Home() {
                 <Text style={styles.actionText}>Accept an invite</Text>
               </Pressable>
             )}
+            <Pressable style={styles.action} onPress={() => router.push('/client/plans')}>
+              <Text style={styles.actionText}>My plans</Text>
+            </Pressable>
           </View>
         ) : null}
 
