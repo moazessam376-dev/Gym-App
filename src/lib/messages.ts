@@ -16,6 +16,9 @@ export type Message = {
 
 const MSG_COLS = 'id, sender_id, recipient_id, body, created_at';
 
+/** Default conversation page size (newest N, then page backwards by `before`). */
+export const CONVERSATION_PAGE_SIZE = 30;
+
 /**
  * Send a message to a counterpart. sender_id is omitted — the DB trigger sets it
  * to auth.uid(); RLS enforces the coach↔client pairing + the rate limit.
@@ -32,21 +35,36 @@ export async function sendMessage(input: SendMessage): Promise<Message> {
 }
 
 /**
- * The conversation between the signed-in user and one other person, oldest-first.
- * RLS already restricts visibility to the caller's own messages; the OR filter
- * narrows to this pair in both directions.
+ * One page of the conversation between the signed-in user and one other person,
+ * returned oldest-first for rendering. RLS already restricts visibility to the
+ * caller's own messages; the OR filter narrows to this pair in both directions.
+ *
+ * Cursor-based (not offset) so it stays cheap as a thread grows — the DB walks the
+ * `(…, created_at)` indexes backwards from the cursor. To load older messages, pass
+ * `before = oldestLoadedMessage.created_at` (the first element of the previous
+ * page). A short page (< `limit`) means there's no more history.
  */
-export async function listConversation(myUserId: string, otherUserId: string): Promise<Message[]> {
-  const { data, error } = await supabase
+export async function listConversation(
+  myUserId: string,
+  otherUserId: string,
+  opts: { limit?: number; before?: string } = {},
+): Promise<Message[]> {
+  const limit = opts.limit ?? CONVERSATION_PAGE_SIZE;
+  let query = supabase
     .from('messages')
     .select(MSG_COLS)
     .or(
       `and(sender_id.eq.${myUserId},recipient_id.eq.${otherUserId}),` +
         `and(sender_id.eq.${otherUserId},recipient_id.eq.${myUserId})`,
     )
-    .order('created_at', { ascending: true });
+    // Newest-first + limit fetches the most recent page (and the tail of older
+    // pages when `before` is set); we reverse to oldest-first before returning.
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (opts.before) query = query.lt('created_at', opts.before);
+  const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []) as Message[];
+  return ((data ?? []) as Message[]).reverse();
 }
 
 /**

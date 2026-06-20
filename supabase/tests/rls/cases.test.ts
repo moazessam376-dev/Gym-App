@@ -949,3 +949,68 @@ describe('messages (0012) — coach⇄client DMs, server-set sender, rate limit 
     expect(r.rows).toHaveLength(0);
   });
 });
+
+describe('media (0013) — owner/coach/admin read, writes are service-role-only (§2/§7)', () => {
+  const ADMIN: Identity = { sub: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userRole: 'admin' };
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_B1_ID: Identity = { sub: CLIENT_B1, userRole: 'client' };
+  const SEED_MEDIA = 'ed000001-0000-0000-0000-000000000001'; // Client A1's progress photo
+
+  it('the owner and their coach read the row; admin sees it too', async () => {
+    const owner = await asUser(CLIENT_A1, (c) => c.query('select id from public.media'));
+    const coach = await asUser(COACH_A, (c) => c.query('select id from public.media'));
+    const admin = await asUser(ADMIN, (c) => c.query('select id from public.media'));
+    expect(owner.rows.length).toBeGreaterThanOrEqual(1);
+    expect(coach.rows.length).toBeGreaterThanOrEqual(1); // is_coach_of(owner)
+    expect(admin.rows.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('a different tenant (other coach / other client) sees nothing', async () => {
+    const coachB = await asUser(COACH_B, (c) => c.query('select id from public.media'));
+    const clientB1 = await asUser(CLIENT_B1_ID, (c) => c.query('select id from public.media'));
+    expect(coachB.rows).toHaveLength(0);
+    expect(clientB1.rows).toHaveLength(0);
+  });
+
+  it('anon sees no media', async () => {
+    const r = await asAnon((c) => c.query('select id from public.media'));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it('an authenticated client cannot INSERT a media row (server-side only)', async () => {
+    // No insert policy AND no insert grant to authenticated — even for own rows.
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query(
+          `insert into public.media (owner_id, kind, bucket, path, mime_type, size_bytes)
+             values ($1, 'progress_photo', 'media', $2, 'image/jpeg', 100)`,
+          [CLIENT_A1.sub, `${CLIENT_A1.sub}/forged.jpg`],
+        ),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('an authenticated client cannot UPDATE or DELETE a media row', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("update public.media set kind = 'inbody' where id = $1", [SEED_MEDIA]),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('delete from public.media where id = $1', [SEED_MEDIA])),
+    ).rejects.toThrow();
+  });
+
+  it('the service role is the trusted writer (and reads all)', async () => {
+    const all = await asService((c) => c.query('select id from public.media'));
+    expect(all.rows.length).toBeGreaterThanOrEqual(1);
+    const ins = await asService((c) =>
+      c.query(
+        `insert into public.media (owner_id, kind, bucket, path, mime_type, size_bytes)
+           values ($1, 'inbody', 'media', $2, 'application/pdf', 2048) returning id`,
+        [CLIENT_A1.sub, `${CLIENT_A1.sub}/inbody-1.pdf`],
+      ),
+    );
+    expect(ins.rowCount).toBe(1);
+  });
+});

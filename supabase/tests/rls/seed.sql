@@ -119,4 +119,12 @@ insert into public.messages (id, sender_id, recipient_id, body) values
   ('ab000002-0000-0000-0000-000000000002',
    'aaaa0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Thanks coach!');
 
+-- One sanitized media row owned by Client A1 (a progress photo) — proves the owner
+-- and their Coach A can read it, while Coach B / Client B1 cannot. Inserted by the
+-- superuser seed (the table has no client-write policy; finalize writes it live).
+insert into public.media (id, owner_id, kind, status, bucket, path, mime_type, size_bytes) values
+  ('ed000001-0000-0000-0000-000000000001',
+   'aaaa0001-0000-0000-0000-000000000001', 'progress_photo', 'ready',
+   'media', 'aaaa0001-0000-0000-0000-000000000001/seed-photo.jpg', 'image/jpeg', 12345);
+
 alter table auth.users enable trigger on_auth_user_created;
