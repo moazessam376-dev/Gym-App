@@ -383,9 +383,13 @@ language plpgsql
 set search_path = ''
 as $$
 declare
-  v_type  public.plan_type;
-  v_title text;
-  v_new   uuid;
+  v_type    public.plan_type;
+  v_title   text;
+  v_new     uuid;
+  r_day     record;
+  r_meal    record;
+  v_new_day uuid;
+  v_new_meal uuid;
 begin
   -- The template must be the caller's own, unassigned plan.
   select type, title
@@ -407,38 +411,38 @@ begin
   values (auth.uid(), p_client, v_type, v_title, 'draft', p_template)
   returning id into v_new;
 
+  -- Deep-copy children. Parent and child are inserted in SEPARATE statements (a
+  -- loop), not a single data-modifying CTE: within one statement the CTE-inserted
+  -- day/meal rows aren't visible to the child's can_write_day/can_write_meal RLS
+  -- check (shared pre-statement snapshot), which would falsely deny the insert.
   if v_type = 'training' then
-    with src as (
-      select id as old_id, position, name, gen_random_uuid() as new_id
-      from public.plan_days
-      where plan_id = p_template
-    ),
-    ins_days as (
-      insert into public.plan_days (id, plan_id, position, name)
-      select new_id, v_new, position, name from src
-      returning 1
-    )
-    insert into public.plan_exercises
-      (day_id, exercise_id, block, position, sets, reps, rest_seconds, tempo, note, progression)
-    select s.new_id, e.exercise_id, e.block, e.position, e.sets, e.reps,
-           e.rest_seconds, e.tempo, e.note, e.progression
-    from public.plan_exercises e
-    join src s on s.old_id = e.day_id;
+    for r_day in
+      select id, position, name from public.plan_days where plan_id = p_template
+    loop
+      insert into public.plan_days (plan_id, position, name)
+      values (v_new, r_day.position, r_day.name)
+      returning id into v_new_day;
+
+      insert into public.plan_exercises
+        (day_id, exercise_id, block, position, sets, reps, rest_seconds, tempo, note, progression)
+      select v_new_day, e.exercise_id, e.block, e.position, e.sets, e.reps,
+             e.rest_seconds, e.tempo, e.note, e.progression
+      from public.plan_exercises e
+      where e.day_id = r_day.id;
+    end loop;
   else
-    with src as (
-      select id as old_id, position, name, note, gen_random_uuid() as new_id
-      from public.plan_meals
-      where plan_id = p_template
-    ),
-    ins_meals as (
-      insert into public.plan_meals (id, plan_id, position, name, note)
-      select new_id, v_new, position, name, note from src
-      returning 1
-    )
-    insert into public.plan_meal_items (meal_id, food_id, position, grams, note)
-    select s.new_id, mi.food_id, mi.position, mi.grams, mi.note
-    from public.plan_meal_items mi
-    join src s on s.old_id = mi.meal_id;
+    for r_meal in
+      select id, position, name, note from public.plan_meals where plan_id = p_template
+    loop
+      insert into public.plan_meals (plan_id, position, name, note)
+      values (v_new, r_meal.position, r_meal.name, r_meal.note)
+      returning id into v_new_meal;
+
+      insert into public.plan_meal_items (meal_id, food_id, position, grams, note)
+      select v_new_meal, mi.food_id, mi.position, mi.grams, mi.note
+      from public.plan_meal_items mi
+      where mi.meal_id = r_meal.id;
+    end loop;
   end if;
 
   return v_new;
