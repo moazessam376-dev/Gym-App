@@ -46,3 +46,18 @@ export async function getCaller(req: Request): Promise<Caller | null> {
   if (error || !data.user) return null;
   return { id: data.user.id, email: data.user.email ?? null };
 }
+
+/**
+ * A Supabase client bound to the caller's bearer token, so reads run UNDER THE
+ * CALLER'S RLS (not the service role). Used where the DB's row policies should be
+ * the authorizer — e.g. media-signed-url only mints a URL for a media row the
+ * caller is actually allowed to read. Returns null when no token is present.
+ */
+export function callerClient(req: Request): SupabaseClient | null {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) return null;
+  return createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
