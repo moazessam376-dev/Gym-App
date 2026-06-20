@@ -1,15 +1,63 @@
-import { Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../src/lib/supabase';
+import { useAuth } from '../src/lib/auth-context';
 
-export default function Index() {
-  // Touch the client so the module + env wiring is exercised by the bundler.
-  const ready = Boolean(supabase);
+// The role-gated landing. Content is driven by the role from the verified JWT.
+// As each role grows features, these become full navigation trees (Phase 2+).
+const ROLE_COPY = {
+  client: { tag: 'CLIENT', title: 'Your training home' },
+  coach: { tag: 'COACH', title: 'Coach dashboard' },
+  admin: { tag: 'ADMIN', title: 'Admin console' },
+} as const;
+
+export default function Home() {
+  const { session, role } = useAuth();
+  const copy = role ? ROLE_COPY[role] : { tag: '—', title: 'Gym-App' };
+
+  async function onSignOut() {
+    await supabase.auth.signOut();
+    // onAuthStateChange clears the session → root guard routes back to sign-in.
+  }
+
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <Text style={{ fontSize: 18, fontWeight: '600' }}>Gym-App — Phase 0 foundation</Text>
-      <Text style={{ marginTop: 8, opacity: 0.7 }}>
-        Supabase client {ready ? 'initialised' : 'unavailable'}.
-      </Text>
-    </View>
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.container}>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{copy.tag}</Text>
+        </View>
+        <Text style={styles.title}>{copy.title}</Text>
+        {session?.user?.email ? <Text style={styles.email}>{session.user.email}</Text> : null}
+        <Text style={styles.note}>Role read from your signed token, enforced by RLS.</Text>
+
+        <Pressable style={styles.button} onPress={onSignOut}>
+          <Text style={styles.buttonText}>Sign out</Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 10 },
+  badge: {
+    backgroundColor: '#1f6feb',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    marginBottom: 4,
+  },
+  badgeText: { color: '#fff', fontSize: 13, fontWeight: '800', letterSpacing: 1 },
+  title: { fontSize: 28, fontWeight: '800', color: '#111' },
+  email: { fontSize: 15, color: '#1f6feb' },
+  note: { fontSize: 13, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 16 },
+  button: {
+    backgroundColor: '#111',
+    borderRadius: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 28,
+    marginTop: 8,
+  },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+});

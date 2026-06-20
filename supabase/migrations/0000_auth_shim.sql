@@ -27,6 +27,10 @@ begin
   if not exists (select 1 from pg_roles where rolname = 'authenticator') then
     create role authenticator login noinherit;
   end if;
+  -- The role Supabase Auth assumes to run the custom access-token hook (0004).
+  if not exists (select 1 from pg_roles where rolname = 'supabase_auth_admin') then
+    create role supabase_auth_admin nologin noinherit;
+  end if;
 end
 $$;
 
