@@ -213,3 +213,48 @@ describe('custom access token hook — role is injected server-side from the DB'
     }
   });
 });
+
+describe('invitations — coach-scoped, server-side assignment (§2)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+
+  it('a coach creates only their own pending invitation', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query("insert into public.invitations (coach_id, email) values ($1, 'x@example.test')", [
+        COACH_A.sub,
+      ]),
+    );
+    expect(r.rowCount).toBe(1);
+  });
+
+  it('a coach cannot create an invitation owned by another coach', async () => {
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query("insert into public.invitations (coach_id, email) values ($1, 'x@example.test')", [
+          COACH_B.sub,
+        ]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('a client cannot create an invitation', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("insert into public.invitations (coach_id, email) values ($1, 'x@example.test')", [
+          CLIENT_A1.sub,
+        ]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('a coach cannot read another coach\'s invitations', async () => {
+    const a = await asUser(COACH_A, (c) => c.query('select id from public.invitations'));
+    const b = await asUser(COACH_B, (c) => c.query('select id from public.invitations'));
+    expect(a.rows).toHaveLength(0); // Coach A owns none
+    expect(b.rows).toHaveLength(1); // Coach B sees their own (seeded)
+  });
+
+  it('anon sees no invitations', async () => {
+    const r = await asAnon((c) => c.query('select id from public.invitations'));
+    expect(r.rows).toHaveLength(0);
+  });
+});

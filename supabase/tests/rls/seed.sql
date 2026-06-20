@@ -38,4 +38,11 @@ insert into public.progress_entries (user_id, weight_grams, note) values
   ('aaaa0002-0000-0000-0000-000000000002', 70000, 'A2 first'),
   ('bbbb0001-0000-0000-0000-000000000001', 90000, 'B1 first');
 
+-- One invitation owned by Coach B — proves Coach A can't read another coach's.
+insert into public.invitations (id, coach_id, email, token) values
+  ('cccc0001-0000-0000-0000-000000000001',
+   '22222222-2222-2222-2222-222222222222',
+   'invitee.b@example.test',
+   'cccc0002-0000-0000-0000-000000000002');
+
 alter table auth.users enable trigger on_auth_user_created;

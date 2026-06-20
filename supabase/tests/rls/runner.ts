@@ -26,6 +26,7 @@ const migrationFiles = [
   '0002_progress_entries.sql',
   '0003_profile_bootstrap.sql',
   '0004_access_token_hook.sql',
+  '0005_invitations.sql',
 ];
 
 const baseUrl =
