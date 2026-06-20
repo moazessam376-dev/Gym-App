@@ -94,7 +94,12 @@ export type UpdateMeal = z.infer<typeof updateMealSchema>;
 export const createMealItemSchema = z.object({
   meal_id: z.string().uuid(),
   food_id: z.string().uuid(),
-  food_name: z.string().min(1).max(120), // display snapshot (see migration 0010)
+  // Display + macro snapshot from the food library at authoring time (0010).
+  food_name: z.string().min(1).max(120),
+  kcal_per_100g: z.number().int().min(0),
+  protein_g_per_100g: z.number().int().min(0),
+  carbs_g_per_100g: z.number().int().min(0),
+  fat_g_per_100g: z.number().int().min(0),
   grams: z.number().int().min(0).max(5000),
   note: z.string().max(2000).nullable().optional(),
   position: z.number().int().min(0).optional(),

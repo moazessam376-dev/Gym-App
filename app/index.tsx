@@ -57,6 +57,9 @@ export default function Home() {
             <Pressable style={styles.action} onPress={() => router.push('/coach/roster')}>
               <Text style={styles.actionText}>My clients</Text>
             </Pressable>
+            <Pressable style={styles.action} onPress={() => router.push('/coach/templates')}>
+              <Text style={styles.actionText}>Plan templates</Text>
+            </Pressable>
             <Pressable style={styles.action} onPress={() => router.push('/coach/invite')}>
               <Text style={styles.actionText}>Invite a client</Text>
             </Pressable>

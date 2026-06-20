@@ -97,9 +97,10 @@ insert into public.plan_meals (id, plan_id, position, name) values
   ('dd000002-0000-0000-0000-000000000002', '99990002-0000-0000-0000-000000000002', 1, 'Breakfast'),
   ('dd000004-0000-0000-0000-000000000004', '99990004-0000-0000-0000-000000000004', 1, 'Breakfast'),
   ('dd000011-0000-0000-0000-000000000011', '99990011-0000-0000-0000-000000000011', 1, 'Breakfast');
-insert into public.plan_meal_items (meal_id, food_id, food_name, position, grams) values
-  ('dd000002-0000-0000-0000-000000000002', 'f0000000-0000-0000-0000-000000000007', 'Whole Egg',               1, 150),
-  ('dd000004-0000-0000-0000-000000000004', 'f0000000-0000-0000-0000-000000000007', 'Whole Egg',               1, 150),
-  ('dd000011-0000-0000-0000-000000000011', 'f0000000-0000-0000-0000-000000000001', 'Chicken Breast (cooked)', 1, 200);
+insert into public.plan_meal_items
+  (meal_id, food_id, food_name, kcal_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g, position, grams) values
+  ('dd000002-0000-0000-0000-000000000002', 'f0000000-0000-0000-0000-000000000007', 'Whole Egg',               155, 13,  1, 11, 1, 150),
+  ('dd000004-0000-0000-0000-000000000004', 'f0000000-0000-0000-0000-000000000007', 'Whole Egg',               155, 13,  1, 11, 1, 150),
+  ('dd000011-0000-0000-0000-000000000011', 'f0000000-0000-0000-0000-000000000001', 'Chicken Breast (cooked)', 165, 31,  0,  4, 1, 200);
 
 alter table auth.users enable trigger on_auth_user_created;

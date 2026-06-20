@@ -347,6 +347,13 @@ create table if not exists public.plan_meal_items (
   meal_id    uuid not null references public.plan_meals (id) on delete cascade,
   food_id    uuid not null references public.food_library (id) on delete restrict,
   food_name  text not null,  -- display snapshot (see plan_exercises.exercise_name)
+  -- Per-100g macro SNAPSHOT (integers, money.md). Lets coach AND client compute
+  -- meal/plan totals (grams × per100g / 100) without reading food_library, and
+  -- freezes the numbers against later library edits. Copied by the clone.
+  kcal_per_100g      integer not null default 0 check (kcal_per_100g >= 0),
+  protein_g_per_100g integer not null default 0 check (protein_g_per_100g >= 0),
+  carbs_g_per_100g   integer not null default 0 check (carbs_g_per_100g >= 0),
+  fat_g_per_100g     integer not null default 0 check (fat_g_per_100g >= 0),
   position   integer not null default 0 check (position >= 0),
   grams      integer not null check (grams >= 0),  -- integer, never float
   note       text,
@@ -354,6 +361,10 @@ create table if not exists public.plan_meal_items (
   updated_at timestamptz not null default now()
 );
 alter table public.plan_meal_items add column if not exists food_name text not null default '';
+alter table public.plan_meal_items add column if not exists kcal_per_100g      integer not null default 0;
+alter table public.plan_meal_items add column if not exists protein_g_per_100g integer not null default 0;
+alter table public.plan_meal_items add column if not exists carbs_g_per_100g   integer not null default 0;
+alter table public.plan_meal_items add column if not exists fat_g_per_100g     integer not null default 0;
 create index if not exists plan_meal_items_meal_id_idx on public.plan_meal_items (meal_id);
 create index if not exists plan_meal_items_food_id_idx on public.plan_meal_items (food_id);
 
@@ -447,8 +458,10 @@ begin
       values (v_new, r_meal.position, r_meal.name, r_meal.note)
       returning id into v_new_meal;
 
-      insert into public.plan_meal_items (meal_id, food_id, food_name, position, grams, note)
-      select v_new_meal, mi.food_id, mi.food_name, mi.position, mi.grams, mi.note
+      insert into public.plan_meal_items
+        (meal_id, food_id, food_name, kcal_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g, position, grams, note)
+      select v_new_meal, mi.food_id, mi.food_name, mi.kcal_per_100g, mi.protein_g_per_100g,
+             mi.carbs_g_per_100g, mi.fat_g_per_100g, mi.position, mi.grams, mi.note
       from public.plan_meal_items mi
       where mi.meal_id = r_meal.id;
     end loop;

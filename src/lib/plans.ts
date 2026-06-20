@@ -66,6 +66,10 @@ export type MealItem = {
   meal_id: string;
   food_id: string;
   food_name: string;
+  kcal_per_100g: number;
+  protein_g_per_100g: number;
+  carbs_g_per_100g: number;
+  fat_g_per_100g: number;
   position: number;
   grams: number;
   note: string | null;
@@ -77,7 +81,8 @@ const DAY_COLS = 'id, plan_id, position, name';
 const EX_COLS =
   'id, day_id, exercise_id, exercise_name, block, position, sets, reps, rest_seconds, tempo, note';
 const MEAL_COLS = 'id, plan_id, position, name, note';
-const MEAL_ITEM_COLS = 'id, meal_id, food_id, food_name, position, grams, note';
+const MEAL_ITEM_COLS =
+  'id, meal_id, food_id, food_name, kcal_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g, position, grams, note';
 
 // ── Plans / templates ────────────────────────────────────────────────────────
 
@@ -197,6 +202,16 @@ export async function listExerciseRows(dayId: string): Promise<ExerciseRow[]> {
   return (data ?? []) as ExerciseRow[];
 }
 
+export async function getExerciseRow(rowId: string): Promise<ExerciseRow | null> {
+  const { data, error } = await supabase
+    .from('plan_exercises')
+    .select(EX_COLS)
+    .eq('id', rowId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as ExerciseRow) ?? null;
+}
+
 export async function createExerciseRow(input: CreateExerciseRow): Promise<ExerciseRow> {
   const v = createExerciseRowSchema.parse(input);
   const { data, error } = await supabase
@@ -274,6 +289,16 @@ export async function listMealItems(mealId: string): Promise<MealItem[]> {
   return (data ?? []) as MealItem[];
 }
 
+export async function getMealItem(itemId: string): Promise<MealItem | null> {
+  const { data, error } = await supabase
+    .from('plan_meal_items')
+    .select(MEAL_ITEM_COLS)
+    .eq('id', itemId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as MealItem) ?? null;
+}
+
 export async function createMealItem(input: CreateMealItem): Promise<MealItem> {
   const v = createMealItemSchema.parse(input);
   const { data, error } = await supabase
@@ -282,6 +307,10 @@ export async function createMealItem(input: CreateMealItem): Promise<MealItem> {
       meal_id: v.meal_id,
       food_id: v.food_id,
       food_name: v.food_name,
+      kcal_per_100g: v.kcal_per_100g,
+      protein_g_per_100g: v.protein_g_per_100g,
+      carbs_g_per_100g: v.carbs_g_per_100g,
+      fat_g_per_100g: v.fat_g_per_100g,
       grams: v.grams,
       note: v.note ?? null,
       position: v.position ?? 0,

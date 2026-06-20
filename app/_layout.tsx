@@ -50,7 +50,13 @@ function RootNavigator() {
       <Stack.Screen name="accept-invite" options={{ headerShown: true, title: 'Accept an invite' }} />
       {/* Phase 3 plan screens. */}
       <Stack.Screen name="coach/client/[id]" options={{ headerShown: true, title: 'Client plans' }} />
+      <Stack.Screen name="coach/templates" options={{ headerShown: true, title: 'Plan templates' }} />
       <Stack.Screen name="coach/plan/[id]" options={{ headerShown: true, title: 'Plan' }} />
+      <Stack.Screen name="coach/exercise-picker" options={{ headerShown: true, title: 'Add exercise' }} />
+      <Stack.Screen name="coach/exercise/[id]" options={{ headerShown: true, title: 'Exercise' }} />
+      <Stack.Screen name="coach/food-picker" options={{ headerShown: true, title: 'Add food' }} />
+      <Stack.Screen name="coach/meal-item/[id]" options={{ headerShown: true, title: 'Food' }} />
+      <Stack.Screen name="coach/assign/[id]" options={{ headerShown: true, title: 'Assign to client' }} />
       <Stack.Screen name="client/plans" options={{ headerShown: true, title: 'My plans' }} />
       <Stack.Screen name="client/plan/[id]" options={{ headerShown: true, title: 'Plan' }} />
     </Stack>
