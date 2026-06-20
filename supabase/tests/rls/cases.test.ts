@@ -258,3 +258,159 @@ describe('invitations — coach-scoped, server-side assignment (§2)', () => {
     expect(r.rows).toHaveLength(0);
   });
 });
+
+describe('assignment functions (0006) — service-side coach_id writes (§2)', () => {
+  // The 0006 functions are the ONLY writers of coach_id / invitation status.
+  // These cases call them exactly as the Edge Functions do: as service_role (the
+  // sole grantee), which BYPASSes RLS and satisfies the profiles immutability
+  // trigger. Fixtures are created on the privileged base connection and rolled
+  // back, so nothing leaks between cases. Inserting an auth.users row fires the
+  // 0003 trigger, which creates the invitee/client's profile (client, no coach).
+
+  const INVITEE_ID = '0a000001-0000-0000-0000-000000000001';
+  const INVITEE_EMAIL = 'fresh.invitee@example.test';
+  const TOKEN = '0a000002-0000-0000-0000-000000000002';
+
+  it('accept_invitation assigns the coach and consumes the token (single-use)', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [
+        INVITEE_ID,
+        INVITEE_EMAIL,
+      ]);
+      await c.query(
+        'insert into public.invitations (coach_id, email, token) values ($1, $2, $3)',
+        [COACH_A.sub, INVITEE_EMAIL, TOKEN],
+      );
+
+      // Redeem as the Edge Function would — as service_role.
+      await c.query('set local role service_role');
+      const r = await c.query('select public.accept_invitation($1, $2, $3) as coach', [
+        TOKEN,
+        INVITEE_ID,
+        INVITEE_EMAIL,
+      ]);
+      expect(r.rows[0].coach).toBe(COACH_A.sub);
+      await c.query('reset role');
+
+      const prof = await c.query('select coach_id from public.profiles where id = $1', [INVITEE_ID]);
+      expect(prof.rows[0].coach_id).toBe(COACH_A.sub);
+      const inv = await c.query(
+        'select status, accepted_by from public.invitations where token = $1',
+        [TOKEN],
+      );
+      expect(inv.rows[0].status).toBe('accepted');
+      expect(inv.rows[0].accepted_by).toBe(INVITEE_ID);
+
+      // Single-use: a second redemption of the now-accepted token is rejected.
+      await c.query('set local role service_role');
+      await expect(
+        c.query('select public.accept_invitation($1, $2, $3)', [TOKEN, INVITEE_ID, INVITEE_EMAIL]),
+      ).rejects.toThrow();
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('accept_invitation rejects an expired token', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [
+        INVITEE_ID,
+        INVITEE_EMAIL,
+      ]);
+      await c.query(
+        `insert into public.invitations (coach_id, email, token, expires_at)
+         values ($1, $2, $3, now() - interval '1 day')`,
+        [COACH_A.sub, INVITEE_EMAIL, TOKEN],
+      );
+      await c.query('set local role service_role');
+      await expect(
+        c.query('select public.accept_invitation($1, $2, $3)', [TOKEN, INVITEE_ID, INVITEE_EMAIL]),
+      ).rejects.toThrow();
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('accept_invitation rejects a mismatched email (leaked-link defense)', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [
+        INVITEE_ID,
+        INVITEE_EMAIL,
+      ]);
+      await c.query(
+        'insert into public.invitations (coach_id, email, token) values ($1, $2, $3)',
+        [COACH_A.sub, INVITEE_EMAIL, TOKEN],
+      );
+      // A raised error aborts the surrounding transaction, so wrap the expected
+      // failure in a savepoint we can roll back to and keep querying.
+      await c.query('savepoint sp');
+      await c.query('set local role service_role');
+      await expect(
+        c.query('select public.accept_invitation($1, $2, $3)', [
+          TOKEN,
+          INVITEE_ID,
+          'someone.else@example.test',
+        ]),
+      ).rejects.toThrow();
+      await c.query('rollback to savepoint sp'); // clears the aborted state + the set role
+      // The token must still be pending after a rejected attempt.
+      const inv = await c.query('select status from public.invitations where token = $1', [TOKEN]);
+      expect(inv.rows[0].status).toBe('pending');
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('assign_client links an unassigned client to a coach', async () => {
+    const CLIENT_ID = '0a000003-0000-0000-0000-000000000003';
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [
+        CLIENT_ID,
+        'fresh.client@example.test',
+      ]);
+      await c.query('set local role service_role');
+      await c.query('select public.assign_client($1, $2)', [COACH_A.sub, CLIENT_ID]);
+      await c.query('reset role');
+      const prof = await c.query('select coach_id from public.profiles where id = $1', [CLIENT_ID]);
+      expect(prof.rows[0].coach_id).toBe(COACH_A.sub);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('assign_client refuses to steal an already-assigned client', async () => {
+    // CLIENT_A1 belongs to COACH_A (seed); COACH_B may not pull them over.
+    await expect(
+      asService((c) => c.query('select public.assign_client($1, $2)', [COACH_B_ID, CLIENT_A1.sub])),
+    ).rejects.toThrow();
+  });
+
+  it('assign_client rejects a non-coach actor', async () => {
+    await expect(
+      asService((c) => c.query('select public.assign_client($1, $2)', [CLIENT_A2, CLIENT_B1])),
+    ).rejects.toThrow();
+  });
+
+  it('the assignment functions are not executable by authenticated/anon', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query('select public.accept_invitation($1, $2, $3)', [TOKEN, CLIENT_A1.sub, INVITEE_EMAIL]),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      asUser(COACH_A, (c) => c.query('select public.assign_client($1, $2)', [COACH_A.sub, CLIENT_A2])),
+    ).rejects.toThrow();
+  });
+});
