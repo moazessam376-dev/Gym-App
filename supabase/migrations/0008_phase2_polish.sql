@@ -47,6 +47,10 @@ as $$
 $$;
 
 revoke all on function public.my_coach_id() from public;
+-- Supabase's default privileges grant EXECUTE to anon too; revoke it explicitly
+-- (this is an internal RLS helper — the policy is `to authenticated`, and anon's
+-- auth.uid() is null anyway). authenticated keeps it for policy evaluation.
+revoke execute on function public.my_coach_id() from anon;
 grant execute on function public.my_coach_id() to authenticated, service_role;
 
 -- Additive permissive policy: OR'd with profiles_select, so a client now reads
