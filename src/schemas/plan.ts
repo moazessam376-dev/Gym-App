@@ -1,6 +1,6 @@
-// Shared Zod contract for Phase 3 plans (CLAUDE.md §4). The app validates against
-// these before any write; allowlist fields only — `coach_id`, `version`, and the
-// timestamps are server-controlled and deliberately excluded.
+// Shared Zod contract for Phase 3 plans v2 (CLAUDE.md §4). A plan is either a
+// coach-owned TEMPLATE (no client) or an assigned copy. Allowlist fields only;
+// `coach_id`, `version`, `source_plan_id`, timestamps are server-controlled.
 import { z } from 'zod';
 
 export const planTypeSchema = z.enum(['training', 'nutrition']);
@@ -9,16 +9,22 @@ export type PlanType = z.infer<typeof planTypeSchema>;
 export const planStatusSchema = z.enum(['draft', 'published', 'archived']);
 export type PlanStatus = z.infer<typeof planStatusSchema>;
 
-// payload holds type-specific structured fields (sets/reps, macros, …). Kept
-// open here but validated per-type at the call site; numbers stay integers.
-const payloadSchema = z.record(z.string(), z.unknown());
+export const trainingBlockSchema = z.enum([
+  'warmup',
+  'primary',
+  'accessory',
+  'conditioning',
+  'cooldown',
+]);
+export type TrainingBlock = z.infer<typeof trainingBlockSchema>;
 
-export const createPlanSchema = z.object({
-  client_id: z.string().uuid(),
+// Create a TEMPLATE (no client). Assigned copies are produced server-side by the
+// assign_plan_to_client RPC, never created through this schema.
+export const createTemplateSchema = z.object({
   type: planTypeSchema,
   title: z.string().min(1).max(120),
 });
-export type CreatePlan = z.infer<typeof createPlanSchema>;
+export type CreateTemplate = z.infer<typeof createTemplateSchema>;
 
 export const updatePlanSchema = z.object({
   title: z.string().min(1).max(120).optional(),
@@ -26,19 +32,75 @@ export const updatePlanSchema = z.object({
 });
 export type UpdatePlan = z.infer<typeof updatePlanSchema>;
 
-export const createPlanItemSchema = z.object({
+// ── Training hierarchy ───────────────────────────────────────────────────────
+export const createDaySchema = z.object({
   plan_id: z.string().uuid(),
-  name: z.string().min(1).max(200),
-  notes: z.string().max(2000).nullable().optional(),
+  name: z.string().min(1).max(120),
   position: z.number().int().min(0).optional(),
-  payload: payloadSchema.optional(),
 });
-export type CreatePlanItem = z.infer<typeof createPlanItemSchema>;
+export type CreateDay = z.infer<typeof createDaySchema>;
 
-export const updatePlanItemSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  notes: z.string().max(2000).nullable().optional(),
+export const updateDaySchema = z.object({
+  name: z.string().min(1).max(120).optional(),
   position: z.number().int().min(0).optional(),
-  payload: payloadSchema.optional(),
 });
-export type UpdatePlanItem = z.infer<typeof updatePlanItemSchema>;
+export type UpdateDay = z.infer<typeof updateDaySchema>;
+
+// reps is free text to allow ranges like "8-12" or "AMRAP".
+const repsSchema = z.string().max(40).nullable().optional();
+
+export const createExerciseRowSchema = z.object({
+  day_id: z.string().uuid(),
+  exercise_id: z.string().uuid(),
+  block: trainingBlockSchema.optional(),
+  position: z.number().int().min(0).optional(),
+  sets: z.number().int().min(0).max(99).nullable().optional(),
+  reps: repsSchema,
+  rest_seconds: z.number().int().min(0).max(3600).nullable().optional(),
+  tempo: z.string().max(40).nullable().optional(),
+  note: z.string().max(2000).nullable().optional(),
+});
+export type CreateExerciseRow = z.infer<typeof createExerciseRowSchema>;
+
+export const updateExerciseRowSchema = z.object({
+  block: trainingBlockSchema.optional(),
+  position: z.number().int().min(0).optional(),
+  sets: z.number().int().min(0).max(99).nullable().optional(),
+  reps: repsSchema,
+  rest_seconds: z.number().int().min(0).max(3600).nullable().optional(),
+  tempo: z.string().max(40).nullable().optional(),
+  note: z.string().max(2000).nullable().optional(),
+});
+export type UpdateExerciseRow = z.infer<typeof updateExerciseRowSchema>;
+
+// ── Nutrition hierarchy ──────────────────────────────────────────────────────
+export const createMealSchema = z.object({
+  plan_id: z.string().uuid(),
+  name: z.string().min(1).max(120),
+  note: z.string().max(2000).nullable().optional(),
+  position: z.number().int().min(0).optional(),
+});
+export type CreateMeal = z.infer<typeof createMealSchema>;
+
+export const updateMealSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  note: z.string().max(2000).nullable().optional(),
+  position: z.number().int().min(0).optional(),
+});
+export type UpdateMeal = z.infer<typeof updateMealSchema>;
+
+export const createMealItemSchema = z.object({
+  meal_id: z.string().uuid(),
+  food_id: z.string().uuid(),
+  grams: z.number().int().min(0).max(5000),
+  note: z.string().max(2000).nullable().optional(),
+  position: z.number().int().min(0).optional(),
+});
+export type CreateMealItem = z.infer<typeof createMealItemSchema>;
+
+export const updateMealItemSchema = z.object({
+  grams: z.number().int().min(0).max(5000).optional(),
+  note: z.string().max(2000).nullable().optional(),
+  position: z.number().int().min(0).optional(),
+});
+export type UpdateMealItem = z.infer<typeof updateMealItemSchema>;

@@ -483,102 +483,278 @@ describe('assignment functions (0006) — service-side coach_id writes (§2)', (
   });
 });
 
-describe('plans & plan_items (0009) — coach authors, assigned client reads (§2)', () => {
-  const PLAN_A1_PUB = '99990001-0000-0000-0000-000000000001';
-  const PLAN_A1_DRAFT = '99990002-0000-0000-0000-000000000002';
-  const PLAN_B1_PUB = '99990003-0000-0000-0000-000000000003';
+describe('plans v2 (0010) — templates, library, hierarchy, clone (§2)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const A1_PUB_TRAIN = '99990001-0000-0000-0000-000000000001';
+  const A1_DRAFT_NUT = '99990002-0000-0000-0000-000000000002';
+  const A1_PUB_NUT = '99990004-0000-0000-0000-000000000004';
+  const B1_PLAN = '99990003-0000-0000-0000-000000000003';
+  const TEMPLATE_A_TRAIN = '99990010-0000-0000-0000-000000000010';
+  const TEMPLATE_A_NUT = '99990011-0000-0000-0000-000000000011';
+  const DAY_A1_PUB = 'da000001-0000-0000-0000-000000000001';
+  const MEAL_A1_PUB_NUT = 'me000004-0000-0000-0000-000000000004';
+  const MEAL_A1_DRAFT = 'me000002-0000-0000-0000-000000000002';
+  const CUSTOM_EX_A = 'e1000000-0000-0000-0000-00000000000a';
+  const CUSTOM_FOOD_B = 'f1000000-0000-0000-0000-00000000000b';
+  const GLOBAL_EX = 'e0000000-0000-0000-0000-000000000001';
+  const GLOBAL_FOOD = 'f0000000-0000-0000-0000-000000000001';
 
-  it('coach A sees only their own plans (both A1 plans), not coach B’s', async () => {
+  // ── templates vs assigned ──────────────────────────────────────────────────
+  it('coach A sees their templates + their assigned plans; coach B only theirs', async () => {
     const a = await asUser(COACH_A, (c) => c.query('select id from public.plans'));
-    const b = await asUser({ sub: COACH_B_ID, userRole: 'coach' }, (c) =>
-      c.query('select id from public.plans'),
-    );
-    expect(a.rows).toHaveLength(2); // A1 published + A1 draft
-    expect(b.rows).toHaveLength(1); // B1 published
+    const b = await asUser(COACH_B, (c) => c.query('select id from public.plans'));
+    expect(a.rows).toHaveLength(5); // 3 assigned to A1 + 2 templates
+    expect(b.rows).toHaveLength(1); // B1 assigned
   });
 
-  it('client A1 reads their PUBLISHED plan only — not the draft, not B1’s', async () => {
-    const all = await asUser(CLIENT_A1, (c) => c.query('select id, status from public.plans'));
-    expect(all.rows).toHaveLength(1);
-    expect(all.rows[0].id).toBe(PLAN_A1_PUB);
-    expect(all.rows[0].status).toBe('published');
+  it('a client reads only their non-draft assigned plans — never a template', async () => {
+    const all = await asUser(CLIENT_A1, (c) => c.query('select id from public.plans'));
+    const ids = all.rows.map((r) => r.id);
+    expect(all.rows).toHaveLength(2); // pub training + pub nutrition
+    expect(ids).toContain(A1_PUB_TRAIN);
+    expect(ids).toContain(A1_PUB_NUT);
+    expect(ids).not.toContain(A1_DRAFT_NUT); // draft hidden
+    expect(ids).not.toContain(B1_PLAN); // other tenant
 
-    const draft = await asUser(CLIENT_A1, (c) =>
-      c.query('select id from public.plans where id = $1', [PLAN_A1_DRAFT]),
+    const templates = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.plans where client_id is null'),
     );
-    const otherClient = await asUser(CLIENT_A1, (c) =>
-      c.query('select id from public.plans where id = $1', [PLAN_B1_PUB]),
-    );
-    expect(draft.rows).toHaveLength(0);
-    expect(otherClient.rows).toHaveLength(0);
+    expect(templates.rows).toHaveLength(0); // cannot read ANY template
   });
 
-  it('a client cannot create a plan', async () => {
-    await expect(
-      asUser(CLIENT_A1, (c) =>
-        c.query(
-          "insert into public.plans (coach_id, client_id, type, title) values ($1, $2, 'training', 'x')",
-          ['11111111-1111-1111-1111-111111111111', CLIENT_A1.sub],
-        ),
-      ),
-    ).rejects.toThrow();
+  it('coach B cannot read coach A’s template', async () => {
+    const r = await asUser(COACH_B, (c) =>
+      c.query('select id from public.plans where id = $1', [TEMPLATE_A_TRAIN]),
+    );
+    expect(r.rows).toHaveLength(0);
   });
 
-  it('coach A can author a plan for their own client, but not for coach B’s client', async () => {
+  it('a coach can create a template (no client) but a client cannot', async () => {
     const ok = await asUser(COACH_A, (c) =>
       c.query(
-        "insert into public.plans (coach_id, client_id, type, title) values ($1, $2, 'training', 'New A1 plan')",
-        [COACH_A.sub, CLIENT_A1.sub],
+        "insert into public.plans (coach_id, client_id, type, title) values ($1, null, 'training', 'T')",
+        [COACH_A.sub],
       ),
     );
     expect(ok.rowCount).toBe(1);
-
     await expect(
-      asUser(COACH_A, (c) =>
+      asUser(CLIENT_A1, (c) =>
         c.query(
-          "insert into public.plans (coach_id, client_id, type, title) values ($1, $2, 'training', 'steal')",
-          [COACH_A.sub, CLIENT_B1],
+          "insert into public.plans (coach_id, client_id, type, title) values ($1, null, 'training', 'T')",
+          [CLIENT_A1.sub],
         ),
       ),
     ).rejects.toThrow();
   });
 
-  it('plan_items: client A1 reads items of their published plan, not of the draft', async () => {
-    const pub = await asUser(CLIENT_A1, (c) =>
-      c.query('select id from public.plan_items where plan_id = $1', [PLAN_A1_PUB]),
+  // ── hierarchy reads/writes ─────────────────────────────────────────────────
+  it('client reads children of their published plans only (through the helper chain)', async () => {
+    const days = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.plan_days where plan_id = $1', [A1_PUB_TRAIN]),
     );
-    const draft = await asUser(CLIENT_A1, (c) =>
-      c.query('select id from public.plan_items where plan_id = $1', [PLAN_A1_DRAFT]),
+    const exs = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.plan_exercises where day_id = $1', [DAY_A1_PUB]),
     );
-    expect(pub.rows).toHaveLength(2);
-    expect(draft.rows).toHaveLength(0);
+    const pubMeals = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.plan_meals where plan_id = $1', [A1_PUB_NUT]),
+    );
+    const draftMeals = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.plan_meals where plan_id = $1', [A1_DRAFT_NUT]),
+    );
+    expect(days.rows).toHaveLength(1);
+    expect(exs.rows).toHaveLength(2);
+    expect(pubMeals.rows).toHaveLength(1);
+    expect(draftMeals.rows).toHaveLength(0); // draft plan's children hidden
   });
 
-  it('plan_items: coach writes items only on plans they own', async () => {
+  it('client cannot read another tenant’s plan children', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        'select e.id from public.plan_exercises e join public.plan_days d on d.id = e.day_id where d.plan_id = $1',
+        [B1_PLAN],
+      ),
+    );
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it('coach writes children only on plans they own; a client cannot write at all', async () => {
     const ok = await asUser(COACH_A, (c) =>
-      c.query("insert into public.plan_items (plan_id, name) values ($1, 'Row')", [PLAN_A1_PUB]),
+      c.query("insert into public.plan_days (plan_id, name) values ($1, 'D')", [A1_PUB_TRAIN]),
     );
     expect(ok.rowCount).toBe(1);
-
     await expect(
       asUser(COACH_A, (c) =>
-        c.query("insert into public.plan_items (plan_id, name) values ($1, 'Row')", [PLAN_B1_PUB]),
+        c.query("insert into public.plan_days (plan_id, name) values ($1, 'D')", [B1_PLAN]),
       ),
     ).rejects.toThrow();
-  });
-
-  it('plan_items: a client cannot write items', async () => {
     await expect(
       asUser(CLIENT_A1, (c) =>
-        c.query("insert into public.plan_items (plan_id, name) values ($1, 'Row')", [PLAN_A1_PUB]),
+        c.query("insert into public.plan_days (plan_id, name) values ($1, 'D')", [A1_PUB_TRAIN]),
       ),
     ).rejects.toThrow();
   });
 
-  it('anon sees no plans or plan_items', async () => {
-    const plans = await asAnon((c) => c.query('select id from public.plans'));
-    const items = await asAnon((c) => c.query('select id from public.plan_items'));
-    expect(plans.rows).toHaveLength(0);
-    expect(items.rows).toHaveLength(0);
+  it('coach writes meal items only on plans they own (grandchild helper chain)', async () => {
+    const ok = await asUser(COACH_A, (c) =>
+      c.query('insert into public.plan_meal_items (meal_id, food_id, grams) values ($1, $2, 100)', [
+        MEAL_A1_PUB_NUT,
+        GLOBAL_FOOD,
+      ]),
+    );
+    expect(ok.rowCount).toBe(1);
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query('insert into public.plan_meal_items (meal_id, food_id, grams) values ($1, $2, 100)', [
+          MEAL_A1_DRAFT,
+          GLOBAL_FOOD,
+        ]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  // ── library: globals shared, customs private ───────────────────────────────
+  it('every coach reads global library entries', async () => {
+    const a = await asUser(COACH_A, (c) =>
+      c.query('select id from public.exercise_library where id = $1', [GLOBAL_EX]),
+    );
+    const b = await asUser(COACH_B, (c) =>
+      c.query('select id from public.food_library where id = $1', [GLOBAL_FOOD]),
+    );
+    expect(a.rows).toHaveLength(1);
+    expect(b.rows).toHaveLength(1);
+  });
+
+  it('a coach reads their own custom entry but not another coach’s', async () => {
+    const ownEx = await asUser(COACH_A, (c) =>
+      c.query('select id from public.exercise_library where id = $1', [CUSTOM_EX_A]),
+    );
+    const otherEx = await asUser(COACH_B, (c) =>
+      c.query('select id from public.exercise_library where id = $1', [CUSTOM_EX_A]),
+    );
+    const otherFood = await asUser(COACH_A, (c) =>
+      c.query('select id from public.food_library where id = $1', [CUSTOM_FOOD_B]),
+    );
+    expect(ownEx.rows).toHaveLength(1);
+    expect(otherEx.rows).toHaveLength(0);
+    expect(otherFood.rows).toHaveLength(0);
+  });
+
+  it('a coach can create their own custom exercise, but cannot forge a global or another coach’s', async () => {
+    const ok = await asUser(COACH_A, (c) =>
+      c.query(
+        "insert into public.exercise_library (coach_id, name, muscle_group) values ($1, 'X', 'push')",
+        [COACH_A.sub],
+      ),
+    );
+    expect(ok.rowCount).toBe(1);
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query(
+          "insert into public.exercise_library (coach_id, name, muscle_group) values (null, 'G', 'push')",
+        ),
+      ),
+    ).rejects.toThrow(); // can't forge a global
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query(
+          "insert into public.exercise_library (coach_id, name, muscle_group) values ($1, 'X', 'push')",
+          [COACH_B_ID],
+        ),
+      ),
+    ).rejects.toThrow(); // can't insert as another coach
+  });
+
+  it('a client cannot create a library entry', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query(
+          "insert into public.exercise_library (coach_id, name, muscle_group) values ($1, 'X', 'push')",
+          [CLIENT_A1.sub],
+        ),
+      ),
+    ).rejects.toThrow();
+  });
+
+  // ── clone / assign ─────────────────────────────────────────────────────────
+  it('assign_plan_to_client deep-copies a template into an independent assigned plan', async () => {
+    const r = await asUser(COACH_A, async (c) => {
+      const res = await c.query('select public.assign_plan_to_client($1, $2) as id', [
+        TEMPLATE_A_TRAIN,
+        CLIENT_A1.sub,
+      ]);
+      const newId = res.rows[0].id;
+      const plan = await c.query(
+        'select coach_id, client_id, source_plan_id, status, type from public.plans where id = $1',
+        [newId],
+      );
+      const days = await c.query('select id from public.plan_days where plan_id = $1', [newId]);
+      const exs = await c.query(
+        'select e.id from public.plan_exercises e join public.plan_days d on d.id = e.day_id where d.plan_id = $1',
+        [newId],
+      );
+      return { plan: plan.rows[0], days: days.rows.length, exs: exs.rows.length };
+    });
+    expect(r.plan.coach_id).toBe(COACH_A.sub);
+    expect(r.plan.client_id).toBe(CLIENT_A1.sub);
+    expect(r.plan.source_plan_id).toBe(TEMPLATE_A_TRAIN);
+    expect(r.plan.status).toBe('draft');
+    expect(r.days).toBe(1); // template had 1 day
+    expect(r.exs).toBe(1); // template had 1 exercise
+  });
+
+  it('assign_plan_to_client clones a nutrition template’s meals + items', async () => {
+    const r = await asUser(COACH_A, async (c) => {
+      const res = await c.query('select public.assign_plan_to_client($1, $2) as id', [
+        TEMPLATE_A_NUT,
+        CLIENT_A1.sub,
+      ]);
+      const newId = res.rows[0].id;
+      const meals = await c.query('select id from public.plan_meals where plan_id = $1', [newId]);
+      const items = await c.query(
+        'select i.id from public.plan_meal_items i join public.plan_meals m on m.id = i.meal_id where m.plan_id = $1',
+        [newId],
+      );
+      return { meals: meals.rows.length, items: items.rows.length };
+    });
+    expect(r.meals).toBe(1);
+    expect(r.items).toBe(1);
+  });
+
+  it('assign_plan_to_client rejects a non-client, a non-template, another coach, and a client caller', async () => {
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query('select public.assign_plan_to_client($1, $2)', [TEMPLATE_A_TRAIN, CLIENT_B1]),
+      ),
+    ).rejects.toThrow(); // not coach A's client
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query('select public.assign_plan_to_client($1, $2)', [A1_PUB_TRAIN, CLIENT_A1.sub]),
+      ),
+    ).rejects.toThrow(); // not a template (has client_id)
+    await expect(
+      asUser(COACH_B, (c) =>
+        c.query('select public.assign_plan_to_client($1, $2)', [TEMPLATE_A_TRAIN, CLIENT_B1]),
+      ),
+    ).rejects.toThrow(); // coach A's template, not B's
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query('select public.assign_plan_to_client($1, $2)', [TEMPLATE_A_TRAIN, CLIENT_A1.sub]),
+      ),
+    ).rejects.toThrow(); // client cannot assign
+  });
+
+  it('anon sees no plans, library, or plan children', async () => {
+    for (const t of [
+      'plans',
+      'plan_days',
+      'plan_exercises',
+      'plan_meals',
+      'plan_meal_items',
+      'exercise_library',
+      'food_library',
+    ]) {
+      const r = await asAnon((c) => c.query(`select * from public.${t} limit 5`));
+      expect(r.rows, `anon must see 0 rows in ${t}`).toHaveLength(0);
+    }
   });
 });
