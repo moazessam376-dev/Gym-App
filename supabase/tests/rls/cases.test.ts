@@ -180,3 +180,36 @@ describe('schema invariant — every public table has RLS enabled (§2)', () => 
     }
   });
 });
+
+describe('custom access token hook — role is injected server-side from the DB', () => {
+  it('stamps profiles.role into the JWT claims (run as supabase_auth_admin)', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role supabase_auth_admin');
+      const event = JSON.stringify({
+        user_id: COACH_A.sub,
+        claims: { sub: COACH_A.sub, role: 'authenticated' },
+      });
+      const r = await c.query('select public.custom_access_token_hook($1::jsonb) as out', [event]);
+      expect(r.rows[0].out.claims.user_role).toBe('coach');
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('yields a null role for a user without a profile (→ onboarding)', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role supabase_auth_admin');
+      const event = JSON.stringify({ user_id: NEW_USER.sub, claims: {} });
+      const r = await c.query('select public.custom_access_token_hook($1::jsonb) as out', [event]);
+      expect(r.rows[0].out.claims.user_role).toBeNull();
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+});

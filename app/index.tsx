@@ -3,10 +3,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../src/lib/auth-context';
 
-// Signed-in landing. In Slice C this splits into role-specific homes
-// ((client)/(coach)/(admin)); for now everyone lands here after login.
+// The role-gated landing. Content is driven by the role from the verified JWT.
+// As each role grows features, these become full navigation trees (Phase 2+).
+const ROLE_COPY = {
+  client: { tag: 'CLIENT', title: 'Your training home' },
+  coach: { tag: 'COACH', title: 'Coach dashboard' },
+  admin: { tag: 'ADMIN', title: 'Admin console' },
+} as const;
+
 export default function Home() {
-  const { session } = useAuth();
+  const { session, role } = useAuth();
+  const copy = role ? ROLE_COPY[role] : { tag: '—', title: 'Gym-App' };
 
   async function onSignOut() {
     await supabase.auth.signOut();
@@ -16,11 +23,12 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <Text style={styles.title}>Gym-App</Text>
-        <Text style={styles.subtitle}>You&apos;re signed in 🎉</Text>
-        {session?.user?.email ? (
-          <Text style={styles.email}>{session.user.email}</Text>
-        ) : null}
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{copy.tag}</Text>
+        </View>
+        <Text style={styles.title}>{copy.title}</Text>
+        {session?.user?.email ? <Text style={styles.email}>{session.user.email}</Text> : null}
+        <Text style={styles.note}>Role read from your signed token, enforced by RLS.</Text>
 
         <Pressable style={styles.button} onPress={onSignOut}>
           <Text style={styles.buttonText}>Sign out</Text>
@@ -33,9 +41,17 @@ export default function Home() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 10 },
-  title: { fontSize: 30, fontWeight: '800', color: '#111' },
-  subtitle: { fontSize: 16, color: '#444' },
-  email: { fontSize: 15, color: '#1f6feb', marginBottom: 16 },
+  badge: {
+    backgroundColor: '#1f6feb',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    marginBottom: 4,
+  },
+  badgeText: { color: '#fff', fontSize: 13, fontWeight: '800', letterSpacing: 1 },
+  title: { fontSize: 28, fontWeight: '800', color: '#111' },
+  email: { fontSize: 15, color: '#1f6feb' },
+  note: { fontSize: 13, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 16 },
   button: {
     backgroundColor: '#111',
     borderRadius: 10,

@@ -4,22 +4,32 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/lib/auth-context';
 
-// Session-gated routing. The role-based split ((client)/(coach)/(admin)) arrives
-// in Slice C once the JWT carries the role claim; for now it's signed-out vs in.
+// Role-aware routing. The role comes from the verified JWT claim (server-issued
+// by the access-token hook) — never from client input.
 function RootNavigator() {
-  const { session, initializing } = useAuth();
+  const { session, role, initializing } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (initializing) return; // wait until we know whether a session exists
-    const inAuthGroup = segments[0] === '(auth)';
-    if (!session && !inAuthGroup) {
-      router.replace('/(auth)/sign-in');
-    } else if (session && inAuthGroup) {
-      router.replace('/');
+    const seg = segments[0];
+    const inAuth = seg === '(auth)';
+    const inOnboarding = seg === 'onboarding';
+
+    if (!session) {
+      if (!inAuth) router.replace('/(auth)/sign-in');
+      return;
     }
-  }, [session, initializing, segments, router]);
+    // Signed in but the token carries no role yet → onboarding (rare; every
+    // signup is bootstrapped as 'client').
+    if (!role) {
+      if (!inOnboarding) router.replace('/onboarding');
+      return;
+    }
+    // Signed in with a role → keep them out of the auth / onboarding screens.
+    if (inAuth || inOnboarding) router.replace('/');
+  }, [session, role, initializing, segments, router]);
 
   if (initializing) {
     return (
@@ -33,6 +43,7 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="(auth)" />
+      <Stack.Screen name="onboarding" />
     </Stack>
   );
 }
