@@ -45,4 +45,24 @@ insert into public.invitations (id, coach_id, email, token) values
    'invitee.b@example.test',
    'cccc0002-0000-0000-0000-000000000002');
 
+-- Phase 3 plans:
+--   Coach A → Client A1: one PUBLISHED training plan + one DRAFT nutrition plan.
+--   Coach B → Client B1: one PUBLISHED plan (cross-tenant control).
+insert into public.plans (id, coach_id, client_id, type, title, status) values
+  ('99990001-0000-0000-0000-000000000001',
+   '11111111-1111-1111-1111-111111111111',
+   'aaaa0001-0000-0000-0000-000000000001', 'training',  'A1 Strength Block', 'published'),
+  ('99990002-0000-0000-0000-000000000002',
+   '11111111-1111-1111-1111-111111111111',
+   'aaaa0001-0000-0000-0000-000000000001', 'nutrition', 'A1 Cut (draft)',    'draft'),
+  ('99990003-0000-0000-0000-000000000003',
+   '22222222-2222-2222-2222-222222222222',
+   'bbbb0001-0000-0000-0000-000000000001', 'training',  'B1 Plan',           'published');
+
+insert into public.plan_items (plan_id, position, name) values
+  ('99990001-0000-0000-0000-000000000001', 1, 'Squat 5x5'),
+  ('99990001-0000-0000-0000-000000000001', 2, 'Bench 5x5'),
+  ('99990002-0000-0000-0000-000000000002', 1, 'Breakfast'),
+  ('99990003-0000-0000-0000-000000000003', 1, 'Deadlift 1x5');
+
 alter table auth.users enable trigger on_auth_user_created;
