@@ -104,29 +104,14 @@ describe('privilege escalation & mass-assignment are rejected', () => {
     ).rejects.toThrow();
   });
 
-  it('a new user can self-insert only a plain client profile', async () => {
-    // Elevated self-insert is rejected …
+  it('a client can no longer self-insert a profile — creation is server-side (§2)', async () => {
+    // Phase 1 dropped the self-insert policy; deny-by-default now rejects every
+    // client profile INSERT, even a plain one. Profiles come from the trigger.
     await expect(
       asUser(NEW_USER, (c) =>
-        c.query("insert into public.profiles (id, role) values ($1, 'admin')", [NEW_USER.sub]),
+        c.query("insert into public.profiles (id, role) values ($1, 'client')", [NEW_USER.sub]),
       ),
     ).rejects.toThrow();
-    // … self-assigning a coach is rejected …
-    await expect(
-      asUser(NEW_USER, (c) =>
-        c.query("insert into public.profiles (id, role, coach_id) values ($1, 'client', $2)", [
-          NEW_USER.sub,
-          COACH_B_ID,
-        ]),
-      ),
-    ).rejects.toThrow();
-    // … but a plain client profile for yourself is allowed.
-    const ok = await asUser(NEW_USER, (c) =>
-      c.query("insert into public.profiles (id, role, full_name) values ($1, 'client', 'New User')", [
-        NEW_USER.sub,
-      ]),
-    );
-    expect(ok.rowCount).toBe(1);
   });
 
   it('client cannot insert a profile for another user id', async () => {
@@ -135,6 +120,31 @@ describe('privilege escalation & mass-assignment are rejected', () => {
         c.query("insert into public.profiles (id, role) values ($1, 'client')", [COACH_B_ID]),
       ),
     ).rejects.toThrow();
+  });
+});
+
+describe('profile bootstrap — signup creates the profile server-side', () => {
+  it('inserting an auth.users row auto-creates exactly one client profile', async () => {
+    const NEW_ID = 'ffff0001-0000-0000-0000-000000000001';
+    // The privileged base connection mirrors Supabase Auth inserting a user;
+    // wrapped in a rolled-back transaction so it never pollutes other cases.
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [
+        NEW_ID,
+        'bootstrap@example.test',
+      ]);
+      const prof = await c.query('select role, coach_id from public.profiles where id = $1', [
+        NEW_ID,
+      ]);
+      expect(prof.rows).toHaveLength(1);
+      expect(prof.rows[0].role).toBe('client');
+      expect(prof.rows[0].coach_id).toBeNull();
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
   });
 });
 

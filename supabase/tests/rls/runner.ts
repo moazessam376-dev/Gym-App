@@ -24,6 +24,7 @@ const migrationFiles = [
   '0000_auth_shim.sql',
   '0001_profiles.sql',
   '0002_progress_entries.sql',
+  '0003_profile_bootstrap.sql',
 ];
 
 const baseUrl =

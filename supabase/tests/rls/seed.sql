@@ -8,6 +8,11 @@
 --   Admin (sees all)
 --   New User (auth.users row WITHOUT a profile — used to test the INSERT policy)
 
+-- The 0003 signup trigger would auto-create a 'client' profile for every
+-- auth.users row below, colliding with our explicit role assignments. Disable it
+-- for seeding only — cases.test.ts exercises the trigger on its own.
+alter table auth.users disable trigger on_auth_user_created;
+
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'coach.a@example.test'),
   ('22222222-2222-2222-2222-222222222222', 'coach.b@example.test'),
@@ -32,3 +37,5 @@ insert into public.progress_entries (user_id, weight_grams, note) values
   ('aaaa0001-0000-0000-0000-000000000001', 79500, 'A1 second'),
   ('aaaa0002-0000-0000-0000-000000000002', 70000, 'A2 first'),
   ('bbbb0001-0000-0000-0000-000000000001', 90000, 'B1 first');
+
+alter table auth.users enable trigger on_auth_user_created;
