@@ -860,3 +860,92 @@ describe('coach applications (0011) — client applies, admin reviews, role flip
     expect(r.rows).toHaveLength(0);
   });
 });
+
+describe('messages (0012) — coach⇄client DMs, server-set sender, rate limit (§8)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_B1_ID: Identity = { sub: CLIENT_B1, userRole: 'client' };
+
+  it('a coach messages their own client, and a client their own coach', async () => {
+    const a = await asUser(COACH_A, (c) =>
+      c.query('insert into public.messages (recipient_id, body) values ($1, $2)', [
+        CLIENT_A1.sub,
+        'hi A1',
+      ]),
+    );
+    const b = await asUser(CLIENT_A1, (c) =>
+      c.query('insert into public.messages (recipient_id, body) values ($1, $2)', [
+        '11111111-1111-1111-1111-111111111111',
+        'hi coach',
+      ]),
+    );
+    expect(a.rowCount).toBe(1);
+    expect(b.rowCount).toBe(1);
+  });
+
+  it('the server forces sender_id = auth.uid() (a forged sender is overwritten)', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query(
+        'insert into public.messages (sender_id, recipient_id, body) values ($1, $2, $3) returning sender_id',
+        [COACH_B_ID, CLIENT_A1.sub, 'forged'],
+      ),
+    );
+    expect(r.rows[0].sender_id).toBe(COACH_A.sub); // not the forged COACH_B_ID
+  });
+
+  it('cannot message someone you are not paired with', async () => {
+    // Coach A -> Coach B's client; and Client A1 -> Coach B.
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query('insert into public.messages (recipient_id, body) values ($1, $2)', [CLIENT_B1, 'x']),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query('insert into public.messages (recipient_id, body) values ($1, $2)', [COACH_B_ID, 'x']),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('cannot message yourself', async () => {
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query('insert into public.messages (recipient_id, body) values ($1, $2)', [
+          COACH_A.sub,
+          'me',
+        ]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('only the two parties read a message; outsiders see nothing', async () => {
+    // Seeded: 2 messages between Coach A and Client A1.
+    const coachA = await asUser(COACH_A, (c) => c.query('select id from public.messages'));
+    const clientA1 = await asUser(CLIENT_A1, (c) => c.query('select id from public.messages'));
+    const coachB = await asUser(COACH_B, (c) => c.query('select id from public.messages'));
+    const clientB1 = await asUser(CLIENT_B1_ID, (c) => c.query('select id from public.messages'));
+    expect(coachA.rows.length).toBeGreaterThanOrEqual(2);
+    expect(clientA1.rows.length).toBeGreaterThanOrEqual(2);
+    expect(coachB.rows).toHaveLength(0);
+    expect(clientB1.rows).toHaveLength(0);
+  });
+
+  it('rate-limits a burst of sends from one sender', async () => {
+    // 20/10s cap; the 21st in the same transaction trips it (now() is constant
+    // within the txn, so all rows fall inside the window).
+    await expect(
+      asUser(COACH_A, async (c) => {
+        for (let i = 0; i < 21; i++) {
+          await c.query('insert into public.messages (recipient_id, body) values ($1, $2)', [
+            CLIENT_A1.sub,
+            `msg ${i}`,
+          ]);
+        }
+      }),
+    ).rejects.toThrow(/rate_limited/);
+  });
+
+  it('anon sees no messages', async () => {
+    const r = await asAnon((c) => c.query('select id from public.messages'));
+    expect(r.rows).toHaveLength(0);
+  });
+});

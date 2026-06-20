@@ -110,4 +110,13 @@ insert into public.coach_applications (id, user_id, message) values
    'aaaa0002-0000-0000-0000-000000000002',
    'A2 would like to coach');
 
+-- Messages between Coach A and Client A1 (both directions) — proves the two
+-- parties read them and outsiders (Coach B / Client B1) cannot. The insert
+-- trigger leaves these untouched (seed runs with auth.uid() null).
+insert into public.messages (id, sender_id, recipient_id, body) values
+  ('ab000001-0000-0000-0000-000000000001',
+   '11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', 'Welcome aboard!'),
+  ('ab000002-0000-0000-0000-000000000002',
+   'aaaa0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Thanks coach!');
+
 alter table auth.users enable trigger on_auth_user_created;

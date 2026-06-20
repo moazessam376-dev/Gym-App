@@ -33,6 +33,7 @@ const migrationFiles = [
   '0009_plans.sql',
   '0010_plan_templates_library.sql',
   '0011_coach_applications.sql',
+  '0012_messages.sql',
 ];
 
 const baseUrl =
