@@ -10,16 +10,19 @@ import {
   createMealItemSchema,
   createMealSchema,
   createTemplateSchema,
+  createWeekSchema,
   updateDaySchema,
   updateExerciseRowSchema,
   updateMealItemSchema,
   updateMealSchema,
   updatePlanSchema,
+  updateWeekSchema,
   type CreateDay,
   type CreateExerciseRow,
   type CreateMeal,
   type CreateMealItem,
   type CreateTemplate,
+  type CreateWeek,
   type PlanStatus,
   type PlanType,
   type TrainingBlock,
@@ -28,22 +31,39 @@ import {
   type UpdateMeal,
   type UpdateMealItem,
   type UpdatePlan,
+  type UpdateWeek,
 } from '../schemas/plan';
 
 export type Plan = {
   id: string;
-  coach_id: string;
-  client_id: string | null; // null = template
+  coach_id: string | null; // null = global SYSTEM template
+  client_id: string | null; // null = template (coach-owned or system)
   type: PlanType;
   title: string;
   status: PlanStatus;
   version: number;
   source_plan_id: string | null;
+  note: string | null; // plan-level coach comment
   created_at: string;
   updated_at: string;
 };
 
-export type Day = { id: string; plan_id: string; position: number; name: string };
+export type Week = {
+  id: string;
+  plan_id: string;
+  position: number;
+  name: string;
+  note: string | null;
+};
+
+export type Day = {
+  id: string;
+  plan_id: string;
+  week_id: string;
+  position: number;
+  name: string;
+  note: string | null; // day-level coach comment
+};
 
 export type ExerciseRow = {
   id: string;
@@ -76,8 +96,9 @@ export type MealItem = {
 };
 
 const PLAN_COLS =
-  'id, coach_id, client_id, type, title, status, version, source_plan_id, created_at, updated_at';
-const DAY_COLS = 'id, plan_id, position, name';
+  'id, coach_id, client_id, type, title, status, version, source_plan_id, note, created_at, updated_at';
+const WEEK_COLS = 'id, plan_id, position, name, note';
+const DAY_COLS = 'id, plan_id, week_id, position, name, note';
 const EX_COLS =
   'id, day_id, exercise_id, exercise_name, block, position, sets, reps, rest_seconds, tempo, note';
 const MEAL_COLS = 'id, plan_id, position, name, note';
@@ -86,17 +107,43 @@ const MEAL_ITEM_COLS =
 
 // ── Plans / templates ────────────────────────────────────────────────────────
 
-/** The coach's templates (client_id IS NULL), optionally filtered by type. */
+/** The coach's OWN templates (client_id IS NULL, coach-owned), optional type. */
 export async function listTemplates(type?: PlanType): Promise<Plan[]> {
   let q = supabase
     .from('plans')
     .select(PLAN_COLS)
     .is('client_id', null)
+    .not('coach_id', 'is', null) // exclude global system templates
     .order('created_at', { ascending: false });
   if (type) q = q.eq('type', type);
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as Plan[];
+}
+
+/** Global SYSTEM templates (coach_id IS NULL) — ready to clone. RLS: coaches only. */
+export async function listSystemTemplates(type?: PlanType): Promise<Plan[]> {
+  let q = supabase
+    .from('plans')
+    .select(PLAN_COLS)
+    .is('client_id', null)
+    .is('coach_id', null)
+    .order('title', { ascending: true });
+  if (type) q = q.eq('type', type);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as Plan[];
+}
+
+/**
+ * Clone a template (the coach's own OR a global system one) into a NEW editable
+ * coach-owned template. The RPC (clone_template) is the only path; it deep-copies
+ * weeks→days→exercises (+ comments). Returns the new plan id.
+ */
+export async function cloneTemplate(templateId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('clone_template', { p_template: templateId });
+  if (error) throw error;
+  return data as string;
 }
 
 /** Plans assigned to one client (RLS: coach sees all, client sees own non-draft). */
@@ -158,13 +205,52 @@ export async function assignPlanToClient(templateId: string, clientId: string): 
   return data as string;
 }
 
-// ── Training: days + exercises ───────────────────────────────────────────────
+// ── Training: weeks → days → exercises ───────────────────────────────────────
 
-export async function listDays(planId: string): Promise<Day[]> {
+export async function listWeeks(planId: string): Promise<Week[]> {
+  const { data, error } = await supabase
+    .from('plan_weeks')
+    .select(WEEK_COLS)
+    .eq('plan_id', planId)
+    .order('position', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Week[];
+}
+
+export async function createWeek(input: CreateWeek): Promise<Week> {
+  const v = createWeekSchema.parse(input);
+  const { data, error } = await supabase
+    .from('plan_weeks')
+    .insert({ plan_id: v.plan_id, name: v.name, note: v.note ?? null, position: v.position ?? 0 })
+    .select(WEEK_COLS)
+    .single();
+  if (error) throw error;
+  return data as Week;
+}
+
+export async function updateWeek(weekId: string, input: UpdateWeek): Promise<void> {
+  const v = updateWeekSchema.parse(input);
+  const { error } = await supabase.from('plan_weeks').update(v).eq('id', weekId);
+  if (error) throw error;
+}
+
+export async function deleteWeek(weekId: string): Promise<void> {
+  const { error } = await supabase.from('plan_weeks').delete().eq('id', weekId);
+  if (error) throw error;
+}
+
+/** Duplicate a week (+ its days/exercises) into a new week in the same plan. */
+export async function duplicateWeek(weekId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('duplicate_plan_week', { p_week: weekId });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function listDays(weekId: string): Promise<Day[]> {
   const { data, error } = await supabase
     .from('plan_days')
     .select(DAY_COLS)
-    .eq('plan_id', planId)
+    .eq('week_id', weekId)
     .order('position', { ascending: true });
   if (error) throw error;
   return (data ?? []) as Day[];
@@ -174,7 +260,7 @@ export async function createDay(input: CreateDay): Promise<Day> {
   const v = createDaySchema.parse(input);
   const { data, error } = await supabase
     .from('plan_days')
-    .insert({ plan_id: v.plan_id, name: v.name, position: v.position ?? 0 })
+    .insert({ plan_id: v.plan_id, week_id: v.week_id, name: v.name, position: v.position ?? 0 })
     .select(DAY_COLS)
     .single();
   if (error) throw error;

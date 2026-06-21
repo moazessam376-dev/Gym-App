@@ -1,7 +1,7 @@
-// Coach → plan editor. One screen for both a TEMPLATE (no client → "Assign to
-// client") and an ASSIGNED plan (→ publish/unpublish). Branches on plan.type:
-// training = days → block-grouped exercises; nutrition = meals → food items with
-// macro totals. All writes are RLS-gated (can_write_plan / _day / _meal).
+// Coach → plan editor. TEMPLATE (no client → "Assign to client") or ASSIGNED plan
+// (→ publish/unpublish). Training = Weeks → Days → block-grouped exercises with
+// 3-level coach comments (plan / day / exercise); nutrition = Meals → food items
+// with macro totals. All writes are RLS-gated (can_write_plan / _day / _meal).
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,19 +21,26 @@ import { useAuth } from '../../../src/lib/auth-context';
 import {
   createDay,
   createMeal,
+  createWeek,
   deleteDay,
   deleteMeal,
+  deleteWeek,
+  duplicateWeek,
   getPlan,
   listDays,
   listExerciseRows,
   listMealItems,
   listMeals,
+  listWeeks,
   setPlanStatus,
+  updateDay,
+  updatePlan,
   type Day,
   type ExerciseRow,
   type Meal,
   type MealItem,
   type Plan,
+  type Week,
 } from '../../../src/lib/plans';
 import {
   addMacros,
@@ -51,6 +58,8 @@ export default function PlanEditor() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [weeks, setWeeks] = useState<Week[]>([]);
+  const [weekId, setWeekId] = useState<string | null>(null);
   const [days, setDays] = useState<Day[]>([]);
   const [exByDay, setExByDay] = useState<Record<string, ExerciseRow[]>>({});
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -59,6 +68,14 @@ export default function PlanEditor() {
   const [newName, setNewName] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Load a week's days + their exercises into state.
+  const loadWeekDays = useCallback(async (wid: string) => {
+    const ds = await listDays(wid);
+    setDays(ds);
+    const entries = await Promise.all(ds.map(async (d) => [d.id, await listExerciseRows(d.id)] as const));
+    setExByDay(Object.fromEntries(entries));
+  }, []);
+
   const load = useCallback(async () => {
     if (!id) return;
     try {
@@ -66,18 +83,19 @@ export default function PlanEditor() {
       setPlan(p);
       if (!p) return;
       if (p.type === 'training') {
-        const ds = await listDays(id);
-        setDays(ds);
-        const entries = await Promise.all(
-          ds.map(async (d) => [d.id, await listExerciseRows(d.id)] as const),
-        );
-        setExByDay(Object.fromEntries(entries));
+        const ws = await listWeeks(id);
+        setWeeks(ws);
+        const active = ws.find((w) => w.id === weekId) ?? ws[0];
+        setWeekId(active?.id ?? null);
+        if (active) await loadWeekDays(active.id);
+        else {
+          setDays([]);
+          setExByDay({});
+        }
       } else {
         const ms = await listMeals(id);
         setMeals(ms);
-        const entries = await Promise.all(
-          ms.map(async (m) => [m.id, await listMealItems(m.id)] as const),
-        );
+        const entries = await Promise.all(ms.map(async (m) => [m.id, await listMealItems(m.id)] as const));
         setItemsByMeal(Object.fromEntries(entries));
       }
     } catch {
@@ -85,7 +103,7 @@ export default function PlanEditor() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, weekId, loadWeekDays]);
 
   useFocusEffect(
     useCallback(() => {
@@ -94,7 +112,6 @@ export default function PlanEditor() {
   );
 
   if (role && role !== 'coach') return <Redirect href="/" />;
-
   if (loading) {
     return (
       <View style={styles.center}>
@@ -112,13 +129,75 @@ export default function PlanEditor() {
 
   const isTemplate = plan.client_id === null;
   const published = plan.status === 'published';
+  const isTraining = plan.type === 'training';
+
+  async function selectWeek(wid: string) {
+    setWeekId(wid);
+    try {
+      await loadWeekDays(wid);
+    } catch {
+      /* keep prior */
+    }
+  }
+
+  async function onAddWeek() {
+    if (!id) return;
+    setBusy(true);
+    try {
+      const w = await createWeek({ plan_id: id, name: `Week ${weeks.length + 1}`, position: weeks.length });
+      await load();
+      await selectWeek(w.id);
+    } catch {
+      Alert.alert('Error', 'Could not add a week.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDuplicateWeek() {
+    if (!weekId) return;
+    setBusy(true);
+    try {
+      const newWeek = await duplicateWeek(weekId);
+      await load();
+      await selectWeek(newWeek);
+    } catch {
+      Alert.alert('Error', 'Could not duplicate the week.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onDeleteWeek() {
+    if (!weekId || weeks.length <= 1) {
+      Alert.alert('Keep one week', 'A plan needs at least one week.');
+      return;
+    }
+    Alert.alert('Delete week', 'Delete this week and all its days?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteWeek(weekId);
+            setWeekId(null);
+            await load();
+          } catch {
+            Alert.alert('Error', 'Could not delete the week.');
+          }
+        },
+      },
+    ]);
+  }
 
   async function onAddContainer() {
     if (!id || newName.trim().length === 0) return;
+    if (isTraining && !weekId) return;
     setBusy(true);
     try {
-      if (plan!.type === 'training') {
-        await createDay({ plan_id: id, name: newName.trim(), position: days.length });
+      if (isTraining) {
+        await createDay({ plan_id: id, week_id: weekId!, name: newName.trim(), position: days.length });
       } else {
         await createMeal({ plan_id: id, name: newName.trim(), position: meals.length });
       }
@@ -163,6 +242,17 @@ export default function PlanEditor() {
     }
   }
 
+  async function savePlanNote(text: string) {
+    if (!plan) return;
+    await updatePlan(plan.id, { note: text.trim() === '' ? null : text.trim() });
+    await load();
+  }
+
+  async function saveDayNote(dayId: string, text: string) {
+    await updateDay(dayId, { note: text.trim() === '' ? null : text.trim() });
+    await load();
+  }
+
   const planMacros: Macros = meals.reduce(
     (acc, m) => addMacros(acc, sumMacros(itemsByMeal[m.id] ?? [])),
     EMPTY_MACROS,
@@ -170,10 +260,7 @@ export default function PlanEditor() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
           {/* Header */}
           <View style={styles.titleRow}>
@@ -203,8 +290,16 @@ export default function PlanEditor() {
             </Pressable>
           )}
 
+          {/* Plan-level coach comment */}
+          <NoteEditor
+            label="Plan note"
+            value={plan.note}
+            placeholder="Overall note for the trainee (e.g. focus on tempo this block)"
+            onSave={savePlanNote}
+          />
+
           {/* Nutrition plan total */}
-          {plan.type === 'nutrition' && meals.length > 0 ? (
+          {!isTraining && meals.length > 0 ? (
             <View style={styles.totalCard}>
               <Text style={styles.totalLabel}>PLAN TOTAL</Text>
               <Text style={styles.totalMacros}>
@@ -213,20 +308,49 @@ export default function PlanEditor() {
             </View>
           ) : null}
 
+          {/* Week selector (training only) */}
+          {isTraining ? (
+            <View style={styles.weekBar}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekPills}>
+                {weeks.map((w) => (
+                  <Pressable
+                    key={w.id}
+                    style={[styles.weekPill, w.id === weekId && styles.weekPillActive]}
+                    onPress={() => selectWeek(w.id)}
+                  >
+                    <Text style={[styles.weekPillText, w.id === weekId && styles.weekPillTextActive]}>
+                      {w.name}
+                    </Text>
+                  </Pressable>
+                ))}
+                <Pressable style={styles.weekAdd} onPress={onAddWeek} disabled={busy}>
+                  <Text style={styles.weekAddText}>＋ Week</Text>
+                </Pressable>
+              </ScrollView>
+              {weekId ? (
+                <View style={styles.weekActions}>
+                  <Pressable onPress={onDuplicateWeek} disabled={busy} hitSlop={6}>
+                    <Text style={styles.weekActionText}>Duplicate this week</Text>
+                  </Pressable>
+                  <Pressable onPress={onDeleteWeek} disabled={busy} hitSlop={6}>
+                    <Text style={[styles.weekActionText, styles.weekDelete]}>Delete week</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+
           {/* Body */}
-          {plan.type === 'training'
+          {isTraining
             ? days.map((d) => (
                 <DayCard
                   key={d.id}
                   day={d}
                   exercises={exByDay[d.id] ?? []}
-                  onAddExercise={() =>
-                    router.push({ pathname: '/coach/exercise-picker', params: { dayId: d.id } })
-                  }
-                  onOpenExercise={(rowId) =>
-                    router.push({ pathname: '/coach/exercise/[id]', params: { id: rowId } })
-                  }
+                  onAddExercise={() => router.push({ pathname: '/coach/exercise-picker', params: { dayId: d.id } })}
+                  onOpenExercise={(rowId) => router.push({ pathname: '/coach/exercise/[id]', params: { id: rowId } })}
                   onDelete={() => confirmDeleteContainer('day', d.id, d.name)}
+                  onSaveNote={(text) => saveDayNote(d.id, text)}
                 />
               ))
             : meals.map((m) => (
@@ -234,32 +358,99 @@ export default function PlanEditor() {
                   key={m.id}
                   meal={m}
                   items={itemsByMeal[m.id] ?? []}
-                  onAddFood={() =>
-                    router.push({ pathname: '/coach/food-picker', params: { mealId: m.id } })
-                  }
-                  onOpenItem={(itemId) =>
-                    router.push({ pathname: '/coach/meal-item/[id]', params: { id: itemId } })
-                  }
+                  onAddFood={() => router.push({ pathname: '/coach/food-picker', params: { mealId: m.id } })}
+                  onOpenItem={(itemId) => router.push({ pathname: '/coach/meal-item/[id]', params: { id: itemId } })}
                   onDelete={() => confirmDeleteContainer('meal', m.id, m.name)}
                 />
               ))}
 
           {/* Add day / meal */}
-          <View style={styles.addBox}>
-            <TextInput
-              style={styles.input}
-              value={newName}
-              onChangeText={setNewName}
-              placeholder={plan.type === 'training' ? 'New day (e.g. Day 1 - Push)' : 'New meal (e.g. Breakfast)'}
-              editable={!busy}
-            />
-            <Pressable style={styles.addBtn} onPress={onAddContainer} disabled={busy}>
-              <Text style={styles.addBtnText}>Add {plan.type === 'training' ? 'day' : 'meal'}</Text>
-            </Pressable>
-          </View>
+          {!isTraining || weekId ? (
+            <View style={styles.addBox}>
+              <TextInput
+                style={styles.input}
+                value={newName}
+                onChangeText={setNewName}
+                placeholder={isTraining ? 'New day (e.g. Day 1 - Push)' : 'New meal (e.g. Breakfast)'}
+                editable={!busy}
+              />
+              <Pressable style={styles.addBtn} onPress={onAddContainer} disabled={busy}>
+                <Text style={styles.addBtnText}>Add {isTraining ? 'day' : 'meal'}</Text>
+              </Pressable>
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+/** Inline editable coach comment. Shows the note (or a prompt); tap to edit. */
+function NoteEditor({
+  label,
+  value,
+  placeholder,
+  onSave,
+}: {
+  label: string;
+  value: string | null;
+  placeholder: string;
+  onSave: (text: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(value ?? '');
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    try {
+      await onSave(text);
+      setEditing(false);
+    } catch {
+      Alert.alert('Error', 'Could not save the note.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <Pressable
+        style={styles.noteRow}
+        onPress={() => {
+          setText(value ?? '');
+          setEditing(true);
+        }}
+      >
+        <Text style={styles.noteIcon}>💬</Text>
+        {value ? (
+          <Text style={styles.noteText}>{value}</Text>
+        ) : (
+          <Text style={styles.notePrompt}>{`Add ${label.toLowerCase()}`}</Text>
+        )}
+      </Pressable>
+    );
+  }
+  return (
+    <View style={styles.noteEdit}>
+      <TextInput
+        style={styles.noteInput}
+        value={text}
+        onChangeText={setText}
+        placeholder={placeholder}
+        multiline
+        editable={!saving}
+        autoFocus
+      />
+      <View style={styles.noteBtns}>
+        <Pressable onPress={() => setEditing(false)} disabled={saving} hitSlop={6}>
+          <Text style={styles.noteCancel}>Cancel</Text>
+        </Pressable>
+        <Pressable onPress={save} disabled={saving} hitSlop={6}>
+          <Text style={styles.noteSave}>{saving ? 'Saving…' : 'Save'}</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -269,12 +460,14 @@ function DayCard({
   onAddExercise,
   onOpenExercise,
   onDelete,
+  onSaveNote,
 }: {
   day: Day;
   exercises: ExerciseRow[];
   onAddExercise: () => void;
   onOpenExercise: (rowId: string) => void;
   onDelete: () => void;
+  onSaveNote: (text: string) => Promise<void>;
 }) {
   return (
     <View style={styles.card}>
@@ -284,6 +477,7 @@ function DayCard({
           <Text style={styles.remove}>✕</Text>
         </Pressable>
       </View>
+      <NoteEditor label="Day note" value={day.note} placeholder="Note for this day (e.g. rest 3 min on heavy sets)" onSave={onSaveNote} />
       {BLOCK_ORDER.filter((b) => exercises.some((e) => e.block === b)).map((b) => (
         <View key={b}>
           <Text style={styles.blockLabel}>{BLOCK_LABEL[b]}</Text>
@@ -297,6 +491,7 @@ function DayCard({
                     .filter(Boolean)
                     .join('  ·  ') || 'tap to set details'}
                 </Text>
+                {e.note ? <Text style={styles.exNote}>“{e.note}”</Text> : null}
               </Pressable>
             ))}
         </View>
@@ -367,6 +562,19 @@ const styles = StyleSheet.create({
   totalCard: { backgroundColor: '#eef6ff', borderRadius: 12, padding: 12, marginTop: 4 },
   totalLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: '#1f6feb' },
   totalMacros: { fontSize: 15, fontWeight: '700', color: '#111', marginTop: 2 },
+  // Week bar
+  weekBar: { marginTop: 6, gap: 8 },
+  weekPills: { gap: 8, paddingVertical: 2 },
+  weekPill: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#eef0f3' },
+  weekPillActive: { backgroundColor: '#1f6feb' },
+  weekPillText: { fontSize: 13, fontWeight: '700', color: '#6e7781' },
+  weekPillTextActive: { color: '#fff' },
+  weekAdd: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#e7f0ff' },
+  weekAddText: { fontSize: 13, fontWeight: '700', color: '#1f6feb' },
+  weekActions: { flexDirection: 'row', gap: 16 },
+  weekActionText: { fontSize: 13, fontWeight: '600', color: '#1f6feb' },
+  weekDelete: { color: '#cf222e' },
+  // Cards
   card: { backgroundColor: '#f5f6f8', borderRadius: 14, padding: 14, gap: 4, marginTop: 6 },
   cardHead: { flexDirection: 'row', alignItems: 'center' },
   cardTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#111' },
@@ -380,15 +588,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   mealMacros: { fontSize: 13, color: '#1f6feb', fontWeight: '600', marginBottom: 2 },
-  exRow: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 6,
-  },
+  exRow: { backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginTop: 6 },
   exName: { fontSize: 15, fontWeight: '600', color: '#111' },
   exMeta: { fontSize: 13, color: '#6e7781', marginTop: 1 },
+  exNote: { fontSize: 13, color: '#1f6feb', fontStyle: 'italic', marginTop: 3 },
   addInline: { paddingVertical: 10, marginTop: 4 },
   addInlineText: { color: '#1f6feb', fontWeight: '600', fontSize: 15 },
   addBox: { gap: 8, marginTop: 12 },
@@ -404,4 +607,24 @@ const styles = StyleSheet.create({
   addBtn: { backgroundColor: '#111', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   addBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   empty: { fontSize: 15, color: '#888' },
+  // Note editor
+  noteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingVertical: 6 },
+  noteIcon: { fontSize: 14 },
+  noteText: { flex: 1, fontSize: 14, color: '#1f6feb', fontStyle: 'italic' },
+  notePrompt: { flex: 1, fontSize: 14, color: '#8a93a0' },
+  noteEdit: { gap: 8, paddingVertical: 6 },
+  noteInput: {
+    borderWidth: 1,
+    borderColor: '#d0d7de',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#111',
+    backgroundColor: '#fff',
+    minHeight: 60,
+  },
+  noteBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 18 },
+  noteCancel: { fontSize: 14, fontWeight: '600', color: '#6e7781' },
+  noteSave: { fontSize: 14, fontWeight: '700', color: '#1f6feb' },
 });

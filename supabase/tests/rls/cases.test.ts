@@ -492,6 +492,8 @@ describe('plans v2 (0010) — templates, library, hierarchy, clone (§2)', () =>
   const TEMPLATE_A_TRAIN = '99990010-0000-0000-0000-000000000010';
   const TEMPLATE_A_NUT = '99990011-0000-0000-0000-000000000011';
   const DAY_A1_PUB = 'da000001-0000-0000-0000-000000000001';
+  const WEEK_A1_PUB = 'ee000001-0000-0000-0000-000000000001';
+  const WEEK_B1 = 'ee000003-0000-0000-0000-000000000003';
   const MEAL_A1_PUB_NUT = 'dd000004-0000-0000-0000-000000000004';
   const MEAL_A1_DRAFT = 'dd000002-0000-0000-0000-000000000002';
   const CUSTOM_EX_A = 'e1000000-0000-0000-0000-00000000000a';
@@ -501,8 +503,9 @@ describe('plans v2 (0010) — templates, library, hierarchy, clone (§2)', () =>
 
   // ── templates vs assigned ──────────────────────────────────────────────────
   it('coach A sees their templates + their assigned plans; coach B only theirs', async () => {
-    const a = await asUser(COACH_A, (c) => c.query('select id from public.plans'));
-    const b = await asUser(COACH_B, (c) => c.query('select id from public.plans'));
+    // Filter to OWN plans — every coach now ALSO sees the global system templates.
+    const a = await asUser(COACH_A, (c) => c.query('select id from public.plans where coach_id = $1', [COACH_A.sub]));
+    const b = await asUser(COACH_B, (c) => c.query('select id from public.plans where coach_id = $1', [COACH_B_ID]));
     expect(a.rows).toHaveLength(5); // 3 assigned to A1 + 2 templates
     expect(b.rows).toHaveLength(1); // B1 assigned
   });
@@ -579,17 +582,17 @@ describe('plans v2 (0010) — templates, library, hierarchy, clone (§2)', () =>
 
   it('coach writes children only on plans they own; a client cannot write at all', async () => {
     const ok = await asUser(COACH_A, (c) =>
-      c.query("insert into public.plan_days (plan_id, name) values ($1, 'D')", [A1_PUB_TRAIN]),
+      c.query("insert into public.plan_days (plan_id, week_id, name) values ($1, $2, 'D')", [A1_PUB_TRAIN, WEEK_A1_PUB]),
     );
     expect(ok.rowCount).toBe(1);
     await expect(
       asUser(COACH_A, (c) =>
-        c.query("insert into public.plan_days (plan_id, name) values ($1, 'D')", [B1_PLAN]),
+        c.query("insert into public.plan_days (plan_id, week_id, name) values ($1, $2, 'D')", [B1_PLAN, WEEK_B1]),
       ),
     ).rejects.toThrow();
     await expect(
       asUser(CLIENT_A1, (c) =>
-        c.query("insert into public.plan_days (plan_id, name) values ($1, 'D')", [A1_PUB_TRAIN]),
+        c.query("insert into public.plan_days (plan_id, week_id, name) values ($1, $2, 'D')", [A1_PUB_TRAIN, WEEK_A1_PUB]),
       ),
     ).rejects.toThrow();
   });
@@ -1012,5 +1015,118 @@ describe('media (0013) — owner/coach/admin read, writes are service-role-only 
       ),
     );
     expect(ins.rowCount).toBe(1);
+  });
+});
+
+describe('plans v3 (0014/0015) — weeks, system templates, clone, duplicate (§2)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const SYSTEM_TPL = '7e510000-0000-0000-0000-000000000002'; // 4-Day Upper/Lower (global)
+  const OWN_TPL = '99990010-0000-0000-0000-000000000010'; // Coach A's own training template
+  const A1_PUB_TRAIN = '99990001-0000-0000-0000-000000000001';
+  const B1_PLAN = '99990003-0000-0000-0000-000000000003';
+  const WEEK_A1 = 'ee000001-0000-0000-0000-000000000001';
+  const WEEK_B1 = 'ee000003-0000-0000-0000-000000000003';
+
+  it('every coach can READ a global system template; a client cannot', async () => {
+    const a = await asUser(COACH_A, (c) => c.query('select id from public.plans where id = $1', [SYSTEM_TPL]));
+    const b = await asUser(COACH_B, (c) => c.query('select id from public.plans where id = $1', [SYSTEM_TPL]));
+    const cl = await asUser(CLIENT_A1, (c) => c.query('select id from public.plans where id = $1', [SYSTEM_TPL]));
+    expect(a.rows).toHaveLength(1);
+    expect(b.rows).toHaveLength(1);
+    expect(cl.rows).toHaveLength(0);
+  });
+
+  it('a system template is read-only — a coach cannot add a week to it', async () => {
+    await expect(
+      asUser(COACH_A, (c) => c.query("insert into public.plan_weeks (plan_id, name) values ($1, 'W')", [SYSTEM_TPL])),
+    ).rejects.toThrow();
+  });
+
+  it('weeks are tenant-scoped: a coach reads/writes only their own plan’s weeks', async () => {
+    const own = await asUser(COACH_A, (c) => c.query('select id from public.plan_weeks where plan_id = $1', [A1_PUB_TRAIN]));
+    const cross = await asUser(COACH_B, (c) => c.query('select id from public.plan_weeks where plan_id = $1', [A1_PUB_TRAIN]));
+    expect(own.rows.length).toBeGreaterThanOrEqual(1);
+    expect(cross.rows).toHaveLength(0);
+    const ok = await asUser(COACH_A, (c) => c.query("insert into public.plan_weeks (plan_id, name) values ($1, 'W2')", [A1_PUB_TRAIN]));
+    expect(ok.rowCount).toBe(1);
+    await expect(
+      asUser(COACH_A, (c) => c.query("insert into public.plan_weeks (plan_id, name) values ($1, 'W')", [B1_PLAN])),
+    ).rejects.toThrow();
+  });
+
+  it('the composite FK rejects a day whose week belongs to another plan', async () => {
+    // RLS would allow (coach A owns A1_PUB_TRAIN) but the week is B1's → FK violation.
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query("insert into public.plan_days (plan_id, week_id, name) values ($1, $2, 'D')", [A1_PUB_TRAIN, WEEK_B1]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('clone_template copies a GLOBAL template into a new editable coach-owned template', async () => {
+    const r = await asUser(COACH_A, async (c) => {
+      const res = await c.query('select public.clone_template($1) as id', [SYSTEM_TPL]);
+      const newId = res.rows[0].id;
+      const plan = await c.query('select coach_id, client_id, source_plan_id, status from public.plans where id = $1', [newId]);
+      const weeks = await c.query('select id from public.plan_weeks where plan_id = $1', [newId]);
+      const days = await c.query('select id from public.plan_days where plan_id = $1', [newId]);
+      const exs = await c.query(
+        'select e.id from public.plan_exercises e join public.plan_days d on d.id = e.day_id where d.plan_id = $1',
+        [newId],
+      );
+      return { plan: plan.rows[0], weeks: weeks.rows.length, days: days.rows.length, exs: exs.rows.length };
+    });
+    expect(r.plan.coach_id).toBe(COACH_A.sub);
+    expect(r.plan.client_id).toBeNull();
+    expect(r.plan.source_plan_id).toBe(SYSTEM_TPL);
+    expect(r.plan.status).toBe('draft');
+    expect(r.weeks).toBe(1);
+    expect(r.days).toBe(4); // 4-Day Upper/Lower
+    expect(r.exs).toBeGreaterThanOrEqual(15);
+  });
+
+  it('a client cannot clone a template', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('select public.clone_template($1)', [SYSTEM_TPL])),
+    ).rejects.toThrow();
+  });
+
+  it('duplicate_plan_week copies a week + its days into a new week in the same plan', async () => {
+    const r = await asUser(COACH_A, async (c) => {
+      const before = await c.query('select count(*)::int as n from public.plan_weeks where plan_id = $1', [A1_PUB_TRAIN]);
+      const srcDays = await c.query('select count(*)::int as n from public.plan_days where week_id = $1', [WEEK_A1]);
+      const res = await c.query('select public.duplicate_plan_week($1) as id', [WEEK_A1]);
+      const newWeek = res.rows[0].id;
+      const after = await c.query('select count(*)::int as n from public.plan_weeks where plan_id = $1', [A1_PUB_TRAIN]);
+      const newDays = await c.query('select count(*)::int as n from public.plan_days where week_id = $1', [newWeek]);
+      return {
+        before: before.rows[0].n,
+        after: after.rows[0].n,
+        srcDays: srcDays.rows[0].n,
+        newDays: newDays.rows[0].n,
+      };
+    });
+    expect(r.after).toBe(r.before + 1);
+    expect(r.newDays).toBe(r.srcDays);
+  });
+
+  it('a coach cannot duplicate a week in another coach’s plan', async () => {
+    await expect(
+      asUser(COACH_B, (c) => c.query('select public.duplicate_plan_week($1)', [WEEK_A1])),
+    ).rejects.toThrow();
+  });
+
+  it('assign_plan_to_client clones the weeks layer', async () => {
+    const weeks = await asUser(COACH_A, async (c) => {
+      const res = await c.query('select public.assign_plan_to_client($1, $2) as id', [OWN_TPL, CLIENT_A1.sub]);
+      const w = await c.query('select count(*)::int as n from public.plan_weeks where plan_id = $1', [res.rows[0].id]);
+      return w.rows[0].n;
+    });
+    expect(weeks).toBeGreaterThanOrEqual(1);
+  });
+
+  it('anon sees no weeks', async () => {
+    const r = await asAnon((c) => c.query('select id from public.plan_weeks'));
+    expect(r.rows).toHaveLength(0);
   });
 });

@@ -57,11 +57,15 @@ export default function ExercisePicker() {
 
   async function onPick(ex: Exercise) {
     if (!dayId || adding) return;
+    setError(null);
     setAdding(true);
     try {
       await createExerciseRow({ day_id: dayId, exercise_id: ex.id, exercise_name: ex.name });
       router.back();
-    } catch {
+    } catch (e) {
+      // The DB accepts this insert (verified); a failure here is a client/network
+      // edge. Log the real cause so it's diagnosable, show the user a generic msg.
+      console.warn('add library exercise failed', e);
       setError('Could not add that exercise.');
       setAdding(false);
     }
@@ -81,7 +85,8 @@ export default function ExercisePicker() {
       // Immediately add the new custom exercise to the day.
       if (dayId) await createExerciseRow({ day_id: dayId, exercise_id: created.id, exercise_name: created.name });
       router.back();
-    } catch {
+    } catch (e) {
+      console.warn('create custom exercise failed', e);
       setError('Could not create the exercise.');
       setAdding(false);
     }

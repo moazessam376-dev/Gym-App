@@ -10,24 +10,20 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
-import { createTemplate, listTemplates, type Plan } from '../../src/lib/plans';
-import { createTemplateSchema, type PlanType } from '../../src/schemas/plan';
+import { listTemplates, type Plan } from '../../src/lib/plans';
+import { type PlanType } from '../../src/schemas/plan';
 
 export default function Templates() {
-  const { role, session } = useAuth();
+  const { role } = useAuth();
   const router = useRouter();
   const [type, setType] = useState<PlanType>('training');
   const [templates, setTemplates] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -46,29 +42,6 @@ export default function Templates() {
   );
 
   if (role && role !== 'coach') return <Redirect href="/" />;
-
-  async function onCreate() {
-    setError(null);
-    const parsed = createTemplateSchema.safeParse({ type, title: title.trim() });
-    if (!parsed.success) {
-      setError('Enter a template title.');
-      return;
-    }
-    if (!session?.user?.id) {
-      setError('Your session expired. Sign in again.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const created = await createTemplate(session.user.id, parsed.data);
-      setTitle('');
-      router.push({ pathname: '/coach/plan/[id]', params: { id: created.id } });
-    } catch {
-      setError('Could not create the template. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -96,26 +69,13 @@ export default function Templates() {
                   </Pressable>
                 ))}
               </View>
-              <TextInput
-                style={styles.input}
-                value={title}
-                onChangeText={setTitle}
-                placeholder={type === 'training' ? 'e.g. PPL Hypertrophy' : 'e.g. Lean Cut'}
-                editable={!submitting}
-              />
-              {error ? <Text style={styles.error}>{error}</Text> : null}
               <Pressable
-                style={[styles.button, submitting && styles.buttonDisabled]}
-                onPress={onCreate}
-                disabled={submitting}
+                style={styles.button}
+                onPress={() => router.push({ pathname: '/coach/new-plan', params: { type } })}
               >
-                {submitting ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>New {type} template</Text>
-                )}
+                <Text style={styles.buttonText}>＋ New plan (template or blank)</Text>
               </Pressable>
-              <Text style={styles.sectionTitle}>Your {type} templates</Text>
+              <Text style={styles.sectionTitle}>Your {type} plans</Text>
             </View>
           }
           ListEmptyComponent={

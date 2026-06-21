@@ -29,12 +29,29 @@ export type CreateTemplate = z.infer<typeof createTemplateSchema>;
 export const updatePlanSchema = z.object({
   title: z.string().min(1).max(120).optional(),
   status: planStatusSchema.optional(),
+  note: z.string().max(2000).nullable().optional(), // plan-level coach comment
 });
 export type UpdatePlan = z.infer<typeof updatePlanSchema>;
 
-// ── Training hierarchy ───────────────────────────────────────────────────────
+// ── Training hierarchy: Plan → Weeks → Days → Exercises ──────────────────────
+export const createWeekSchema = z.object({
+  plan_id: z.string().uuid(),
+  name: z.string().min(1).max(120),
+  note: z.string().max(2000).nullable().optional(),
+  position: z.number().int().min(0).optional(),
+});
+export type CreateWeek = z.infer<typeof createWeekSchema>;
+
+export const updateWeekSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  note: z.string().max(2000).nullable().optional(),
+  position: z.number().int().min(0).optional(),
+});
+export type UpdateWeek = z.infer<typeof updateWeekSchema>;
+
 export const createDaySchema = z.object({
   plan_id: z.string().uuid(),
+  week_id: z.string().uuid(),
   name: z.string().min(1).max(120),
   position: z.number().int().min(0).optional(),
 });
@@ -42,6 +59,7 @@ export type CreateDay = z.infer<typeof createDaySchema>;
 
 export const updateDaySchema = z.object({
   name: z.string().min(1).max(120).optional(),
+  note: z.string().max(2000).nullable().optional(), // day-level coach comment
   position: z.number().int().min(0).optional(),
 });
 export type UpdateDay = z.infer<typeof updateDaySchema>;

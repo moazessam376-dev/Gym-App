@@ -1,7 +1,7 @@
-// Client → read-only view of an assigned plan. RLS returns the plan + its
-// children only if it's a non-draft plan assigned to this client, so there is no
-// edit surface. Training: days → block-grouped exercises with the coach's cues.
-// Nutrition: meals → foods with per-meal + plan macro totals.
+// Client → read-only view of an assigned plan. RLS returns the plan + its children
+// only if it's a non-draft plan assigned to this client, so there is no edit
+// surface. Training: Weeks → Days → block-grouped exercises with the coach's cues
+// at plan / day / exercise level. Nutrition: meals → foods with macro totals.
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,11 +13,13 @@ import {
   listExerciseRows,
   listMealItems,
   listMeals,
+  listWeeks,
   type Day,
   type ExerciseRow,
   type Meal,
   type MealItem,
   type Plan,
+  type Week,
 } from '../../../src/lib/plans';
 import {
   addMacros,
@@ -33,11 +35,20 @@ export default function ClientPlanView() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [weeks, setWeeks] = useState<Week[]>([]);
+  const [weekId, setWeekId] = useState<string | null>(null);
   const [days, setDays] = useState<Day[]>([]);
   const [exByDay, setExByDay] = useState<Record<string, ExerciseRow[]>>({});
   const [meals, setMeals] = useState<Meal[]>([]);
   const [itemsByMeal, setItemsByMeal] = useState<Record<string, MealItem[]>>({});
   const [loading, setLoading] = useState(true);
+
+  const loadWeekDays = useCallback(async (wid: string) => {
+    const ds = await listDays(wid);
+    setDays(ds);
+    const entries = await Promise.all(ds.map(async (d) => [d.id, await listExerciseRows(d.id)] as const));
+    setExByDay(Object.fromEntries(entries));
+  }, []);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -46,18 +57,15 @@ export default function ClientPlanView() {
       setPlan(p);
       if (!p) return;
       if (p.type === 'training') {
-        const ds = await listDays(id);
-        setDays(ds);
-        const entries = await Promise.all(
-          ds.map(async (d) => [d.id, await listExerciseRows(d.id)] as const),
-        );
-        setExByDay(Object.fromEntries(entries));
+        const ws = await listWeeks(id);
+        setWeeks(ws);
+        const active = ws.find((w) => w.id === weekId) ?? ws[0];
+        setWeekId(active?.id ?? null);
+        if (active) await loadWeekDays(active.id);
       } else {
         const ms = await listMeals(id);
         setMeals(ms);
-        const entries = await Promise.all(
-          ms.map(async (m) => [m.id, await listMealItems(m.id)] as const),
-        );
+        const entries = await Promise.all(ms.map(async (m) => [m.id, await listMealItems(m.id)] as const));
         setItemsByMeal(Object.fromEntries(entries));
       }
     } catch {
@@ -65,7 +73,7 @@ export default function ClientPlanView() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, weekId, loadWeekDays]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,6 +97,16 @@ export default function ClientPlanView() {
     );
   }
 
+  async function selectWeek(wid: string) {
+    setWeekId(wid);
+    try {
+      await loadWeekDays(wid);
+    } catch {
+      /* keep prior */
+    }
+  }
+
+  const isTraining = plan.type === 'training';
   const planMacros: Macros = meals.reduce(
     (acc, m) => addMacros(acc, sumMacros(itemsByMeal[m.id] ?? [])),
     EMPTY_MACROS,
@@ -100,7 +118,9 @@ export default function ClientPlanView() {
         <Text style={styles.title}>{plan.title}</Text>
         <Text style={styles.type}>{plan.type}</Text>
 
-        {plan.type === 'nutrition' && meals.length > 0 ? (
+        {plan.note ? <Text style={styles.planNote}>💬 {plan.note}</Text> : null}
+
+        {!isTraining && meals.length > 0 ? (
           <View style={styles.totalCard}>
             <Text style={styles.totalLabel}>DAILY TOTAL</Text>
             <Text style={styles.totalMacros}>
@@ -109,12 +129,28 @@ export default function ClientPlanView() {
           </View>
         ) : null}
 
-        {plan.type === 'training'
+        {/* Week selector (training only) */}
+        {isTraining && weeks.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekPills}>
+            {weeks.map((w) => (
+              <Text
+                key={w.id}
+                onPress={() => selectWeek(w.id)}
+                style={[styles.weekPill, w.id === weekId && styles.weekPillActive]}
+              >
+                {w.name}
+              </Text>
+            ))}
+          </ScrollView>
+        ) : null}
+
+        {isTraining
           ? days.map((d) => {
               const ex = exByDay[d.id] ?? [];
               return (
                 <View key={d.id} style={styles.card}>
                   <Text style={styles.cardTitle}>{d.name}</Text>
+                  {d.note ? <Text style={styles.note}>💬 {d.note}</Text> : null}
                   {ex.length === 0 ? <Text style={styles.muted}>No exercises.</Text> : null}
                   {BLOCK_ORDER.filter((b) => ex.some((e) => e.block === b)).map((b) => (
                     <View key={b}>
@@ -177,9 +213,29 @@ const styles = StyleSheet.create({
   wrap: { padding: 16, gap: 10 },
   title: { fontSize: 24, fontWeight: '800', color: '#111' },
   type: { fontSize: 14, color: '#6e7781', textTransform: 'capitalize' },
+  planNote: {
+    fontSize: 14,
+    color: '#1f6feb',
+    fontStyle: 'italic',
+    backgroundColor: '#eef6ff',
+    borderRadius: 10,
+    padding: 10,
+  },
   totalCard: { backgroundColor: '#eef6ff', borderRadius: 12, padding: 12, marginTop: 4 },
   totalLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: '#1f6feb' },
   totalMacros: { fontSize: 15, fontWeight: '700', color: '#111', marginTop: 2 },
+  weekPills: { gap: 8, paddingVertical: 4 },
+  weekPill: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: '#eef0f3',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6e7781',
+    overflow: 'hidden',
+  },
+  weekPillActive: { backgroundColor: '#1f6feb', color: '#fff' },
   card: { backgroundColor: '#f5f6f8', borderRadius: 14, padding: 14, gap: 2, marginTop: 6 },
   cardTitle: { fontSize: 17, fontWeight: '700', color: '#111' },
   mealMacros: { fontSize: 13, color: '#1f6feb', fontWeight: '600' },

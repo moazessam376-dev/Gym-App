@@ -51,6 +51,7 @@ function RootNavigator() {
       {/* Phase 3 plan screens. */}
       <Stack.Screen name="coach/client/[id]" options={{ headerShown: true, title: 'Client plans' }} />
       <Stack.Screen name="coach/templates" options={{ headerShown: true, title: 'Plan templates' }} />
+      <Stack.Screen name="coach/new-plan" options={{ headerShown: true, title: 'New plan' }} />
       <Stack.Screen name="coach/plan/[id]" options={{ headerShown: true, title: 'Plan' }} />
       <Stack.Screen name="coach/exercise-picker" options={{ headerShown: true, title: 'Add exercise' }} />
       <Stack.Screen name="coach/exercise/[id]" options={{ headerShown: true, title: 'Exercise' }} />
