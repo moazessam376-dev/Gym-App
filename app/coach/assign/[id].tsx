@@ -1,20 +1,14 @@
 // Coach → assign a template to one of their clients. Picking a client deep-clones
-// the template into a new DRAFT plan for them (assign_plan_to_client RPC) and
-// opens it so the coach can tweak the copy before publishing. id = template id.
+// the template into a new DRAFT plan (assign_plan_to_client RPC) and opens it.
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, FlatList, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
 import { listMyClients, type Client } from '../../../src/lib/invitations';
 import { assignPlanToClient } from '../../../src/lib/plans';
+import { Screen, Text, Avatar, GlassCard, EmptyState } from '../../../src/components/ui';
+import { theme } from '../../../src/theme';
 
 export default function AssignTemplate() {
   const { role } = useAuth();
@@ -50,7 +44,6 @@ export default function AssignTemplate() {
     setAssigning(true);
     try {
       const newId = await assignPlanToClient(id, client.id);
-      // Replace so Back returns to the template, not this picker.
       router.replace({ pathname: '/coach/plan/[id]', params: { id: newId } });
     } catch {
       setError('Could not assign the plan. Please try again.');
@@ -60,67 +53,51 @@ export default function AssignTemplate() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <Screen gradient padded={false} edges={['bottom']}>
       <FlatList
         data={clients}
         keyExtractor={(c) => c.id}
-        contentContainerStyle={clients.length === 0 ? styles.emptyWrap : styles.listWrap}
+        contentContainerStyle={clients.length === 0 ? { flexGrow: 1, justifyContent: 'center' } : { padding: theme.spacing.lg, gap: theme.spacing.md }}
         ListHeaderComponent={
-          <View>
-            <Text style={styles.lead}>Assign this template to a client. They get their own
-              editable copy as a draft — publish it when you’re ready.</Text>
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            {assigning ? <ActivityIndicator style={{ marginVertical: 8 }} /> : null}
-          </View>
+          clients.length === 0 ? null : (
+            <View style={{ marginBottom: theme.spacing.xs }}>
+              <Text variant="body" muted>
+                Assign this template to a client. They get their own editable copy as a draft — publish it when ready.
+              </Text>
+              {error ? (
+                <Text variant="caption" color="danger" style={{ marginTop: theme.spacing.sm }}>
+                  {error}
+                </Text>
+              ) : null}
+              {assigning ? <ActivityIndicator style={{ marginVertical: theme.spacing.sm }} color={theme.colors.primary} /> : null}
+            </View>
+          )
         }
-        ListEmptyComponent={<Text style={styles.empty}>No clients yet. Invite one first.</Text>}
+        ListEmptyComponent={
+          <EmptyState icon="people-outline" title="No clients yet" subtitle="Invite a client before assigning plans." />
+        }
         renderItem={({ item }) => {
           const label = item.full_name ?? item.invited_email ?? 'Client';
           return (
-            <Pressable style={styles.row} onPress={() => onAssign(item)} disabled={assigning}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{label.trim().charAt(0).toUpperCase()}</Text>
+            <GlassCard onPress={() => onAssign(item)}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                <Avatar name={label} size={40} />
+                <Text variant="title" style={{ flex: 1 }}>
+                  {label}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
               </View>
-              <Text style={styles.name}>{label}</Text>
-            </Pressable>
+            </GlassCard>
           );
         }}
       />
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
-  listWrap: { padding: 16, gap: 10 },
-  emptyWrap: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  lead: { fontSize: 14, color: '#57606a', marginBottom: 10 },
-  error: { color: '#cf222e', fontSize: 13, marginBottom: 6 },
-  empty: { fontSize: 15, color: '#888', textAlign: 'center' },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: '#f5f6f8',
-  },
-  avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#1f6feb',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  name: { fontSize: 16, color: '#111', fontWeight: '600' },
-});

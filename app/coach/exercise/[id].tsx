@@ -1,31 +1,15 @@
 // Coach → edit one exercise row in a day: block, sets, reps, rest, tempo, and a
 // coach note for the trainee. Writes are RLS-gated (can_write_day).
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
-import {
-  deleteExerciseRow,
-  getExerciseRow,
-  updateExerciseRow,
-  type ExerciseRow,
-} from '../../../src/lib/plans';
+import { deleteExerciseRow, getExerciseRow, updateExerciseRow, type ExerciseRow } from '../../../src/lib/plans';
 import { updateExerciseRowSchema, type TrainingBlock } from '../../../src/schemas/plan';
 import { BLOCK_LABEL, BLOCK_ORDER } from '../../../src/lib/plan-ui';
+import { Screen, Text, Input, Button } from '../../../src/components/ui';
+import { theme } from '../../../src/theme';
 
-// parseInt that maps blank/invalid to null (so a cleared field clears the value).
 function intOrNull(s: string): number | null {
   const t = s.trim();
   if (t === '') return null;
@@ -75,15 +59,17 @@ export default function ExerciseRowEditor() {
   if (role && role !== 'coach') return <Redirect href="/" />;
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
   if (!row || !id) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.empty}>Exercise not found.</Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
+        <Text variant="body" muted>
+          Exercise not found.
+        </Text>
       </View>
     );
   }
@@ -131,97 +117,62 @@ export default function ExerciseRowEditor() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>{row.exercise_name}</Text>
+    <Screen gradient padded={false} edges={['bottom']}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md }} keyboardShouldPersistTaps="handled">
+          <Text variant="h2">{row.exercise_name}</Text>
 
-          <Text style={styles.label}>Block</Text>
-          <View style={styles.blocks}>
-            {BLOCK_ORDER.map((b) => (
-              <Pressable
-                key={b}
-                style={[styles.blockChip, block === b && styles.blockChipActive]}
-                onPress={() => setBlock(b)}
-              >
-                <Text style={[styles.blockChipText, block === b && styles.blockChipTextActive]}>
-                  {BLOCK_LABEL[b]}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <View style={styles.twoCol}>
-            <View style={styles.col}>
-              <Text style={styles.label}>Sets</Text>
-              <TextInput style={styles.input} value={sets} onChangeText={setSets} keyboardType="number-pad" placeholder="e.g. 4" />
-            </View>
-            <View style={styles.col}>
-              <Text style={styles.label}>Reps</Text>
-              <TextInput style={styles.input} value={reps} onChangeText={setReps} placeholder="e.g. 8-12" />
-            </View>
-          </View>
-
-          <View style={styles.twoCol}>
-            <View style={styles.col}>
-              <Text style={styles.label}>Rest (sec)</Text>
-              <TextInput style={styles.input} value={rest} onChangeText={setRest} keyboardType="number-pad" placeholder="e.g. 120" />
-            </View>
-            <View style={styles.col}>
-              <Text style={styles.label}>Tempo</Text>
-              <TextInput style={styles.input} value={tempo} onChangeText={setTempo} placeholder="e.g. 3-1-1-0" />
+          <View style={{ gap: theme.spacing.sm }}>
+            <Text variant="label" muted>
+              Block
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
+              {BLOCK_ORDER.map((b) => {
+                const active = block === b;
+                return (
+                  <Pressable
+                    key={b}
+                    onPress={() => setBlock(b)}
+                    style={{
+                      borderRadius: theme.radii.full,
+                      paddingHorizontal: theme.spacing.md,
+                      paddingVertical: 7,
+                      backgroundColor: active ? theme.colors.primary : theme.colors.glass,
+                      borderWidth: 1,
+                      borderColor: active ? theme.colors.primary : theme.colors.glassBorder,
+                    }}
+                  >
+                    <Text variant="caption" color={active ? theme.colors.onPrimary : theme.colors.textMuted} style={{ fontFamily: theme.fontFamily.bodySemiBold }}>
+                      {BLOCK_LABEL[b]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
-          <Text style={styles.label}>Note for the trainee</Text>
-          <TextInput
-            style={[styles.input, styles.multiline]}
+          <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
+            <Input label="Sets" containerStyle={{ flex: 1 }} value={sets} onChangeText={setSets} keyboardType="number-pad" placeholder="e.g. 4" />
+            <Input label="Reps" containerStyle={{ flex: 1 }} value={reps} onChangeText={setReps} placeholder="e.g. 8-12" />
+          </View>
+          <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
+            <Input label="Rest (sec)" containerStyle={{ flex: 1 }} value={rest} onChangeText={setRest} keyboardType="number-pad" placeholder="e.g. 120" />
+            <Input label="Tempo" containerStyle={{ flex: 1 }} value={tempo} onChangeText={setTempo} placeholder="e.g. 3-1-1-0" />
+          </View>
+
+          <Input
+            label="Note for the trainee"
             value={note}
             onChangeText={setNote}
             placeholder="Cues, e.g. Knees out, pause at bottom"
             multiline
+            style={{ minHeight: 70, textAlignVertical: 'top' }}
           />
 
-          <Pressable style={[styles.button, saving && styles.disabled]} onPress={onSave} disabled={saving}>
-            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
-          </Pressable>
-          <Pressable style={styles.deleteBtn} onPress={onDelete}>
-            <Text style={styles.deleteText}>Remove exercise</Text>
-          </Pressable>
+          <Button title="Save" onPress={onSave} loading={saving} size="lg" style={{ marginTop: theme.spacing.sm }} />
+          <Button title="Remove exercise" variant="ghost" onPress={onDelete} />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  flex: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
-  wrap: { padding: 16, gap: 8 },
-  title: { fontSize: 22, fontWeight: '800', color: '#111', marginBottom: 4 },
-  label: { fontSize: 13, fontWeight: '700', color: '#444', marginTop: 6 },
-  blocks: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  blockChip: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: '#eef0f3' },
-  blockChipActive: { backgroundColor: '#1f6feb' },
-  blockChipText: { fontSize: 13, fontWeight: '600', color: '#6e7781' },
-  blockChipTextActive: { color: '#fff' },
-  twoCol: { flexDirection: 'row', gap: 10 },
-  col: { flex: 1 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d0d7de',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#111',
-  },
-  multiline: { minHeight: 70, textAlignVertical: 'top' },
-  button: { backgroundColor: '#111', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 14 },
-  disabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  deleteBtn: { paddingVertical: 14, alignItems: 'center' },
-  deleteText: { color: '#cf222e', fontSize: 15, fontWeight: '600' },
-  empty: { fontSize: 15, color: '#888' },
-});

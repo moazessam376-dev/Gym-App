@@ -25,3 +25,7 @@ export { Sparkline } from './Sparkline';
 export type { SparklineProps } from './Sparkline';
 export { StatBlock, DeltaChip } from './StatBlock';
 export type { StatBlockProps, DeltaChipProps } from './StatBlock';
+export { Segmented } from './Segmented';
+export type { SegmentedProps, SegmentedOption } from './Segmented';
+export { Chip } from './Chip';
+export type { ChipProps } from './Chip';
