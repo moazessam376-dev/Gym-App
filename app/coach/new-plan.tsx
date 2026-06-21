@@ -1,31 +1,14 @@
-// Coach → start a new plan. Two paths: clone a ready-made SYSTEM TEMPLATE (the
-// fast path — pre-filled weeks/days/exercises + example comments, then fully
-// editable), or start blank. Either way the coach lands in the plan editor with a
-// coach-owned, editable template they can later assign to a client.
+// Coach → start a new plan. Clone a ready-made SYSTEM TEMPLATE (pre-filled,
+// editable) or start blank. Either way the coach lands in the editor with a
+// coach-owned, editable template to later assign to a client.
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
-import {
-  cloneTemplate,
-  createTemplate,
-  createWeek,
-  listSystemTemplates,
-  type Plan,
-} from '../../src/lib/plans';
+import { cloneTemplate, createTemplate, createWeek, listSystemTemplates, type Plan } from '../../src/lib/plans';
 import { planTypeSchema, type PlanType } from '../../src/schemas/plan';
+import { Screen, Text, Input, Button, GlassCard, Segmented } from '../../src/components/ui';
+import { theme } from '../../src/theme';
 
 export default function NewPlan() {
   const { role, session } = useAuth();
@@ -64,7 +47,6 @@ export default function NewPlan() {
     try {
       const t = title.trim() || (type === 'training' ? 'New training plan' : 'New nutrition plan');
       const created = await createTemplate(session.user.id, { type, title: t });
-      // A training plan needs a week to hold days; seed Week 1 up front.
       if (type === 'training') await createWeek({ plan_id: created.id, name: 'Week 1', position: 0 });
       router.replace({ pathname: '/coach/plan/[id]', params: { id: created.id } });
     } catch {
@@ -86,115 +68,75 @@ export default function NewPlan() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <Screen gradient padded={false} edges={['bottom']}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <FlatList
           data={loading ? [] : templates}
           keyExtractor={(p) => p.id}
-          contentContainerStyle={styles.wrap}
+          contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md }}
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
-            <View style={styles.head}>
-              <View style={styles.segment}>
-                {(['training', 'nutrition'] as const).map((t) => (
-                  <Pressable
-                    key={t}
-                    style={[styles.segmentBtn, type === t && styles.segmentBtnActive]}
-                    onPress={() => setType(t)}
-                  >
-                    <Text style={[styles.segmentText, type === t && styles.segmentTextActive]}>
-                      {t === 'training' ? 'Training' : 'Nutrition'}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              <Text style={styles.sectionTitle}>Start blank</Text>
-              <TextInput
-                style={styles.input}
+            <View style={{ gap: theme.spacing.md }}>
+              <Segmented
+                value={type}
+                onChange={setType}
+                options={[
+                  { value: 'training', label: 'Training' },
+                  { value: 'nutrition', label: 'Nutrition' },
+                ]}
+              />
+              <Text variant="label" muted style={{ marginTop: theme.spacing.sm }}>
+                Start blank
+              </Text>
+              <Input
                 value={title}
                 onChangeText={setTitle}
                 placeholder={type === 'training' ? 'Plan name (e.g. PPL Hypertrophy)' : 'Plan name (e.g. Lean Cut)'}
                 editable={!busy}
               />
-              <Pressable style={[styles.blankBtn, busy && styles.disabled]} onPress={startBlank} disabled={busy}>
-                <Text style={styles.blankBtnText}>Start blank {type} plan</Text>
-              </Pressable>
-
-              <Text style={styles.sectionTitle}>Or start from a template</Text>
-              {loading ? <ActivityIndicator style={{ marginTop: 16 }} /> : null}
+              <Button title={`Start blank ${type} plan`} variant="secondary" onPress={startBlank} disabled={busy} />
+              <Text variant="label" muted style={{ marginTop: theme.spacing.sm }}>
+                Or start from a template
+              </Text>
+              {loading ? <ActivityIndicator style={{ marginTop: 16 }} color={theme.colors.primary} /> : null}
             </View>
           }
           ListEmptyComponent={
             loading ? null : (
-              <Text style={styles.empty}>
+              <Text variant="body" muted>
                 No {type} templates yet — start blank above.
               </Text>
             )
           }
           renderItem={({ item }) => (
-            <Pressable style={styles.tpl} onPress={() => startFromTemplate(item)} disabled={busy}>
-              <View style={styles.flex}>
-                <Text style={styles.tplTitle}>{item.title}</Text>
-                {item.note ? (
-                  <Text style={styles.tplNote} numberOfLines={2}>
-                    {item.note}
-                  </Text>
-                ) : null}
+            <GlassCard onPress={() => startFromTemplate(item)}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text variant="bodyStrong">{item.title}</Text>
+                  {item.note ? (
+                    <Text variant="caption" muted numberOfLines={2}>
+                      {item.note}
+                    </Text>
+                  ) : null}
+                </View>
+                <Text variant="bodyStrong" color="primary">
+                  Use ›
+                </Text>
               </View>
-              <Text style={styles.use}>Use ›</Text>
-            </Pressable>
+            </GlassCard>
           )}
         />
         {busy ? (
-          <View style={styles.overlay}>
-            <ActivityIndicator size="large" color="#fff" />
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: theme.colors.overlay, alignItems: 'center', justifyContent: 'center' },
+            ]}
+          >
+            <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
         ) : null}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  flex: { flex: 1 },
-  wrap: { padding: 16, gap: 10 },
-  head: { gap: 10 },
-  segment: { flexDirection: 'row', backgroundColor: '#eef0f3', borderRadius: 10, padding: 3 },
-  segmentBtn: { flex: 1, paddingVertical: 9, borderRadius: 8, alignItems: 'center' },
-  segmentBtnActive: { backgroundColor: '#fff' },
-  segmentText: { fontSize: 14, fontWeight: '600', color: '#6e7781' },
-  segmentTextActive: { color: '#111' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111', marginTop: 10 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d0d7de',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#111',
-  },
-  blankBtn: { backgroundColor: '#111', borderRadius: 10, paddingVertical: 13, alignItems: 'center' },
-  blankBtnText: { color: '#fff', fontSize: 15, fontWeight: '600', textTransform: 'capitalize' },
-  disabled: { opacity: 0.6 },
-  empty: { fontSize: 14, color: '#888', paddingHorizontal: 4, marginTop: 8 },
-  tpl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#f5f6f8',
-  },
-  tplTitle: { fontSize: 16, fontWeight: '700', color: '#111' },
-  tplNote: { fontSize: 13, color: '#6e7781', marginTop: 2 },
-  use: { fontSize: 14, fontWeight: '700', color: '#1f6feb' },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

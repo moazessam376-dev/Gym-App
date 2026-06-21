@@ -1,26 +1,13 @@
 // Admin → review pending coach applications. Approve flips the applicant to a
 // coach; reject closes the request. Both go through the review-coach-application
-// Edge Function (the only writer of status / role). RLS lets only an admin read
-// these rows; the role guard keeps the UI honest.
+// Edge Function (the only writer of status / role). RLS lets only an admin read these.
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, FlatList, View } from 'react-native';
 import { Redirect, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
-import {
-  listPendingApplications,
-  reviewApplication,
-  type PendingApplication,
-} from '../../src/lib/coach-applications';
+import { listPendingApplications, reviewApplication, type PendingApplication } from '../../src/lib/coach-applications';
+import { Screen, Text, Avatar, GlassCard, Button, EmptyState } from '../../src/components/ui';
+import { theme } from '../../src/theme';
 
 export default function AdminApplications() {
   const { role } = useAuth();
@@ -62,9 +49,7 @@ export default function AdminApplications() {
     const who = app.applicant_name ?? 'this applicant';
     Alert.alert(
       approve ? 'Approve coach' : 'Reject application',
-      approve
-        ? `Make ${who} a coach? They'll switch to a coach account.`
-        : `Reject ${who}'s application?`,
+      approve ? `Make ${who} a coach? They'll switch to a coach account.` : `Reject ${who}'s application?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -78,66 +63,47 @@ export default function AdminApplications() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <Screen gradient padded={false} edges={['bottom']}>
       <FlatList
         data={apps}
         keyExtractor={(a) => a.id}
-        contentContainerStyle={apps.length === 0 ? styles.emptyWrap : styles.listWrap}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
-        ListEmptyComponent={<Text style={styles.empty}>No pending applications.</Text>}
+        contentContainerStyle={apps.length === 0 ? { flexGrow: 1, justifyContent: 'center' } : { padding: theme.spacing.lg, gap: theme.spacing.md }}
+        ListEmptyComponent={
+          <EmptyState icon="clipboard-outline" title="No pending applications" subtitle="Coach requests will appear here for review." />
+        }
         renderItem={({ item }) => {
           const busy = busyId === item.id;
           return (
-            <View style={styles.card}>
-              <Text style={styles.name}>{item.applicant_name ?? 'Unnamed applicant'}</Text>
-              {item.message ? <Text style={styles.message}>“{item.message}”</Text> : null}
-              <Text style={styles.date}>applied {new Date(item.created_at).toLocaleDateString()}</Text>
-              <View style={styles.actions}>
-                <Pressable
-                  style={[styles.btn, styles.reject, busy && styles.disabled]}
-                  onPress={() => confirm(item, false)}
-                  disabled={busy}
-                >
-                  <Text style={styles.rejectText}>Reject</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.btn, styles.approve, busy && styles.disabled]}
-                  onPress={() => confirm(item, true)}
-                  disabled={busy}
-                >
-                  {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.approveText}>Approve</Text>}
-                </Pressable>
+            <GlassCard>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                <Avatar name={item.applicant_name ?? 'Applicant'} size={44} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="title">{item.applicant_name ?? 'Unnamed applicant'}</Text>
+                  <Text variant="caption" muted>
+                    applied {new Date(item.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
               </View>
-            </View>
+              {item.message ? (
+                <Text variant="body" muted style={{ fontStyle: 'italic', marginTop: theme.spacing.md }}>
+                  “{item.message}”
+                </Text>
+              ) : null}
+              <View style={{ flexDirection: 'row', gap: theme.spacing.md, marginTop: theme.spacing.md }}>
+                <Button title="Reject" variant="ghost" onPress={() => confirm(item, false)} disabled={busy} style={{ flex: 1 }} />
+                <Button title="Approve" onPress={() => confirm(item, true)} loading={busy} style={{ flex: 1 }} />
+              </View>
+            </GlassCard>
           );
         }}
       />
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
-  listWrap: { padding: 16, gap: 10 },
-  emptyWrap: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  empty: { fontSize: 15, color: '#888', textAlign: 'center' },
-  card: { backgroundColor: '#f5f6f8', borderRadius: 14, padding: 16, gap: 6 },
-  name: { fontSize: 17, fontWeight: '700', color: '#111' },
-  message: { fontSize: 14, color: '#444', fontStyle: 'italic' },
-  date: { fontSize: 12, color: '#6e7781' },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 6 },
-  btn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  approve: { backgroundColor: '#1a7f37' },
-  approveText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  reject: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#cf222e' },
-  rejectText: { color: '#cf222e', fontSize: 15, fontWeight: '600' },
-  disabled: { opacity: 0.6 },
-});

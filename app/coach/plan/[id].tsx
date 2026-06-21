@@ -52,6 +52,7 @@ import {
   sumMacros,
   type Macros,
 } from '../../../src/lib/plan-ui';
+import { theme } from '../../../src/theme';
 
 export default function PlanEditor() {
   const { role } = useAuth();
@@ -137,7 +138,7 @@ export default function PlanEditor() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -426,6 +427,7 @@ export default function PlanEditor() {
                 value={newName}
                 onChangeText={setNewName}
                 placeholder={isTraining ? 'New day (e.g. Arms)' : 'New meal (e.g. Breakfast)'}
+                placeholderTextColor={theme.colors.textMuted}
                 editable={!busy}
               />
               <Pressable style={styles.addBtn} onPress={onAddContainer} disabled={busy}>
@@ -494,6 +496,7 @@ function EditableText({
         value={text}
         onChangeText={setText}
         placeholder={placeholder}
+        placeholderTextColor={theme.colors.textMuted}
         autoFocus
         editable={!saving}
         onSubmitEditing={save}
@@ -555,6 +558,7 @@ function NoteEditor({
         value={text}
         onChangeText={setText}
         placeholder={placeholder}
+        placeholderTextColor={theme.colors.textMuted}
         multiline
         editable={!saving}
         autoFocus
@@ -678,103 +682,105 @@ function MealCard({
   );
 }
 
+const c = theme.colors;
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
+  safe: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg },
   wrap: { padding: 16, gap: 10 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  title: { fontSize: 24, fontWeight: '800', color: '#111' },
-  type: { fontSize: 14, color: '#6e7781', textTransform: 'capitalize' },
+  title: { fontSize: 24, fontWeight: '800', color: c.text },
+  type: { fontSize: 14, color: c.textMuted, textTransform: 'capitalize' },
   status: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  template: { backgroundColor: '#6f42c1' },
-  statusText: { color: '#fff', fontSize: 12, fontWeight: '700', textTransform: 'capitalize' },
+  template: { backgroundColor: c.secondary },
+  statusText: { color: c.white, fontSize: 12, fontWeight: '700', textTransform: 'capitalize' },
   headerBtn: { borderRadius: 10, paddingVertical: 13, alignItems: 'center', marginTop: 6 },
-  assign: { backgroundColor: '#6f42c1' },
-  publish: { backgroundColor: '#1a7f37' },
-  unpublish: { backgroundColor: '#9a6700' },
-  headerBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  totalCard: { backgroundColor: '#eef6ff', borderRadius: 12, padding: 12, marginTop: 4 },
-  totalLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: '#1f6feb' },
-  totalMacros: { fontSize: 15, fontWeight: '700', color: '#111', marginTop: 2 },
+  assign: { backgroundColor: c.secondary },
+  publish: { backgroundColor: c.success },
+  unpublish: { backgroundColor: c.warning },
+  headerBtnText: { color: c.white, fontSize: 15, fontWeight: '600' },
+  totalCard: { backgroundColor: c.glass, borderWidth: 1, borderColor: c.glassBorder, borderRadius: 12, padding: 12, marginTop: 4 },
+  totalLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: c.primary },
+  totalMacros: { fontSize: 15, fontWeight: '700', color: c.text, marginTop: 2 },
   weekBar: { marginTop: 6, gap: 8 },
   weekPills: { gap: 8, paddingVertical: 2 },
-  weekPill: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#eef0f3' },
-  weekPillActive: { backgroundColor: '#1f6feb' },
-  weekPillText: { fontSize: 13, fontWeight: '700', color: '#6e7781' },
-  weekPillTextActive: { color: '#fff' },
-  weekAdd: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#e7f0ff' },
-  weekAddText: { fontSize: 13, fontWeight: '700', color: '#1f6feb' },
+  weekPill: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: c.glass, borderWidth: 1, borderColor: c.glassBorder },
+  weekPillActive: { backgroundColor: c.primary, borderColor: c.primary },
+  weekPillText: { fontSize: 13, fontWeight: '700', color: c.textMuted },
+  weekPillTextActive: { color: c.onPrimary },
+  weekAdd: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: c.glassStrong, borderWidth: 1, borderColor: c.glassBorder },
+  weekAddText: { fontSize: 13, fontWeight: '700', color: c.primary },
   weekActions: { flexDirection: 'row', gap: 16 },
-  weekActionText: { fontSize: 13, fontWeight: '600', color: '#1f6feb' },
-  weekDelete: { color: '#cf222e' },
-  card: { backgroundColor: '#f5f6f8', borderRadius: 14, padding: 14, gap: 4, marginTop: 6 },
+  weekActionText: { fontSize: 13, fontWeight: '600', color: c.primary },
+  weekDelete: { color: c.danger },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 14, padding: 14, gap: 4, marginTop: 6 },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: '#111' },
-  move: { fontSize: 15, color: '#1f6feb', fontWeight: '700' },
-  moveOff: { color: '#c2c8d0' },
-  remove: { fontSize: 17, color: '#cf222e', fontWeight: '700' },
+  cardTitle: { fontSize: 17, fontWeight: '700', color: c.text },
+  move: { fontSize: 15, color: c.primary, fontWeight: '700' },
+  moveOff: { color: c.borderStrong },
+  remove: { fontSize: 17, color: c.danger, fontWeight: '700' },
   blockLabel: {
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
-    color: '#6e7781',
+    color: c.textMuted,
     marginTop: 8,
     textTransform: 'uppercase',
   },
-  mealMacros: { fontSize: 13, color: '#1f6feb', fontWeight: '600', marginBottom: 2 },
-  exRow: { backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginTop: 6 },
-  exName: { fontSize: 15, fontWeight: '600', color: '#111' },
-  exMeta: { fontSize: 13, color: '#6e7781', marginTop: 1 },
-  exNote: { fontSize: 13, color: '#1f6feb', fontStyle: 'italic', marginTop: 3 },
+  mealMacros: { fontSize: 13, color: c.primary, fontWeight: '600', marginBottom: 2 },
+  exRow: { backgroundColor: c.glass, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginTop: 6 },
+  exName: { fontSize: 15, fontWeight: '600', color: c.text },
+  exMeta: { fontSize: 13, color: c.textMuted, marginTop: 1 },
+  exNote: { fontSize: 13, color: c.primary, fontStyle: 'italic', marginTop: 3 },
   addInline: { paddingVertical: 10, marginTop: 4 },
-  addInlineText: { color: '#1f6feb', fontWeight: '600', fontSize: 15 },
+  addInlineText: { color: c.primary, fontWeight: '600', fontSize: 15 },
   addBox: { gap: 8, marginTop: 12 },
   input: {
     borderWidth: 1,
-    borderColor: '#d0d7de',
+    borderColor: c.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#111',
+    color: c.text,
+    backgroundColor: c.surface,
   },
-  addBtn: { backgroundColor: '#111', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
-  addBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  empty: { fontSize: 15, color: '#888' },
+  addBtn: { backgroundColor: c.primary, borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  addBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: '600' },
+  empty: { fontSize: 15, color: c.textMuted },
   // Editable single-line text
   editableRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  pencil: { fontSize: 14, color: '#8a93a0' },
+  pencil: { fontSize: 14, color: c.textMuted },
   editableEdit: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   editableInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#1f6feb',
+    borderColor: c.primary,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 16,
-    color: '#111',
-    backgroundColor: '#fff',
+    color: c.text,
+    backgroundColor: c.surface,
   },
   // Note editor
   noteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingVertical: 6 },
   noteIcon: { fontSize: 14 },
-  noteText: { flex: 1, fontSize: 14, color: '#1f6feb', fontStyle: 'italic' },
-  notePrompt: { flex: 1, fontSize: 14, color: '#8a93a0' },
+  noteText: { flex: 1, fontSize: 14, color: c.primary, fontStyle: 'italic' },
+  notePrompt: { flex: 1, fontSize: 14, color: c.textMuted },
   noteEdit: { gap: 8, paddingVertical: 6 },
   noteInput: {
     borderWidth: 1,
-    borderColor: '#d0d7de',
+    borderColor: c.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#111',
-    backgroundColor: '#fff',
+    color: c.text,
+    backgroundColor: c.surface,
     minHeight: 60,
   },
   noteBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 18 },
-  noteCancel: { fontSize: 14, fontWeight: '600', color: '#6e7781' },
-  noteSave: { fontSize: 14, fontWeight: '700', color: '#1f6feb' },
+  noteCancel: { fontSize: 14, fontWeight: '600', color: c.textMuted },
+  noteSave: { fontSize: 14, fontWeight: '700', color: c.primary },
 });

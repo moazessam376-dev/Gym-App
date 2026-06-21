@@ -1,20 +1,13 @@
 import { useState } from 'react';
-import { Link } from 'expo-router';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { credentialsSchema } from '../../src/schemas/auth';
+import { Screen, Text, Input, Button } from '../../src/components/ui';
+import { theme } from '../../src/theme';
 
 export default function SignUp() {
+  const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,8 +30,7 @@ export default function SignUp() {
     }
     setLoading(true);
     // full_name rides along in user metadata; the profile bootstrap trigger
-    // (0008) reads it server-side at signup, so it works even with email
-    // confirmation on (no client session yet).
+    // (0008) reads it server-side at signup.
     const { data, error: authError } = await supabase.auth.signUp({
       ...parsed.data,
       options: { data: { full_name: name } },
@@ -54,37 +46,34 @@ export default function SignUp() {
       return;
     }
     if (!data.session) {
-      // Email confirmation is enabled on the project → no session until confirmed.
       setInfo('Account created. Check your email to confirm, then sign in.');
       return;
     }
-    // Session present → AuthProvider + root guard route us into the app.
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={styles.container}>
-          <Text style={styles.title}>Create your account</Text>
-          <Text style={styles.subtitle}>Start your Gym-App journey</Text>
+    <Screen gradient padded={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={{ flex: 1, justifyContent: 'center', padding: theme.spacing.xl, gap: theme.spacing.lg }}>
+          <View style={{ gap: theme.spacing.xs, marginBottom: theme.spacing.sm }}>
+            <Text variant="h1">Create your account</Text>
+            <Text variant="body" muted>
+              Start your Gym-App journey
+            </Text>
+          </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Full name"
-            placeholderTextColor="#999"
+          <Input
+            label="Full name"
+            placeholder="Your name"
             autoCapitalize="words"
             autoComplete="name"
             value={fullName}
             onChangeText={setFullName}
             editable={!loading}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#999"
+          <Input
+            label="Email"
+            placeholder="you@example.com"
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
@@ -92,72 +81,38 @@ export default function SignUp() {
             onChangeText={setEmail}
             editable={!loading}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Password (min 8 characters)"
-            placeholderTextColor="#999"
+          <Input
+            label="Password"
+            placeholder="Min 8 characters"
             secureTextEntry
             autoCapitalize="none"
             autoComplete="new-password"
             value={password}
             onChangeText={setPassword}
             editable={!loading}
+            error={error}
           />
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {info ? <Text style={styles.info}>{info}</Text> : null}
+          {info ? (
+            <Text variant="caption" color="link">
+              {info}
+            </Text>
+          ) : null}
 
-          <Pressable
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={onSubmit}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Sign up</Text>
-            )}
-          </Pressable>
+          <Button title="Sign up" onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
 
-          <View style={styles.switchRow}>
-            <Text style={styles.switchText}>Already have an account? </Text>
-            <Link href="/(auth)/sign-in" style={styles.switchLink}>
-              Sign in
-            </Link>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: theme.spacing.sm }}>
+            <Text variant="body" muted>
+              Already have an account?{' '}
+            </Text>
+            <Pressable onPress={() => router.replace('/(auth)/sign-in')}>
+              <Text variant="bodyStrong" color="link">
+                Sign in
+              </Text>
+            </Pressable>
           </View>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  flex: { flex: 1 },
-  container: { flex: 1, justifyContent: 'center', padding: 24, gap: 12 },
-  title: { fontSize: 28, fontWeight: '700', color: '#111' },
-  subtitle: { fontSize: 15, color: '#666', marginBottom: 12 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#111',
-  },
-  error: { color: '#c0392b', fontSize: 14 },
-  info: { color: '#1f6feb', fontSize: 14 },
-  button: {
-    backgroundColor: '#1f6feb',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  switchRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
-  switchText: { color: '#666' },
-  switchLink: { color: '#1f6feb', fontWeight: '600' },
-});

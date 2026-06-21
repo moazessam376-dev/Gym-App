@@ -3,23 +3,17 @@
 // The redemption goes through the accept-invitation Edge Function (the only
 // writer of coach_id / invitation status, §2). supabase-js attaches the user's
 // bearer token automatically, so the server resolves the accepting user + email
-// from the verified JWT — the token is the only thing we send. Errors are
-// generic on purpose (the server collapses every failure to one opaque message).
+// from the verified JWT. Errors are generic on purpose.
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { acceptInvitationSchema } from '../src/schemas/invitation';
 import { acceptInvitation } from '../src/lib/invitations';
+import { Screen, Text, Input, Button } from '../src/components/ui';
+import { theme } from '../src/theme';
+
+const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
 export default function AcceptInvite() {
   const router = useRouter();
@@ -35,7 +29,6 @@ export default function AcceptInvite() {
       setError('That doesn’t look like a valid invite token.');
       return;
     }
-
     setSubmitting(true);
     try {
       const result = await acceptInvitation(parsed.data);
@@ -44,9 +37,7 @@ export default function AcceptInvite() {
       } else if (result.reason === 'already_has_coach') {
         setError('You already have a coach. You can only be linked to one at a time.');
       } else {
-        setError(
-          'This invite couldn’t be accepted. It may be used, expired, or for a different email.',
-        );
+        setError('This invite couldn’t be accepted. It may be used, expired, or for a different email.');
       }
     } catch {
       setError('Something went wrong. Please try again.');
@@ -57,95 +48,53 @@ export default function AcceptInvite() {
 
   if (done) {
     return (
-      <SafeAreaView style={styles.safe} edges={['bottom']}>
-        <View style={styles.center}>
-          <View style={styles.check}>
-            <Text style={styles.checkMark}>✓</Text>
+      <Screen gradient edges={['bottom']}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.md }}>
+          <View
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 36,
+              backgroundColor: theme.colors.success,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="checkmark" size={40} color={theme.colors.bg} />
           </View>
-          <Text style={styles.title}>You’re connected!</Text>
-          <Text style={styles.note}>Your coach can now see you on their roster.</Text>
-          <Pressable style={styles.button} onPress={() => router.replace('/')}>
-            <Text style={styles.buttonText}>Go to home</Text>
-          </Pressable>
+          <Text variant="h1" align="center">
+            You’re connected!
+          </Text>
+          <Text variant="body" muted align="center">
+            Your coach can now see you on their roster.
+          </Text>
+          <Button title="Go to home" fullWidth={false} onPress={() => router.replace('/(tabs)')} style={{ marginTop: theme.spacing.sm }} />
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={styles.container}>
-          <Text style={styles.title}>Accept an invite</Text>
-          <Text style={styles.note}>Paste the token your coach shared with you.</Text>
-
-          <TextInput
-            style={styles.input}
+    <Screen gradient padded={false} edges={['bottom']}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={{ flex: 1, justifyContent: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
+          <Text variant="h1">Accept an invite</Text>
+          <Text variant="body" muted>
+            Paste the token your coach shared with you.
+          </Text>
+          <Input
             value={token}
             onChangeText={setToken}
             placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
             autoCapitalize="none"
             autoCorrect={false}
             editable={!submitting}
+            error={error}
+            style={{ fontFamily: MONO, fontSize: 14 }}
           />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <Pressable
-            style={[styles.button, submitting && styles.buttonDisabled]}
-            onPress={onSubmit}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Accept invite</Text>
-            )}
-          </Pressable>
+          <Button title="Accept invite" onPress={onSubmit} loading={submitting} size="lg" style={{ marginTop: theme.spacing.xs }} />
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  flex: { flex: 1 },
-  container: { flex: 1, justifyContent: 'center', padding: 24, gap: 10 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 10 },
-  title: { fontSize: 24, fontWeight: '800', color: '#111' },
-  note: { fontSize: 15, color: '#666', marginBottom: 8, textAlign: 'center' },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d0d7de',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: '#111',
-    fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }),
-  },
-  error: { color: '#cf222e', fontSize: 13 },
-  button: {
-    backgroundColor: '#111',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 6,
-    paddingHorizontal: 28,
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  check: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#1a7f37',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  checkMark: { color: '#fff', fontSize: 34, fontWeight: '800' },
-});

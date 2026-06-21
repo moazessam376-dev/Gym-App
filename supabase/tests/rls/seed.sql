@@ -133,4 +133,28 @@ insert into public.media (id, owner_id, kind, status, bucket, path, mime_type, s
    'aaaa0001-0000-0000-0000-000000000001', 'progress_photo', 'ready',
    'media', 'aaaa0001-0000-0000-0000-000000000001/seed-photo.jpg', 'image/jpeg', 12345);
 
+-- Completion logging (0016). Client A1 trained on 3 consecutive recent days
+-- (→ a 3-day streak); Client A2 once this week; Client B1 (Coach B's client) once.
+-- Proves cross-tenant denial + the leaderboard tenancy fence. Dates are relative
+-- to current_date so the streak/leaderboard assertions stay deterministic.
+insert into public.workout_sessions (id, user_id, plan_id, day_id, session_date, status, completed_at) values
+  ('5e550001-0000-0000-0000-000000000001', 'aaaa0001-0000-0000-0000-000000000001',
+   '99990001-0000-0000-0000-000000000001', 'da000001-0000-0000-0000-000000000001', current_date,     'completed', now()),
+  ('5e550002-0000-0000-0000-000000000002', 'aaaa0001-0000-0000-0000-000000000001',
+   '99990001-0000-0000-0000-000000000001', 'da000001-0000-0000-0000-000000000001', current_date - 1, 'completed', now()),
+  ('5e550003-0000-0000-0000-000000000003', 'aaaa0001-0000-0000-0000-000000000001',
+   '99990001-0000-0000-0000-000000000001', 'da000001-0000-0000-0000-000000000001', current_date - 2, 'completed', now()),
+  ('5e550004-0000-0000-0000-000000000004', 'aaaa0002-0000-0000-0000-000000000002',
+   null, null, current_date, 'completed', now()),
+  ('5e550005-0000-0000-0000-000000000005', 'bbbb0001-0000-0000-0000-000000000001',
+   '99990003-0000-0000-0000-000000000003', null, current_date, 'completed', now());
+
+-- Three completed sets on A1's most recent session (planned day da000001 has 4+3 = 7
+-- planned sets → adherence view sets_done = 3, sets_planned = 7).
+insert into public.exercise_set_logs
+  (id, session_id, plan_exercise_id, exercise_name, set_index, reps_done, load_grams, is_completed) values
+  ('5e5e0001-0000-0000-0000-000000000001', '5e550001-0000-0000-0000-000000000001', null, 'Barbell Bench Press', 0, 8,  60000, true),
+  ('5e5e0002-0000-0000-0000-000000000002', '5e550001-0000-0000-0000-000000000001', null, 'Barbell Bench Press', 1, 8,  60000, true),
+  ('5e5e0003-0000-0000-0000-000000000003', '5e550001-0000-0000-0000-000000000001', null, 'Triceps Pushdown',    0, 12, 20000, true);
+
 alter table auth.users enable trigger on_auth_user_created;
