@@ -165,4 +165,28 @@ insert into public.athlete_profile (user_id, primary_goal, experience_level, hei
 insert into public.coach_profile (user_id, bio, specialties, years_experience, onboarded_at) values
   ('11111111-1111-1111-1111-111111111111', 'Strength & hypertrophy coach', '{hypertrophy,powerlifting}', 6, now());
 
+-- Food logging (0019). Coach A set A1's daily target (the override path). Client A1
+-- logged food today (one library food + one off-plan quick-add) and yesterday
+-- (→ a 2-day nutrition streak); Client B1 (Coach B's client) logged once today.
+-- Proves cross-tenant denial + the daily roll-up view + streak tenancy.
+insert into public.nutrition_targets
+  (user_id, kcal_target, protein_g_target, carbs_g_target, fat_g_target, source, set_by) values
+  ('aaaa0001-0000-0000-0000-000000000001', 2400, 180, 250, 70, 'coach_set',
+   '11111111-1111-1111-1111-111111111111');
+
+insert into public.food_log_entries
+  (id, user_id, log_date, meal_slot, food_id, plan_meal_item_id, food_name,
+   kcal_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g, grams) values
+  -- A1 today: a library food (Chicken Breast 200g) + an off-plan quick-add (null food_id).
+  ('f10d0001-0000-0000-0000-000000000001', 'aaaa0001-0000-0000-0000-000000000001', current_date,
+   'lunch',  'f0000000-0000-0000-0000-000000000001', null, 'Chicken Breast (cooked)', 165, 31, 0, 4, 200),
+  ('f10d0002-0000-0000-0000-000000000002', 'aaaa0001-0000-0000-0000-000000000001', current_date,
+   'snack',  null,                                   null, 'Banana',                   89,  1, 23, 0, 120),
+  -- A1 yesterday (extends the streak to 2).
+  ('f10d0003-0000-0000-0000-000000000003', 'aaaa0001-0000-0000-0000-000000000001', current_date - 1,
+   'dinner', 'f0000000-0000-0000-0000-000000000004', null, 'White Rice (cooked)',     130,  3, 28, 0, 250),
+  -- B1 (Coach B's client) today — must never be visible to Coach A / Client A1.
+  ('f10d0004-0000-0000-0000-000000000004', 'bbbb0001-0000-0000-0000-000000000001', current_date,
+   'lunch',  'f0000000-0000-0000-0000-000000000001', null, 'Chicken Breast (cooked)', 165, 31, 0, 4, 150);
+
 alter table auth.users enable trigger on_auth_user_created;
