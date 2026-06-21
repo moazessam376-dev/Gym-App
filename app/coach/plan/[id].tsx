@@ -2,7 +2,7 @@
 // (→ publish/unpublish). Training = Weeks → Days → block-grouped exercises with
 // 3-level coach comments (plan / day / exercise) and editable titles + day order;
 // nutrition = Meals → food items with macro totals. All writes are RLS-gated.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -76,9 +76,16 @@ export default function PlanEditor() {
     setExByDay(Object.fromEntries(entries));
   }, []);
 
-  // Loads the plan + weeks (or meals). Does NOT depend on weekId — a separate
-  // effect loads the selected week's days — so selecting a week can't feed back
-  // into this and cause the editor to flip weeks on its own.
+  // Mirror weekId in a ref so load() can keep the current selection WITHOUT
+  // depending on weekId — depending on it would recreate load + re-fire
+  // useFocusEffect on every selection (the "weeks switch on their own" loop).
+  // load() reloads the active week's days each focus, so a freshly-added exercise
+  // shows when you return from the picker (the week didn't change).
+  const weekIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    weekIdRef.current = weekId;
+  }, [weekId]);
+
   const load = useCallback(async () => {
     if (!id) return;
     try {
@@ -88,7 +95,13 @@ export default function PlanEditor() {
       if (p.type === 'training') {
         const ws = await listWeeks(id);
         setWeeks(ws);
-        setWeekId((prev) => (ws.some((w) => w.id === prev) ? prev : ws[0]?.id ?? null));
+        const active = ws.some((w) => w.id === weekIdRef.current) ? weekIdRef.current : ws[0]?.id ?? null;
+        setWeekId(active);
+        if (active) await loadWeekDays(active);
+        else {
+          setDays([]);
+          setExByDay({});
+        }
       } else {
         const ms = await listMeals(id);
         setMeals(ms);
@@ -100,7 +113,7 @@ export default function PlanEditor() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, loadWeekDays]);
 
   useFocusEffect(
     useCallback(() => {
@@ -108,15 +121,17 @@ export default function PlanEditor() {
     }, [load]),
   );
 
-  // Load the selected week's days whenever the selection changes.
-  useEffect(() => {
-    if (weekId) {
-      loadWeekDays(weekId).catch(() => {});
-    } else {
-      setDays([]);
-      setExByDay({});
-    }
-  }, [weekId, loadWeekDays]);
+  const selectWeek = useCallback(
+    async (wid: string) => {
+      setWeekId(wid);
+      try {
+        await loadWeekDays(wid);
+      } catch {
+        /* keep prior */
+      }
+    },
+    [loadWeekDays],
+  );
 
   if (role && role !== 'coach') return <Redirect href="/" />;
   if (loading) {
@@ -141,7 +156,13 @@ export default function PlanEditor() {
   async function refreshWeeks(selectId?: string) {
     const ws = await listWeeks(id!);
     setWeeks(ws);
-    setWeekId(selectId ?? (ws.some((w) => w.id === weekId) ? weekId : ws[0]?.id ?? null));
+    const target = selectId ?? (ws.some((w) => w.id === weekIdRef.current) ? weekIdRef.current : ws[0]?.id ?? null);
+    setWeekId(target);
+    if (target) await loadWeekDays(target);
+    else {
+      setDays([]);
+      setExByDay({});
+    }
   }
 
   async function onAddWeek() {
@@ -344,7 +365,7 @@ export default function PlanEditor() {
                   <Pressable
                     key={w.id}
                     style={[styles.weekPill, w.id === weekId && styles.weekPillActive]}
-                    onPress={() => setWeekId(w.id)}
+                    onPress={() => selectWeek(w.id)}
                   >
                     <Text style={[styles.weekPillText, w.id === weekId && styles.weekPillTextActive]}>{w.name}</Text>
                   </Pressable>
