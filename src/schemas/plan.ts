@@ -3,6 +3,15 @@
 // `coach_id`, `version`, `source_plan_id`, timestamps are server-controlled.
 import { z } from 'zod';
 
+// Lenient UUID: any 8-4-4-4-12 hex string, matching what Postgres accepts.
+// Deliberately NOT z.string().uuid(): Zod v4's .uuid() enforces RFC-4122
+// version/variant nibbles, which our seeded global library/template ids (e.g.
+// e0000000-0000-0000-0000-000000000001) don't have — strict validation would
+// reject picking a global exercise/food (the "Could not add that exercise" bug).
+const uuid = z
+  .string()
+  .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/, 'Invalid id');
+
 export const planTypeSchema = z.enum(['training', 'nutrition']);
 export type PlanType = z.infer<typeof planTypeSchema>;
 
@@ -35,7 +44,7 @@ export type UpdatePlan = z.infer<typeof updatePlanSchema>;
 
 // ── Training hierarchy: Plan → Weeks → Days → Exercises ──────────────────────
 export const createWeekSchema = z.object({
-  plan_id: z.string().uuid(),
+  plan_id: uuid,
   name: z.string().min(1).max(120),
   note: z.string().max(2000).nullable().optional(),
   position: z.number().int().min(0).optional(),
@@ -50,8 +59,8 @@ export const updateWeekSchema = z.object({
 export type UpdateWeek = z.infer<typeof updateWeekSchema>;
 
 export const createDaySchema = z.object({
-  plan_id: z.string().uuid(),
-  week_id: z.string().uuid(),
+  plan_id: uuid,
+  week_id: uuid,
   name: z.string().min(1).max(120),
   position: z.number().int().min(0).optional(),
 });
@@ -68,8 +77,8 @@ export type UpdateDay = z.infer<typeof updateDaySchema>;
 const repsSchema = z.string().max(40).nullable().optional();
 
 export const createExerciseRowSchema = z.object({
-  day_id: z.string().uuid(),
-  exercise_id: z.string().uuid(),
+  day_id: uuid,
+  exercise_id: uuid,
   // Display snapshot from the library at authoring time (see migration 0010).
   exercise_name: z.string().min(1).max(120),
   block: trainingBlockSchema.optional(),
@@ -95,7 +104,7 @@ export type UpdateExerciseRow = z.infer<typeof updateExerciseRowSchema>;
 
 // ── Nutrition hierarchy ──────────────────────────────────────────────────────
 export const createMealSchema = z.object({
-  plan_id: z.string().uuid(),
+  plan_id: uuid,
   name: z.string().min(1).max(120),
   note: z.string().max(2000).nullable().optional(),
   position: z.number().int().min(0).optional(),
@@ -110,8 +119,8 @@ export const updateMealSchema = z.object({
 export type UpdateMeal = z.infer<typeof updateMealSchema>;
 
 export const createMealItemSchema = z.object({
-  meal_id: z.string().uuid(),
-  food_id: z.string().uuid(),
+  meal_id: uuid,
+  food_id: uuid,
   // Display + macro snapshot from the food library at authoring time (0010).
   food_name: z.string().min(1).max(120),
   kcal_per_100g: z.number().int().min(0),

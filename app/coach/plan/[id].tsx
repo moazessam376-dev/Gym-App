@@ -1,8 +1,8 @@
 // Coach → plan editor. TEMPLATE (no client → "Assign to client") or ASSIGNED plan
 // (→ publish/unpublish). Training = Weeks → Days → block-grouped exercises with
-// 3-level coach comments (plan / day / exercise); nutrition = Meals → food items
-// with macro totals. All writes are RLS-gated (can_write_plan / _day / _meal).
-import { useCallback, useState } from 'react';
+// 3-level coach comments (plan / day / exercise) and editable titles + day order;
+// nutrition = Meals → food items with macro totals. All writes are RLS-gated.
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
+import { confirmDestructive } from '../../../src/lib/confirm';
 import {
   createDay,
   createMeal,
@@ -68,7 +69,6 @@ export default function PlanEditor() {
   const [newName, setNewName] = useState('');
   const [busy, setBusy] = useState(false);
 
-  // Load a week's days + their exercises into state.
   const loadWeekDays = useCallback(async (wid: string) => {
     const ds = await listDays(wid);
     setDays(ds);
@@ -76,6 +76,9 @@ export default function PlanEditor() {
     setExByDay(Object.fromEntries(entries));
   }, []);
 
+  // Loads the plan + weeks (or meals). Does NOT depend on weekId — a separate
+  // effect loads the selected week's days — so selecting a week can't feed back
+  // into this and cause the editor to flip weeks on its own.
   const load = useCallback(async () => {
     if (!id) return;
     try {
@@ -85,13 +88,7 @@ export default function PlanEditor() {
       if (p.type === 'training') {
         const ws = await listWeeks(id);
         setWeeks(ws);
-        const active = ws.find((w) => w.id === weekId) ?? ws[0];
-        setWeekId(active?.id ?? null);
-        if (active) await loadWeekDays(active.id);
-        else {
-          setDays([]);
-          setExByDay({});
-        }
+        setWeekId((prev) => (ws.some((w) => w.id === prev) ? prev : ws[0]?.id ?? null));
       } else {
         const ms = await listMeals(id);
         setMeals(ms);
@@ -103,13 +100,23 @@ export default function PlanEditor() {
     } finally {
       setLoading(false);
     }
-  }, [id, weekId, loadWeekDays]);
+  }, [id]);
 
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load]),
   );
+
+  // Load the selected week's days whenever the selection changes.
+  useEffect(() => {
+    if (weekId) {
+      loadWeekDays(weekId).catch(() => {});
+    } else {
+      setDays([]);
+      setExByDay({});
+    }
+  }, [weekId, loadWeekDays]);
 
   if (role && role !== 'coach') return <Redirect href="/" />;
   if (loading) {
@@ -131,22 +138,17 @@ export default function PlanEditor() {
   const published = plan.status === 'published';
   const isTraining = plan.type === 'training';
 
-  async function selectWeek(wid: string) {
-    setWeekId(wid);
-    try {
-      await loadWeekDays(wid);
-    } catch {
-      /* keep prior */
-    }
+  async function refreshWeeks(selectId?: string) {
+    const ws = await listWeeks(id!);
+    setWeeks(ws);
+    setWeekId(selectId ?? (ws.some((w) => w.id === weekId) ? weekId : ws[0]?.id ?? null));
   }
 
   async function onAddWeek() {
-    if (!id) return;
     setBusy(true);
     try {
-      const w = await createWeek({ plan_id: id, name: `Week ${weeks.length + 1}`, position: weeks.length });
-      await load();
-      await selectWeek(w.id);
+      const w = await createWeek({ plan_id: id!, name: `Week ${weeks.length + 1}`, position: weeks.length });
+      await refreshWeeks(w.id);
     } catch {
       Alert.alert('Error', 'Could not add a week.');
     } finally {
@@ -159,8 +161,7 @@ export default function PlanEditor() {
     setBusy(true);
     try {
       const newWeek = await duplicateWeek(weekId);
-      await load();
-      await selectWeek(newWeek);
+      await refreshWeeks(newWeek);
     } catch {
       Alert.alert('Error', 'Could not duplicate the week.');
     } finally {
@@ -168,41 +169,37 @@ export default function PlanEditor() {
     }
   }
 
-  function onDeleteWeek() {
-    if (!weekId || weeks.length <= 1) {
+  async function onDeleteWeek() {
+    if (!weekId) return;
+    if (weeks.length <= 1) {
       Alert.alert('Keep one week', 'A plan needs at least one week.');
       return;
     }
-    Alert.alert('Delete week', 'Delete this week and all its days?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteWeek(weekId);
-            setWeekId(null);
-            await load();
-          } catch {
-            Alert.alert('Error', 'Could not delete the week.');
-          }
-        },
-      },
-    ]);
+    if (!(await confirmDestructive('Delete week', 'Delete this week and all its days?'))) return;
+    setBusy(true);
+    try {
+      await deleteWeek(weekId);
+      await refreshWeeks();
+    } catch {
+      Alert.alert('Error', 'Could not delete the week.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onAddContainer() {
-    if (!id || newName.trim().length === 0) return;
+    if (newName.trim().length === 0) return;
     if (isTraining && !weekId) return;
     setBusy(true);
     try {
       if (isTraining) {
-        await createDay({ plan_id: id, week_id: weekId!, name: newName.trim(), position: days.length });
+        await createDay({ plan_id: id!, week_id: weekId!, name: newName.trim(), position: days.length });
+        await loadWeekDays(weekId!);
       } else {
-        await createMeal({ plan_id: id, name: newName.trim(), position: meals.length });
+        await createMeal({ plan_id: id!, name: newName.trim(), position: meals.length });
+        await load();
       }
       setNewName('');
-      await load();
     } catch {
       Alert.alert('Error', 'Could not add. Please try again.');
     } finally {
@@ -210,23 +207,43 @@ export default function PlanEditor() {
     }
   }
 
-  function confirmDeleteContainer(kind: 'day' | 'meal', cid: string, name: string) {
-    Alert.alert(`Delete ${kind}`, `Delete "${name}" and everything in it?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            if (kind === 'day') await deleteDay(cid);
-            else await deleteMeal(cid);
-            await load();
-          } catch {
-            Alert.alert('Error', 'Could not delete.');
-          }
-        },
-      },
-    ]);
+  async function onDeleteDay(dayId: string, name: string) {
+    if (!(await confirmDestructive('Delete day', `Delete "${name}" and everything in it?`))) return;
+    try {
+      await deleteDay(dayId);
+      if (weekId) await loadWeekDays(weekId);
+    } catch {
+      Alert.alert('Error', 'Could not delete.');
+    }
+  }
+
+  async function onDeleteMeal(mealId: string, name: string) {
+    if (!(await confirmDestructive('Delete meal', `Delete "${name}" and everything in it?`))) return;
+    try {
+      await deleteMeal(mealId);
+      await load();
+    } catch {
+      Alert.alert('Error', 'Could not delete.');
+    }
+  }
+
+  // Reorder a day by swapping its position with its neighbour (functional
+  // stand-in for drag-and-drop, which comes in the UI redesign).
+  async function moveDay(day: Day, dir: 'up' | 'down') {
+    const idx = days.findIndex((d) => d.id === day.id);
+    const swapIdx = dir === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= days.length || !weekId) return;
+    const other = days[swapIdx];
+    setBusy(true);
+    try {
+      await updateDay(day.id, { position: other.position });
+      await updateDay(other.id, { position: day.position });
+      await loadWeekDays(weekId);
+    } catch {
+      Alert.alert('Error', 'Could not reorder.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onTogglePublish() {
@@ -242,15 +259,26 @@ export default function PlanEditor() {
     }
   }
 
+  async function savePlanTitle(text: string) {
+    if (!plan) return;
+    await updatePlan(plan.id, { title: text.trim() });
+    setPlan(await getPlan(plan.id));
+  }
+
   async function savePlanNote(text: string) {
     if (!plan) return;
     await updatePlan(plan.id, { note: text.trim() === '' ? null : text.trim() });
-    await load();
+    setPlan(await getPlan(plan.id));
+  }
+
+  async function saveDayName(dayId: string, text: string) {
+    await updateDay(dayId, { name: text.trim() });
+    if (weekId) await loadWeekDays(weekId);
   }
 
   async function saveDayNote(dayId: string, text: string) {
     await updateDay(dayId, { note: text.trim() === '' ? null : text.trim() });
-    await load();
+    if (weekId) await loadWeekDays(weekId);
   }
 
   const planMacros: Macros = meals.reduce(
@@ -262,9 +290,11 @@ export default function PlanEditor() {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
-          {/* Header */}
+          {/* Header — editable title */}
           <View style={styles.titleRow}>
-            <Text style={styles.title}>{plan.title}</Text>
+            <View style={styles.flex}>
+              <EditableText value={plan.title} onSave={savePlanTitle} textStyle={styles.title} placeholder="Plan name" />
+            </View>
             <View style={[styles.status, isTemplate ? styles.template : PLAN_STATUS_STYLE[plan.status]]}>
               <Text style={styles.statusText}>{isTemplate ? 'template' : plan.status}</Text>
             </View>
@@ -290,7 +320,6 @@ export default function PlanEditor() {
             </Pressable>
           )}
 
-          {/* Plan-level coach comment */}
           <NoteEditor
             label="Plan note"
             value={plan.note}
@@ -298,7 +327,6 @@ export default function PlanEditor() {
             onSave={savePlanNote}
           />
 
-          {/* Nutrition plan total */}
           {!isTraining && meals.length > 0 ? (
             <View style={styles.totalCard}>
               <Text style={styles.totalLabel}>PLAN TOTAL</Text>
@@ -316,11 +344,9 @@ export default function PlanEditor() {
                   <Pressable
                     key={w.id}
                     style={[styles.weekPill, w.id === weekId && styles.weekPillActive]}
-                    onPress={() => selectWeek(w.id)}
+                    onPress={() => setWeekId(w.id)}
                   >
-                    <Text style={[styles.weekPillText, w.id === weekId && styles.weekPillTextActive]}>
-                      {w.name}
-                    </Text>
+                    <Text style={[styles.weekPillText, w.id === weekId && styles.weekPillTextActive]}>{w.name}</Text>
                   </Pressable>
                 ))}
                 <Pressable style={styles.weekAdd} onPress={onAddWeek} disabled={busy}>
@@ -332,9 +358,11 @@ export default function PlanEditor() {
                   <Pressable onPress={onDuplicateWeek} disabled={busy} hitSlop={6}>
                     <Text style={styles.weekActionText}>Duplicate this week</Text>
                   </Pressable>
-                  <Pressable onPress={onDeleteWeek} disabled={busy} hitSlop={6}>
-                    <Text style={[styles.weekActionText, styles.weekDelete]}>Delete week</Text>
-                  </Pressable>
+                  {weeks.length > 1 ? (
+                    <Pressable onPress={onDeleteWeek} disabled={busy} hitSlop={6}>
+                      <Text style={[styles.weekActionText, styles.weekDelete]}>Delete week</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               ) : null}
             </View>
@@ -342,14 +370,19 @@ export default function PlanEditor() {
 
           {/* Body */}
           {isTraining
-            ? days.map((d) => (
+            ? days.map((d, i) => (
                 <DayCard
                   key={d.id}
                   day={d}
                   exercises={exByDay[d.id] ?? []}
+                  canMoveUp={i > 0}
+                  canMoveDown={i < days.length - 1}
+                  onMoveUp={() => moveDay(d, 'up')}
+                  onMoveDown={() => moveDay(d, 'down')}
                   onAddExercise={() => router.push({ pathname: '/coach/exercise-picker', params: { dayId: d.id } })}
                   onOpenExercise={(rowId) => router.push({ pathname: '/coach/exercise/[id]', params: { id: rowId } })}
-                  onDelete={() => confirmDeleteContainer('day', d.id, d.name)}
+                  onDelete={() => onDeleteDay(d.id, d.name)}
+                  onSaveName={(text) => saveDayName(d.id, text)}
                   onSaveNote={(text) => saveDayNote(d.id, text)}
                 />
               ))
@@ -360,7 +393,7 @@ export default function PlanEditor() {
                   items={itemsByMeal[m.id] ?? []}
                   onAddFood={() => router.push({ pathname: '/coach/food-picker', params: { mealId: m.id } })}
                   onOpenItem={(itemId) => router.push({ pathname: '/coach/meal-item/[id]', params: { id: itemId } })}
-                  onDelete={() => confirmDeleteContainer('meal', m.id, m.name)}
+                  onDelete={() => onDeleteMeal(m.id, m.name)}
                 />
               ))}
 
@@ -371,7 +404,7 @@ export default function PlanEditor() {
                 style={styles.input}
                 value={newName}
                 onChangeText={setNewName}
-                placeholder={isTraining ? 'New day (e.g. Day 1 - Push)' : 'New meal (e.g. Breakfast)'}
+                placeholder={isTraining ? 'New day (e.g. Arms)' : 'New meal (e.g. Breakfast)'}
                 editable={!busy}
               />
               <Pressable style={styles.addBtn} onPress={onAddContainer} disabled={busy}>
@@ -385,7 +418,74 @@ export default function PlanEditor() {
   );
 }
 
-/** Inline editable coach comment. Shows the note (or a prompt); tap to edit. */
+/** Inline single-line editable text (required). Tap to edit; blank reverts. */
+function EditableText({
+  value,
+  onSave,
+  textStyle,
+  placeholder,
+}: {
+  value: string;
+  onSave: (text: string) => Promise<void>;
+  textStyle: object;
+  placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(value);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const t = text.trim();
+    if (t.length === 0) {
+      setText(value);
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(t);
+      setEditing(false);
+    } catch {
+      Alert.alert('Error', 'Could not save.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <Pressable
+        style={styles.editableRow}
+        onPress={() => {
+          setText(value);
+          setEditing(true);
+        }}
+      >
+        <Text style={textStyle}>{value}</Text>
+        <Text style={styles.pencil}>✎</Text>
+      </Pressable>
+    );
+  }
+  return (
+    <View style={styles.editableEdit}>
+      <TextInput
+        style={styles.editableInput}
+        value={text}
+        onChangeText={setText}
+        placeholder={placeholder}
+        autoFocus
+        editable={!saving}
+        onSubmitEditing={save}
+        returnKeyType="done"
+      />
+      <Pressable onPress={save} disabled={saving} hitSlop={8}>
+        <Text style={styles.noteSave}>{saving ? '…' : 'Save'}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/** Inline editable coach comment (optional, multiline). */
 function NoteEditor({
   label,
   value,
@@ -423,11 +523,7 @@ function NoteEditor({
         }}
       >
         <Text style={styles.noteIcon}>💬</Text>
-        {value ? (
-          <Text style={styles.noteText}>{value}</Text>
-        ) : (
-          <Text style={styles.notePrompt}>{`Add ${label.toLowerCase()}`}</Text>
-        )}
+        {value ? <Text style={styles.noteText}>{value}</Text> : <Text style={styles.notePrompt}>{`Add ${label.toLowerCase()}`}</Text>}
       </Pressable>
     );
   }
@@ -457,23 +553,41 @@ function NoteEditor({
 function DayCard({
   day,
   exercises,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
   onAddExercise,
   onOpenExercise,
   onDelete,
+  onSaveName,
   onSaveNote,
 }: {
   day: Day;
   exercises: ExerciseRow[];
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   onAddExercise: () => void;
   onOpenExercise: (rowId: string) => void;
   onDelete: () => void;
+  onSaveName: (text: string) => Promise<void>;
   onSaveNote: (text: string) => Promise<void>;
 }) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHead}>
-        <Text style={styles.cardTitle}>{day.name}</Text>
-        <Pressable hitSlop={10} onPress={onDelete}>
+        <View style={styles.flex}>
+          <EditableText value={day.name} onSave={onSaveName} textStyle={styles.cardTitle} placeholder="Day name" />
+        </View>
+        <Pressable hitSlop={8} onPress={onMoveUp} disabled={!canMoveUp}>
+          <Text style={[styles.move, !canMoveUp && styles.moveOff]}>▲</Text>
+        </Pressable>
+        <Pressable hitSlop={8} onPress={onMoveDown} disabled={!canMoveDown}>
+          <Text style={[styles.move, !canMoveDown && styles.moveOff]}>▼</Text>
+        </Pressable>
+        <Pressable hitSlop={8} onPress={onDelete}>
           <Text style={styles.remove}>✕</Text>
         </Pressable>
       </View>
@@ -549,7 +663,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   wrap: { padding: 16, gap: 10 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  title: { flex: 1, fontSize: 24, fontWeight: '800', color: '#111' },
+  title: { fontSize: 24, fontWeight: '800', color: '#111' },
   type: { fontSize: 14, color: '#6e7781', textTransform: 'capitalize' },
   status: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   template: { backgroundColor: '#6f42c1' },
@@ -562,7 +676,6 @@ const styles = StyleSheet.create({
   totalCard: { backgroundColor: '#eef6ff', borderRadius: 12, padding: 12, marginTop: 4 },
   totalLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: '#1f6feb' },
   totalMacros: { fontSize: 15, fontWeight: '700', color: '#111', marginTop: 2 },
-  // Week bar
   weekBar: { marginTop: 6, gap: 8 },
   weekPills: { gap: 8, paddingVertical: 2 },
   weekPill: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#eef0f3' },
@@ -574,10 +687,11 @@ const styles = StyleSheet.create({
   weekActions: { flexDirection: 'row', gap: 16 },
   weekActionText: { fontSize: 13, fontWeight: '600', color: '#1f6feb' },
   weekDelete: { color: '#cf222e' },
-  // Cards
   card: { backgroundColor: '#f5f6f8', borderRadius: 14, padding: 14, gap: 4, marginTop: 6 },
-  cardHead: { flexDirection: 'row', alignItems: 'center' },
-  cardTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#111' },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cardTitle: { fontSize: 17, fontWeight: '700', color: '#111' },
+  move: { fontSize: 15, color: '#1f6feb', fontWeight: '700' },
+  moveOff: { color: '#c2c8d0' },
   remove: { fontSize: 17, color: '#cf222e', fontWeight: '700' },
   blockLabel: {
     fontSize: 11,
@@ -607,6 +721,21 @@ const styles = StyleSheet.create({
   addBtn: { backgroundColor: '#111', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   addBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   empty: { fontSize: 15, color: '#888' },
+  // Editable single-line text
+  editableRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  pencil: { fontSize: 14, color: '#8a93a0' },
+  editableEdit: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  editableInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#1f6feb',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 16,
+    color: '#111',
+    backgroundColor: '#fff',
+  },
   // Note editor
   noteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingVertical: 6 },
   noteIcon: { fontSize: 14 },

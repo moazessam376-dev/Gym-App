@@ -63,9 +63,8 @@ export default function ExercisePicker() {
       await createExerciseRow({ day_id: dayId, exercise_id: ex.id, exercise_name: ex.name });
       router.back();
     } catch (e) {
-      // The DB accepts this insert (verified); a failure here is a client/network
-      // edge. Log the real cause so it's diagnosable, show the user a generic msg.
-      console.warn('add library exercise failed', e);
+      // Log the real cause in dev only (no secrets/PII); show a generic message.
+      if (__DEV__) console.warn('add library exercise failed', e);
       setError('Could not add that exercise.');
       setAdding(false);
     }

@@ -2,7 +2,7 @@
 // only if it's a non-draft plan assigned to this client, so there is no edit
 // surface. Training: Weeks → Days → block-grouped exercises with the coach's cues
 // at plan / day / exercise level. Nutrition: meals → foods with macro totals.
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -50,6 +50,8 @@ export default function ClientPlanView() {
     setExByDay(Object.fromEntries(entries));
   }, []);
 
+  // Loads plan + weeks (or meals) without depending on weekId; a separate effect
+  // loads the selected week's days, so selecting a week can't loop back here.
   const load = useCallback(async () => {
     if (!id) return;
     try {
@@ -59,9 +61,7 @@ export default function ClientPlanView() {
       if (p.type === 'training') {
         const ws = await listWeeks(id);
         setWeeks(ws);
-        const active = ws.find((w) => w.id === weekId) ?? ws[0];
-        setWeekId(active?.id ?? null);
-        if (active) await loadWeekDays(active.id);
+        setWeekId((prev) => (ws.some((w) => w.id === prev) ? prev : ws[0]?.id ?? null));
       } else {
         const ms = await listMeals(id);
         setMeals(ms);
@@ -73,13 +73,21 @@ export default function ClientPlanView() {
     } finally {
       setLoading(false);
     }
-  }, [id, weekId, loadWeekDays]);
+  }, [id]);
 
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load]),
   );
+
+  useEffect(() => {
+    if (weekId) loadWeekDays(weekId).catch(() => {});
+    else {
+      setDays([]);
+      setExByDay({});
+    }
+  }, [weekId, loadWeekDays]);
 
   if (role && role !== 'client') return <Redirect href="/" />;
   if (loading) {
@@ -95,15 +103,6 @@ export default function ClientPlanView() {
         <Text style={styles.empty}>This plan isn’t available.</Text>
       </View>
     );
-  }
-
-  async function selectWeek(wid: string) {
-    setWeekId(wid);
-    try {
-      await loadWeekDays(wid);
-    } catch {
-      /* keep prior */
-    }
   }
 
   const isTraining = plan.type === 'training';
@@ -135,7 +134,7 @@ export default function ClientPlanView() {
             {weeks.map((w) => (
               <Text
                 key={w.id}
-                onPress={() => selectWeek(w.id)}
+                onPress={() => setWeekId(w.id)}
                 style={[styles.weekPill, w.id === weekId && styles.weekPillActive]}
               >
                 {w.name}
