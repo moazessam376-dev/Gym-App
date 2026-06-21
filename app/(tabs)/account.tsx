@@ -89,6 +89,7 @@ export default function AccountTab() {
 
         {role === 'client' ? (
           <>
+            <LinkRow icon="heart-outline" label="Food preferences" onPress={go('/food/preferences')} />
             {!hasCoach ? (
               <LinkRow icon="ticket-outline" label="Accept an invite" onPress={go('/accept-invite')} />
             ) : null}

@@ -1544,3 +1544,88 @@ describe('food logging (0019) — diary, targets, daily roll-up, streak (§2)', 
     expect(outsider.rows[0].n).toBe(0); // can't read A1's entries
   });
 });
+
+describe('food preferences (0020) — athlete-owned likes/avoids, coach-readable (§2)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_A2_ID: Identity = { sub: CLIENT_A2, userRole: 'client' };
+  const BANANA = 'f0000000-0000-0000-0000-00000000000d';
+  const ALMONDS = 'f0000000-0000-0000-0000-000000000010';
+  const APPLE = 'f0000000-0000-0000-0000-00000000000e';
+
+  it('the global food library is categorised (0020 backfill)', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query('select count(*)::int as n from public.food_library where coach_id is null and category is null'),
+    );
+    expect(r.rows[0].n).toBe(0); // every global food has a category
+  });
+
+  it('the owner + their coach read a preference; another coach and a sibling cannot', async () => {
+    const owner = await asUser(CLIENT_A1, (c) =>
+      c.query('select food_id, kind from public.food_preferences where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select food_id from public.food_preferences where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select food_id from public.food_preferences where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const sibling = await asUser(CLIENT_A2_ID, (c) =>
+      c.query('select food_id from public.food_preferences where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(owner.rows.length).toBe(2); // ♥ Banana, ⊘ Almonds
+    expect(coach.rows.length).toBe(2); // is_coach_of(A1)
+    expect(otherCoach.rows).toHaveLength(0);
+    expect(sibling.rows).toHaveLength(0);
+  });
+
+  it('a coach’s cohort read returns only their own clients’ preferences', async () => {
+    const a = await asUser(COACH_A, (c) => c.query('select user_id from public.food_preferences'));
+    const owners = new Set(a.rows.map((r) => r.user_id));
+    expect(owners.has(CLIENT_A1.sub)).toBe(true);
+    expect(owners.has(CLIENT_B1)).toBe(false); // Coach B's client
+  });
+
+  it('anon sees no preferences', async () => {
+    const r = await asAnon((c) => c.query('select user_id from public.food_preferences'));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it('an athlete sets their own preference; a forged owner is coerced back to the caller', async () => {
+    const ok = await asUser(CLIENT_A2_ID, (c) =>
+      c.query(
+        "insert into public.food_preferences (user_id, food_id, kind) values ($1, $2, 'like') returning user_id",
+        [CLIENT_A2, APPLE],
+      ),
+    );
+    expect(ok.rows[0].user_id).toBe(CLIENT_A2);
+
+    const forged = await asUser(CLIENT_A2_ID, (c) =>
+      c.query(
+        "insert into public.food_preferences (user_id, food_id, kind) values ($1, $2, 'like') returning user_id",
+        [CLIENT_B1, BANANA],
+      ),
+    );
+    expect(forged.rows[0].user_id).toBe(CLIENT_A2); // not B1
+  });
+
+  it('a coach cannot write preferences (read-only): insert rejected, delete affects nothing', async () => {
+    // Trigger forces user_id=coach; the role='client' check then rejects the coach.
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query("insert into public.food_preferences (user_id, food_id, kind) values ($1, $2, 'like')", [
+          CLIENT_A1.sub,
+          APPLE,
+        ]),
+      ),
+    ).rejects.toThrow();
+    const del = await asUser(COACH_A, (c) =>
+      c.query('delete from public.food_preferences where user_id = $1 and food_id = $2', [CLIENT_A1.sub, ALMONDS]),
+    );
+    expect(del.rowCount).toBe(0); // not the owner
+    // A1's data is untouched.
+    const a1 = await asUser(CLIENT_A1, (c) =>
+      c.query('select food_id from public.food_preferences where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(a1.rows.length).toBe(2);
+  });
+});

@@ -41,6 +41,7 @@ const migrationFiles = [
   '0017_profiles_goals.sql',
   '0018_sex_male_female.sql',
   '0019_food_logging.sql',
+  '0020_food_categories_preferences.sql',
 ];
 
 const baseUrl =
