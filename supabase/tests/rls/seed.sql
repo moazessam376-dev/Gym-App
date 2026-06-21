@@ -157,4 +157,12 @@ insert into public.exercise_set_logs
   ('5e5e0002-0000-0000-0000-000000000002', '5e550001-0000-0000-0000-000000000001', null, 'Barbell Bench Press', 1, 8,  60000, true),
   ('5e5e0003-0000-0000-0000-000000000003', '5e550001-0000-0000-0000-000000000001', null, 'Triceps Pushdown',    0, 12, 20000, true);
 
+-- Profiles & goals (0017). Client A1 has an athlete_profile; Coach A has a
+-- coach_profile. Proves: Coach A reads A1's goals, Coach B cannot; Client A1
+-- reads Coach A's profile (their coach) but not Coach B's.
+insert into public.athlete_profile (user_id, primary_goal, experience_level, height_cm, target_weight_grams, training_days, onboarded_at) values
+  ('aaaa0001-0000-0000-0000-000000000001', 'build_muscle', 'intermediate', 178, 82000, 4, now());
+insert into public.coach_profile (user_id, bio, specialties, years_experience, onboarded_at) values
+  ('11111111-1111-1111-1111-111111111111', 'Strength & hypertrophy coach', '{hypertrophy,powerlifting}', 6, now());
+
 alter table auth.users enable trigger on_auth_user_created;
