@@ -30,6 +30,13 @@ const migrationFiles = [
   '0006_assignment_functions.sql',
   '0007_function_hardening.sql',
   '0008_phase2_polish.sql',
+  '0009_plans.sql',
+  '0010_plan_templates_library.sql',
+  '0011_coach_applications.sql',
+  '0012_messages.sql',
+  '0013_media.sql',
+  '0014_plan_weeks_templates.sql',
+  '0015_system_templates.sql',
 ];
 
 const baseUrl =

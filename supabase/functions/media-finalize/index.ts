@@ -1,0 +1,162 @@
+// media-finalize — the ENFORCER (Phase 4, §7). Turns an untrusted inbox upload
+// into a servable, sanitized file recorded in public.media (the gatekeeper).
+//
+// Flow (all as the service role; owner taken from the VERIFIED JWT, §5):
+//   1. The inbox_path's first segment must equal the caller — you finalize only
+//      your OWN uploads.
+//   2. (optional) a progress_entry link must belong to the caller.
+//   3. download the inbox object; reject if empty or > 10 MB.
+//   4. MAGIC-BYTE detect the real type; reject anything off the allowlist (a lying
+//      extension/MIME can't get through — bytes are authoritative).
+//   5. STRIP EXIF by re-encoding jpg/png via imagescript (decode→encode drops all
+//      metadata incl. GPS); pdf passes through (no EXIF; PDF scrub deferred).
+//   6. upload the sanitized bytes to the LOCKED `media` bucket, INSERT the media
+//      row (this is the ONLY writer of that table), delete the inbox object.
+// Any failure collapses to one generic error and best-effort cleans up (§4).
+import { getCaller, serviceClient } from '../_shared/clients.ts';
+import { finalizeSchema } from '../_shared/schemas.ts';
+import { corsHeaders, json } from '../_shared/http.ts';
+import { Image } from 'imagescript';
+
+const MAX_BYTES = 10 * 1024 * 1024; // 10 MB (§7)
+
+type Mime = 'image/jpeg' | 'image/png' | 'application/pdf';
+
+/** Detect the real content type from leading bytes — never trust extension/MIME. */
+function detectType(b: Uint8Array): Mime | null {
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  if (
+    b.length >= 8 &&
+    b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 &&
+    b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a
+  ) {
+    return 'image/png';
+  }
+  if (b.length >= 5 && b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 && b[4] === 0x2d) {
+    return 'application/pdf';
+  }
+  return null;
+}
+
+const EXT: Record<Mime, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'application/pdf': 'pdf',
+};
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+
+  const caller = await getCaller(req);
+  if (!caller) return json({ error: 'unauthorized' }, 401);
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'invalid_request' }, 400);
+  }
+  const parsed = finalizeSchema.safeParse(body);
+  if (!parsed.success) return json({ error: 'invalid_request' }, 400);
+  const { inbox_path, kind, progress_entry_id } = parsed.data;
+
+  // You may only finalize uploads under your own owner prefix.
+  if (inbox_path.split('/')[0] !== caller.id) return json({ error: 'forbidden' }, 403);
+
+  const svc = serviceClient();
+  const dropInbox = async () => {
+    try {
+      await svc.storage.from('media-inbox').remove([inbox_path]);
+    } catch (_) {
+      /* best-effort */
+    }
+  };
+
+  try {
+    // An optional weigh-in link must belong to the caller (service role bypasses
+    // RLS, so we check ownership explicitly — no attaching to someone else's row).
+    if (progress_entry_id) {
+      const { data: pe } = await svc
+        .from('progress_entries')
+        .select('user_id')
+        .eq('id', progress_entry_id)
+        .maybeSingle();
+      if (!pe || pe.user_id !== caller.id) {
+        await dropInbox();
+        return json({ error: 'invalid_request' }, 400);
+      }
+    }
+
+    const { data: blob, error: dErr } = await svc.storage.from('media-inbox').download(inbox_path);
+    if (dErr || !blob) return json({ error: 'invalid_file' }, 400);
+
+    const raw = new Uint8Array(await blob.arrayBuffer());
+    if (raw.length === 0 || raw.length > MAX_BYTES) {
+      await dropInbox();
+      return json({ error: 'invalid_file' }, 400);
+    }
+
+    const mime = detectType(raw);
+    if (!mime) {
+      await dropInbox();
+      return json({ error: 'invalid_file' }, 400);
+    }
+
+    // Sanitize: re-encode images to strip EXIF; pass PDFs through.
+    let clean: Uint8Array;
+    if (mime === 'application/pdf') {
+      clean = raw;
+    } else {
+      const img = await Image.decode(raw);
+      clean = mime === 'image/png' ? await img.encode() : await img.encodeJPEG(85);
+    }
+    if (clean.length > MAX_BYTES) {
+      await dropInbox();
+      return json({ error: 'invalid_file' }, 400);
+    }
+
+    const mediaId = crypto.randomUUID();
+    const finalPath = `${caller.id}/${mediaId}.${EXT[mime]}`;
+
+    const { error: uErr } = await svc.storage
+      .from('media')
+      .upload(finalPath, clean, { contentType: mime, upsert: false });
+    if (uErr) {
+      await dropInbox();
+      return json({ error: 'invalid_file' }, 400);
+    }
+
+    const { data: row, error: iErr } = await svc
+      .from('media')
+      .insert({
+        id: mediaId,
+        owner_id: caller.id,
+        kind,
+        status: 'ready',
+        bucket: 'media',
+        path: finalPath,
+        mime_type: mime,
+        size_bytes: clean.length,
+        progress_entry_id: progress_entry_id ?? null,
+      })
+      .select('id')
+      .single();
+    if (iErr || !row) {
+      try {
+        await svc.storage.from('media').remove([finalPath]); // don't orphan bytes
+      } catch (_) {
+        /* best-effort */
+      }
+      await dropInbox();
+      return json({ error: 'invalid_file' }, 400);
+    }
+
+    await dropInbox(); // raw inbox copy no longer needed
+    return json({ media_id: row.id }, 200);
+  } catch (e) {
+    console.error('media-finalize failed', { message: String(e) });
+    await dropInbox();
+    return json({ error: 'invalid_file' }, 400);
+  }
+});
