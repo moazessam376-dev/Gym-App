@@ -8,6 +8,7 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth-context';
 import { getMyName } from '@/lib/profile';
+import { getMyAthleteProfile } from '@/lib/athlete-profile';
 import { getMyCoach } from '@/lib/invitations';
 import { listPlansForClient, listWeeks, listDays, listExerciseRows } from '@/lib/plans';
 import {
@@ -35,21 +36,24 @@ export default function ClientHome() {
   const [plannedSets, setPlannedSets] = useState(0);
   const [setsDone, setSetsDone] = useState(0);
   const [status, setStatus] = useState<SessionStatus | 'none'>('none');
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!userId) return;
     try {
-      const [n, s, coach, plans] = await Promise.all([
+      const [n, s, coach, plans, athlete] = await Promise.all([
         getMyName(userId),
         getStreak(userId),
         getMyCoach(userId),
         listPlansForClient(userId),
+        getMyAthleteProfile(userId),
       ]);
       setName(n);
       setStreak(s);
       setCoachName(coach?.full_name ?? null);
       setCoachId(coach?.id ?? null);
+      setNeedsOnboarding(athlete?.onboarded_at == null);
 
       // Active training plan = most recent non-archived training plan.
       const plan = plans.find((p) => p.type === 'training' && p.status !== 'archived');
@@ -139,6 +143,22 @@ export default function ClientHome() {
           <Avatar name={name ?? 'Athlete'} size={44} />
         </View>
       </View>
+
+      {/* Onboarding nudge — set goals so the coach can tailor the plan */}
+      {needsOnboarding ? (
+        <Card onPress={() => router.push('/profile-setup')} style={{ borderColor: theme.colors.primary }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+            <Ionicons name="flag" size={22} color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyStrong">Set your goals</Text>
+              <Text variant="caption" muted>
+                Tell us your goals so your coach can tailor your plan.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+          </View>
+        </Card>
+      ) : null}
 
       {/* Hero ring */}
       {today ? (

@@ -8,9 +8,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
 import { listPlansForClient, type Plan } from '../../../src/lib/plans';
-import { Screen, Text, Avatar, GlassCard, Badge, Button, DeltaChip } from '../../../src/components/ui';
+import { getAthleteProfileFor, type AthleteProfile } from '../../../src/lib/athlete-profile';
+import { Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 import { IS_DEMO_DATA, MOCK_CLIENT_PROGRESS as P } from '../../../src/mock/dashboard';
+
+function label(s: string): string {
+  return s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
+}
 
 const STATUS_TONE = { draft: 'warning', published: 'success', archived: 'neutral' } as const;
 
@@ -31,12 +36,15 @@ export default function ClientDetail() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
 
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [goals, setGoals] = useState<AthleteProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      setPlans(await listPlansForClient(id));
+      const [p, g] = await Promise.all([listPlansForClient(id), getAthleteProfileFor(id)]);
+      setPlans(p);
+      setGoals(g);
     } catch {
       /* keep prior */
     } finally {
@@ -102,6 +110,29 @@ export default function ClientDetail() {
                 <MiniStat value={`${P.adherencePct}%`} label="ADHERENCE" />
               </View>
             </GlassCard>
+
+            {/* Client goals (real data from athlete_profile, 0017) */}
+            {goals?.onboarded_at ? (
+              <GlassCard>
+                <Text variant="label" muted style={{ marginBottom: theme.spacing.sm }}>
+                  Goals
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
+                  {goals.primary_goal ? <Chip label={label(goals.primary_goal)} active /> : null}
+                  {goals.experience_level ? <Chip label={label(goals.experience_level)} /> : null}
+                  {goals.training_days != null ? <Chip label={`${goals.training_days} days/wk`} /> : null}
+                  {goals.target_weight_grams ? <Chip label={`Target ${Math.round(goals.target_weight_grams / 1000)}kg`} /> : null}
+                  {goals.dietary_tags.map((t) => (
+                    <Chip key={t} label={label(t)} />
+                  ))}
+                </View>
+                {goals.injuries_notes ? (
+                  <Text variant="caption" muted style={{ marginTop: theme.spacing.sm, fontStyle: 'italic' }}>
+                    {goals.injuries_notes}
+                  </Text>
+                ) : null}
+              </GlassCard>
+            ) : null}
 
             <Button
               title="Assign from templates"

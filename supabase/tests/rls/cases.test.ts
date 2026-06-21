@@ -1298,3 +1298,81 @@ describe('completion logging (0016) — sessions, set logs, derived metrics (§2
     ).rejects.toThrow(); // no execute grant
   });
 });
+
+describe('profiles & goals (0017) — athlete_profile + coach_profile (§2)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_A2_ID: Identity = { sub: CLIENT_A2, userRole: 'client' };
+  const CLIENT_B1_ID: Identity = { sub: CLIENT_B1, userRole: 'client' };
+  const COACH_A_ID = '11111111-1111-1111-1111-111111111111';
+
+  // ── athlete_profile: client-owned, coach-readable ──────────────────────────
+  it('the owner + their coach read an athlete_profile; outsiders see nothing', async () => {
+    const owner = await asUser(CLIENT_A1, (c) =>
+      c.query('select user_id from public.athlete_profile where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select user_id from public.athlete_profile where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select user_id from public.athlete_profile where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const sibling = await asUser(CLIENT_A2_ID, (c) =>
+      c.query('select user_id from public.athlete_profile where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(owner.rows).toHaveLength(1);
+    expect(coach.rows).toHaveLength(1); // is_coach_of(A1)
+    expect(otherCoach.rows).toHaveLength(0);
+    expect(sibling.rows).toHaveLength(0);
+  });
+
+  it('anon sees no athlete or coach profiles', async () => {
+    const a = await asAnon((c) => c.query('select user_id from public.athlete_profile'));
+    const co = await asAnon((c) => c.query('select user_id from public.coach_profile'));
+    expect(a.rows).toHaveLength(0);
+    expect(co.rows).toHaveLength(0);
+  });
+
+  it('a client upserts their OWN athlete_profile but cannot forge another owner', async () => {
+    const ok = await asUser(CLIENT_A2_ID, (c) =>
+      c.query("insert into public.athlete_profile (user_id, primary_goal) values ($1, 'lose_fat')", [CLIENT_A2]),
+    );
+    expect(ok.rowCount).toBe(1);
+    await expect(
+      asUser(CLIENT_A2_ID, (c) =>
+        c.query("insert into public.athlete_profile (user_id, primary_goal) values ($1, 'lose_fat')", [CLIENT_B1]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('a coach cannot write an athlete_profile for their client (self-report only)', async () => {
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query("insert into public.athlete_profile (user_id, primary_goal) values ($1, 'maintain')", [CLIENT_A1.sub]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  // ── coach_profile: coach-owned, readable by their clients ──────────────────
+  it('a client reads THEIR coach’s profile but not another coach’s', async () => {
+    const ownCoach = await asUser(CLIENT_A1, (c) =>
+      c.query('select user_id from public.coach_profile where user_id = $1', [COACH_A_ID]),
+    );
+    const otherCoach = await asUser(CLIENT_B1_ID, (c) =>
+      c.query('select user_id from public.coach_profile where user_id = $1', [COACH_A_ID]),
+    );
+    expect(ownCoach.rows).toHaveLength(1); // my_coach_id() = Coach A
+    expect(otherCoach.rows).toHaveLength(0); // B1's coach is Coach B
+  });
+
+  it('a coach upserts their own coach_profile but cannot forge another coach’s', async () => {
+    const ok = await asUser(COACH_B, (c) =>
+      c.query("insert into public.coach_profile (user_id, bio) values ($1, 'hi')", [COACH_B_ID]),
+    );
+    expect(ok.rowCount).toBe(1);
+    await expect(
+      asUser(COACH_B, (c) =>
+        c.query("insert into public.coach_profile (user_id, bio) values ($1, 'forged')", [COACH_A_ID]),
+      ),
+    ).rejects.toThrow();
+  });
+});
