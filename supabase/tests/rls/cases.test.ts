@@ -1376,3 +1376,171 @@ describe('profiles & goals (0017) — athlete_profile + coach_profile (§2)', ()
     ).rejects.toThrow();
   });
 });
+
+describe('food logging (0019) — diary, targets, daily roll-up, streak (§2)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_A2_ID: Identity = { sub: CLIENT_A2, userRole: 'client' };
+  const CLIENT_B1_ID: Identity = { sub: CLIENT_B1, userRole: 'client' };
+  const ENTRY_A1 = 'f10d0001-0000-0000-0000-000000000001'; // A1, today, Chicken 200g
+
+  // ── cross-tenant denial ────────────────────────────────────────────────────
+  it('a coach cannot read another coach’s client diary; a client cannot read a sibling’s', async () => {
+    const coach = await asUser(COACH_B, (c) =>
+      c.query('select id from public.food_log_entries where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const sibling = await asUser(CLIENT_A2_ID, (c) =>
+      c.query('select id from public.food_log_entries where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(coach.rows).toHaveLength(0);
+    expect(sibling.rows).toHaveLength(0);
+  });
+
+  it('anon sees no diary entries, targets, or daily roll-ups', async () => {
+    const e = await asAnon((c) => c.query('select id from public.food_log_entries'));
+    const t = await asAnon((c) => c.query('select user_id from public.nutrition_targets'));
+    const v = await asAnon((c) => c.query('select user_id from public.v_daily_nutrition'));
+    expect(e.rows).toHaveLength(0);
+    expect(t.rows).toHaveLength(0);
+    expect(v.rows).toHaveLength(0);
+  });
+
+  // ── owner / coach positive controls ────────────────────────────────────────
+  it('a client logs + reads their own diary; their coach reads it but a stranger cannot', async () => {
+    const own = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.food_log_entries where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(own.rows.length).toBeGreaterThanOrEqual(2); // 2 seeded today (+1 yesterday)
+
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select id from public.food_log_entries where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(coach.rows.length).toBeGreaterThanOrEqual(2); // is_coach_of(A1)
+
+    const stranger = await asUser(CLIENT_B1_ID, (c) =>
+      c.query('select id from public.food_log_entries where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(stranger.rows).toHaveLength(0);
+  });
+
+  it('a client adds an off-plan entry (null plan_meal_item_id) owned by themselves', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        `insert into public.food_log_entries (user_id, meal_slot, food_name, grams)
+           values ($1, 'snack', 'Protein Shake', 300) returning user_id, plan_meal_item_id`,
+        [CLIENT_A1.sub],
+      ),
+    );
+    expect(r.rows[0].user_id).toBe(CLIENT_A1.sub);
+    expect(r.rows[0].plan_meal_item_id).toBeNull(); // off-plan extra
+  });
+
+  // ── forgery / mass-assignment: the trigger forces the owner ────────────────
+  it('the server forces user_id = auth.uid() (a forged owner is overwritten, not honoured)', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        `insert into public.food_log_entries (user_id, meal_slot, food_name, grams)
+           values ($1, 'lunch', 'Forged', 100) returning user_id`,
+        [CLIENT_B1], // attempt to log into B1's diary
+      ),
+    );
+    expect(r.rows[0].user_id).toBe(CLIENT_A1.sub); // coerced back to the caller
+  });
+
+  it('a coach cannot edit or delete a client’s diary entry (read-only for coaches)', async () => {
+    const upd = await asUser(COACH_A, (c) =>
+      c.query("update public.food_log_entries set note = 'coach edit' where id = $1", [ENTRY_A1]),
+    );
+    const del = await asUser(COACH_A, (c) =>
+      c.query('delete from public.food_log_entries where id = $1', [ENTRY_A1]),
+    );
+    expect(upd.rowCount).toBe(0); // RLS: not the owner
+    expect(del.rowCount).toBe(0);
+  });
+
+  // ── targets: client-owned, coach-overridable ───────────────────────────────
+  it('the owner + their coach read a target; another coach cannot', async () => {
+    const own = await asUser(CLIENT_A1, (c) =>
+      c.query('select kcal_target from public.nutrition_targets where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select kcal_target from public.nutrition_targets where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select kcal_target from public.nutrition_targets where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(own.rows).toHaveLength(1);
+    expect(coach.rows).toHaveLength(1); // is_coach_of(A1)
+    expect(otherCoach.rows).toHaveLength(0);
+  });
+
+  it('a coach may override their client’s target (set_by forced); another coach may not', async () => {
+    const coachA = await asUser(COACH_A, (c) =>
+      c.query(
+        'update public.nutrition_targets set kcal_target = 2500 where user_id = $1 returning set_by',
+        [CLIENT_A1.sub],
+      ),
+    );
+    expect(coachA.rowCount).toBe(1);
+    expect(coachA.rows[0].set_by).toBe(COACH_A.sub); // server-forced writer
+
+    const coachB = await asUser(COACH_B, (c) =>
+      c.query('update public.nutrition_targets set kcal_target = 9999 where user_id = $1', [
+        CLIENT_A1.sub,
+      ]),
+    );
+    expect(coachB.rowCount).toBe(0); // not A1's coach
+  });
+
+  it('a client upserts their OWN target but cannot create one for someone else', async () => {
+    const ok = await asUser(CLIENT_A2_ID, (c) =>
+      c.query(
+        `insert into public.nutrition_targets (user_id, kcal_target, protein_g_target, carbs_g_target, fat_g_target, source)
+           values ($1, 2000, 150, 200, 60, 'self_set')`,
+        [CLIENT_A2],
+      ),
+    );
+    expect(ok.rowCount).toBe(1);
+    await expect(
+      asUser(CLIENT_A2_ID, (c) =>
+        c.query(
+          `insert into public.nutrition_targets (user_id, kcal_target, protein_g_target, carbs_g_target, fat_g_target, source)
+             values ($1, 2000, 150, 200, 60, 'self_set')`,
+          [CLIENT_B1],
+        ),
+      ),
+    ).rejects.toThrow();
+  });
+
+  // ── derived: daily roll-up view + streak ───────────────────────────────────
+  it('v_daily_nutrition rolls up the owner’s day and is tenant-scoped', async () => {
+    const a1 = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        'select kcal_total, entry_count from public.v_daily_nutrition where user_id = $1 and log_date = current_date',
+        [CLIENT_A1.sub],
+      ),
+    );
+    expect(a1.rows).toHaveLength(1);
+    expect(Number(a1.rows[0].kcal_total)).toBeGreaterThan(0);
+    expect(Number(a1.rows[0].entry_count)).toBeGreaterThanOrEqual(2);
+
+    const cross = await asUser(COACH_B, (c) =>
+      c.query('select log_date from public.v_daily_nutrition where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(cross.rows).toHaveLength(0); // security_invoker → base-table RLS
+  });
+
+  it('nutrition_streak counts the owner’s consecutive logged days; a coach sees it, an outsider 0', async () => {
+    const own = await asUser(CLIENT_A1, (c) =>
+      c.query('select public.nutrition_streak($1) as n', [CLIENT_A1.sub]),
+    );
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select public.nutrition_streak($1) as n', [CLIENT_A1.sub]),
+    );
+    const outsider = await asUser(COACH_B, (c) =>
+      c.query('select public.nutrition_streak($1) as n', [CLIENT_A1.sub]),
+    );
+    expect(own.rows[0].n).toBe(2); // today + yesterday
+    expect(coach.rows[0].n).toBe(2); // is_coach_of(A1)
+    expect(outsider.rows[0].n).toBe(0); // can't read A1's entries
+  });
+});

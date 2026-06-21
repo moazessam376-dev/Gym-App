@@ -9,6 +9,16 @@ import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-
 import { useAuth } from '../../../src/lib/auth-context';
 import { listPlansForClient, type Plan } from '../../../src/lib/plans';
 import { getAthleteProfileFor, type AthleteProfile } from '../../../src/lib/athlete-profile';
+import {
+  getDailyNutrition,
+  getNutritionStreak,
+  getTargets,
+  getWeekNutrition,
+  todayLocalDate,
+  type DailyNutrition,
+  type NutritionTargets,
+  type WeekNutrition,
+} from '../../../src/lib/nutrition';
 import { Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 import { IS_DEMO_DATA, MOCK_CLIENT_PROGRESS as P } from '../../../src/mock/dashboard';
@@ -37,14 +47,30 @@ export default function ClientDetail() {
 
   const [plans, setPlans] = useState<Plan[]>([]);
   const [goals, setGoals] = useState<AthleteProfile | null>(null);
+  const [nutTargets, setNutTargets] = useState<NutritionTargets | null>(null);
+  const [nutDaily, setNutDaily] = useState<DailyNutrition | null>(null);
+  const [nutWeek, setNutWeek] = useState<WeekNutrition | null>(null);
+  const [nutStreak, setNutStreak] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      const [p, g] = await Promise.all([listPlansForClient(id), getAthleteProfileFor(id)]);
+      const today = todayLocalDate();
+      const [p, g, t, d, w, s] = await Promise.all([
+        listPlansForClient(id),
+        getAthleteProfileFor(id),
+        getTargets(id),
+        getDailyNutrition(id, today),
+        getWeekNutrition(id, today),
+        getNutritionStreak(id),
+      ]);
       setPlans(p);
       setGoals(g);
+      setNutTargets(t);
+      setNutDaily(d);
+      setNutWeek(w);
+      setNutStreak(s);
     } catch {
       /* keep prior */
     } finally {
@@ -133,6 +159,31 @@ export default function ClientDetail() {
                 ) : null}
               </GlassCard>
             ) : null}
+
+            {/* Nutrition adherence (real data, migration 0019) */}
+            <GlassCard>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+                <Text variant="label" muted>
+                  Nutrition
+                </Text>
+                {nutTargets ? (
+                  <Text variant="caption" muted>
+                    Today {nutDaily?.kcal_total ?? 0} / {nutTargets.kcal_target} kcal
+                  </Text>
+                ) : null}
+              </View>
+              {nutWeek && (nutWeek.daysLogged > 0 || nutTargets) ? (
+                <View style={{ flexDirection: 'row' }}>
+                  <MiniStat value={`${nutStreak}🔥`} label="LOG STREAK" />
+                  <MiniStat value={`${nutWeek.daysLogged}/7`} label="DAYS LOGGED" />
+                  <MiniStat value={String(nutWeek.average.kcal)} label="AVG KCAL" />
+                </View>
+              ) : (
+                <Text variant="caption" muted>
+                  No nutrition logged yet.
+                </Text>
+              )}
+            </GlassCard>
 
             <Button
               title="Assign from templates"

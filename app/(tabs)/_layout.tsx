@@ -58,6 +58,14 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="nutrition"
+        options={{
+          title: 'Nutrition',
+          href: showFor(isClient),
+          tabBarIcon: tabIcon('restaurant', 'restaurant-outline'),
+        }}
+      />
+      <Tabs.Screen
         name="progress"
         options={{
           title: 'Progress',
@@ -93,6 +101,9 @@ export default function TabsLayout() {
         name="account"
         options={{
           title: 'Account',
+          // Clients reach Account from the Home header avatar (keeps the client bar
+          // at five: Home · Plans · Nutrition · Progress · Chat). Coach/admin keep it.
+          href: showFor(!isClient),
           tabBarIcon: tabIcon('person-circle', 'person-circle-outline'),
         }}
       />

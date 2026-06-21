@@ -2,7 +2,7 @@
 // workout, a streak chip, and a one-tap "log workout" CTA. Everything here is
 // fed by real completion-logging data (migration 0016); nothing is faked.
 import { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -18,6 +18,13 @@ import {
   todayLocalDate,
   type SessionStatus,
 } from '@/lib/sessions';
+import {
+  getDailyNutrition,
+  getTargets,
+  remaining,
+  type DailyNutrition,
+  type NutritionTargets,
+} from '@/lib/nutrition';
 import { Screen, Text, Card, Avatar, Button, ProgressRing, EmptyState } from '@/components/ui';
 import { theme } from '@/theme';
 
@@ -37,23 +44,30 @@ export default function ClientHome() {
   const [setsDone, setSetsDone] = useState(0);
   const [status, setStatus] = useState<SessionStatus | 'none'>('none');
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [nutTargets, setNutTargets] = useState<NutritionTargets | null>(null);
+  const [nutDaily, setNutDaily] = useState<DailyNutrition | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!userId) return;
     try {
-      const [n, s, coach, plans, athlete] = await Promise.all([
+      const today = todayLocalDate();
+      const [n, s, coach, plans, athlete, nt, nd] = await Promise.all([
         getMyName(userId),
         getStreak(userId),
         getMyCoach(userId),
         listPlansForClient(userId),
         getMyAthleteProfile(userId),
+        getTargets(userId),
+        getDailyNutrition(userId, today),
       ]);
       setName(n);
       setStreak(s);
       setCoachName(coach?.full_name ?? null);
       setCoachId(coach?.id ?? null);
       setNeedsOnboarding(athlete?.onboarded_at == null);
+      setNutTargets(nt);
+      setNutDaily(nd);
 
       // Active training plan = most recent non-archived training plan.
       const plan = plans.find((p) => p.type === 'training' && p.status !== 'archived');
@@ -103,6 +117,11 @@ export default function ClientHome() {
   const pct = Math.round(progress * 100);
   const isDone = status === 'completed';
 
+  const consumedKcal = nutDaily?.kcal_total ?? 0;
+  const targetKcal = nutTargets?.kcal_target ?? 0;
+  const nutLeft = remaining(consumedKcal, targetKcal);
+  const nutProgress = targetKcal > 0 ? Math.min(1, consumedKcal / targetKcal) : 0;
+
   const openWorkout = () => {
     if (!today) return;
     router.push({
@@ -140,7 +159,9 @@ export default function ClientHome() {
               {streak}
             </Text>
           </View>
-          <Avatar name={name ?? 'Athlete'} size={44} />
+          <Pressable onPress={() => router.push('/(tabs)/account')}>
+            <Avatar name={name ?? 'Athlete'} size={44} />
+          </Pressable>
         </View>
       </View>
 
@@ -217,6 +238,42 @@ export default function ClientHome() {
           />
         </Card>
       )}
+
+      {/* Nutrition today — links into the Nutrition tab */}
+      <View style={{ gap: theme.spacing.sm }}>
+        <Text variant="label" muted>
+          Nutrition today
+        </Text>
+        <Card onPress={() => router.push('/(tabs)/nutrition')}>
+          {nutTargets ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.lg }}>
+              <ProgressRing progress={nutProgress} size={76} strokeWidth={8}>
+                <Text variant="bodyStrong" style={{ fontSize: 12 }}>
+                  {nutLeft}
+                </Text>
+              </ProgressRing>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text variant="title">{nutLeft} kcal left</Text>
+                <Text variant="caption" muted>
+                  {consumedKcal} / {targetKcal} kcal · {nutDaily?.protein_total ?? 0}P / {nutDaily?.carbs_total ?? 0}C / {nutDaily?.fat_total ?? 0}F
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+            </View>
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+              <Ionicons name="restaurant" size={22} color={theme.colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyStrong">Track your nutrition</Text>
+                <Text variant="caption" muted>
+                  Set a daily target and log your meals.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+            </View>
+          )}
+        </Card>
+      </View>
 
       {/* Coach card */}
       {coachName ? (
