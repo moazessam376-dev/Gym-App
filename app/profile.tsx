@@ -1,20 +1,12 @@
 // Edit your profile (display name). Any role. The name isn't in the JWT, so no
 // re-login is needed — it reflects on the next data load (roster, coach card).
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '../src/lib/auth-context';
 import { getMyName, updateMyName } from '../src/lib/profile';
+import { Screen, Text, Input, Button } from '../src/components/ui';
+import { theme } from '../src/theme';
 
 export default function Profile() {
   const { session } = useAuth();
@@ -68,19 +60,18 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.container}>
-          <Text style={styles.label}>Display name</Text>
-          <TextInput
-            style={styles.input}
+    <Screen gradient padded={false} edges={['bottom']}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={{ flex: 1, justifyContent: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
+          <Input
+            label="Display name"
             value={name}
             onChangeText={(t) => {
               setName(t);
@@ -89,44 +80,23 @@ export default function Profile() {
             placeholder="Your name"
             autoCapitalize="words"
             editable={!saving}
+            error={error}
           />
-          {session?.user?.email ? <Text style={styles.email}>{session.user.email}</Text> : null}
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {saved ? <Text style={styles.saved}>Saved ✓</Text> : null}
+          {session?.user?.email ? (
+            <Text variant="caption" muted>
+              {session.user.email}
+            </Text>
+          ) : null}
+          {saved ? (
+            <Text variant="bodyStrong" color="success">
+              Saved ✓
+            </Text>
+          ) : null}
 
-          <Pressable style={[styles.button, saving && styles.disabled]} onPress={onSave} disabled={saving}>
-            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
-          </Pressable>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backText}>Done</Text>
-          </Pressable>
+          <Button title="Save" onPress={onSave} loading={saving} size="lg" style={{ marginTop: theme.spacing.sm }} />
+          <Button title="Done" variant="ghost" onPress={() => router.back()} />
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  flex: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
-  container: { flex: 1, justifyContent: 'center', padding: 24, gap: 8 },
-  label: { fontSize: 13, fontWeight: '700', color: '#444' },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d0d7de',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#111',
-  },
-  email: { fontSize: 14, color: '#6e7781', marginTop: 2 },
-  error: { color: '#cf222e', fontSize: 13 },
-  saved: { color: '#1a7f37', fontSize: 14, fontWeight: '600' },
-  button: { backgroundColor: '#111', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
-  disabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  backBtn: { paddingVertical: 12, alignItems: 'center' },
-  backText: { color: '#1f6feb', fontSize: 15, fontWeight: '600' },
-});

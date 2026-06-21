@@ -1130,3 +1130,171 @@ describe('plans v3 (0014/0015) — weeks, system templates, clone, duplicate (§
     expect(r.rows).toHaveLength(0);
   });
 });
+
+describe('completion logging (0016) — sessions, set logs, derived metrics (§2)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_A2_ID: Identity = { sub: CLIENT_A2, userRole: 'client' };
+  const CLIENT_B1_ID: Identity = { sub: CLIENT_B1, userRole: 'client' };
+  const SESS_A1 = '5e550001-0000-0000-0000-000000000001'; // A1, today, 3 set logs
+  const SESS_B1 = '5e550005-0000-0000-0000-000000000005'; // B1 (Coach B's client)
+
+  // ── cross-tenant denial ────────────────────────────────────────────────────
+  it('coach A cannot read coach B’s client sessions; a client cannot read a sibling’s', async () => {
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select id from public.workout_sessions where user_id = $1', [CLIENT_B1]),
+    );
+    const sibling = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.workout_sessions where user_id = $1', [CLIENT_A2]),
+    );
+    expect(coach.rows).toHaveLength(0);
+    expect(sibling.rows).toHaveLength(0);
+  });
+
+  it('anon sees no sessions and no set logs', async () => {
+    const s = await asAnon((c) => c.query('select id from public.workout_sessions'));
+    const l = await asAnon((c) => c.query('select id from public.exercise_set_logs'));
+    expect(s.rows).toHaveLength(0);
+    expect(l.rows).toHaveLength(0);
+  });
+
+  // ── owner / coach positive controls ────────────────────────────────────────
+  it('a client logs their own session + set, and reads their own history', async () => {
+    const sess = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        `insert into public.workout_sessions (user_id, session_date, status)
+           values ($1, current_date - 10, 'completed')`,
+        [CLIENT_A1.sub],
+      ),
+    );
+    expect(sess.rowCount).toBe(1);
+
+    const set = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        `insert into public.exercise_set_logs (session_id, exercise_name, set_index, reps_done, load_grams)
+           values ($1, 'Extra Set', 0, 10, 50000)`,
+        [SESS_A1],
+      ),
+    );
+    expect(set.rowCount).toBe(1);
+
+    const own = await asUser(CLIENT_A1, (c) => c.query('select id from public.workout_sessions'));
+    expect(own.rows.length).toBeGreaterThanOrEqual(3); // 3 seeded
+  });
+
+  it('coach A reads their two clients’ sessions but never coach B’s client', async () => {
+    const rows = await asUser(COACH_A, (c) =>
+      c.query('select user_id from public.workout_sessions'),
+    );
+    const owners = new Set(rows.rows.map((r) => r.user_id));
+    expect(owners.has(CLIENT_A1.sub)).toBe(true);
+    expect(owners.has(CLIENT_A2)).toBe(true);
+    expect(owners.has(CLIENT_B1)).toBe(false);
+  });
+
+  it('the owner + their coach read a session’s set logs; outsiders see none', async () => {
+    const owner = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.exercise_set_logs where session_id = $1', [SESS_A1]),
+    );
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select id from public.exercise_set_logs where session_id = $1', [SESS_A1]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select id from public.exercise_set_logs where session_id = $1', [SESS_A1]),
+    );
+    const otherClient = await asUser(CLIENT_B1_ID, (c) =>
+      c.query('select id from public.exercise_set_logs where session_id = $1', [SESS_A1]),
+    );
+    expect(owner.rows).toHaveLength(3);
+    expect(coach.rows).toHaveLength(3); // is_coach_of(owner)
+    expect(otherCoach.rows).toHaveLength(0);
+    expect(otherClient.rows).toHaveLength(0);
+  });
+
+  // ── forgery / mass-assignment rejection ────────────────────────────────────
+  it('a client cannot insert a session owned by someone else', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query(
+          "insert into public.workout_sessions (user_id, session_date, status) values ($1, current_date, 'completed')",
+          [CLIENT_B1],
+        ),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('a client cannot write set logs into another client’s session', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query(
+          "insert into public.exercise_set_logs (session_id, exercise_name, set_index) values ($1, 'X', 0)",
+          [SESS_B1],
+        ),
+      ),
+    ).rejects.toThrow();
+  });
+
+  // ── derived: adherence view ────────────────────────────────────────────────
+  it('the adherence view reports sets done vs planned for the owner, and is tenant-scoped', async () => {
+    const a1 = await asUser(CLIENT_A1, (c) =>
+      c.query('select sets_done, sets_planned from public.v_session_adherence where session_id = $1', [
+        SESS_A1,
+      ]),
+    );
+    expect(a1.rows).toHaveLength(1);
+    expect(Number(a1.rows[0].sets_done)).toBe(3);
+    expect(Number(a1.rows[0].sets_planned)).toBe(7); // day da000001: 4 + 3 sets
+
+    // Another coach's view of A1's session: nothing (base-table RLS via security_invoker).
+    const cross = await asUser(COACH_B, (c) =>
+      c.query('select session_id from public.v_session_adherence where session_id = $1', [SESS_A1]),
+    );
+    expect(cross.rows).toHaveLength(0);
+  });
+
+  // ── derived: streak ────────────────────────────────────────────────────────
+  it('current_streak counts the owner’s consecutive days; a coach sees their client’s, an outsider 0', async () => {
+    const own = await asUser(CLIENT_A1, (c) =>
+      c.query('select public.current_streak($1) as n', [CLIENT_A1.sub]),
+    );
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select public.current_streak($1) as n', [CLIENT_A1.sub]),
+    );
+    const outsider = await asUser(COACH_B, (c) =>
+      c.query('select public.current_streak($1) as n', [CLIENT_A1.sub]),
+    );
+    expect(own.rows[0].n).toBe(3);
+    expect(coach.rows[0].n).toBe(3); // is_coach_of(A1)
+    expect(outsider.rows[0].n).toBe(0); // can't read A1's sessions
+  });
+
+  // ── derived: leaderboard (cross-tenant, must not leak) ─────────────────────
+  it('coach_leaderboard returns only the caller’s own clients', async () => {
+    const a = await asUser(COACH_A, (c) =>
+      c.query('select client_id, sessions_done from public.coach_leaderboard((current_date - 6)::date)'),
+    );
+    const ids = a.rows.map((r) => r.client_id);
+    expect(ids).toContain(CLIENT_A1.sub);
+    expect(ids).toContain(CLIENT_A2);
+    expect(ids).not.toContain(CLIENT_B1);
+    const a1Row = a.rows.find((r) => r.client_id === CLIENT_A1.sub);
+    expect(a1Row.sessions_done).toBe(3);
+
+    const b = await asUser(COACH_B, (c) =>
+      c.query('select client_id from public.coach_leaderboard((current_date - 6)::date)'),
+    );
+    const bIds = b.rows.map((r) => r.client_id);
+    expect(bIds).toContain(CLIENT_B1);
+    expect(bIds).not.toContain(CLIENT_A1.sub);
+  });
+
+  it('coach_leaderboard rejects a client caller and anon', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query('select * from public.coach_leaderboard((current_date - 6)::date)'),
+      ),
+    ).rejects.toThrow(); // not_a_coach
+    await expect(
+      asAnon((c) => c.query('select * from public.coach_leaderboard((current_date - 6)::date)')),
+    ).rejects.toThrow(); // no execute grant
+  });
+});

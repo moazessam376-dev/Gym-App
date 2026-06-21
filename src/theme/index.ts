@@ -1,0 +1,27 @@
+// Single import surface for the design system: `import { theme } from '@/theme'`.
+import { darkColors } from './colors';
+import { spacing } from './spacing';
+import { radii } from './radii';
+import { fontFamily, textVariants } from './typography';
+import { gradients, glow } from './effects';
+
+export const theme = {
+  colors: darkColors,
+  spacing,
+  radii,
+  fontFamily,
+  textVariants,
+  gradients,
+  glow,
+} as const;
+
+export type Theme = typeof theme;
+
+export { darkColors, palette, gradientFor, avatarGradients } from './colors';
+export type { AppColors } from './colors';
+export { spacing } from './spacing';
+export { radii } from './radii';
+export { fontFamily, textVariants } from './typography';
+export type { TextVariant } from './typography';
+export { gradients, glow } from './effects';
+export type { GradientKey } from './effects';

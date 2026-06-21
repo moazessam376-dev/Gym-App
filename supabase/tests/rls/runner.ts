@@ -37,6 +37,7 @@ const migrationFiles = [
   '0013_media.sql',
   '0014_plan_weeks_templates.sql',
   '0015_system_templates.sql',
+  '0016_completion_logging.sql',
 ];
 
 const baseUrl =
