@@ -19,7 +19,8 @@ export type ExperienceLevel = z.infer<typeof experienceLevelSchema>;
 export const activityLevelSchema = z.enum(['sedentary', 'light', 'moderate', 'active', 'very_active']);
 export type ActivityLevel = z.infer<typeof activityLevelSchema>;
 
-export const sexSchema = z.enum(['male', 'female', 'other', 'prefer_not_to_say']);
+// Biological sex (male/female only) — tracked for accurate calorie/TDEE estimates.
+export const sexSchema = z.enum(['male', 'female']);
 export type Sex = z.infer<typeof sexSchema>;
 
 // Allowlisted dietary tags — never free-form (keeps the array a closed set).

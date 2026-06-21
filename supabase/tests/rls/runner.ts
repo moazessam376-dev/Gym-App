@@ -39,6 +39,7 @@ const migrationFiles = [
   '0015_system_templates.sql',
   '0016_completion_logging.sql',
   '0017_profiles_goals.sql',
+  '0018_sex_male_female.sql',
 ];
 
 const baseUrl =

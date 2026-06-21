@@ -3,7 +3,8 @@
 // (migration 0017) via the allowlisted data layer. Goals here are read downstream
 // by macro targets (P10), progress (P11), ranks (P12).
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '../src/lib/auth-context';
 import {
@@ -25,12 +26,27 @@ import {
   type Sex,
 } from '../src/schemas/athlete-profile';
 import { specialtySchema, type Specialty } from '../src/schemas/coach-profile';
-import { Screen, Text, Input, Button, Chip, Segmented } from '../src/components/ui';
+import { Screen, Text, Input, Button, Chip } from '../src/components/ui';
 import { theme } from '../src/theme';
 
 function label(s: string): string {
   return s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
 }
+
+// Short explanations shown to athletes so they pick the right level.
+const EXPERIENCE_HINT: Record<ExperienceLevel, string> = {
+  beginner: 'New to training, or less than ~1 year of consistent workouts.',
+  intermediate: '1–3 years of consistent training; comfortable with the main lifts.',
+  advanced: '3+ years of structured training and programming.',
+};
+
+const ACTIVITY_HINT: Record<ActivityLevel, string> = {
+  sedentary: 'Little or no exercise; mostly sitting (desk job).',
+  light: 'Light exercise 1–3 days a week.',
+  moderate: 'Moderate exercise 3–5 days a week.',
+  active: 'Hard exercise 6–7 days a week.',
+  very_active: 'Very hard daily training, or a physical job / two-a-days.',
+};
 
 function Field({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -57,6 +73,55 @@ function ChipGroup<T extends string>({
       {options.map((o) => (
         <Chip key={o} label={label(o)} active={selected.includes(o)} onPress={() => onToggle(o)} />
       ))}
+    </View>
+  );
+}
+
+// A selectable row (title + explanation) for single-choice options that need a hint.
+function OptionRows<T extends string>({
+  options,
+  hints,
+  value,
+  onChange,
+}: {
+  options: readonly T[];
+  hints: Record<T, string>;
+  value: T | null;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <View style={{ gap: theme.spacing.sm }}>
+      {options.map((o) => {
+        const active = value === o;
+        return (
+          <Pressable
+            key={o}
+            onPress={() => onChange(o)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: theme.spacing.md,
+              padding: theme.spacing.md,
+              borderRadius: theme.radii.md,
+              backgroundColor: active ? 'rgba(61,90,254,0.10)' : theme.colors.glass,
+              borderWidth: 1,
+              borderColor: active ? theme.colors.primary : theme.colors.glassBorder,
+            }}
+          >
+            <Ionicons
+              name={active ? 'radio-button-on' : 'radio-button-off'}
+              size={20}
+              color={active ? theme.colors.primary : theme.colors.textMuted}
+            />
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyStrong">{label(o)}</Text>
+              <Text variant="caption" muted>
+                {hints[o]}
+              </Text>
+            </View>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -216,17 +281,23 @@ export default function ProfileSetup() {
                 <ChipGroup options={athleteGoalSchema.options} selected={goal ? [goal] : []} onToggle={(v) => setGoal(goal === v ? null : v)} />
               </Field>
               <Field title="Experience">
-                <Segmented
+                <OptionRows
+                  options={experienceLevelSchema.options}
+                  hints={EXPERIENCE_HINT}
                   value={experience}
                   onChange={setExperience}
-                  options={experienceLevelSchema.options.map((o) => ({ value: o, label: label(o) }))}
                 />
               </Field>
               <Field title="Sex (for calorie estimates)">
                 <ChipGroup options={sexSchema.options} selected={sex ? [sex] : []} onToggle={(v) => setSex(sex === v ? null : v)} />
               </Field>
               <Field title="Activity level">
-                <ChipGroup options={activityLevelSchema.options} selected={activity ? [activity] : []} onToggle={(v) => setActivity(activity === v ? null : v)} />
+                <OptionRows
+                  options={activityLevelSchema.options}
+                  hints={ACTIVITY_HINT}
+                  value={activity}
+                  onChange={setActivity}
+                />
               </Field>
               <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
                 <Field title="Height (cm)">

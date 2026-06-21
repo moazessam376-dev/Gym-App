@@ -69,6 +69,9 @@ function RootNavigator() {
         headerTintColor: theme.colors.text,
         headerTitleStyle: { fontFamily: theme.fontFamily.displaySemiBold, color: theme.colors.text },
         headerShadowVisible: false,
+        // Show only the back arrow — never the previous route's name (e.g. "(tabs)").
+        headerBackButtonDisplayMode: 'minimal',
+        headerBackTitle: '',
       }}
     >
       <Stack.Screen name="(tabs)" />
