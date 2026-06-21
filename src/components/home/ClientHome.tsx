@@ -29,6 +29,7 @@ export default function ClientHome() {
 
   const [name, setName] = useState<string | null>(null);
   const [coachName, setCoachName] = useState<string | null>(null);
+  const [coachId, setCoachId] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
   const [today, setToday] = useState<TodayDay | null>(null);
   const [plannedSets, setPlannedSets] = useState(0);
@@ -48,6 +49,7 @@ export default function ClientHome() {
       setName(n);
       setStreak(s);
       setCoachName(coach?.full_name ?? null);
+      setCoachId(coach?.id ?? null);
 
       // Active training plan = most recent non-archived training plan.
       const plan = plans.find((p) => p.type === 'training' && p.status !== 'archived');
@@ -202,13 +204,19 @@ export default function ClientHome() {
           <Text variant="label" muted>
             Your coach
           </Text>
-          <Card>
+          <Card
+            onPress={
+              coachId
+                ? () => router.push({ pathname: '/chat/[id]', params: { id: coachId, name: coachName ?? 'Your coach' } })
+                : undefined
+            }
+          >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
               <Avatar name={coachName} size={40} />
               <Text variant="title" style={{ flex: 1 }}>
                 {coachName}
               </Text>
-              <Ionicons name="chatbubble-ellipses-outline" size={22} color={theme.colors.textMuted} />
+              <Ionicons name="chatbubble-ellipses" size={22} color={theme.colors.primary} />
             </View>
           </Card>
         </View>

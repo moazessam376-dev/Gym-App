@@ -89,6 +89,7 @@ function RootNavigator() {
       <Stack.Screen name="coach/assign/[id]" options={{ headerShown: true, title: 'Assign to client' }} />
       <Stack.Screen name="client/plan/[id]" options={{ headerShown: true, title: 'Plan' }} />
       <Stack.Screen name="client/workout/[dayId]" options={{ headerShown: true, title: 'Workout' }} />
+      <Stack.Screen name="chat/[id]" options={{ headerShown: true, title: 'Chat' }} />
       {/* Account & onboarding. */}
       <Stack.Screen name="profile" options={{ headerShown: true, title: 'Edit profile' }} />
       <Stack.Screen name="become-coach" options={{ headerShown: true, title: 'Become a coach' }} />
