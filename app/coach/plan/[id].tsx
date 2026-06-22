@@ -310,8 +310,13 @@ export default function PlanEditor() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView style={styles.flex}>
+        <ScrollView
+          contentContainerStyle={styles.wrap}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          showsVerticalScrollIndicator>
           {/* Header — editable title */}
           <View style={styles.titleRow}>
             <View style={styles.flex}>
@@ -413,7 +418,12 @@ export default function PlanEditor() {
                   key={m.id}
                   meal={m}
                   items={itemsByMeal[m.id] ?? []}
-                  onAddFood={() => router.push({ pathname: '/coach/food-picker', params: { mealId: m.id } })}
+                  onAddFood={() =>
+                    router.push({
+                      pathname: '/coach/food-picker',
+                      params: { mealId: m.id, clientId: plan.client_id ?? '' },
+                    })
+                  }
                   onOpenItem={(itemId) => router.push({ pathname: '/coach/meal-item/[id]', params: { id: itemId } })}
                   onDelete={() => onDeleteMeal(m.id, m.name)}
                 />
@@ -687,7 +697,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg },
-  wrap: { padding: 16, gap: 10 },
+  wrap: { padding: 16, paddingBottom: 160, gap: 10 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontSize: 24, fontWeight: '800', color: c.text },
   type: { fontSize: 14, color: c.textMuted, textTransform: 'capitalize' },
@@ -779,6 +789,8 @@ const styles = StyleSheet.create({
     color: c.text,
     backgroundColor: c.surface,
     minHeight: 60,
+    maxHeight: 140, // cap growth so newlines can't break the layout
+    textAlignVertical: 'top',
   },
   noteBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 18 },
   noteCancel: { fontSize: 14, fontWeight: '600', color: c.textMuted },

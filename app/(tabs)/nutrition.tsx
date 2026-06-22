@@ -3,18 +3,20 @@
 // assigned nutrition plan), meal-slot sections, a logging streak, and quick actions
 // (add, copy a previous day). All data is real (migration 0019); nothing is faked.
 import { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { getMyAthleteProfile } from '../../src/lib/athlete-profile';
 import {
+  addFoodLog,
   copyDay,
   deleteFoodLog,
   entryMacros,
   estimateTargets,
   getAssignedNutritionPlanId,
+  getAssignedNutritionPlanMeals,
   getDailyNutrition,
   getLatestWeightGrams,
   getNutritionStreak,
@@ -28,7 +30,9 @@ import {
   type DailyNutrition,
   type FoodLogEntry,
   type NutritionTargets,
+  type PlanMealWithItems,
 } from '../../src/lib/nutrition';
+import type { MealItem } from '../../src/lib/plans';
 import type { UpsertTargets } from '../../src/schemas/nutrition';
 import { mealSlotSchema, type MealSlot } from '../../src/schemas/nutrition';
 import { Screen, Text, Card, GlassCard, Button, ProgressRing, IconButton, Badge } from '../../src/components/ui';
@@ -40,6 +44,15 @@ const SLOT_LABEL: Record<MealSlot, string> = {
   dinner: 'Dinner',
   snack: 'Snacks',
 };
+
+/** Map a plan meal's name to a diary slot (falls back to 'snack'). */
+function mealNameToSlot(name: string): MealSlot {
+  const n = name.toLowerCase();
+  if (n.includes('breakfast')) return 'breakfast';
+  if (n.includes('lunch')) return 'lunch';
+  if (n.includes('dinner')) return 'dinner';
+  return 'snack';
+}
 const MACRO_COLOR = { protein: theme.colors.primary, carbs: '#22D3EE', fat: '#A78BFA' };
 
 function MacroBar({ label, consumed, target, color }: { label: string; consumed: number; target: number; color: string }) {
@@ -73,23 +86,25 @@ export default function Nutrition() {
   const [streak, setStreak] = useState(0);
   const [estimate, setEstimate] = useState<UpsertTargets | null>(null);
   const [planTargets, setPlanTargets] = useState<UpsertTargets | null>(null);
-  const [hasPlan, setHasPlan] = useState(false);
+  const [planMeals, setPlanMeals] = useState<PlanMealWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
     try {
-      const [list, day, t, s] = await Promise.all([
+      const [list, day, t, s, pm] = await Promise.all([
         listFoodLog(userId, date),
         getDailyNutrition(userId, date),
         getTargets(userId),
         getNutritionStreak(userId),
+        getAssignedNutritionPlanMeals(userId),
       ]);
       setEntries(list);
       setDaily(day);
       setTargets(t);
       setStreak(s);
+      setPlanMeals(pm);
 
       // Only compute the suggestion sources when there's no target yet.
       if (!t) {
@@ -99,7 +114,6 @@ export default function Nutrition() {
           getAssignedNutritionPlanId(userId),
         ]);
         setEstimate(profile ? estimateTargets(profile, weight) : null);
-        setHasPlan(planId != null);
         setPlanTargets(planId ? await plannedDailyMacros(planId) : null);
       }
     } catch {
@@ -150,6 +164,63 @@ export default function Nutrition() {
     setBusy(true);
     try {
       await copyDay(userId, shiftDate(date, -1), date);
+      await load();
+    } catch {
+      /* keep prior */
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // The logged entry linked to each plan item (so we can tick / untick).
+  const entryByPlanItem = new Map<string, FoodLogEntry>();
+  for (const e of entries) if (e.plan_meal_item_id) entryByPlanItem.set(e.plan_meal_item_id, e);
+
+  /** Plan items assigned to a diary slot (a plan meal maps to a slot by name). */
+  function planItemsForSlot(slot: MealSlot): MealItem[] {
+    return planMeals.filter((m) => mealNameToSlot(m.name) === slot).flatMap((m) => m.items);
+  }
+
+  async function logOne(item: MealItem, slot: MealSlot) {
+    if (!userId) return;
+    await addFoodLog(userId, {
+      log_date: date,
+      meal_slot: slot,
+      food_id: item.food_id,
+      plan_meal_item_id: item.id,
+      food_name: item.food_name,
+      kcal_per_100g: item.kcal_per_100g,
+      protein_g_per_100g: item.protein_g_per_100g,
+      carbs_g_per_100g: item.carbs_g_per_100g,
+      fat_g_per_100g: item.fat_g_per_100g,
+      grams: item.grams,
+    });
+  }
+
+  // Tick → log the planned item; untick → remove the logged entry.
+  async function togglePlannedItem(item: MealItem, slot: MealSlot) {
+    if (!userId || busy) return;
+    setBusy(true);
+    try {
+      const existing = entryByPlanItem.get(item.id);
+      if (existing) await deleteFoodLog(existing.id);
+      else await logOne(item, slot);
+      await load();
+    } catch {
+      /* keep prior */
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Log every not-yet-logged planned item in a slot.
+  async function logSlotPlan(slot: MealSlot) {
+    if (!userId) return;
+    const pending = planItemsForSlot(slot).filter((it) => !entryByPlanItem.has(it.id));
+    if (pending.length === 0) return;
+    setBusy(true);
+    try {
+      for (const it of pending) await logOne(it, slot);
       await load();
     } catch {
       /* keep prior */
@@ -251,45 +322,97 @@ export default function Nutrition() {
         </Card>
       )}
 
-      {/* Meal-slot sections */}
+      {/* Unified meal sections: planned items (tick / untick to log) + any off-plan
+          extras + the slot's total kcal, all in one place. */}
       {mealSlotSchema.options.map((slot) => {
+        const planItems = planItemsForSlot(slot);
+        const planItemIds = new Set(planItems.map((i) => i.id));
         const slotEntries = entries.filter((e) => e.meal_slot === slot);
+        const extras = slotEntries.filter((e) => !e.plan_meal_item_id || !planItemIds.has(e.plan_meal_item_id));
         const slotKcal = slotEntries.reduce((sum, e) => sum + entryMacros(e).kcal, 0);
+        const pendingPlan = planItems.filter((i) => !entryByPlanItem.has(i.id)).length;
+        const isEmpty = planItems.length === 0 && slotEntries.length === 0;
         return (
           <View key={slot} style={{ gap: theme.spacing.sm }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text variant="label" muted>
                 {SLOT_LABEL[slot]} {slotKcal > 0 ? `· ${slotKcal} kcal` : ''}
               </Text>
-              <IconButton name="add" onPress={() => goAdd(slot)} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                {pendingPlan > 0 ? (
+                  <Pressable onPress={() => logSlotPlan(slot)} disabled={busy} hitSlop={6}>
+                    <Text variant="caption" color="link">
+                      Log all
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <IconButton name="add" onPress={() => goAdd(slot)} />
+              </View>
             </View>
-            {slotEntries.length === 0 ? (
+
+            {/* Planned items — tap the box to log, tap again to undo */}
+            {planItems.map((it) => {
+              const logged = entryByPlanItem.has(it.id);
+              const m = entryMacros(it);
+              return (
+                <Card key={it.id}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                    <Pressable
+                      onPress={() => togglePlannedItem(it, slot)}
+                      disabled={busy}
+                      hitSlop={6}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: theme.radii.sm,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: logged ? theme.colors.primary : 'transparent',
+                        borderWidth: 1,
+                        borderColor: logged ? theme.colors.primary : theme.colors.border,
+                      }}
+                    >
+                      {logged ? <Ionicons name="checkmark" size={18} color={theme.colors.onPrimary} /> : null}
+                    </Pressable>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text variant="bodyStrong">{it.food_name}</Text>
+                      <Text variant="caption" muted>
+                        {it.grams}g · {m.kcal} kcal · {m.protein}P / {m.carbs}C / {m.fat}F
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              );
+            })}
+
+            {/* Off-plan extras logged in this slot */}
+            {extras.map((e) => {
+              const m = entryMacros(e);
+              return (
+                <Card key={e.id}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                        <Text variant="bodyStrong">{e.food_name}</Text>
+                        {planItems.length > 0 ? <Badge label="extra" tone="neutral" /> : null}
+                      </View>
+                      <Text variant="caption" muted>
+                        {e.grams}g · {m.kcal} kcal · {m.protein}P / {m.carbs}C / {m.fat}F
+                      </Text>
+                    </View>
+                    <IconButton name="trash-outline" onPress={() => onDelete(e.id)} />
+                  </View>
+                </Card>
+              );
+            })}
+
+            {isEmpty ? (
               <Card onPress={() => goAdd(slot)} style={{ paddingVertical: theme.spacing.md }}>
                 <Text variant="caption" muted>
                   Add a food
                 </Text>
               </Card>
-            ) : (
-              slotEntries.map((e) => {
-                const m = entryMacros(e);
-                return (
-                  <Card key={e.id}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                          <Text variant="bodyStrong">{e.food_name}</Text>
-                          {hasPlan && !e.plan_meal_item_id ? <Badge label="extra" tone="neutral" /> : null}
-                        </View>
-                        <Text variant="caption" muted>
-                          {e.grams}g · {m.kcal} kcal · {m.protein}P / {m.carbs}C / {m.fat}F
-                        </Text>
-                      </View>
-                      <IconButton name="trash-outline" onPress={() => onDelete(e.id)} />
-                    </View>
-                  </Card>
-                );
-              })
-            )}
+            ) : null}
           </View>
         );
       })}

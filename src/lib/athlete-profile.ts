@@ -5,12 +5,14 @@
 import { supabase } from './supabase';
 import {
   upsertAthleteProfileSchema,
+  weightUnitSchema,
   type ActivityLevel,
   type AthleteGoal,
   type DietaryTag,
   type ExperienceLevel,
   type Sex,
   type UpsertAthleteProfile,
+  type WeightUnit,
 } from '../schemas/athlete-profile';
 
 export type AthleteProfile = {
@@ -25,13 +27,14 @@ export type AthleteProfile = {
   training_days: number | null;
   dietary_tags: DietaryTag[];
   injuries_notes: string | null;
+  weight_unit: WeightUnit;
   onboarded_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
 const COLS =
-  'user_id, primary_goal, experience_level, sex, birth_date, height_cm, target_weight_grams, activity_level, training_days, dietary_tags, injuries_notes, onboarded_at, created_at, updated_at';
+  'user_id, primary_goal, experience_level, sex, birth_date, height_cm, target_weight_grams, activity_level, training_days, dietary_tags, injuries_notes, weight_unit, onboarded_at, created_at, updated_at';
 
 /** The signed-in client's own profile (null if not started). */
 export async function getMyAthleteProfile(userId: string): Promise<AthleteProfile | null> {
@@ -63,4 +66,17 @@ export async function upsertAthleteProfile(userId: string, input: UpsertAthleteP
     .single();
   if (error) throw error;
   return data as AthleteProfile;
+}
+
+/**
+ * Persist the athlete's preferred display unit (kg/lb). Upserts so it works even
+ * before the questionnaire has created a profile row. Only this one column is
+ * written — the partial upsert leaves the rest of the profile untouched.
+ */
+export async function setWeightUnit(userId: string, unit: WeightUnit): Promise<void> {
+  const v = weightUnitSchema.parse(unit);
+  const { error } = await supabase
+    .from('athlete_profile')
+    .upsert({ user_id: userId, weight_unit: v }, { onConflict: 'user_id' });
+  if (error) throw error;
 }

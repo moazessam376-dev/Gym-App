@@ -14,6 +14,7 @@ import {
   type UpdateFoodLog,
   type UpsertTargets,
 } from '../schemas/nutrition';
+import { listMealItems, listMeals, type MealItem } from './plans';
 import type { AthleteProfile } from './athlete-profile';
 
 export type FoodLogEntry = {
@@ -412,6 +413,22 @@ export async function getAssignedNutritionPlanId(userId: string): Promise<string
     .maybeSingle();
   if (error) throw error;
   return data ? String((data as { id: string }).id) : null;
+}
+
+export type PlanMealWithItems = { id: string; name: string; items: MealItem[] };
+
+/**
+ * The athlete's assigned nutrition plan as meals + their items, so the Nutrition
+ * tab can show the prescribed meals and let the athlete LOG them in one tap
+ * (mirrors logging a workout). Empty array if no published plan.
+ */
+export async function getAssignedNutritionPlanMeals(userId: string): Promise<PlanMealWithItems[]> {
+  const planId = await getAssignedNutritionPlanId(userId);
+  if (!planId) return [];
+  const meals = await listMeals(planId);
+  return Promise.all(
+    meals.map(async (m) => ({ id: m.id, name: m.name, items: await listMealItems(m.id) })),
+  );
 }
 
 /** Sum the prescribed daily macros of a nutrition plan (Plan → meals → items). */

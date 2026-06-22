@@ -132,12 +132,14 @@ export default function AddFood() {
 
   return (
     <Screen gradient padded={false} edges={['bottom']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }}>
         <FlatList
           data={loading ? [] : filtered}
           keyExtractor={(f) => f.id}
-          contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.sm }}
+          contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: 140, gap: theme.spacing.sm }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
           ListHeaderComponent={
             <View style={{ gap: theme.spacing.md, marginBottom: theme.spacing.xs }}>
               <Segmented

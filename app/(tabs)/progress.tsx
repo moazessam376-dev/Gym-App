@@ -2,7 +2,7 @@
 import { useCallback, useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { getStreak, listSessions, type WorkoutSession } from '../../src/lib/sessions';
 import { Screen, Text, Card, Badge, EmptyState } from '../../src/components/ui';
@@ -20,6 +20,7 @@ function formatDate(d: string): string {
 
 export default function ProgressTab() {
   const { session } = useAuth();
+  const router = useRouter();
   const userId = session?.user?.id;
   const [streak, setStreak] = useState(0);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
@@ -85,29 +86,37 @@ export default function ProgressTab() {
             />
           )
         }
-        renderItem={({ item }) => (
-          <Card>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-              <Ionicons
-                name={item.status === 'completed' ? 'checkmark-circle' : 'ellipse-outline'}
-                size={26}
-                color={item.status === 'completed' ? theme.colors.success : theme.colors.textMuted}
-              />
-              <View style={{ flex: 1 }}>
-                <Text variant="bodyStrong">{formatDate(item.session_date)}</Text>
-                {item.note ? (
+        renderItem={({ item }) => {
+          // Tappable when it points at a planned day — opens/continues that workout.
+          const open = item.day_id
+            ? () =>
+                router.push({
+                  pathname: '/client/workout/[dayId]',
+                  params: { dayId: item.day_id!, planId: item.plan_id ?? '' },
+                })
+            : undefined;
+          return (
+            <Card onPress={open}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                <Ionicons
+                  name={item.status === 'completed' ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={26}
+                  color={item.status === 'completed' ? theme.colors.success : theme.colors.textMuted}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyStrong">{formatDate(item.session_date)}</Text>
                   <Text variant="caption" muted>
-                    {item.note}
+                    {item.note ? item.note : item.status === 'in_progress' ? 'Tap to continue' : 'Tap to review'}
                   </Text>
-                ) : null}
+                </View>
+                <Badge
+                  label={item.status === 'in_progress' ? 'in progress' : item.status}
+                  tone={item.status === 'completed' ? 'success' : 'neutral'}
+                />
               </View>
-              <Badge
-                label={item.status}
-                tone={item.status === 'completed' ? 'success' : 'neutral'}
-              />
-            </View>
-          </Card>
-        )}
+            </Card>
+          );
+        }}
       />
     </Screen>
   );

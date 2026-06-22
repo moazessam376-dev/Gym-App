@@ -189,4 +189,30 @@ insert into public.food_log_entries
   ('f10d0004-0000-0000-0000-000000000004', 'bbbb0001-0000-0000-0000-000000000001', current_date,
    'lunch',  'f0000000-0000-0000-0000-000000000001', null, 'Chicken Breast (cooked)', 165, 31, 0, 4, 150);
 
+-- Food preferences (0020). Client A1 (Coach A) likes Banana, avoids Almonds.
+-- Client B1 (Coach B) likes Chicken. Proves Coach A reads A1's prefs while Coach B
+-- cannot, and the cross-tenant denial. Uses the global food_library ids from 0010.
+insert into public.food_preferences (user_id, food_id, kind) values
+  ('aaaa0001-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-00000000000d', 'like'),  -- A1 ♥ Banana
+  ('aaaa0001-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000010', 'avoid'), -- A1 ⊘ Almonds
+  ('bbbb0001-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000001', 'like');  -- B1 ♥ Chicken
+
+-- Workout notes (0021). Client A1 left feedback on their logged session — one
+-- Challenge tied to an exercise, one Compliment about the whole workout. Client B1
+-- (Coach B's client) left one. Proves Coach A reads A1's notes while Coach B
+-- cannot, plus the cross-tenant denial. (v_exercise_prs is fed by the set logs
+-- seeded above: A1's best Bench = 60000g, Triceps = 20000g.)
+insert into public.workout_notes (id, user_id, session_id, plan_exercise_id, exercise_name, category, body) values
+  ('40e00001-0000-0000-0000-000000000001', 'aaaa0001-0000-0000-0000-000000000001',
+   '5e550001-0000-0000-0000-000000000001', null, 'Barbell Bench Press', 'challenge', 'Left shoulder felt tight on the top set'),
+  ('40e00002-0000-0000-0000-000000000002', 'aaaa0001-0000-0000-0000-000000000001',
+   '5e550001-0000-0000-0000-000000000001', null, null,                  'compliment', 'Loved this session, felt strong'),
+  ('40e00003-0000-0000-0000-000000000003', 'bbbb0001-0000-0000-0000-000000000001',
+   '5e550005-0000-0000-0000-000000000005', null, null,                  'challenge', 'Lower back fatigued on deadlifts');
+
+-- Exercise unit prefs (0025). A1's gym bench is calibrated in lb. Proves Coach A
+-- reads A1's per-exercise unit while Coach B cannot.
+insert into public.exercise_unit_prefs (user_id, exercise_name, unit) values
+  ('aaaa0001-0000-0000-0000-000000000001', 'Barbell Bench Press', 'lb');
+
 alter table auth.users enable trigger on_auth_user_created;

@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../../src/lib/supabase';
@@ -59,6 +60,8 @@ export default function ChatThread() {
   const { id: otherId, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const { session } = useAuth();
   const myId = session?.user?.id;
+  // Measured header height → exact keyboard offset (the hardcoded 90 clipped).
+  const headerHeight = useHeaderHeight();
 
   // Stored newest-first to feed an inverted FlatList (index 0 renders at bottom).
   const [messages, setMessages] = useState<Message[]>([]);
@@ -141,7 +144,7 @@ export default function ChatThread() {
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
         >
           {loading ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

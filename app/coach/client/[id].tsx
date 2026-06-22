@@ -9,6 +9,7 @@ import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-
 import { useAuth } from '../../../src/lib/auth-context';
 import { listPlansForClient, type Plan } from '../../../src/lib/plans';
 import { getAthleteProfileFor, type AthleteProfile } from '../../../src/lib/athlete-profile';
+import { listClientNotes, type WorkoutNote } from '../../../src/lib/workout-notes';
 import {
   getDailyNutrition,
   getNutritionStreak,
@@ -19,9 +20,21 @@ import {
   type NutritionTargets,
   type WeekNutrition,
 } from '../../../src/lib/nutrition';
+import { readCache, writeCache } from '../../../src/lib/screen-cache';
 import { Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 import { IS_DEMO_DATA, MOCK_CLIENT_PROGRESS as P } from '../../../src/mock/dashboard';
+
+// Warm-cache snapshot so re-opening a client renders instantly (then refetches).
+type ClientSnapshot = {
+  plans: Plan[];
+  goals: AthleteProfile | null;
+  nutTargets: NutritionTargets | null;
+  nutDaily: DailyNutrition | null;
+  nutWeek: WeekNutrition | null;
+  nutStreak: number;
+  notes: WorkoutNote[];
+};
 
 function label(s: string): string {
   return s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
@@ -44,26 +57,30 @@ export default function ClientDetail() {
   const { role } = useAuth();
   const router = useRouter();
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
+  const cacheKey = id ? `coach-client:${id}` : null;
+  const cached = readCache<ClientSnapshot>(cacheKey);
 
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [goals, setGoals] = useState<AthleteProfile | null>(null);
-  const [nutTargets, setNutTargets] = useState<NutritionTargets | null>(null);
-  const [nutDaily, setNutDaily] = useState<DailyNutrition | null>(null);
-  const [nutWeek, setNutWeek] = useState<WeekNutrition | null>(null);
-  const [nutStreak, setNutStreak] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [plans, setPlans] = useState<Plan[]>(cached?.plans ?? []);
+  const [goals, setGoals] = useState<AthleteProfile | null>(cached?.goals ?? null);
+  const [nutTargets, setNutTargets] = useState<NutritionTargets | null>(cached?.nutTargets ?? null);
+  const [nutDaily, setNutDaily] = useState<DailyNutrition | null>(cached?.nutDaily ?? null);
+  const [nutWeek, setNutWeek] = useState<WeekNutrition | null>(cached?.nutWeek ?? null);
+  const [nutStreak, setNutStreak] = useState(cached?.nutStreak ?? 0);
+  const [notes, setNotes] = useState<WorkoutNote[]>(cached?.notes ?? []);
+  const [loading, setLoading] = useState(cached === undefined);
 
   const load = useCallback(async () => {
     if (!id) return;
     try {
       const today = todayLocalDate();
-      const [p, g, t, d, w, s] = await Promise.all([
+      const [p, g, t, d, w, s, n] = await Promise.all([
         listPlansForClient(id),
         getAthleteProfileFor(id),
         getTargets(id),
         getDailyNutrition(id, today),
         getWeekNutrition(id, today),
         getNutritionStreak(id),
+        listClientNotes(id, 8),
       ]);
       setPlans(p);
       setGoals(g);
@@ -71,6 +88,10 @@ export default function ClientDetail() {
       setNutDaily(d);
       setNutWeek(w);
       setNutStreak(s);
+      setNotes(n);
+      writeCache<ClientSnapshot>(cacheKey, {
+        plans: p, goals: g, nutTargets: t, nutDaily: d, nutWeek: w, nutStreak: s, notes: n,
+      });
     } catch {
       /* keep prior */
     } finally {
@@ -184,6 +205,33 @@ export default function ClientDetail() {
                 </Text>
               )}
             </GlassCard>
+
+            {/* Athlete feedback from logged workouts (migration 0021) */}
+            {notes.length > 0 ? (
+              <GlassCard>
+                <Text variant="label" muted style={{ marginBottom: theme.spacing.sm }}>
+                  Recent feedback
+                </Text>
+                <View style={{ gap: theme.spacing.md }}>
+                  {notes.map((n) => (
+                    <View key={n.id} style={{ gap: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
+                        <Badge
+                          label={n.category === 'challenge' ? 'Challenge' : 'Compliment'}
+                          tone={n.category === 'challenge' ? 'warning' : 'success'}
+                        />
+                        {n.exercise_name ? (
+                          <Text variant="caption" color="primary">
+                            {n.exercise_name}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Text variant="body">{n.body}</Text>
+                    </View>
+                  ))}
+                </View>
+              </GlassCard>
+            ) : null}
 
             <Button
               title="Assign from templates"

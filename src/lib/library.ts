@@ -8,6 +8,7 @@ import {
   createFoodSchema,
   type CreateExercise,
   type CreateFood,
+  type FoodCategory,
   type MuscleGroup,
 } from '../schemas/library';
 
@@ -27,11 +28,12 @@ export type Food = {
   protein_g_per_100g: number;
   carbs_g_per_100g: number;
   fat_g_per_100g: number;
+  category: FoodCategory | null;
 };
 
 const EXERCISE_COLS = 'id, coach_id, name, muscle_group, primary_muscle';
 const FOOD_COLS =
-  'id, coach_id, name, kcal_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g';
+  'id, coach_id, name, kcal_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g, category';
 
 /** Exercises visible to the coach (globals + own customs), optionally filtered. */
 export async function listExercises(opts?: { muscleGroup?: MuscleGroup }): Promise<Exercise[]> {
@@ -72,7 +74,15 @@ export async function createFood(coachId: string, input: CreateFood): Promise<Fo
   const v = createFoodSchema.parse(input);
   const { data, error } = await supabase
     .from('food_library')
-    .insert({ coach_id: coachId, ...v })
+    .insert({
+      coach_id: coachId,
+      name: v.name,
+      kcal_per_100g: v.kcal_per_100g,
+      protein_g_per_100g: v.protein_g_per_100g,
+      carbs_g_per_100g: v.carbs_g_per_100g,
+      fat_g_per_100g: v.fat_g_per_100g,
+      category: v.category ?? null,
+    })
     .select(FOOD_COLS)
     .single();
   if (error) throw error;

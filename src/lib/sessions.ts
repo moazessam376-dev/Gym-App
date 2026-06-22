@@ -229,3 +229,71 @@ export async function getCoachLeaderboard(weekStart = weekStartDate()): Promise<
   if (error) throw error;
   return (data ?? []) as LeaderboardRow[];
 }
+
+export type ExercisePR = {
+  bestLoadGrams: number; // best weight (for the "best 60 kg" header)
+  bestE1rmGrams: number; // best estimated 1RM — rewards more reps at the same load
+  bestReps: number; // best reps (rep PR for bodyweight / unloaded sets)
+};
+
+/**
+ * The athlete's all-time bests per exercise name, for PR detection (the 0021/0023
+ * v_exercise_prs view). RLS-scoped: own as athlete, the client's as their coach.
+ * Keyed by exercise_name (the snapshot stored on each set log).
+ */
+export async function getExercisePRs(userId: string): Promise<Map<string, ExercisePR>> {
+  const { data, error } = await supabase
+    .from('v_exercise_prs')
+    .select('exercise_name, best_load_grams, best_e1rm_grams, best_reps')
+    .eq('user_id', userId);
+  if (error) throw error;
+  const m = new Map<string, ExercisePR>();
+  for (const r of (data ?? []) as {
+    exercise_name: string;
+    best_load_grams: number | string | null;
+    best_e1rm_grams: number | string | null;
+    best_reps: number | string | null;
+  }[]) {
+    m.set(r.exercise_name, {
+      bestLoadGrams: Number(r.best_load_grams ?? 0),
+      bestE1rmGrams: Number(r.best_e1rm_grams ?? 0),
+      bestReps: Number(r.best_reps ?? 0),
+    });
+  }
+  return m;
+}
+
+/** Epley estimated 1RM in integer grams: load × (30 + reps) / 30. 0 if unloaded. */
+export function estimatedOneRepMaxGrams(loadGrams: number | null, reps: number | null): number {
+  if (!loadGrams || loadGrams <= 0) return 0;
+  const r = reps && reps > 0 ? reps : 1;
+  return Math.round((loadGrams * (30 + r)) / 30);
+}
+
+// ── Per-exercise weight-unit preference (migration 0025) ─────────────────────
+
+/** The athlete's per-exercise display-unit choices, keyed by exercise_name. */
+export async function getExerciseUnits(userId: string): Promise<Map<string, 'kg' | 'lb'>> {
+  const { data, error } = await supabase
+    .from('exercise_unit_prefs')
+    .select('exercise_name, unit')
+    .eq('user_id', userId);
+  if (error) throw error;
+  const m = new Map<string, 'kg' | 'lb'>();
+  for (const r of (data ?? []) as { exercise_name: string; unit: 'kg' | 'lb' }[]) {
+    m.set(r.exercise_name, r.unit);
+  }
+  return m;
+}
+
+/** Persist the athlete's display unit for one exercise (by name). Upsert. */
+export async function setExerciseUnit(
+  userId: string,
+  exerciseName: string,
+  unit: 'kg' | 'lb',
+): Promise<void> {
+  const { error } = await supabase
+    .from('exercise_unit_prefs')
+    .upsert({ user_id: userId, exercise_name: exerciseName, unit }, { onConflict: 'user_id,exercise_name' });
+  if (error) throw error;
+}

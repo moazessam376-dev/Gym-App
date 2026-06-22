@@ -15,6 +15,13 @@ export type TargetSource = z.infer<typeof targetSourceSchema>;
 // 'YYYY-MM-DD' calendar date.
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date');
 
+// Lenient UUID (matches src/schemas/plan.ts / session.ts): the seeded GLOBAL food
+// ids aren't RFC-4122-versioned, so z.string().uuid() wrongly rejects them — which
+// silently blocked logging any library food.
+const uuid = z
+  .string()
+  .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/, 'Invalid id');
+
 // Per-100g macro bounds mirror createFoodSchema (src/schemas/library.ts).
 const kcal100 = z.number().int().min(0).max(2000);
 const macro100 = z.number().int().min(0).max(100);
@@ -25,8 +32,8 @@ const macro100 = z.number().int().min(0).max(100);
 export const createFoodLogSchema = z.object({
   log_date: isoDate.optional(),
   meal_slot: mealSlotSchema,
-  food_id: z.string().uuid().nullable().optional(),
-  plan_meal_item_id: z.string().uuid().nullable().optional(),
+  food_id: uuid.nullable().optional(),
+  plan_meal_item_id: uuid.nullable().optional(),
   food_name: z.string().min(1).max(120),
   kcal_per_100g: kcal100,
   protein_g_per_100g: macro100,

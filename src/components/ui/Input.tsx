@@ -46,6 +46,9 @@ export function Input({ label, error, containerStyle, style, onFocus, onBlur, ..
             fontFamily: theme.fontFamily.bodyRegular,
             fontSize: 15,
           },
+          // Cap multiline growth so newlines can't push the layout off-screen
+          // (overridable by the caller's `style`). Applies app-wide.
+          rest.multiline ? { minHeight: 80, maxHeight: 140, textAlignVertical: 'top' as const } : null,
           style,
         ]}
         {...rest}

@@ -317,6 +317,30 @@ export default function ProfileSetup() {
               <Field title="Dietary preferences">
                 <ChipGroup options={dietaryTagSchema.options} selected={diet} onToggle={(v) => toggle(diet, setDiet, v)} />
               </Field>
+              <Field title="Favourite & avoided foods">
+                <Pressable
+                  onPress={() => router.push('/food/preferences')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: theme.spacing.md,
+                    padding: theme.spacing.md,
+                    borderRadius: theme.radii.md,
+                    backgroundColor: theme.colors.glass,
+                    borderWidth: 1,
+                    borderColor: theme.colors.glassBorder,
+                  }}
+                >
+                  <Ionicons name="heart" size={20} color={theme.colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyStrong">Pick foods you love or avoid</Text>
+                    <Text variant="caption" muted>
+                      Helps your coach build a plan you’ll actually stick to.
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+                </Pressable>
+              </Field>
               <Field title="Injuries / notes">
                 <Input value={injuries} onChangeText={setInjuries} placeholder="Anything your coach should know" multiline style={{ minHeight: 70, textAlignVertical: 'top' }} />
               </Field>
