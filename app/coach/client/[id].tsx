@@ -3,11 +3,13 @@
 // Progress stats are DEMO data (see src/mock/dashboard.ts) until completion logging
 // is live (streak/adherence) and the InBody system lands (lean-mass delta).
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
 import { listPlansForClient, type Plan } from '../../../src/lib/plans';
+import { generatePlan, getPlanInsight, requestPlanNudge } from '../../../src/lib/coach-ai';
+import type { PlanType } from '../../../src/schemas/plan';
 import { getAthleteProfileFor, type AthleteProfile } from '../../../src/lib/athlete-profile';
 import { listClientNotes, type WorkoutNote } from '../../../src/lib/workout-notes';
 import { listBodyMetrics, listUnverifiedOcrMetrics, type BodyMetric } from '../../../src/lib/body-metrics';
@@ -22,7 +24,7 @@ import {
   type WeekNutrition,
 } from '../../../src/lib/nutrition';
 import { readCache, writeCache } from '../../../src/lib/screen-cache';
-import { Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip } from '../../../src/components/ui';
+import { Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 import { IS_DEMO_DATA, MOCK_CLIENT_PROGRESS as P } from '../../../src/mock/dashboard';
 
@@ -37,6 +39,7 @@ type ClientSnapshot = {
   notes: WorkoutNote[];
   metrics: BodyMetric[];
   pendingOcr: BodyMetric[];
+  nudge: string | null;
 };
 
 function label(s: string): string {
@@ -74,11 +77,20 @@ export default function ClientDetail() {
   const [pendingOcr, setPendingOcr] = useState<BodyMetric[]>(cached?.pendingOcr ?? []);
   const [loading, setLoading] = useState(cached === undefined);
 
+  // Coach AI (Phase 13): plan-gen modal + plan-adjustment nudges. Coach-only.
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiType, setAiType] = useState<PlanType>('training');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [nudge, setNudge] = useState<string | null>(cached?.nudge ?? null);
+  const [nudgePrompt, setNudgePrompt] = useState('');
+  const [nudgeBusy, setNudgeBusy] = useState(false);
+
   const load = useCallback(async () => {
     if (!id) return;
     try {
       const today = todayLocalDate();
-      const [p, g, t, d, w, s, n, m, o] = await Promise.all([
+      const [p, g, t, d, w, s, n, m, o, ins] = await Promise.all([
         listPlansForClient(id),
         getAthleteProfileFor(id),
         getTargets(id),
@@ -88,6 +100,7 @@ export default function ClientDetail() {
         listClientNotes(id, 8),
         listBodyMetrics(id),
         listUnverifiedOcrMetrics(id),
+        getPlanInsight(id).catch(() => null),
       ]);
       setPlans(p);
       setGoals(g);
@@ -98,8 +111,9 @@ export default function ClientDetail() {
       setNotes(n);
       setMetrics(m);
       setPendingOcr(o);
+      setNudge(ins?.analysis ?? null);
       writeCache<ClientSnapshot>(cacheKey, {
-        plans: p, goals: g, nutTargets: t, nutDaily: d, nutWeek: w, nutStreak: s, notes: n, metrics: m, pendingOcr: o,
+        plans: p, goals: g, nutTargets: t, nutDaily: d, nutWeek: w, nutStreak: s, notes: n, metrics: m, pendingOcr: o, nudge: ins?.analysis ?? null,
       });
     } catch {
       /* keep prior */
@@ -127,6 +141,47 @@ export default function ClientDetail() {
         ) / 10
       : null;
 
+  async function onGenerate() {
+    if (!id || aiBusy) return;
+    setAiBusy(true);
+    try {
+      const res = await generatePlan({ clientId: id, type: aiType, coachPrompt: aiPrompt.trim() || undefined });
+      if (res.status === 'generated' && res.plan_id) {
+        setAiOpen(false);
+        setAiPrompt('');
+        router.push({ pathname: '/coach/plan/[id]', params: { id: res.plan_id } });
+      } else if (res.status === 'no_profile') {
+        Alert.alert('Profile needed', 'This client hasn’t completed their profile yet, so the plan can’t be personalized.');
+      } else if (res.status === 'rate_limited') {
+        Alert.alert('Daily limit reached', 'You’ve generated the maximum number of AI plans today. Try again tomorrow.');
+      } else {
+        Alert.alert('Could not generate', 'The AI draft failed. Please try again.');
+      }
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function onNudge() {
+    if (!id || nudgeBusy) return;
+    setNudgeBusy(true);
+    try {
+      const res = await requestPlanNudge(id, nudgePrompt.trim() || undefined);
+      if (res.status === 'analyzed' && res.analysis) {
+        setNudge(res.analysis);
+        setNudgePrompt('');
+      } else if (res.status === 'no_data') {
+        Alert.alert('Not enough data', 'This client hasn’t logged enough workouts or nutrition yet for suggestions.');
+      } else if (res.status === 'rate_limited') {
+        Alert.alert('Daily limit reached', 'You’ve reached today’s suggestion limit. Try again tomorrow.');
+      } else {
+        Alert.alert('Could not analyze', 'The suggestion failed. Please try again.');
+      }
+    } finally {
+      setNudgeBusy(false);
+    }
+  }
+
   if (role && role !== 'coach') return <Redirect href="/" />;
   if (loading) {
     return (
@@ -137,6 +192,7 @@ export default function ClientDetail() {
   }
 
   return (
+    <>
     <Screen gradient padded={false} edges={['bottom']}>
       <FlatList
         data={plans}
@@ -205,6 +261,45 @@ export default function ClientDetail() {
                 ) : null}
               </GlassCard>
             ) : null}
+
+            {/* Coach AI assistant (Phase 13) — coach-only tools. Plan-gen drafts a
+                plan the coach edits + publishes; nudges are private decision-support. */}
+            <GlassCard glowColor={theme.colors.primary}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                <Ionicons name="sparkles" size={16} color={theme.colors.primary} />
+                <Text variant="label" muted style={{ flex: 1 }}>
+                  AI assistant
+                </Text>
+              </View>
+              <Button
+                title="Generate a plan with AI"
+                variant="secondary"
+                left={<Ionicons name="sparkles" size={16} color={theme.colors.text} />}
+                onPress={() => setAiOpen(true)}
+              />
+              <View style={{ height: 1, backgroundColor: theme.colors.glassBorder, marginVertical: theme.spacing.md }} />
+              <Text variant="caption" muted style={{ marginBottom: theme.spacing.sm }}>
+                Plan adjustments — private suggestions from this client’s recent logging. Only you see these.
+              </Text>
+              {nudge ? (
+                <Text variant="body" style={{ marginBottom: theme.spacing.sm }}>
+                  {nudge}
+                </Text>
+              ) : null}
+              <Input
+                value={nudgePrompt}
+                onChangeText={setNudgePrompt}
+                placeholder="Optional: steer the suggestions (e.g. focus on nutrition)"
+                editable={!nudgeBusy}
+              />
+              <Button
+                title={nudge ? 'Refresh suggestions' : 'Suggest plan adjustments'}
+                variant="ghost"
+                onPress={onNudge}
+                loading={nudgeBusy}
+                style={{ marginTop: theme.spacing.sm }}
+              />
+            </GlassCard>
 
             {/* Nutrition adherence (real data, migration 0019) */}
             <GlassCard>
@@ -390,5 +485,68 @@ export default function ClientDetail() {
         )}
       />
     </Screen>
+
+    {/* Plan-gen modal: pick training/nutrition + an optional steering prompt. The AI
+        drafts it for THIS client; the coach lands in the editor to review + publish. */}
+    <Modal visible={aiOpen} transparent animationType="slide" onRequestClose={() => setAiOpen(false)}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Pressable style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.overlay }} onPress={() => !aiBusy && setAiOpen(false)}>
+          <Pressable
+            onPress={Keyboard.dismiss}
+            style={{
+              backgroundColor: theme.colors.surface,
+              borderTopLeftRadius: theme.radii.lg,
+              borderTopRightRadius: theme.radii.lg,
+              padding: theme.spacing.lg,
+              paddingBottom: theme.spacing.xl,
+              gap: theme.spacing.md,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+              <Ionicons name="sparkles" size={20} color={theme.colors.primary} />
+              <Text variant="title" style={{ flex: 1 }}>
+                Generate a plan
+              </Text>
+              <Pressable onPress={() => !aiBusy && setAiOpen(false)} hitSlop={8}>
+                <Ionicons name="close" size={24} color={theme.colors.textMuted} />
+              </Pressable>
+            </View>
+            <Text variant="caption" muted>
+              A draft is created from {name ?? 'this client'}’s goals and preferences. You review and edit it before publishing.
+            </Text>
+            <Segmented
+              value={aiType}
+              onChange={setAiType}
+              options={[
+                { value: 'training', label: 'Training' },
+                { value: 'nutrition', label: 'Nutrition' },
+              ]}
+            />
+            <Input
+              value={aiPrompt}
+              onChangeText={setAiPrompt}
+              placeholder={
+                aiType === 'training'
+                  ? 'Optional: e.g. upper/lower split, knee-friendly'
+                  : 'Optional: e.g. budget-friendly, high protein'
+              }
+              editable={!aiBusy}
+              multiline
+              style={{ minHeight: 60, textAlignVertical: 'top' }}
+            />
+            <Text variant="label" muted style={{ fontSize: 10 }}>
+              {aiType === 'training' ? 'Drafts one week sized to their training days.' : 'Drafts one day of meals toward their macro target.'}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+              <Button title="Cancel" variant="ghost" fullWidth={false} onPress={() => setAiOpen(false)} disabled={aiBusy} />
+              <View style={{ flex: 1 }}>
+                <Button title="Generate" onPress={onGenerate} loading={aiBusy} />
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </KeyboardAvoidingView>
+    </Modal>
+    </>
   );
 }
