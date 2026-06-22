@@ -74,10 +74,14 @@ create trigger body_metrics_set_updated_at
 -- verified_at and have it counted as verified. (12b: OCR rows are inserted
 -- unverified by a service function, then verified on coach confirm — which
 -- re-stamps via the coach_entered branch / a dedicated SECURITY DEFINER path.)
+-- SECURITY INVOKER (least privilege): a BEFORE trigger fires regardless of security
+-- context and the client can't bypass it, so it needs no elevated rights — it only
+-- reads auth.uid() (a session GUC, caller-scoped under invoker) + writes NEW. (The
+-- cross-tenant board below is the one place that legitimately needs DEFINER.)
 create or replace function public.stamp_body_metric_verification()
 returns trigger
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 begin
