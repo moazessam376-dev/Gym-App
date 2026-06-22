@@ -92,6 +92,11 @@ function RootNavigator() {
       <Stack.Screen name="coach/assign/[id]" options={{ headerShown: true, title: 'Assign to client' }} />
       <Stack.Screen name="client/plan/[id]" options={{ headerShown: true, title: 'Plan' }} />
       <Stack.Screen name="client/workout/[dayId]" options={{ headerShown: true, title: 'Workout' }} />
+      {/* Phase 11 progress & uploads. */}
+      <Stack.Screen name="client/progress/weight" options={{ headerShown: true, title: 'Weight' }} />
+      <Stack.Screen name="client/progress/photos" options={{ headerShown: true, title: 'Progress photos' }} />
+      <Stack.Screen name="client/progress/inbody" options={{ headerShown: true, title: 'InBody scans' }} />
+      <Stack.Screen name="client/progress/view" options={{ headerShown: true, title: '', headerTransparent: true, headerTintColor: '#fff' }} />
       <Stack.Screen name="food/add" options={{ headerShown: true, title: 'Log food' }} />
       <Stack.Screen name="food/preferences" options={{ headerShown: true, title: 'Food preferences' }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: true, title: 'Chat' }} />
