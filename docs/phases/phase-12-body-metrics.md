@@ -53,8 +53,9 @@ writes; `get_advisors` expected clean (only the known SECURITY-DEFINER-helper WA
 
 ## 12b — InBody OCR (built; free vision LLM behind a swap-by-config adapter)
 
-Layers auto-extraction on top of 12a, writing the **same** rows. **No schema change to
-0026** — additive. One new table (`0027_ai_usage_events`) is the rate-limit ledger.
+Layers auto-extraction on top of 12a, writing the **same** rows. Additive on 0026.
+Tables: `0027_ai_usage_events` (rate-limit ledger) + `0028` (`body_metrics.extras` jsonb,
+`body_metric_insights` coach-only AI analysis, `body_metric_comments` coach→client).
 
 **Provider — a `VisionProvider` adapter** (`supabase/functions/_shared/vision.ts`),
 provider chosen by the `VISION_PROVIDER` env var (same philosophy as the PaymentProvider
@@ -67,23 +68,34 @@ stub — no Groq-specific calls scattered around):
 - Keys in Supabase secrets via `Deno.env.get` (§3). (CLAUDE.md §1 names OpenAI as the
   planned provider — the adapter makes the actual provider a config detail.)
 
-**Flow (anti-cheat anchor preserved):** athlete captures/picks the InBody sheet (Phase 11
-media pipeline) → taps **Auto-read** → `inbody-ocr` Edge Function verifies the scan is the
-caller's own ready image, dedupes (one reading per `media_id`), rate-limits, then calls
-`VisionProvider.extractInBody` → returns fields as **Zod-validated JSON** → inserts a
-`body_metrics` row **unverified** (`source='inbody_ocr'`; the 0026 trigger forces
-`verified_*=null`) → **coach reviews against the scan and confirms** (a plain UPDATE
-`source→coach_entered`, which makes the 0026 trigger stamp `verified_by`/`verified_at`).
-Misreads and photoshopped sheets die at coach review — same anchor as 12a; manual entry
-(12a) remains the always-available fallback. PDF scans aren't OCR'd in the pilot (Groq
-vision is image-only) → manual entry.
+**Flow (anti-cheat anchor preserved; OCR is a COACH action):** athlete uploads the InBody
+sheet (Phase 11 media pipeline) — **one per day**, enforced in `media-finalize` (UTC day).
+The **coach** opens the client's scans and taps **Read with AI** → `inbody-ocr` Edge
+Function authorizes the caller as the scan owner's coach/admin (athletes are rejected
+server-side — not just hidden), dedupes (one reading per `media_id`), rate-limits, calls
+`VisionProvider.extractInBody` → **Zod-validated JSON** (core fields + an `extras` object:
+segmental lean/fat, on-sheet history, InBody score, body-water/ECW:TBW, phase angle, control
+recs) → inserts a `body_metrics` row **unverified** for the client (`source='inbody_ocr'`;
+0026 trigger forces `verified_*=null`) → **coach reviews against the scan (tap to zoom) and
+confirms** (UPDATE `source→coach_entered` → trigger stamps the verifier). Misreads and
+photoshopped sheets die at coach review; manual entry (12a) is the fallback. PDF scans
+aren't OCR'd in the pilot (Groq vision is image-only) → manual entry.
 
-**Rate limit (§9): 5/hr/user** via the `ai_usage_events` ledger (append-only,
-service-role-write-only, deny-by-default RLS — owner/admin read only). The attempt is
-recorded **before** the model call (fail-closed), so failed/garbage requests also count —
-which matters once a paid model (Sonnet) makes every call cost money. The model output is
-Zod-validated before any DB write, and the image prompt carries a prompt-injection guard.
+**AI analysis (coach-only, on demand):** the coach taps **Generate AI analysis** on a
+reading → `inbody-analyze` builds a goal-relative prompt from the reading + `extras` + the
+client's goal/target + their verified baseline→latest trend → `VisionProvider.analyze` →
+stored in `body_metric_insights`. That table's RLS **excludes the athlete** (row-level, so a
+coach-only *column* wouldn't hide it — a separate table does): it's the coach's private
+decision-support. The coach curates a **comment** (`body_metric_comments`, coach→client,
+author server-stamped) that the client reads on their scan.
+
+**Rate limit (§9):** the real cap on AI reads is **one per scan** (`media_id` dedupe — a
+re-read returns the cached row at no cost); a generous per-coach hourly backstop
+(`ai_usage_events`, append-only, service-role-write-only, owner/admin read) only guards a
+runaway loop. Analysis runs are capped per coach/hour. Attempts are recorded **before** the
+call (fail-closed). Model output is Zod-validated before any DB write; the image prompt
+carries a prompt-injection guard. Athlete upload cap is one InBody/day.
 
 ## Deferred (later)
-Segmental analysis, body-measurement columns (waist/chest/…), device/Bluetooth
-imports, gym-wide (cross-coach) leaderboard, podium animation.
+PDF-scan OCR (Groq vision is image-only; Claude could at launch), body-measurement columns
+(waist/chest/…), device/Bluetooth imports, gym-wide (cross-coach) leaderboard, podium animation.
