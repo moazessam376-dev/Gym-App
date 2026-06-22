@@ -1,40 +1,24 @@
-// ⚠️ DUMMY DEMO DATA — remove when the real InBody body-metrics + ranking system
-// lands. Ranks/deltas/body-composition require structured InBody data that does
-// not exist in the schema yet (InBody is stored only as a raw photo/PDF; the
-// verification + OCR system is a future phase). Until then, these placeholders
-// make the dashboard look alive. Nothing here touches the database.
+// ⚠️ DUMMY DEMO DATA — the remaining placeholders here keep the coach dashboard
+// looking alive until their real sources land. Nothing here touches the database.
 //
-// To remove later: delete this file and the imports of `MOCK_*` in
-// src/components/home/CoachHome.tsx, then wire the real readers.
+// Phase 12a REPLACED the body-composition demos with real data: the coach "Top
+// performers" board (MOCK_TOP_PERFORMERS + MOCK_TEAM_MOMENTUM, removed) now reads
+// the goal-relative `coach_body_metrics_board` RPC, and the client-detail lean-mass
+// delta is real when verified InBody readings exist. What's LEFT here is the
+// per-client streak/adherence sample (until those readers are wired) and the
+// recent-activity feed (until an activity log lands).
 
 export const IS_DEMO_DATA = true;
 
-// Headline "how's my roster doing" ring on the coach home (0..1). Demo only.
-export const MOCK_TEAM_MOMENTUM = 0.78;
-
-// Per-client progress shown on the coach's client-detail screen. Demo only —
-// real values come from completion logging (streak/adherence) + the future
-// InBody system (lean-mass delta).
+// Per-client progress shown on the coach's client-detail screen. The streak/
+// workouts/adherence are still demo; the lean-mass delta is now REAL when verified
+// InBody readings exist (Phase 12a) — `leanMassDelta` here is only the fallback.
 export const MOCK_CLIENT_PROGRESS = {
   streak: 5,
   workoutsThisWeek: 3,
   adherencePct: 72,
   leanMassDelta: 2.1,
 };
-
-export type TopPerformer = {
-  id: string;
-  name: string;
-  metricLabel: string; // what earned the rank
-  deltaPct: number; // weekly change
-  trend: number[]; // sparkline points
-};
-
-export const MOCK_TOP_PERFORMERS: TopPerformer[] = [
-  { id: 'm1', name: 'Taha Mohammed', metricLabel: 'Lean mass', deltaPct: 2.1, trend: [62, 63, 62, 64, 66, 67, 69] },
-  { id: 'm2', name: 'Adam Khaled', metricLabel: 'Body fat', deltaPct: -1.4, trend: [22, 21, 21, 20, 19, 19, 18] },
-  { id: 'm3', name: 'Mariam Saleh', metricLabel: 'Strength index', deltaPct: 3.6, trend: [40, 42, 43, 45, 47, 48, 51] },
-];
 
 export type ActivityItem = {
   id: string;

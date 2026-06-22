@@ -97,6 +97,9 @@ function RootNavigator() {
       <Stack.Screen name="client/progress/photos" options={{ headerShown: true, title: 'Progress photos' }} />
       <Stack.Screen name="client/progress/inbody" options={{ headerShown: true, title: 'InBody scans' }} />
       <Stack.Screen name="client/progress/view" options={{ headerShown: true, title: '', headerTransparent: true, headerTintColor: '#fff' }} />
+      {/* Phase 12a body metrics / InBody. */}
+      <Stack.Screen name="client/progress/body-comp" options={{ headerShown: true, title: 'Body composition' }} />
+      <Stack.Screen name="coach/body-metric" options={{ headerShown: true, title: 'New InBody reading' }} />
       <Stack.Screen name="food/add" options={{ headerShown: true, title: 'Log food' }} />
       <Stack.Screen name="food/preferences" options={{ headerShown: true, title: 'Food preferences' }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: true, title: 'Chat' }} />
