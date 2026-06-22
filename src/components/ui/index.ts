@@ -29,3 +29,7 @@ export { Segmented } from './Segmented';
 export type { SegmentedProps, SegmentedOption } from './Segmented';
 export { Chip } from './Chip';
 export type { ChipProps } from './Chip';
+export { LineChart } from './LineChart';
+export type { LineChartProps, LineChartPoint } from './LineChart';
+export { SignedImage } from './SignedImage';
+export type { SignedImageProps } from './SignedImage';
