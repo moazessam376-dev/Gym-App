@@ -135,9 +135,12 @@ export default function WeightProgress() {
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <View style={{ gap: theme.spacing.md, marginBottom: theme.spacing.xs }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text variant="h2">Weight</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.md }}>
+                <Text variant="h2" style={{ flex: 1 }}>
+                  Weight
+                </Text>
                 <Segmented
+                  style={{ width: 132 }}
                   options={[
                     { label: 'kg', value: 'kg' },
                     { label: 'lb', value: 'lb' },
