@@ -10,6 +10,7 @@ import { useAuth } from '../../../src/lib/auth-context';
 import { listPlansForClient, type Plan } from '../../../src/lib/plans';
 import { getAthleteProfileFor, type AthleteProfile } from '../../../src/lib/athlete-profile';
 import { listClientNotes, type WorkoutNote } from '../../../src/lib/workout-notes';
+import { listBodyMetrics, type BodyMetric } from '../../../src/lib/body-metrics';
 import {
   getDailyNutrition,
   getNutritionStreak,
@@ -34,6 +35,7 @@ type ClientSnapshot = {
   nutWeek: WeekNutrition | null;
   nutStreak: number;
   notes: WorkoutNote[];
+  metrics: BodyMetric[];
 };
 
 function label(s: string): string {
@@ -67,13 +69,14 @@ export default function ClientDetail() {
   const [nutWeek, setNutWeek] = useState<WeekNutrition | null>(cached?.nutWeek ?? null);
   const [nutStreak, setNutStreak] = useState(cached?.nutStreak ?? 0);
   const [notes, setNotes] = useState<WorkoutNote[]>(cached?.notes ?? []);
+  const [metrics, setMetrics] = useState<BodyMetric[]>(cached?.metrics ?? []);
   const [loading, setLoading] = useState(cached === undefined);
 
   const load = useCallback(async () => {
     if (!id) return;
     try {
       const today = todayLocalDate();
-      const [p, g, t, d, w, s, n] = await Promise.all([
+      const [p, g, t, d, w, s, n, m] = await Promise.all([
         listPlansForClient(id),
         getAthleteProfileFor(id),
         getTargets(id),
@@ -81,6 +84,7 @@ export default function ClientDetail() {
         getWeekNutrition(id, today),
         getNutritionStreak(id),
         listClientNotes(id, 8),
+        listBodyMetrics(id),
       ]);
       setPlans(p);
       setGoals(g);
@@ -89,8 +93,9 @@ export default function ClientDetail() {
       setNutWeek(w);
       setNutStreak(s);
       setNotes(n);
+      setMetrics(m);
       writeCache<ClientSnapshot>(cacheKey, {
-        plans: p, goals: g, nutTargets: t, nutDaily: d, nutWeek: w, nutStreak: s, notes: n,
+        plans: p, goals: g, nutTargets: t, nutDaily: d, nutWeek: w, nutStreak: s, notes: n, metrics: m,
       });
     } catch {
       /* keep prior */
@@ -104,6 +109,19 @@ export default function ClientDetail() {
       load();
     }, [load]),
   );
+
+  // Real lean-mass delta from verified InBody readings (0026): latest − baseline
+  // skeletal muscle mass, in kg. Replaces the SAMPLE delta once real data exists.
+  const muscleReadings = metrics.filter((m) => m.skeletal_muscle_mass_grams != null);
+  const realLeanDeltaKg =
+    muscleReadings.length >= 2
+      ? Math.round(
+          ((muscleReadings[muscleReadings.length - 1]!.skeletal_muscle_mass_grams! -
+            muscleReadings[0]!.skeletal_muscle_mass_grams!) /
+            1000) *
+            10,
+        ) / 10
+      : null;
 
   if (role && role !== 'coach') return <Redirect href="/" />;
   if (loading) {
@@ -143,8 +161,11 @@ export default function ClientDetail() {
                   <Text variant="caption" muted>
                     Lean mass
                   </Text>
-                  <DeltaChip value={P.leanMassDelta} />
-                  {IS_DEMO_DATA ? (
+                  <DeltaChip
+                    value={realLeanDeltaKg ?? P.leanMassDelta}
+                    suffix={realLeanDeltaKg != null ? ' kg' : '%'}
+                  />
+                  {realLeanDeltaKg == null && IS_DEMO_DATA ? (
                     <Text variant="label" muted style={{ fontSize: 9, opacity: 0.6 }}>
                       SAMPLE
                     </Text>
@@ -213,6 +234,7 @@ export default function ClientDetail() {
               </Text>
               <View style={{ gap: theme.spacing.sm }}>
                 {[
+                  { icon: 'body' as const, label: 'Body composition', route: '/client/progress/body-comp' as const },
                   { icon: 'trending-up' as const, label: 'Weight history', route: '/client/progress/weight' as const },
                   { icon: 'camera' as const, label: 'Progress photos', route: '/client/progress/photos' as const },
                   { icon: 'document-text' as const, label: 'InBody scans', route: '/client/progress/inbody' as const },
@@ -236,6 +258,15 @@ export default function ClientDetail() {
                   </Pressable>
                 ))}
               </View>
+              <Button
+                title="Add InBody reading"
+                variant="secondary"
+                style={{ marginTop: theme.spacing.md }}
+                left={<Ionicons name="add" size={18} color={theme.colors.text} />}
+                onPress={() =>
+                  router.push({ pathname: '/coach/body-metric', params: { clientId: id, clientName: name ?? '' } })
+                }
+              />
             </GlassCard>
 
             {/* Athlete feedback from logged workouts (migration 0021) */}

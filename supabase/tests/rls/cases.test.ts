@@ -1827,3 +1827,94 @@ describe('exercise unit prefs (0025) — per-exercise kg/lb, athlete-owned', () 
     ).rejects.toThrow();
   });
 });
+
+describe('body metrics (0026) — coach-verified, athletes never self-write (§2/§4)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+
+  it('the athlete + their coach read metrics; another coach and anon cannot', async () => {
+    const owner = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.body_metrics where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select id from public.body_metrics where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select id from public.body_metrics where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const anon = await asAnon((c) => c.query('select id from public.body_metrics'));
+    expect(owner.rows).toHaveLength(2);
+    expect(coach.rows).toHaveLength(2);
+    expect(otherCoach.rows).toHaveLength(0); // cross-tenant denial
+    expect(anon.rows).toHaveLength(0);
+  });
+
+  it('an athlete CANNOT self-write a metric (anti-cheat): insert rejected', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query(
+          "insert into public.body_metrics (user_id, weight_grams, source) values ($1, 88000, 'coach_entered')",
+          [CLIENT_A1.sub],
+        ),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('a coach writes a verified metric for their client; verifier is server-stamped to the caller', async () => {
+    // measured_at pinned mid-range so it changes neither the baseline (60d) nor the
+    // latest (5d) the board test below asserts on.
+    const r = await asUser(COACH_A, (c) =>
+      c.query(
+        "insert into public.body_metrics (user_id, measured_at, weight_grams, body_fat_bp, source) values ($1, now() - interval '50 days', 89000, 2200, 'coach_entered') returning verified_by, verified_at",
+        [CLIENT_A1.sub],
+      ),
+    );
+    expect(r.rows[0].verified_by).toBe(COACH_A.sub); // forced from auth.uid()
+    expect(r.rows[0].verified_at).not.toBeNull();
+  });
+
+  it('verification cannot be forged on a non-coach_entered source: verified_* nulled', async () => {
+    // A coach tries to insert a 'self_reported' row pre-stamped as verified by
+    // someone else — the trigger forces it UNVERIFIED (so ranks ignore it).
+    const r = await asUser(COACH_A, (c) =>
+      c.query(
+        "insert into public.body_metrics (user_id, weight_grams, source, verified_at, verified_by) values ($1, 88000, 'self_reported', now(), $2) returning verified_at, verified_by",
+        [CLIENT_A1.sub, COACH_B_ID],
+      ),
+    );
+    expect(r.rows[0].verified_at).toBeNull();
+    expect(r.rows[0].verified_by).toBeNull();
+  });
+
+  it('a coach cannot write a metric for a client they do not coach: insert rejected', async () => {
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query("insert into public.body_metrics (user_id, weight_grams, source) values ($1, 70000, 'coach_entered')", [
+          CLIENT_B1, // Coach B's client
+        ]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('coach_body_metrics_board returns only the caller’s own clients', async () => {
+    const a = await asUser(COACH_A, (c) =>
+      c.query('select client_id, entries, baseline_weight_grams, latest_weight_grams from public.coach_body_metrics_board()'),
+    );
+    const ids = a.rows.map((r) => r.client_id);
+    expect(ids).toContain(CLIENT_A1.sub);
+    expect(ids).not.toContain(CLIENT_B1); // never another coach's client
+    const a1 = a.rows.find((r) => r.client_id === CLIENT_A1.sub);
+    expect(a1.baseline_weight_grams).toBe(92500); // earliest verified
+    expect(a1.latest_weight_grams).toBe(90000); // most-recent verified
+
+    const b = await asUser(COACH_B, (c) => c.query('select client_id from public.coach_body_metrics_board()'));
+    expect(b.rows.map((r) => r.client_id)).toContain(CLIENT_B1);
+    expect(b.rows.map((r) => r.client_id)).not.toContain(CLIENT_A1.sub);
+  });
+
+  it('coach_body_metrics_board rejects a client caller and anon', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('select * from public.coach_body_metrics_board()')),
+    ).rejects.toThrow();
+    await expect(asAnon((c) => c.query('select * from public.coach_body_metrics_board()'))).rejects.toThrow();
+  });
+});

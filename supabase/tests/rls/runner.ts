@@ -47,6 +47,7 @@ const migrationFiles = [
   '0023_exercise_prs_e1rm.sql',
   '0024_one_published_plan_per_type.sql',
   '0025_exercise_unit_prefs.sql',
+  '0026_body_metrics.sql',
 ];
 
 const baseUrl =

@@ -12,9 +12,10 @@ import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { listMyClients, listMyInvitations } from '@/lib/invitations';
 import { getMyName } from '@/lib/profile';
 import { useAuth } from '@/lib/auth-context';
-import { Screen, Text, Avatar, GlassCard, Sparkline, StatBlock, DeltaChip } from '@/components/ui';
+import { Screen, Text, Avatar, GlassCard, StatBlock, EmptyState } from '@/components/ui';
 import { theme } from '@/theme';
-import { IS_DEMO_DATA, MOCK_ACTIVITY, MOCK_TOP_PERFORMERS } from '@/mock/dashboard';
+import { getBodyMetricsBoard, rankBoard, type BoardRow, type GoalProgress } from '@/lib/body-metrics';
+import { MOCK_ACTIVITY } from '@/mock/dashboard';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -25,20 +26,21 @@ export default function CoachHome() {
   const [name, setName] = useState<string | null>(null);
   const [clients, setClients] = useState(0);
   const [pending, setPending] = useState(0);
+  const [board, setBoard] = useState<(BoardRow & { progress: GoalProgress; rank: number })[]>([]);
 
   const load = useCallback(async () => {
-    try {
-      const [n, cs, invs] = await Promise.all([
-        userId ? getMyName(userId) : Promise.resolve(null),
-        listMyClients(),
-        listMyInvitations(),
-      ]);
-      setName(n);
-      setClients(cs.length);
-      setPending(invs.filter((i) => i.status === 'pending').length);
-    } catch {
-      /* best-effort */
-    }
+    // allSettled so the (newer) body-metrics board can't blank the dashboard if it
+    // errors before the roster/invites load.
+    const [n, cs, invs, bm] = await Promise.allSettled([
+      userId ? getMyName(userId) : Promise.resolve(null),
+      listMyClients(),
+      listMyInvitations(),
+      getBodyMetricsBoard(),
+    ]);
+    if (n.status === 'fulfilled') setName(n.value);
+    if (cs.status === 'fulfilled') setClients(cs.value.length);
+    if (invs.status === 'fulfilled') setPending(invs.value.filter((i) => i.status === 'pending').length);
+    if (bm.status === 'fulfilled') setBoard(rankBoard(bm.value));
   }, [userId]);
 
   useFocusEffect(
@@ -97,39 +99,47 @@ export default function CoachHome() {
         </View>
       </View>
 
-      {/* Top performers (DEMO) */}
+      {/* Top performers — REAL, ranked by goal-relative InBody progress (0026) */}
       <View style={{ gap: theme.spacing.md }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text variant="label" muted>
-            Top performers · this week
-          </Text>
-          {IS_DEMO_DATA ? (
-            <Text variant="label" muted style={{ fontSize: 9, opacity: 0.6 }}>
-              SAMPLE
-            </Text>
-          ) : null}
-        </View>
+        <Text variant="label" muted>
+          Top performers · body composition
+        </Text>
 
-        {MOCK_TOP_PERFORMERS.map((p, i) => (
-          <GlassCard key={p.id} glowColor={i === 0 ? theme.colors.primary : undefined} onPress={go('/clients')}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-              <Text variant="title" color={i === 0 ? theme.colors.primary : theme.colors.textMuted} style={{ width: 18 }}>
-                {i + 1}
-              </Text>
-              <Avatar name={p.name} size={40} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text variant="bodyStrong">{p.name}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <Text variant="caption" muted>
-                    {p.metricLabel}
+        {board.length === 0 ? (
+          <EmptyState
+            icon="trophy-outline"
+            title="No verified readings yet"
+            subtitle="Record an InBody reading from a client’s profile and your ranked board appears here."
+          />
+        ) : (
+          board.map((r) => (
+            <GlassCard
+              key={r.client_id}
+              glowColor={r.rank === 1 && r.progress.hasTrend ? theme.colors.primary : undefined}
+              onPress={() =>
+                router.push({ pathname: '/coach/client/[id]', params: { id: r.client_id, name: r.full_name ?? '' } })
+              }
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                <Text
+                  variant="title"
+                  color={r.rank === 1 ? theme.colors.primary : theme.colors.textMuted}
+                  style={{ width: 18 }}
+                >
+                  {r.rank}
+                </Text>
+                <Avatar name={r.full_name ?? 'Client'} size={40} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text variant="bodyStrong">{r.full_name ?? 'Client'}</Text>
+                  <Text variant="caption" color={r.progress.hasTrend ? 'primary' : theme.colors.textMuted}>
+                    {r.progress.headline}
                   </Text>
-                  <DeltaChip value={p.deltaPct} />
                 </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
               </View>
-              <Sparkline data={p.trend} color={p.deltaPct >= 0 ? theme.colors.primary : theme.colors.secondary} />
-            </View>
-          </GlassCard>
-        ))}
+            </GlassCard>
+          ))
+        )}
       </View>
 
       {/* Recent activity (DEMO) */}

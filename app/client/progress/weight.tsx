@@ -7,7 +7,7 @@ import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } fro
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
-import { addWeightEntry, deleteWeightEntry, listProgressWeights, type WeightEntry } from '../../../src/lib/progress';
+import { upsertTodayWeight, deleteWeightEntry, listProgressWeights, type WeightEntry } from '../../../src/lib/progress';
 import { getAthleteProfileFor, setWeightUnit } from '../../../src/lib/athlete-profile';
 import { displayToGrams, gramsToDisplay, formatWeight, type WeightUnit } from '../../../src/lib/units';
 import {
@@ -83,6 +83,17 @@ export default function WeightProgress() {
       : null;
   const deltaLabel = delta != null ? `${delta > 0 ? '+' : ''}${delta} ${unit} since start` : null;
 
+  // Today's entry (local calendar day) — saving again edits it rather than adding.
+  const todaysEntry = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const end = start + 24 * 60 * 60 * 1000;
+    return entries.find((e) => {
+      const t = new Date(e.recorded_at).getTime();
+      return t >= start && t < end;
+    });
+  }, [entries]);
+
   if (role && role === 'admin') return <Redirect href="/" />;
 
   async function changeUnit(next: WeightUnit) {
@@ -106,7 +117,7 @@ export default function WeightProgress() {
     setBusy(true);
     setError(null);
     try {
-      await addWeightEntry(ownerId, { weight_grams: grams });
+      await upsertTodayWeight(ownerId, grams); // one entry per day — edits today's
       setValue('');
       await load();
     } catch {
@@ -174,11 +185,11 @@ export default function WeightProgress() {
                 {chartData.length >= 2 ? <LineChart data={chartData} unit={` ${unit}`} /> : null}
               </GlassCard>
 
-              {/* Log a new entry (owner only) */}
+              {/* Log a new entry (owner only) — one per day; re-saving edits today's */}
               {!readOnly ? (
                 <GlassCard style={{ gap: theme.spacing.md }}>
                   <Text variant="label" muted>
-                    Log today’s weight
+                    {todaysEntry ? 'Update today’s weight' : 'Log today’s weight'}
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: theme.spacing.sm }}>
                     <Input
@@ -186,11 +197,16 @@ export default function WeightProgress() {
                       value={value}
                       onChangeText={setValue}
                       keyboardType="decimal-pad"
-                      placeholder={`Weight in ${unit}`}
+                      placeholder={todaysEntry ? formatWeight(todaysEntry.weight_grams, unit) : `Weight in ${unit}`}
                       error={error}
                     />
-                    <Button title="Save" fullWidth={false} onPress={onLog} loading={busy} />
+                    <Button title={todaysEntry ? 'Update' : 'Save'} fullWidth={false} onPress={onLog} loading={busy} />
                   </View>
+                  {todaysEntry ? (
+                    <Text variant="caption" muted>
+                      Logged {formatWeight(todaysEntry.weight_grams, unit)} today — saving replaces it.
+                    </Text>
+                  ) : null}
                 </GlassCard>
               ) : null}
 

@@ -8,6 +8,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { getStreak, listSessions, type WorkoutSession } from '../../src/lib/sessions';
 import { listProgressWeights, type WeightEntry } from '../../src/lib/progress';
+import { listBodyMetrics, type BodyMetric } from '../../src/lib/body-metrics';
 import { countMediaFor } from '../../src/lib/media';
 import { getMyAthleteProfile } from '../../src/lib/athlete-profile';
 import { gramsToDisplay, formatWeight, type WeightUnit } from '../../src/lib/units';
@@ -77,19 +78,21 @@ export default function ProgressTab() {
   const [unit, setUnit] = useState<WeightUnit>('kg');
   const [photoCount, setPhotoCount] = useState(0);
   const [inbodyCount, setInbodyCount] = useState(0);
+  const [bodyMetrics, setBodyMetrics] = useState<BodyMetric[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!userId) return;
     // allSettled so one failing read can't blank the whole screen (e.g. an empty
     // media list vs a transient error on another call).
-    const [s, list, w, profile, photos, inbody] = await Promise.allSettled([
+    const [s, list, w, profile, photos, inbody, bm] = await Promise.allSettled([
       getStreak(userId),
       listSessions(userId),
       listProgressWeights(userId),
       getMyAthleteProfile(userId),
       countMediaFor(userId, 'progress_photo'),
       countMediaFor(userId, 'inbody'),
+      listBodyMetrics(userId),
     ]);
     if (s.status === 'fulfilled') setStreak(s.value);
     if (list.status === 'fulfilled') setSessions(list.value);
@@ -97,6 +100,7 @@ export default function ProgressTab() {
     if (profile.status === 'fulfilled' && profile.value?.weight_unit) setUnit(profile.value.weight_unit);
     if (photos.status === 'fulfilled') setPhotoCount(photos.value);
     if (inbody.status === 'fulfilled') setInbodyCount(inbody.value);
+    if (bm.status === 'fulfilled') setBodyMetrics(bm.value);
     setLoading(false);
   }, [userId]);
 
@@ -113,6 +117,7 @@ export default function ProgressTab() {
     [weights, unit],
   );
   const latestWeight = weights.length ? weights[weights.length - 1]! : null;
+  const latestBodyComp = bodyMetrics.length ? bodyMetrics[bodyMetrics.length - 1]! : null;
 
   return (
     <Screen padded={false} gradient>
@@ -179,6 +184,16 @@ export default function ProgressTab() {
               label="InBody scans"
               hint={inbodyCount > 0 ? `${inbodyCount} scan${inbodyCount === 1 ? '' : 's'}` : 'Add a body-composition scan'}
               onPress={() => router.push('/client/progress/inbody')}
+            />
+            <PillarRow
+              icon="body"
+              label="Body composition"
+              hint={
+                latestBodyComp
+                  ? `${Math.round((latestBodyComp.weight_grams / 1000) * 10) / 10}kg${latestBodyComp.body_fat_bp != null ? ` · ${Math.round((latestBodyComp.body_fat_bp / 100) * 10) / 10}% fat` : ''}`
+                  : 'Coach-verified InBody trends'
+              }
+              onPress={() => router.push('/client/progress/body-comp')}
             />
 
             <Text variant="label" muted style={{ marginTop: theme.spacing.xs }}>

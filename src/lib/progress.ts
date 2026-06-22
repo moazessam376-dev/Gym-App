@@ -49,6 +49,52 @@ export async function addWeightEntry(userId: string, input: CreateWeight): Promi
   return data as WeightEntry;
 }
 
+/**
+ * Record today's weight as ONE entry per local calendar day: updates today's entry
+ * if it exists, else inserts a new one. (A body weight changes ~daily, not hourly —
+ * logging again the same day is an edit, not a new data point.) `user_id` is forced
+ * from the caller; RLS lets the owner update their own row.
+ */
+export async function upsertTodayWeight(userId: string, weightGrams: number): Promise<WeightEntry> {
+  const v = createWeightSchema.parse({ weight_grams: weightGrams });
+
+  // Today's local-day window, expressed in UTC for the recorded_at comparison.
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+
+  const { data: existing, error: selErr } = await supabase
+    .from('progress_entries')
+    .select('id')
+    .eq('user_id', userId)
+    .not('weight_grams', 'is', null)
+    .gte('recorded_at', start.toISOString())
+    .lt('recorded_at', end.toISOString())
+    .order('recorded_at', { ascending: false })
+    .limit(1);
+  if (selErr) throw selErr;
+
+  if (existing && existing.length > 0) {
+    const { data, error } = await supabase
+      .from('progress_entries')
+      .update({ weight_grams: v.weight_grams })
+      .eq('id', existing[0]!.id)
+      .select(COLS)
+      .single();
+    if (error) throw error;
+    return data as WeightEntry;
+  }
+
+  const { data, error } = await supabase
+    .from('progress_entries')
+    .insert({ user_id: userId, weight_grams: v.weight_grams })
+    .select(COLS)
+    .single();
+  if (error) throw error;
+  return data as WeightEntry;
+}
+
 /** Delete one of the owner's weight entries (RLS delete = owner only). */
 export async function deleteWeightEntry(entryId: string): Promise<void> {
   const { error } = await supabase.from('progress_entries').delete().eq('id', entryId);
