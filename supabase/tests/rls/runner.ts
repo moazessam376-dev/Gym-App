@@ -42,6 +42,11 @@ const migrationFiles = [
   '0018_sex_male_female.sql',
   '0019_food_logging.sql',
   '0020_food_categories_preferences.sql',
+  '0021_workout_logging_notes.sql',
+  '0022_nutrition_system_templates.sql',
+  '0023_exercise_prs_e1rm.sql',
+  '0024_one_published_plan_per_type.sql',
+  '0025_exercise_unit_prefs.sql',
 ];
 
 const baseUrl =

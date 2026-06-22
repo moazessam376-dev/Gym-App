@@ -1629,3 +1629,201 @@ describe('food preferences (0020) — athlete-owned likes/avoids, coach-readable
     expect(a1.rows.length).toBe(2);
   });
 });
+
+describe('workout logging (0021) — exercise PRs + athlete→coach feedback notes (§2)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_A2_ID: Identity = { sub: CLIENT_A2, userRole: 'client' };
+  const A1_SESSION = '5e550001-0000-0000-0000-000000000001';
+  const A2_SESSION = '5e550004-0000-0000-0000-000000000004';
+
+  it('the owner + their coach read a note; another coach and a sibling cannot', async () => {
+    const owner = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.workout_notes where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select id from public.workout_notes where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select id from public.workout_notes where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const sibling = await asUser(CLIENT_A2_ID, (c) =>
+      c.query('select id from public.workout_notes where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(owner.rows.length).toBe(2); // one Challenge, one Compliment
+    expect(coach.rows.length).toBe(2); // is_coach_of(A1)
+    expect(otherCoach.rows).toHaveLength(0);
+    expect(sibling.rows).toHaveLength(0);
+  });
+
+  it('a coach’s cohort read returns only their own clients’ notes', async () => {
+    const a = await asUser(COACH_A, (c) => c.query('select user_id from public.workout_notes'));
+    const owners = new Set(a.rows.map((r) => r.user_id));
+    expect(owners.has(CLIENT_A1.sub)).toBe(true);
+    expect(owners.has(CLIENT_B1)).toBe(false); // Coach B's client
+  });
+
+  it('anon sees no notes', async () => {
+    const r = await asAnon((c) => c.query('select id from public.workout_notes'));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it('an athlete writes their own note; a forged owner is coerced back to the caller', async () => {
+    const ok = await asUser(CLIENT_A2_ID, (c) =>
+      c.query(
+        "insert into public.workout_notes (user_id, session_id, category, body) values ($1, $2, 'challenge', 'felt great') returning user_id",
+        [CLIENT_A2, A2_SESSION],
+      ),
+    );
+    expect(ok.rows[0].user_id).toBe(CLIENT_A2);
+
+    const forged = await asUser(CLIENT_A2_ID, (c) =>
+      c.query(
+        "insert into public.workout_notes (user_id, session_id, category, body) values ($1, $2, 'compliment', 'forged') returning user_id",
+        [CLIENT_B1, A2_SESSION],
+      ),
+    );
+    expect(forged.rows[0].user_id).toBe(CLIENT_A2); // not B1
+  });
+
+  it('a coach cannot author notes (read-only): insert rejected', async () => {
+    // Trigger forces user_id=coach; the role='client' with-check then rejects them.
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query(
+          "insert into public.workout_notes (user_id, session_id, category, body) values ($1, $2, 'challenge', 'coach note')",
+          [CLIENT_A1.sub, A1_SESSION],
+        ),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('v_exercise_prs gives an athlete their own bests; their coach can read them, others cannot', async () => {
+    const own = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        'select exercise_name, best_load_grams, best_e1rm_grams, best_reps from public.v_exercise_prs where user_id = $1',
+        [CLIENT_A1.sub],
+      ),
+    );
+    const best = new Map(own.rows.map((r) => [r.exercise_name, Number(r.best_load_grams)]));
+    expect(best.get('Barbell Bench Press')).toBe(60000); // integer grams, never float
+    expect(best.get('Triceps Pushdown')).toBe(20000);
+    // e1RM (0023): Bench 60000×(30+8)/30 = 76000; best reps tracks the rep PR.
+    const e1rm = new Map(own.rows.map((r) => [r.exercise_name, Number(r.best_e1rm_grams)]));
+    const reps = new Map(own.rows.map((r) => [r.exercise_name, Number(r.best_reps)]));
+    expect(e1rm.get('Barbell Bench Press')).toBe(76000);
+    expect(reps.get('Barbell Bench Press')).toBe(8);
+    expect(reps.get('Triceps Pushdown')).toBe(12);
+
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select exercise_name from public.v_exercise_prs where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(coach.rows.length).toBe(2);
+
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select exercise_name from public.v_exercise_prs where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(otherCoach.rows).toHaveLength(0);
+
+    const anon = await asAnon((c) => c.query('select user_id from public.v_exercise_prs'));
+    expect(anon.rows).toHaveLength(0);
+  });
+});
+
+describe('nutrition system templates (0022) — clonable global starters (§2)', () => {
+  it('a coach sees the seeded nutrition system templates, each with meals + items', async () => {
+    const tpls = await asUser(COACH_A, (c) =>
+      c.query(
+        "select id from public.plans where coach_id is null and client_id is null and type = 'nutrition' and status = 'published'",
+      ),
+    );
+    expect(tpls.rows.length).toBeGreaterThanOrEqual(3); // Lean Cut, Lean Bulk, Maintenance
+
+    const items = await asUser(COACH_A, (c) =>
+      c.query(
+        `select count(*)::int as n
+           from public.plan_meal_items mi
+           join public.plan_meals m on m.id = mi.meal_id
+           join public.plans p on p.id = m.plan_id
+          where p.coach_id is null and p.type = 'nutrition'`,
+      ),
+    );
+    expect(items.rows[0].n).toBeGreaterThan(0); // macros snapshotted from food_library
+  });
+
+  it('a client cannot see system templates (they are not assigned plans)', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.plans where coach_id is null and client_id is null'),
+    );
+    expect(r.rows).toHaveLength(0);
+  });
+});
+
+describe('one published plan per type (0024) — publishing supersedes the previous', () => {
+  const A1_TRAINING_PUB = '99990001-0000-0000-0000-000000000001';
+  const A1_NUTRITION_DRAFT = '99990002-0000-0000-0000-000000000002';
+  const A1_NUTRITION_PUB = '99990004-0000-0000-0000-000000000004';
+
+  it('publishing a second nutrition plan archives the previously published one (same type only)', async () => {
+    // Whole flow in one tx (rolled back by the helper) so seed isn't mutated.
+    const rows = await asUser(COACH_A, async (c) => {
+      await c.query("update public.plans set status = 'published' where id = $1", [A1_NUTRITION_DRAFT]);
+      return c.query('select id, status from public.plans where id = any($1)', [
+        [A1_NUTRITION_DRAFT, A1_NUTRITION_PUB, A1_TRAINING_PUB],
+      ]);
+    });
+    const status = new Map(rows.rows.map((r) => [r.id, r.status]));
+    expect(status.get(A1_NUTRITION_DRAFT)).toBe('published'); // newly published
+    expect(status.get(A1_NUTRITION_PUB)).toBe('archived'); // superseded by the new one
+    expect(status.get(A1_TRAINING_PUB)).toBe('published'); // different type — untouched
+  });
+});
+
+describe('exercise unit prefs (0025) — per-exercise kg/lb, athlete-owned', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_A2_ID: Identity = { sub: CLIENT_A2, userRole: 'client' };
+
+  it('the owner + their coach read a unit pref; another coach and anon cannot', async () => {
+    const owner = await asUser(CLIENT_A1, (c) =>
+      c.query('select exercise_name, unit from public.exercise_unit_prefs where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select unit from public.exercise_unit_prefs where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select unit from public.exercise_unit_prefs where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const anon = await asAnon((c) => c.query('select unit from public.exercise_unit_prefs'));
+    expect(owner.rows[0]?.unit).toBe('lb');
+    expect(coach.rows).toHaveLength(1);
+    expect(otherCoach.rows).toHaveLength(0);
+    expect(anon.rows).toHaveLength(0);
+  });
+
+  it('an athlete sets their own pref; a forged owner is coerced back to the caller', async () => {
+    const ok = await asUser(CLIENT_A2_ID, (c) =>
+      c.query(
+        "insert into public.exercise_unit_prefs (user_id, exercise_name, unit) values ($1, 'Deadlift', 'kg') returning user_id",
+        [CLIENT_A2],
+      ),
+    );
+    expect(ok.rows[0].user_id).toBe(CLIENT_A2);
+
+    const forged = await asUser(CLIENT_A2_ID, (c) =>
+      c.query(
+        "insert into public.exercise_unit_prefs (user_id, exercise_name, unit) values ($1, 'Squat', 'lb') returning user_id",
+        [CLIENT_B1],
+      ),
+    );
+    expect(forged.rows[0].user_id).toBe(CLIENT_A2); // not B1
+  });
+
+  it('a coach cannot write a client’s unit pref (read-only): insert rejected', async () => {
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query("insert into public.exercise_unit_prefs (user_id, exercise_name, unit) values ($1, 'Bench', 'kg')", [
+          CLIENT_A1.sub,
+        ]),
+      ),
+    ).rejects.toThrow();
+  });
+});
