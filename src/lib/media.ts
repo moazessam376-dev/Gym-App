@@ -47,11 +47,15 @@ export async function requestUpload(input: CreateUpload): Promise<SignedUpload> 
   return data as SignedUpload;
 }
 
-/** Step 2 — upload the (already JPEG/PNG/PDF) bytes to the signed inbox URL. */
+/**
+ * Step 2 — upload the (already JPEG/PNG/PDF) bytes to the signed inbox URL.
+ * On React Native, Blob/File/FormData upload as 0 bytes — supabase-js requires raw
+ * ArrayBuffer/typed-array data, so callers pass a Uint8Array (see src/lib/upload.ts).
+ */
 export async function uploadToInbox(
   path: string,
   token: string,
-  file: Blob,
+  file: ArrayBuffer | ArrayBufferView,
   contentType: MediaMime,
 ): Promise<void> {
   const { error } = await supabase.storage
@@ -69,18 +73,19 @@ export async function finalizeUpload(input: FinalizeUpload): Promise<string> {
 }
 
 /**
- * End-to-end convenience: request → upload → finalize. The `file` MUST already be
- * JPEG/PNG/PDF (convert HEIC→JPEG on-device first, §7 — the server rejects the
- * rest). Returns the new media id.
+ * End-to-end convenience: request → upload → finalize. The `file` bytes MUST already
+ * be JPEG/PNG/PDF (convert HEIC→JPEG on-device first, §7 — the server rejects the
+ * rest). Pass raw bytes (Uint8Array/ArrayBuffer), not a Blob (see uploadToInbox).
+ * Returns the new media id.
  */
 export async function uploadMedia(args: {
-  file: Blob;
+  file: ArrayBuffer | ArrayBufferView;
   mimeType: MediaMime;
   kind: MediaKind;
   progressEntryId?: string;
 }): Promise<string> {
   const { file, mimeType, kind, progressEntryId } = args;
-  const { path, token } = await requestUpload({ mime_type: mimeType, size_bytes: file.size });
+  const { path, token } = await requestUpload({ mime_type: mimeType, size_bytes: file.byteLength });
   await uploadToInbox(path, token, file, mimeType);
   return finalizeUpload({ inbox_path: path, kind, progress_entry_id: progressEntryId });
 }
@@ -94,17 +99,36 @@ export async function getSignedUrl(mediaId: string): Promise<string> {
 }
 
 /**
- * Media owned by `ownerId`, newest first (optionally filtered by kind). RLS limits
- * results to what the caller may read (own / their coach's clients / admin).
+ * Media owned by `ownerId`, newest first (optionally filtered by kind). Only
+ * `ready` rows — quarantined/failed uploads are never servable, so they must not
+ * appear in timelines or counts. RLS limits results to what the caller may read
+ * (own / their coach's clients / admin).
  */
 export async function listMediaFor(ownerId: string, kind?: MediaKind): Promise<Media[]> {
   let query = supabase
     .from('media')
     .select(MEDIA_COLS)
     .eq('owner_id', ownerId)
+    .eq('status', 'ready')
     .order('created_at', { ascending: false });
   if (kind) query = query.eq('kind', kind);
   const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as Media[];
+}
+
+/**
+ * Count of `ready` media for `ownerId` (optionally by kind), without transferring
+ * the rows — for hint badges on high-traffic screens. RLS-scoped like listMediaFor.
+ */
+export async function countMediaFor(ownerId: string, kind?: MediaKind): Promise<number> {
+  let query = supabase
+    .from('media')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', ownerId)
+    .eq('status', 'ready');
+  if (kind) query = query.eq('kind', kind);
+  const { count, error } = await query;
+  if (error) throw error;
+  return count ?? 0;
 }
