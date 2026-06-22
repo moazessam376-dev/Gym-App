@@ -10,7 +10,7 @@ import { useAuth } from '../../../src/lib/auth-context';
 import { listPlansForClient, type Plan } from '../../../src/lib/plans';
 import { getAthleteProfileFor, type AthleteProfile } from '../../../src/lib/athlete-profile';
 import { listClientNotes, type WorkoutNote } from '../../../src/lib/workout-notes';
-import { listBodyMetrics, type BodyMetric } from '../../../src/lib/body-metrics';
+import { listBodyMetrics, listUnverifiedOcrMetrics, type BodyMetric } from '../../../src/lib/body-metrics';
 import {
   getDailyNutrition,
   getNutritionStreak,
@@ -36,6 +36,7 @@ type ClientSnapshot = {
   nutStreak: number;
   notes: WorkoutNote[];
   metrics: BodyMetric[];
+  pendingOcr: BodyMetric[];
 };
 
 function label(s: string): string {
@@ -70,13 +71,14 @@ export default function ClientDetail() {
   const [nutStreak, setNutStreak] = useState(cached?.nutStreak ?? 0);
   const [notes, setNotes] = useState<WorkoutNote[]>(cached?.notes ?? []);
   const [metrics, setMetrics] = useState<BodyMetric[]>(cached?.metrics ?? []);
+  const [pendingOcr, setPendingOcr] = useState<BodyMetric[]>(cached?.pendingOcr ?? []);
   const [loading, setLoading] = useState(cached === undefined);
 
   const load = useCallback(async () => {
     if (!id) return;
     try {
       const today = todayLocalDate();
-      const [p, g, t, d, w, s, n, m] = await Promise.all([
+      const [p, g, t, d, w, s, n, m, o] = await Promise.all([
         listPlansForClient(id),
         getAthleteProfileFor(id),
         getTargets(id),
@@ -85,6 +87,7 @@ export default function ClientDetail() {
         getNutritionStreak(id),
         listClientNotes(id, 8),
         listBodyMetrics(id),
+        listUnverifiedOcrMetrics(id),
       ]);
       setPlans(p);
       setGoals(g);
@@ -94,8 +97,9 @@ export default function ClientDetail() {
       setNutStreak(s);
       setNotes(n);
       setMetrics(m);
+      setPendingOcr(o);
       writeCache<ClientSnapshot>(cacheKey, {
-        plans: p, goals: g, nutTargets: t, nutDaily: d, nutWeek: w, nutStreak: s, notes: n, metrics: m,
+        plans: p, goals: g, nutTargets: t, nutDaily: d, nutWeek: w, nutStreak: s, notes: n, metrics: m, pendingOcr: o,
       });
     } catch {
       /* keep prior */
@@ -226,6 +230,55 @@ export default function ClientDetail() {
                 </Text>
               )}
             </GlassCard>
+
+            {/* Pending OCR readings to confirm (Phase 12b). Auto-read from the client's
+                scans; unverified until the coach confirms — tap to review against the scan. */}
+            {pendingOcr.length > 0 ? (
+              <GlassCard glowColor={theme.colors.warning}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                  <Ionicons name="sparkles" size={16} color={theme.colors.warning} />
+                  <Text variant="label" muted style={{ flex: 1 }}>
+                    Pending InBody readings
+                  </Text>
+                  <Badge label={String(pendingOcr.length)} tone="warning" />
+                </View>
+                <Text variant="caption" muted style={{ marginBottom: theme.spacing.sm }}>
+                  Auto-read from the client’s scans. Review each against the sheet and confirm to count it.
+                </Text>
+                <View style={{ gap: theme.spacing.sm }}>
+                  {pendingOcr.map((m) => (
+                    <Pressable
+                      key={m.id}
+                      onPress={() =>
+                        router.push({ pathname: '/coach/body-metric', params: { metricId: m.id, clientName: name ?? '' } })
+                      }
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: theme.spacing.md,
+                        paddingVertical: theme.spacing.xs,
+                        opacity: pressed ? 0.6 : 1,
+                      })}
+                    >
+                      <Ionicons name="document-text" size={18} color={theme.colors.primary} />
+                      <View style={{ flex: 1 }}>
+                        <Text variant="body">
+                          {Math.round(m.weight_grams / 100) / 10} kg
+                          {m.body_fat_bp != null ? ` · ${Math.round(m.body_fat_bp / 10) / 10}% fat` : ''}
+                        </Text>
+                        <Text variant="caption" muted>
+                          {new Date(m.measured_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </Text>
+                      </View>
+                      <Text variant="caption" color="warning">
+                        Review
+                      </Text>
+                      <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                    </Pressable>
+                  ))}
+                </View>
+              </GlassCard>
+            ) : null}
 
             {/* Progress: weight trend + photos + InBody (read-only; ?clientId=) */}
             <GlassCard>

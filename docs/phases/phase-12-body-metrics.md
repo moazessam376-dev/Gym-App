@@ -51,17 +51,38 @@ same migration; cross-tenant denial + coach-verified-write + forged-verifier +
 board-fence tests added to the harness; Zod-allowlisted; integer units; no client
 writes; `get_advisors` expected clean (only the known SECURITY-DEFINER-helper WARN).
 
-## 12b — InBody OCR (next slice, Claude vision)
+## 12b — InBody OCR (built; free vision LLM behind a swap-by-config adapter)
 
-Layer auto-extraction on top of 12a, writing the **same** rows:
-- Athlete captures/picks the InBody sheet (reuses the Phase 11 media pipeline) →
-  Edge Function sends the image to **Claude vision** (Sonnet 4.6, ~2¢/scan; §3 key
-  in Supabase secrets) → returns the fields as **Zod-validated JSON** → inserted
-  **unverified** (`source = 'inbody_ocr'`, `verified_at` null) → **coach taps
-  confirm** (the human-in-the-loop, §9) which stamps verification. Misreads die at
-  coach review; a photoshopped sheet dies there too — same anti-cheat anchor.
-- Rate-limit 5/hr/user (§9). No schema change — additive on 0026.
-- Cost: pilot < $1/mo, launch ~$8/mo (Sonnet). Haiku is the cost-floor fallback.
+Layers auto-extraction on top of 12a, writing the **same** rows. **No schema change to
+0026** — additive. One new table (`0027_ai_usage_events`) is the rate-limit ledger.
+
+**Provider — a `VisionProvider` adapter** (`supabase/functions/_shared/vision.ts`),
+provider chosen by the `VISION_PROVIDER` env var (same philosophy as the PaymentProvider
+stub — no Groq-specific calls scattered around):
+- **Pilot → Groq** (Llama 4 Scout vision). Free, and Groq processes API data as a
+  data-processor under its DPA (**not used to train**) — the right fit for sensitive
+  health data (§7), unlike Gemini's free tier which trains on inputs.
+- **Launch → Claude Sonnet 4.6** (written now; switch = `VISION_PROVIDER=anthropic` +
+  `ANTHROPIC_API_KEY`, no code change). ~2¢/scan; pilot $0.
+- Keys in Supabase secrets via `Deno.env.get` (§3). (CLAUDE.md §1 names OpenAI as the
+  planned provider — the adapter makes the actual provider a config detail.)
+
+**Flow (anti-cheat anchor preserved):** athlete captures/picks the InBody sheet (Phase 11
+media pipeline) → taps **Auto-read** → `inbody-ocr` Edge Function verifies the scan is the
+caller's own ready image, dedupes (one reading per `media_id`), rate-limits, then calls
+`VisionProvider.extractInBody` → returns fields as **Zod-validated JSON** → inserts a
+`body_metrics` row **unverified** (`source='inbody_ocr'`; the 0026 trigger forces
+`verified_*=null`) → **coach reviews against the scan and confirms** (a plain UPDATE
+`source→coach_entered`, which makes the 0026 trigger stamp `verified_by`/`verified_at`).
+Misreads and photoshopped sheets die at coach review — same anchor as 12a; manual entry
+(12a) remains the always-available fallback. PDF scans aren't OCR'd in the pilot (Groq
+vision is image-only) → manual entry.
+
+**Rate limit (§9): 5/hr/user** via the `ai_usage_events` ledger (append-only,
+service-role-write-only, deny-by-default RLS — owner/admin read only). The attempt is
+recorded **before** the model call (fail-closed), so failed/garbage requests also count —
+which matters once a paid model (Sonnet) makes every call cost money. The model output is
+Zod-validated before any DB write, and the image prompt carries a prompt-injection guard.
 
 ## Deferred (later)
 Segmental analysis, body-measurement columns (waist/chest/…), device/Bluetooth

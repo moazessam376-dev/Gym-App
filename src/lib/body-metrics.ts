@@ -5,7 +5,12 @@
 // (grams, basis points). The per-coach leaderboard goes through the SECURITY DEFINER
 // `coach_body_metrics_board` RPC, never a client-side cross-tenant aggregate.
 import { supabase } from './supabase';
-import { createBodyMetricSchema, type CreateBodyMetric } from '../schemas/body-metric';
+import {
+  createBodyMetricSchema,
+  confirmBodyMetricSchema,
+  type CreateBodyMetric,
+  type ConfirmBodyMetric,
+} from '../schemas/body-metric';
 import type { AthleteGoal } from '../schemas/athlete-profile';
 
 export type BodyMetricSource = 'coach_entered' | 'inbody_ocr' | 'device' | 'self_reported';
@@ -47,6 +52,58 @@ export async function listBodyMetrics(userId: string): Promise<BodyMetric[]> {
 }
 
 /**
+ * UNVERIFIED OCR readings for `userId`, newest first — the coach's review queue
+ * (Phase 12b). These are staged by the inbody-ocr Edge Function (source='inbody_ocr')
+ * and stay out of ranks/progress until the coach confirms one. RLS limits results to
+ * the owner / their coach / admin.
+ */
+export async function listUnverifiedOcrMetrics(userId: string): Promise<BodyMetric[]> {
+  const { data, error } = await supabase
+    .from('body_metrics')
+    .select(COLS)
+    .eq('user_id', userId)
+    .eq('source', 'inbody_ocr')
+    .is('verified_at', null)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as BodyMetric[];
+}
+
+export type MediaMetricLink = {
+  media_id: string;
+  metric_id: string;
+  verified: boolean;
+  source: BodyMetricSource;
+};
+
+/**
+ * For each of `userId`'s metric rows that links a scan, a compact {media_id → status}
+ * record — lets the InBody scans screen show per-scan OCR state (awaiting coach /
+ * confirmed) without pulling every full reading. RLS-scoped (owner / coach / admin).
+ */
+export async function listMetricLinksFor(userId: string): Promise<MediaMetricLink[]> {
+  const { data, error } = await supabase
+    .from('body_metrics')
+    .select('id, media_id, verified_at, source')
+    .eq('user_id', userId)
+    .not('media_id', 'is', null);
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    media_id: r.media_id as string,
+    metric_id: r.id as string,
+    verified: r.verified_at != null,
+    source: r.source as BodyMetricSource,
+  }));
+}
+
+/** A single metric row by id (RLS-scoped) — used to prefill the coach's confirm screen. */
+export async function getBodyMetric(id: string): Promise<BodyMetric | null> {
+  const { data, error } = await supabase.from('body_metrics').select(COLS).eq('id', id).maybeSingle();
+  if (error) throw error;
+  return (data as BodyMetric) ?? null;
+}
+
+/**
  * Coach enters a verified metric for their client. `source` is fixed to
  * 'coach_entered'; the verifier + timestamp are server-stamped by the trigger.
  * RLS rejects this for anyone who isn't the client's coach (or an admin).
@@ -77,6 +134,32 @@ export async function addBodyMetric(clientId: string, input: CreateBodyMetric): 
 /** Remove a mistaken entry (coach of the client / admin only, per RLS). */
 export async function deleteBodyMetric(id: string): Promise<void> {
   const { error } = await supabase.from('body_metrics').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/**
+ * Coach confirms an OCR-staged reading (Phase 12b): writes the (possibly corrected)
+ * numbers and flips `source` → 'coach_entered'. That flip makes the 0026 verification
+ * trigger stamp `verified_by = auth.uid()` + `verified_at = now()` — so the reading
+ * becomes verified and starts feeding ranks/progress. RLS rejects this for anyone who
+ * isn't the client's coach (or admin); an athlete cannot confirm their own row.
+ */
+export async function confirmOcrMetric(id: string, input: ConfirmBodyMetric): Promise<void> {
+  const v = confirmBodyMetricSchema.parse(input);
+  const { error } = await supabase
+    .from('body_metrics')
+    .update({
+      source: 'coach_entered',
+      weight_grams: v.weight_grams,
+      body_fat_bp: v.body_fat_bp ?? null,
+      skeletal_muscle_mass_grams: v.skeletal_muscle_mass_grams ?? null,
+      body_fat_mass_grams: v.body_fat_mass_grams ?? null,
+      visceral_fat_level: v.visceral_fat_level ?? null,
+      bmr_kcal: v.bmr_kcal ?? null,
+      note: v.note ?? null,
+      ...(v.measured_at ? { measured_at: v.measured_at } : null),
+    })
+    .eq('id', id);
   if (error) throw error;
 }
 

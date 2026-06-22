@@ -1918,3 +1918,68 @@ describe('body metrics (0026) — coach-verified, athletes never self-write (§2
     await expect(asAnon((c) => c.query('select * from public.coach_body_metrics_board()'))).rejects.toThrow();
   });
 });
+
+describe('ai usage ledger (0027) — owner-only read, service-role-only write (§9)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+
+  it('the owner reads their own AI usage; their coach, another coach, and anon cannot', async () => {
+    const owner = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.ai_usage_events where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select id from public.ai_usage_events where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select id from public.ai_usage_events where user_id = $1', [CLIENT_A1.sub]),
+    );
+    const anon = await asAnon((c) => c.query('select id from public.ai_usage_events'));
+    expect(owner.rows).toHaveLength(1);
+    expect(coach.rows).toHaveLength(0); // a coach cannot read a client's AI counters
+    expect(otherCoach.rows).toHaveLength(0);
+    expect(anon.rows).toHaveLength(0);
+  });
+
+  it('a client CANNOT write the ledger (service-role only): insert rejected', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("insert into public.ai_usage_events (user_id, kind) values ($1, 'inbody_ocr')", [CLIENT_A1.sub]),
+      ),
+    ).rejects.toThrow();
+  });
+});
+
+describe('InBody OCR confirm (0026 + 12b) — coach confirms, athlete cannot self-verify', () => {
+  const OCR_ROW = 'b0d70004-0000-0000-0000-000000000004';
+  const CLIENT_A2_IDENT: Identity = { sub: CLIENT_A2, userRole: 'client' };
+
+  it('the staged inbody_ocr reading is UNVERIFIED (trigger forces verified_*=null)', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query('select source, verified_at, verified_by from public.body_metrics where id = $1', [OCR_ROW]),
+    );
+    expect(r.rows[0].source).toBe('inbody_ocr');
+    expect(r.rows[0].verified_at).toBeNull();
+    expect(r.rows[0].verified_by).toBeNull();
+  });
+
+  it('the athlete CANNOT confirm their own OCR row (anti-cheat): RLS hides it from their UPDATE', async () => {
+    const r = await asUser(CLIENT_A2_IDENT, (c) =>
+      c.query("update public.body_metrics set source = 'coach_entered' where id = $1 returning id", [OCR_ROW]),
+    );
+    expect(r.rows).toHaveLength(0); // USING (is_coach_of) is false for the owner → 0 rows updated
+    const after = await asUser(COACH_A, (c) =>
+      c.query('select verified_at from public.body_metrics where id = $1', [OCR_ROW]),
+    );
+    expect(after.rows[0].verified_at).toBeNull(); // still unverified
+  });
+
+  it('the client’s coach confirms it: source→coach_entered server-stamps the verifier', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query(
+        "update public.body_metrics set source = 'coach_entered' where id = $1 returning verified_by, verified_at",
+        [OCR_ROW],
+      ),
+    );
+    expect(r.rows[0].verified_by).toBe(COACH_A.sub); // forced from auth.uid()
+    expect(r.rows[0].verified_at).not.toBeNull();
+  });
+});
