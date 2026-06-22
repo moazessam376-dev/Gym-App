@@ -3,7 +3,7 @@
 // Progress stats are DEMO data (see src/mock/dashboard.ts) until completion logging
 // is live (streak/adherence) and the InBody system lands (lean-mass delta).
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
@@ -204,6 +204,38 @@ export default function ClientDetail() {
                   No nutrition logged yet.
                 </Text>
               )}
+            </GlassCard>
+
+            {/* Progress: weight trend + photos + InBody (read-only; ?clientId=) */}
+            <GlassCard>
+              <Text variant="label" muted style={{ marginBottom: theme.spacing.sm }}>
+                Progress
+              </Text>
+              <View style={{ gap: theme.spacing.sm }}>
+                {[
+                  { icon: 'trending-up' as const, label: 'Weight history', route: '/client/progress/weight' as const },
+                  { icon: 'camera' as const, label: 'Progress photos', route: '/client/progress/photos' as const },
+                  { icon: 'document-text' as const, label: 'InBody scans', route: '/client/progress/inbody' as const },
+                ].map((row) => (
+                  <Pressable
+                    key={row.route}
+                    onPress={() => router.push({ pathname: row.route, params: { clientId: id } })}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: theme.spacing.md,
+                      paddingVertical: theme.spacing.xs,
+                      opacity: pressed ? 0.6 : 1,
+                    })}
+                  >
+                    <Ionicons name={row.icon} size={18} color={theme.colors.primary} />
+                    <Text variant="body" style={{ flex: 1 }}>
+                      {row.label}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                  </Pressable>
+                ))}
+              </View>
             </GlassCard>
 
             {/* Athlete feedback from logged workouts (migration 0021) */}
