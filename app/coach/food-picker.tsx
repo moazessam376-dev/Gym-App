@@ -15,6 +15,7 @@ import { foodCategorySchema, type FoodCategory } from '../../src/schemas/library
 import { createMealItem, listMealItems, type MealItem } from '../../src/lib/plans';
 import { listMyClients, type Client } from '../../src/lib/invitations';
 import { listClientFoodPreferences } from '../../src/lib/food-preferences';
+import { suggestFoodMacros } from '../../src/lib/coach-ai';
 import { createFoodSchema } from '../../src/schemas/library';
 import { Screen, Text, Input, Button, GlassCard, Avatar, Chip, Badge } from '../../src/components/ui';
 import { theme } from '../../src/theme';
@@ -60,6 +61,7 @@ export default function FoodPicker() {
   const [cP, setCP] = useState('');
   const [cC, setCC] = useState('');
   const [cF, setCF] = useState('');
+  const [macroBusy, setMacroBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -164,6 +166,31 @@ export default function FoodPicker() {
     } catch {
       setError('Could not add that food.');
       setBusy(false);
+    }
+  }
+
+  async function onAutoFillMacros() {
+    const nm = cName.trim();
+    if (!nm || macroBusy) {
+      if (!nm) setError('Enter the food name first.');
+      return;
+    }
+    setError(null);
+    setMacroBusy(true);
+    try {
+      const res = await suggestFoodMacros(nm);
+      if (res.status === 'filled' && res.macros) {
+        setCKcal(String(res.macros.kcal_per_100g));
+        setCP(String(res.macros.protein_g_per_100g));
+        setCC(String(res.macros.carbs_g_per_100g));
+        setCF(String(res.macros.fat_g_per_100g));
+      } else if (res.status === 'rate_limited') {
+        setError('Daily AI limit reached. Enter the macros manually.');
+      } else {
+        setError('Could not estimate macros. Enter them manually.');
+      }
+    } finally {
+      setMacroBusy(false);
     }
   }
 
@@ -298,6 +325,13 @@ export default function FoodPicker() {
                   <Text variant="caption" muted>
                     Per 100g.{cat !== 'all' ? ` Category: ${label(cat)}.` : ''}
                   </Text>
+                  <Button
+                    title="Auto-fill macros with AI"
+                    variant="ghost"
+                    left={<Ionicons name="sparkles" size={16} color={theme.colors.primary} />}
+                    onPress={onAutoFillMacros}
+                    loading={macroBusy}
+                  />
                   <Button title="Create food" onPress={onCreateCustom} loading={busy} />
                 </GlassCard>
               ) : null}

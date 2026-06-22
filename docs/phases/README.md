@@ -58,7 +58,7 @@ core loop; `[post-MVP]` = sequences outward.
 | 13 | Chat hardening & scale | post-MVP | 8 | _at phase start_ |
 | L1 | Social sign-in (Google/Apple) | post-MVP | — | outline |
 | L2 | Payments (stub → live, Paymob) | post-MVP | — | original §6 |
-| L3 | AI — InBody OCR + plan-gen | post-MVP | 11, 12 | original §7 |
+| L3 | AI — InBody OCR + plan-gen | ✅ built | 11, 12 | InBody OCR (12b) + coach plan-gen/nudges/utility (`phase-13-coach-ai.md`) |
 
 **Launch MVP = Phases 8–11 + the already-built chat.** That ships the full core loop.
 

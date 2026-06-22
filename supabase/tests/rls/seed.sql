@@ -261,4 +261,13 @@ insert into public.body_metric_comments (id, metric_id, author_id, body) values
   ('c0de0001-0000-0000-0000-000000000001', 'b0d70004-0000-0000-0000-000000000004',
    '11111111-1111-1111-1111-111111111111', 'Great progress — keep protein high this week.');
 
+-- Coach-only AI plan nudge (0029, Phase 13) for Client A1. Like body_metric_insights,
+-- proves the client's COACH reads it while the client (owner) cannot — the AI
+-- plan-adjustment suggestions are the coach's private decision-support, never shown to
+-- the athlete (its RLS has no owner branch). Service-role write only.
+insert into public.plan_insights (client_id, analysis, provider, created_by) values
+  ('aaaa0001-0000-0000-0000-000000000001',
+   'Adherence strong; nudge protein +20g and add a 4th session.', 'groq',
+   '11111111-1111-1111-1111-111111111111');
+
 alter table auth.users enable trigger on_auth_user_created;
