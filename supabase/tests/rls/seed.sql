@@ -215,4 +215,18 @@ insert into public.workout_notes (id, user_id, session_id, plan_exercise_id, exe
 insert into public.exercise_unit_prefs (user_id, exercise_name, unit) values
   ('aaaa0001-0000-0000-0000-000000000001', 'Barbell Bench Press', 'lb');
 
+-- Body metrics (0026). Coach-entered, VERIFIED InBody readings. Client A1 (Coach A)
+-- has two scans (a baseline + a later one → a trend on Coach A's board); Client B1
+-- (Coach B) has one. Proves Coach A reads A1's metrics while Coach B cannot, the
+-- cross-tenant denial, and that the per-coach board is fenced. Seeded as superuser:
+-- the verification trigger stamps verified_at for coach_entered rows.
+insert into public.body_metrics
+  (id, user_id, measured_at, weight_grams, body_fat_bp, skeletal_muscle_mass_grams, source) values
+  ('b0d70001-0000-0000-0000-000000000001', 'aaaa0001-0000-0000-0000-000000000001',
+   now() - interval '60 days', 92500, 2560, 39200, 'coach_entered'),
+  ('b0d70002-0000-0000-0000-000000000002', 'aaaa0001-0000-0000-0000-000000000001',
+   now() - interval '5 days',  90000, 2300, 39800, 'coach_entered'),
+  ('b0d70003-0000-0000-0000-000000000003', 'bbbb0001-0000-0000-0000-000000000001',
+   now() - interval '3 days',  50100, 2030, 21800, 'coach_entered');
+
 alter table auth.users enable trigger on_auth_user_created;
