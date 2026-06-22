@@ -2,7 +2,7 @@
 // sees these while building nutrition plans. Search + category filter keep the
 // library browsable. Each row toggles like / avoid (tap again to clear). Writes are
 // owner-scoped (RLS); the athlete only ever sets their own.
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect } from 'expo-router';
@@ -33,13 +33,17 @@ export default function FoodPreferences() {
   const [query, setQuery] = useState('');
   const [cat, setCat] = useState<FoodCategory | 'all'>('all');
   const [loading, setLoading] = useState(true);
+  // Once the athlete has toggled anything, local state is authoritative — a late
+  // server refetch (e.g. the focus reload landing after a fast tap) must NOT
+  // overwrite it, or the highlight would flash on then reset.
+  const dirtyRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
     try {
       const [f, p] = await Promise.all([listFoods(), getMyFoodPreferences(userId)]);
       setFoods(f);
-      setPrefs(p);
+      if (!dirtyRef.current) setPrefs(p);
     } catch {
       /* keep prior */
     } finally {
@@ -64,21 +68,26 @@ export default function FoodPreferences() {
 
   async function choose(foodId: string, kind: FoodPrefKind) {
     if (!userId) return;
+    dirtyRef.current = true;
     const current = prefs.get(foodId);
+    const isClear = current === kind; // tapping the active stance clears it
+    // Optimistic update.
     const next = new Map(prefs);
-    // Optimistic: tapping the active stance clears it; otherwise set it.
+    if (isClear) next.delete(foodId);
+    else next.set(foodId, kind);
+    setPrefs(next);
     try {
-      if (current === kind) {
-        next.delete(foodId);
-        setPrefs(next);
-        await removeFoodPreference(userId, foodId);
-      } else {
-        next.set(foodId, kind);
-        setPrefs(next);
-        await setFoodPreference(userId, foodId, kind);
-      }
+      if (isClear) await removeFoodPreference(userId, foodId);
+      else await setFoodPreference(userId, foodId, kind);
     } catch {
-      load(); // revert to server truth on failure
+      // Revert ONLY this food to its previous stance — never reload the whole
+      // map (that's what made every toggle flash and reset).
+      setPrefs((p) => {
+        const n = new Map(p);
+        if (current === undefined) n.delete(foodId);
+        else n.set(foodId, current);
+        return n;
+      });
     }
   }
 

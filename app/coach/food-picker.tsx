@@ -12,7 +12,7 @@ import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-
 import { useAuth } from '../../src/lib/auth-context';
 import { createFood, listFoods, type Food } from '../../src/lib/library';
 import { foodCategorySchema, type FoodCategory } from '../../src/schemas/library';
-import { createMealItem, listMealItems, updateMealItem, type MealItem } from '../../src/lib/plans';
+import { createMealItem, listMealItems, type MealItem } from '../../src/lib/plans';
 import { listMyClients, type Client } from '../../src/lib/invitations';
 import { listClientFoodPreferences } from '../../src/lib/food-preferences';
 import { createFoodSchema } from '../../src/schemas/library';
@@ -126,8 +126,23 @@ export default function FoodPicker() {
       }
     : null;
 
+  // Select a food to add. A food already in the meal is BLOCKED (edit its grams in
+  // the meal itself) — adding it again would be ambiguous.
+  function pick(food: Food) {
+    if (existing.some((it) => it.food_id === food.id)) {
+      setError(`${food.name} is already in this meal.`);
+      return;
+    }
+    setError(null);
+    setSelected(food);
+  }
+
   async function onAdd() {
     if (!mealId || !selected) return;
+    if (existing.some((it) => it.food_id === selected.id)) {
+      setError(`${selected.name} is already in this meal.`);
+      return;
+    }
     const grm = intOr0(grams);
     if (grm <= 0) {
       setError('Enter grams.');
@@ -135,21 +150,16 @@ export default function FoodPicker() {
     }
     setBusy(true);
     try {
-      const dup = existing.find((it) => it.food_id === selected.id);
-      if (dup) {
-        await updateMealItem(dup.id, { grams: dup.grams + grm });
-      } else {
-        await createMealItem({
-          meal_id: mealId,
-          food_id: selected.id,
-          food_name: selected.name,
-          kcal_per_100g: selected.kcal_per_100g,
-          protein_g_per_100g: selected.protein_g_per_100g,
-          carbs_g_per_100g: selected.carbs_g_per_100g,
-          fat_g_per_100g: selected.fat_g_per_100g,
-          grams: grm,
-        });
-      }
+      await createMealItem({
+        meal_id: mealId,
+        food_id: selected.id,
+        food_name: selected.name,
+        kcal_per_100g: selected.kcal_per_100g,
+        protein_g_per_100g: selected.protein_g_per_100g,
+        carbs_g_per_100g: selected.carbs_g_per_100g,
+        fat_g_per_100g: selected.fat_g_per_100g,
+        grams: grm,
+      });
       router.back();
     } catch {
       setError('Could not add that food.');
@@ -210,23 +220,13 @@ export default function FoodPicker() {
                       {selected.kcal_per_100g} kcal · {selected.protein_g_per_100g}P / {selected.carbs_g_per_100g}C / {selected.fat_g_per_100g}F per 100g
                     </Text>
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: theme.spacing.sm }}>
-                    <Input containerStyle={{ flex: 1 }} label="Grams" value={grams} onChangeText={setGrams} keyboardType="number-pad" placeholder="grams" />
-                    <Button
-                      title={existing.some((it) => it.food_id === selected.id) ? 'Add more' : 'Add'}
-                      fullWidth={false}
-                      onPress={onAdd}
-                      loading={busy}
-                    />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <Input containerStyle={{ flex: 1 }} value={grams} onChangeText={setGrams} keyboardType="number-pad" placeholder="Grams" />
+                    <Button title="Add" fullWidth={false} onPress={onAdd} loading={busy} />
                   </View>
                   {preview ? (
                     <Text variant="bodyStrong" color="primary">
                       This serving: {preview.kcal} kcal · {preview.protein}P / {preview.carbs}C / {preview.fat}F
-                    </Text>
-                  ) : null}
-                  {existing.some((it) => it.food_id === selected.id) ? (
-                    <Text variant="caption" muted>
-                      Already in this meal — these grams will be added to it.
                     </Text>
                   ) : null}
                   <Pressable onPress={() => setSelected(null)}>
@@ -324,7 +324,7 @@ export default function FoodPicker() {
               pref={prefIndex.get(item.id)}
               nameById={nameById}
               clientFilter={clientFilter}
-              onPick={() => setSelected(item)}
+              onPick={() => pick(item)}
             />
           )}
         />
@@ -356,7 +356,11 @@ function FoodRow({
   const focusAvoids = clientFilter !== 'all' && avoiders.includes(clientFilter);
 
   return (
-    <GlassCard onPress={onPick} glowColor={focusLikes ? theme.colors.primary : undefined}>
+    <GlassCard
+      onPress={onPick}
+      glowColor={focusLikes ? theme.colors.primary : undefined}
+      style={{ opacity: inMeal ? 0.5 : 1 }}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
@@ -403,7 +407,11 @@ function FoodRow({
             </Text>
           ) : null}
         </View>
-        <Ionicons name="add-circle" size={24} color={theme.colors.primary} />
+        <Ionicons
+          name={inMeal ? 'checkmark-circle' : 'add-circle'}
+          size={24}
+          color={inMeal ? theme.colors.textMuted : theme.colors.primary}
+        />
       </View>
     </GlassCard>
   );
