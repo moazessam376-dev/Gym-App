@@ -1983,3 +1983,76 @@ describe('InBody OCR confirm (0026 + 12b) — coach confirms, athlete cannot sel
     expect(r.rows[0].verified_at).not.toBeNull();
   });
 });
+
+describe('InBody insights + comments (0028) — coach-only analysis, coach→client comments', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_A2_IDENT: Identity = { sub: CLIENT_A2, userRole: 'client' };
+  const METRIC = 'b0d70004-0000-0000-0000-000000000004';
+
+  it('AI insight is COACH-ONLY: the coach reads it; the athlete (owner), another coach, and anon cannot', async () => {
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select metric_id from public.body_metric_insights where metric_id = $1', [METRIC]),
+    );
+    const owner = await asUser(CLIENT_A2_IDENT, (c) =>
+      c.query('select metric_id from public.body_metric_insights where metric_id = $1', [METRIC]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select metric_id from public.body_metric_insights where metric_id = $1', [METRIC]),
+    );
+    const anon = await asAnon((c) => c.query('select metric_id from public.body_metric_insights'));
+    expect(coach.rows).toHaveLength(1);
+    expect(owner.rows).toHaveLength(0); // the client never sees the coach's analysis
+    expect(otherCoach.rows).toHaveLength(0);
+    expect(anon.rows).toHaveLength(0);
+  });
+
+  it('a client CANNOT write an insight (service-role only): insert rejected', async () => {
+    await expect(
+      asUser(CLIENT_A2_IDENT, (c) =>
+        c.query("insert into public.body_metric_insights (metric_id, analysis) values ($1, 'x')", [METRIC]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('comments: the reading’s owner + their coach read them; another coach and anon cannot', async () => {
+    const owner = await asUser(CLIENT_A2_IDENT, (c) =>
+      c.query('select id from public.body_metric_comments where metric_id = $1', [METRIC]),
+    );
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select id from public.body_metric_comments where metric_id = $1', [METRIC]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select id from public.body_metric_comments where metric_id = $1', [METRIC]),
+    );
+    const anon = await asAnon((c) => c.query('select id from public.body_metric_comments'));
+    expect(owner.rows).toHaveLength(1); // the client reads the coach's feedback
+    expect(coach.rows).toHaveLength(1);
+    expect(otherCoach.rows).toHaveLength(0); // cross-tenant denial
+    expect(anon.rows).toHaveLength(0);
+  });
+
+  it('the coach comments on their client’s reading; author is server-stamped to the caller', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query("insert into public.body_metric_comments (metric_id, body) values ($1, 'Nice work') returning author_id", [
+        METRIC,
+      ]),
+    );
+    expect(r.rows[0].author_id).toBe(COACH_A.sub); // forced from auth.uid()
+  });
+
+  it('the athlete CANNOT comment on their own reading (coach→client only): insert rejected', async () => {
+    await expect(
+      asUser(CLIENT_A2_IDENT, (c) =>
+        c.query("insert into public.body_metric_comments (metric_id, body) values ($1, 'me')", [METRIC]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('a coach cannot comment on a client they do not coach: insert rejected', async () => {
+    await expect(
+      asUser(COACH_B, (c) =>
+        c.query("insert into public.body_metric_comments (metric_id, body) values ($1, 'x')", [METRIC]),
+      ),
+    ).rejects.toThrow();
+  });
+});

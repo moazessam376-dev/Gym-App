@@ -246,4 +246,19 @@ insert into public.body_metrics
   ('b0d70004-0000-0000-0000-000000000004', 'aaaa0002-0000-0000-0000-000000000002',
    now() - interval '2 days', 81000, 1850, 35000, 'inbody_ocr');
 
+-- Coach-only AI insight on Client A2's OCR reading (0028). Proves the coach reads it
+-- while the athlete (the owner) cannot — the analysis is the coach's private
+-- decision-support, not client-facing.
+insert into public.body_metric_insights (metric_id, analysis, provider, created_by) values
+  ('b0d70004-0000-0000-0000-000000000004',
+   'Down 1.2% body fat vs baseline; trending toward the fat-loss goal.', 'groq',
+   '11111111-1111-1111-1111-111111111111');
+
+-- A coach comment on Client A2's reading (0028). Proves the owner + their coach read it,
+-- the athlete cannot author one, and another coach cannot read it. author_id is given
+-- explicitly (the trigger only overrides it when auth.uid() is set; null in seed).
+insert into public.body_metric_comments (id, metric_id, author_id, body) values
+  ('c0de0001-0000-0000-0000-000000000001', 'b0d70004-0000-0000-0000-000000000004',
+   '11111111-1111-1111-1111-111111111111', 'Great progress — keep protein high this week.');
+
 alter table auth.users enable trigger on_auth_user_created;

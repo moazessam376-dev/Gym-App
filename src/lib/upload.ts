@@ -29,7 +29,11 @@ async function ensurePermission(source: PickSource): Promise<boolean> {
   return res.granted;
 }
 
-export type UploadResult = { mediaId: string } | { cancelled: true } | { denied: true };
+export type UploadResult =
+  | { mediaId: string }
+  | { cancelled: true }
+  | { denied: true }
+  | { limited: 'daily' };
 
 /**
  * Capture/pick a photo and upload it as `kind`. Returns the new media id, or a
@@ -75,6 +79,7 @@ export async function captureAndUploadPhoto(args: {
   // bytes through supabase-js, so we pass a Uint8Array (its documented RN path).
   const bytes = await new File(out.uri).bytes();
 
-  const mediaId = await uploadMedia({ file: bytes, mimeType: 'image/jpeg', kind });
-  return { mediaId };
+  const res = await uploadMedia({ file: bytes, mimeType: 'image/jpeg', kind });
+  if ('dailyLimit' in res) return { limited: 'daily' };
+  return { mediaId: res.mediaId };
 }

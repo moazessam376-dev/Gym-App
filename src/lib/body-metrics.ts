@@ -8,12 +8,49 @@ import { supabase } from './supabase';
 import {
   createBodyMetricSchema,
   confirmBodyMetricSchema,
+  metricCommentSchema,
   type CreateBodyMetric,
   type ConfirmBodyMetric,
 } from '../schemas/body-metric';
 import type { AthleteGoal } from '../schemas/athlete-profile';
 
 export type BodyMetricSource = 'coach_entered' | 'inbody_ocr' | 'device' | 'self_reported';
+
+// Per-limb readings off the InBody sheet (kg). All optional — sheets vary.
+export type Segment = {
+  right_arm_kg?: number | null;
+  left_arm_kg?: number | null;
+  trunk_kg?: number | null;
+  right_leg_kg?: number | null;
+  left_leg_kg?: number | null;
+};
+
+// Richer OCR capture stored on the reading (Phase 12b). All optional/lenient — the model
+// fills what's printed; the coach uses it as context. Never drives ranks.
+export type BodyMetricExtras = {
+  inbody_score?: number | null;
+  fat_free_mass_kg?: number | null;
+  total_body_water_kg?: number | null;
+  intracellular_water_kg?: number | null;
+  extracellular_water_kg?: number | null;
+  ecw_tbw_ratio?: number | null;
+  phase_angle_deg?: number | null;
+  protein_kg?: number | null;
+  minerals_kg?: number | null;
+  segmental_lean_kg?: Segment | null;
+  segmental_fat_kg?: Segment | null;
+  target_weight_kg?: number | null;
+  weight_control_kg?: number | null;
+  fat_control_kg?: number | null;
+  muscle_control_kg?: number | null;
+  history?: Array<{
+    measured_on?: string | null;
+    weight_kg?: number | null;
+    skeletal_muscle_mass_kg?: number | null;
+    body_fat_pct?: number | null;
+  }> | null;
+  notes?: string | null;
+} | null;
 
 export type BodyMetric = {
   id: string;
@@ -30,10 +67,11 @@ export type BodyMetric = {
   verified_by: string | null;
   media_id: string | null;
   note: string | null;
+  extras: BodyMetricExtras;
 };
 
 const COLS =
-  'id, user_id, measured_at, weight_grams, body_fat_bp, skeletal_muscle_mass_grams, body_fat_mass_grams, visceral_fat_level, bmr_kcal, source, verified_at, verified_by, media_id, note';
+  'id, user_id, measured_at, weight_grams, body_fat_bp, skeletal_muscle_mass_grams, body_fat_mass_grams, visceral_fat_level, bmr_kcal, source, verified_at, verified_by, media_id, note, extras';
 
 /**
  * Verified body metrics for `userId`, oldest→newest (chart-friendly). RLS limits
@@ -160,6 +198,85 @@ export async function confirmOcrMetric(id: string, input: ConfirmBodyMetric): Pr
       ...(v.measured_at ? { measured_at: v.measured_at } : null),
     })
     .eq('id', id);
+  if (error) throw error;
+}
+
+// ── Coach-only AI insight (Phase 12b) ───────────────────────────────────────
+
+export type MetricInsight = {
+  metric_id: string;
+  analysis: string;
+  provider: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * The coach-only AI analysis for a reading, if one was generated. RLS limits this table
+ * to the metric's coach/admin — an athlete reading it gets nothing (the analysis is the
+ * coach's private decision-support; the client sees the coach's comment instead).
+ */
+export async function getMetricInsight(metricId: string): Promise<MetricInsight | null> {
+  const { data, error } = await supabase
+    .from('body_metric_insights')
+    .select('metric_id, analysis, provider, created_at, updated_at')
+    .eq('metric_id', metricId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as MetricInsight) ?? null;
+}
+
+// ── Coach → client comments on a reading (Phase 12b) ────────────────────────
+
+export type MetricComment = {
+  id: string;
+  metric_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+};
+
+const COMMENT_COLS = 'id, metric_id, author_id, body, created_at';
+
+/** Comments on one reading, oldest→newest. RLS: owner / coach / admin. */
+export async function listMetricComments(metricId: string): Promise<MetricComment[]> {
+  const { data, error } = await supabase
+    .from('body_metric_comments')
+    .select(COMMENT_COLS)
+    .eq('metric_id', metricId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as MetricComment[];
+}
+
+/** Comments across several readings in one query (for the athlete's inline per-scan view). */
+export async function listCommentsForMetrics(metricIds: string[]): Promise<MetricComment[]> {
+  if (metricIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('body_metric_comments')
+    .select(COMMENT_COLS)
+    .in('metric_id', metricIds)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as MetricComment[];
+}
+
+/** Coach posts a comment on a client's reading. author_id is server-set; RLS rejects
+ *  anyone who isn't the reading's coach (or admin). */
+export async function addMetricComment(metricId: string, body: string): Promise<MetricComment> {
+  const v = metricCommentSchema.parse({ body });
+  const { data, error } = await supabase
+    .from('body_metric_comments')
+    .insert({ metric_id: metricId, body: v.body })
+    .select(COMMENT_COLS)
+    .single();
+  if (error) throw error;
+  return data as MetricComment;
+}
+
+/** Remove a comment (the author / admin only, per RLS). */
+export async function deleteMetricComment(id: string): Promise<void> {
+  const { error } = await supabase.from('body_metric_comments').delete().eq('id', id);
   if (error) throw error;
 }
 

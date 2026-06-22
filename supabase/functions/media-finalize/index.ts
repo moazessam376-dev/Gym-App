@@ -74,6 +74,25 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
+    // Athletes may submit at most one InBody per (UTC) day (Phase 12b). The AI read is a
+    // coach action; this just caps how often a client uploads a new sheet. Progress photos
+    // are unaffected.
+    if (kind === 'inbody') {
+      const startOfDay = new Date();
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const { count } = await svc
+        .from('media')
+        .select('id', { count: 'exact', head: true })
+        .eq('owner_id', caller.id)
+        .eq('kind', 'inbody')
+        .eq('status', 'ready')
+        .gte('created_at', startOfDay.toISOString());
+      if ((count ?? 0) >= 1) {
+        await dropInbox();
+        return json({ status: 'daily_limit' }, 200);
+      }
+    }
+
     // An optional weigh-in link must belong to the caller (service role bypasses
     // RLS, so we check ownership explicitly — no attaching to someone else's row).
     if (progress_entry_id) {

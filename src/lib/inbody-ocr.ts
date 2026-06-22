@@ -29,3 +29,21 @@ export async function requestInBodyOcr(mediaId: string): Promise<OcrResult> {
   }
   return data as OcrResult;
 }
+
+// ── Coach-only AI analysis (inbody-analyze) ─────────────────────────────────
+export type InsightStatus = 'analyzed' | 'rate_limited' | 'failed';
+export type InsightResult = { status: InsightStatus; analysis?: string };
+
+/**
+ * Generate (or re-generate) the coach-only goal-relative analysis for a reading. The
+ * function stores it in body_metric_insights and returns the text. Coach-only server-side.
+ */
+export async function requestInBodyInsights(metricId: string): Promise<InsightResult> {
+  const { data, error } = await supabase.functions.invoke('inbody-analyze', {
+    body: { metric_id: metricId },
+  });
+  if (error || !data || typeof (data as InsightResult).status !== 'string') {
+    return { status: 'failed' };
+  }
+  return data as InsightResult;
+}

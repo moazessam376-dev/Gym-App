@@ -32,3 +32,10 @@ export type CreateBodyMetric = z.infer<typeof createBodyMetricSchema>;
 // flips source → coach_entered, which makes the 0026 trigger stamp the verifier.
 export const confirmBodyMetricSchema = createBodyMetricSchema.omit({ media_id: true });
 export type ConfirmBodyMetric = z.infer<typeof confirmBodyMetricSchema>;
+
+// Coach's comment on a client's InBody reading (Phase 12b). Allowlist: just the text;
+// metric_id is passed by the data layer and author_id is server-set by the DB trigger.
+export const metricCommentSchema = z.object({
+  body: z.string().trim().min(1, 'Write a comment').max(2000),
+});
+export type MetricCommentInput = z.infer<typeof metricCommentSchema>;

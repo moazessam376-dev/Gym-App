@@ -48,3 +48,8 @@ export const signedUrlSchema = z.object({
 export const inbodyOcrSchema = z.object({
   media_id: z.string().uuid(),
 });
+
+// Coach asks for the on-demand, goal-relative AI analysis of a reading (coach-only).
+export const analyzeInbodySchema = z.object({
+  metric_id: z.string().uuid(),
+});

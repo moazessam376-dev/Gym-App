@@ -294,7 +294,7 @@ export default function ClientDetail() {
                 ].map((row) => (
                   <Pressable
                     key={row.route}
-                    onPress={() => router.push({ pathname: row.route, params: { clientId: id } })}
+                    onPress={() => router.push({ pathname: row.route, params: { clientId: id, clientName: name ?? '' } })}
                     style={({ pressed }) => ({
                       flexDirection: 'row',
                       alignItems: 'center',
