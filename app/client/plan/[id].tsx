@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
 import {
   getPlan,
@@ -21,7 +21,7 @@ import {
   type Week,
 } from '../../../src/lib/plans';
 import { addMacros, BLOCK_LABEL, BLOCK_ORDER, EMPTY_MACROS, sumMacros, type Macros } from '../../../src/lib/plan-ui';
-import { Screen, Text, Card, GlassCard, Badge } from '../../../src/components/ui';
+import { Screen, Text, Card, GlassCard, Badge, Button } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 function CoachNote({ text }: { text: string }) {
@@ -46,6 +46,7 @@ function CoachNote({ text }: { text: string }) {
 
 export default function ClientPlanView() {
   const { role } = useAuth();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -219,6 +220,19 @@ export default function ClientPlanView() {
                         ))}
                     </View>
                   ))}
+                  {ex.length > 0 ? (
+                    <Button
+                      title="Log this workout"
+                      left={<Ionicons name="barbell" size={18} color={theme.colors.onPrimary} />}
+                      style={{ marginTop: theme.spacing.md }}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/client/workout/[dayId]',
+                          params: { dayId: d.id, planId: plan.id, name: d.name },
+                        })
+                      }
+                    />
+                  ) : null}
                 </Card>
               );
             })

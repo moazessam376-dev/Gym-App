@@ -23,6 +23,10 @@ export type ActivityLevel = z.infer<typeof activityLevelSchema>;
 export const sexSchema = z.enum(['male', 'female']);
 export type Sex = z.infer<typeof sexSchema>;
 
+// Preferred DISPLAY unit for weight (load is always stored as integer grams).
+export const weightUnitSchema = z.enum(['kg', 'lb']);
+export type WeightUnit = z.infer<typeof weightUnitSchema>;
+
 // Allowlisted dietary tags — never free-form (keeps the array a closed set).
 export const dietaryTagSchema = z.enum([
   'vegetarian',

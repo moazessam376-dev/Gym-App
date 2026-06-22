@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { createExercise, listExercises, type Exercise } from '../../src/lib/library';
-import { createExerciseRow } from '../../src/lib/plans';
+import { createExerciseRow, listExerciseRows } from '../../src/lib/plans';
 import { createExerciseSchema, muscleGroupSchema, type MuscleGroup } from '../../src/schemas/library';
 import { Screen, Text, Input, Button, GlassCard, Chip } from '../../src/components/ui';
 import { theme } from '../../src/theme';
@@ -20,6 +20,8 @@ export default function ExercisePicker() {
 
   const [filter, setFilter] = useState<MuscleGroup | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  // exercise_ids already in this day — to block adding the same one twice.
+  const [inDay, setInDay] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [showCustom, setShowCustom] = useState(false);
@@ -29,13 +31,18 @@ export default function ExercisePicker() {
 
   const load = useCallback(async () => {
     try {
-      setExercises(await listExercises(filter ? { muscleGroup: filter } : undefined));
+      const [list, rows] = await Promise.all([
+        listExercises(filter ? { muscleGroup: filter } : undefined),
+        dayId ? listExerciseRows(dayId) : Promise.resolve([]),
+      ]);
+      setExercises(list);
+      setInDay(new Set(rows.map((r) => r.exercise_id)));
     } catch {
       /* keep prior */
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, dayId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -47,6 +54,10 @@ export default function ExercisePicker() {
 
   async function onPick(ex: Exercise) {
     if (!dayId || adding) return;
+    if (inDay.has(ex.id)) {
+      setError(`${ex.name} is already in this day.`);
+      return;
+    }
     setError(null);
     setAdding(true);
     try {
@@ -137,21 +148,29 @@ export default function ExercisePicker() {
               </Text>
             )
           }
-          renderItem={({ item }) => (
-            <GlassCard onPress={() => onPick(item)}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-                <View style={{ flex: 1 }}>
-                  <Text variant="bodyStrong">{item.name}</Text>
-                  <Text variant="caption" muted style={{ textTransform: 'capitalize' }}>
-                    {item.muscle_group}
-                    {item.primary_muscle ? ` · ${item.primary_muscle}` : ''}
-                    {item.coach_id ? ' · custom' : ''}
-                  </Text>
+          renderItem={({ item }) => {
+            const added = inDay.has(item.id);
+            return (
+              <GlassCard onPress={() => onPick(item)} style={{ opacity: added ? 0.5 : 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyStrong">{item.name}</Text>
+                    <Text variant="caption" muted style={{ textTransform: 'capitalize' }}>
+                      {item.muscle_group}
+                      {item.primary_muscle ? ` · ${item.primary_muscle}` : ''}
+                      {item.coach_id ? ' · custom' : ''}
+                      {added ? ' · in day' : ''}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name={added ? 'checkmark-circle' : 'add-circle'}
+                    size={24}
+                    color={added ? theme.colors.textMuted : theme.colors.primary}
+                  />
                 </View>
-                <Ionicons name="add-circle" size={24} color={theme.colors.primary} />
-              </View>
-            </GlassCard>
-          )}
+              </GlassCard>
+            );
+          }}
         />
       </KeyboardAvoidingView>
     </Screen>
