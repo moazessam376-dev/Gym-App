@@ -50,27 +50,34 @@ export default function ClientHome() {
 
   const load = useCallback(async () => {
     if (!userId) return;
-    try {
-      const today = todayLocalDate();
-      const [n, s, coach, plans, athlete, nt, nd] = await Promise.all([
-        getMyName(userId),
-        getStreak(userId),
-        getMyCoach(userId),
-        listPlansForClient(userId),
-        getMyAthleteProfile(userId),
-        getTargets(userId),
-        getDailyNutrition(userId, today),
-      ]);
-      setName(n);
-      setStreak(s);
-      setCoachName(coach?.full_name ?? null);
-      setCoachId(coach?.id ?? null);
-      setNeedsOnboarding(athlete?.onboarded_at == null);
-      setNutTargets(nt);
-      setNutDaily(nd);
+    const today = todayLocalDate();
+    // allSettled: one failing read (e.g. nutrition) must NOT blank the whole
+    // dashboard — your name, streak and avatar should always render.
+    const [n, s, coach, plans, athlete, nt, nd] = await Promise.allSettled([
+      getMyName(userId),
+      getStreak(userId),
+      getMyCoach(userId),
+      listPlansForClient(userId),
+      getMyAthleteProfile(userId),
+      getTargets(userId),
+      getDailyNutrition(userId, today),
+    ]);
+    if (n.status === 'fulfilled') setName(n.value);
+    if (s.status === 'fulfilled') setStreak(s.value);
+    if (coach.status === 'fulfilled') {
+      setCoachName(coach.value?.full_name ?? null);
+      setCoachId(coach.value?.id ?? null);
+    }
+    if (athlete.status === 'fulfilled') setNeedsOnboarding(athlete.value?.onboarded_at == null);
+    if (nt.status === 'fulfilled') setNutTargets(nt.value);
+    if (nd.status === 'fulfilled') setNutDaily(nd.value);
 
+    try {
       // Active training plan = most recent non-archived training plan.
-      const plan = plans.find((p) => p.type === 'training' && p.status !== 'archived');
+      const plan =
+        plans.status === 'fulfilled'
+          ? plans.value.find((p) => p.type === 'training' && p.status !== 'archived')
+          : undefined;
       if (!plan) {
         setToday(null);
         return;
@@ -88,7 +95,7 @@ export default function ClientHome() {
       const exercises = await listExerciseRows(day.id);
       const planned = exercises.reduce((sum, e) => sum + (e.sets ?? 0), 0);
 
-      const existing = await getSessionForDay(userId, day.id, todayLocalDate());
+      const existing = await getSessionForDay(userId, day.id, today);
       if (existing) {
         setStatus(existing.status);
         const adh = await getAdherence(existing.id);
@@ -100,7 +107,7 @@ export default function ClientHome() {
         setPlannedSets(planned);
       }
     } catch {
-      /* keep prior */
+      /* plan section failed — leave the rest of the dashboard intact */
     } finally {
       setLoading(false);
     }
@@ -108,7 +115,8 @@ export default function ClientHome() {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
+      // Refetch silently on focus — keep the current content visible so revisiting
+      // the tab doesn't flash a loader (the initial cold load still shows one).
       load();
     }, [load]),
   );

@@ -789,6 +789,8 @@ const styles = StyleSheet.create({
     color: c.text,
     backgroundColor: c.surface,
     minHeight: 60,
+    maxHeight: 140, // cap growth so newlines can't break the layout
+    textAlignVertical: 'top',
   },
   noteBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 18 },
   noteCancel: { fontSize: 14, fontWeight: '600', color: c.textMuted },

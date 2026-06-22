@@ -23,7 +23,6 @@ export default function NewPlan() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       setTemplates(await listSystemTemplates(type));
     } catch {

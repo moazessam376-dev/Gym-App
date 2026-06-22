@@ -1,10 +1,11 @@
 // Edit your profile (display name). Any role. The name isn't in the JWT, so no
 // re-login is needed — it reflects on the next data load (roster, coach card).
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '../src/lib/auth-context';
 import { getMyName, updateMyName } from '../src/lib/profile';
+import { readCache, writeCache } from '../src/lib/screen-cache';
 import { Screen, Text, Input, Button } from '../src/components/ui';
 import { theme } from '../src/theme';
 
@@ -12,9 +13,11 @@ export default function Profile() {
   const { session } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
+  const cacheKey = userId ? `profile-name:${userId}` : null;
 
-  const [name, setName] = useState('');
-  const [loading, setLoading] = useState(true);
+  // Seed from the warm cache so the form shows instantly (no loading spinner);
+  // the focus refetch updates it silently.
+  const [name, setName] = useState(readCache<string>(cacheKey) ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -22,13 +25,13 @@ export default function Profile() {
   const load = useCallback(async () => {
     if (!userId) return;
     try {
-      setName((await getMyName(userId)) ?? '');
+      const n = (await getMyName(userId)) ?? '';
+      setName(n);
+      writeCache(cacheKey, n);
     } catch {
       /* leave blank */
-    } finally {
-      setLoading(false);
     }
-  }, [userId]);
+  }, [userId, cacheKey]);
 
   useFocusEffect(
     useCallback(() => {
@@ -50,20 +53,13 @@ export default function Profile() {
     setSaving(true);
     try {
       await updateMyName(userId, name);
+      writeCache(cacheKey, name.trim());
       setSaved(true);
     } catch {
       setError('Could not save your name. Please try again.');
     } finally {
       setSaving(false);
     }
-  }
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
   }
 
   return (
