@@ -70,7 +70,8 @@ const coachPrompt = z.string().max(280).optional();
 export const coachPlanGenSchema = z.object({
   client_id: z.string().uuid(),
   type: z.enum(['training', 'nutrition']),
-  weeks: z.number().int().min(1).max(4).optional(), // training only; default 1
+  // Pilot generates ONE week (reliable on the free model); the coach extends via the
+  // editor's Duplicate-week / Adjust-with-AI. Multi-week returns at launch on Claude.
   coach_prompt: coachPrompt,
 });
 
@@ -132,20 +133,22 @@ const genWeekSchema = z.object({
   note: planNote,
   days: z.array(genDaySchema).min(1).max(7),
 });
-// Accept either { weeks: [...] } or a singular { week: {...} } (some models ignore the
-// plural instruction) — wrap the singular before validating.
-export const genTrainingPlanSchema = z.preprocess(
-  (v) => {
-    if (v && typeof v === 'object' && !('weeks' in v) && 'week' in (v as Record<string, unknown>)) {
-      return { ...(v as Record<string, unknown>), weeks: [(v as Record<string, unknown>).week] };
-    }
-    return v;
-  },
-  z.object({
-    title: z.string().min(1).max(120),
-    weeks: z.array(genWeekSchema).min(1).max(8),
-  }),
-);
+export const genTrainingPlanSchema = z.object({
+  title: z.string().min(1).max(120),
+  weeks: z.array(genWeekSchema).min(1).max(8),
+});
+
+// Some models ignore the "weeks" array instruction and return a singular { week: {...} }.
+// Normalize that to the array shape BEFORE validating. We do this in a plain helper rather
+// than z.preprocess on purpose: a preprocess pipe erases the schema's OUTPUT type (the
+// parsed `gen.data` becomes `unknown` under a strict typecheck), which would force `as`
+// casts at every call site. A plain z.object keeps `gen.data` correctly typed.
+export function normalizeTrainingRaw(v: unknown): unknown {
+  if (v && typeof v === 'object' && !('weeks' in v) && 'week' in (v as Record<string, unknown>)) {
+    return { ...(v as Record<string, unknown>), weeks: [(v as Record<string, unknown>).week] };
+  }
+  return v;
+}
 
 const genMealItemSchema = z.object({
   food_id: looseUuid,

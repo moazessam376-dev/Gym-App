@@ -93,7 +93,6 @@ export default function ClientDetail() {
   // Coach AI (Phase 13): plan-gen modal + plan-adjustment nudges. Coach-only.
   const [aiOpen, setAiOpen] = useState(false);
   const [aiType, setAiType] = useState<PlanType>('training');
-  const [aiWeeks, setAiWeeks] = useState(1);
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [nudge, setNudge] = useState<string | null>(cached?.nudge ?? null);
@@ -159,7 +158,7 @@ export default function ClientDetail() {
     if (!id || aiBusy) return;
     setAiBusy(true);
     try {
-      const res = await generatePlan({ clientId: id, type: aiType, weeks: aiWeeks, coachPrompt: aiPrompt.trim() || undefined });
+      const res = await generatePlan({ clientId: id, type: aiType, coachPrompt: aiPrompt.trim() || undefined });
       if (res.status === 'generated' && res.plan_id) {
         setAiOpen(false);
         setAiPrompt('');
@@ -530,25 +529,17 @@ export default function ClientDetail() {
             </Text>
             <Segmented
               value={aiType}
-              onChange={setAiType}
+              onChange={(t) => {
+                // Training and nutrition steer differently — don't carry one's prompt
+                // into the other when the coach switches tabs.
+                setAiType(t);
+                setAiPrompt('');
+              }}
               options={[
                 { value: 'training', label: 'Training' },
                 { value: 'nutrition', label: 'Nutrition' },
               ]}
             />
-            {/* Weeks selector (training only). Each week is AI-written with progression. */}
-            {aiType === 'training' ? (
-              <View style={{ gap: theme.spacing.xs }}>
-                <Text variant="label" muted>
-                  Weeks
-                </Text>
-                <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                  {[1, 2, 3, 4].map((n) => (
-                    <Chip key={n} label={String(n)} active={aiWeeks === n} onPress={() => setAiWeeks(n)} />
-                  ))}
-                </View>
-              </View>
-            ) : null}
             <Input
               value={aiPrompt}
               onChangeText={setAiPrompt}
@@ -565,7 +556,7 @@ export default function ClientDetail() {
             </View>
             <Text variant="label" muted style={{ fontSize: 10 }}>
               {aiType === 'training'
-                ? `Drafts ${aiWeeks} week${aiWeeks > 1 ? 's' : ''} sized to their training days.`
+                ? 'Drafts one week sized to their training days. Duplicate or “Adjust with AI” in the editor to extend.'
                 : 'Drafts one day of meals toward their macro target.'}
             </Text>
             <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
