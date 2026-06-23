@@ -19,7 +19,7 @@ import { getCaller, serviceClient } from '../_shared/clients.ts';
 import { coachPlanGenSchema, genNutritionPlanSchema, genTrainingPlanSchema, normalizeTrainingRaw } from '../_shared/schemas.ts';
 import { corsHeaders, json } from '../_shared/http.ts';
 import { getVisionProvider } from '../_shared/vision.ts';
-import { DAY_MS, recordUsage, refundUsage, withinLimit } from '../_shared/rate-limit.ts';
+import { DAY_MS, recordCost, recordUsage, refundUsage, withinLimit } from '../_shared/rate-limit.ts';
 
 const RATE_LIMIT = 10; // per-coach DAILY (CLAUDE.md §9 target: plan-gen 10/day/coach)
 
@@ -221,6 +221,7 @@ Deno.serve(async (req: Request) => {
         console.error('coach-plan-gen training model failed', { message: String(e) });
         return await fail();
       }
+      await recordCost(svc, usageId, provider.lastUsage());
       const gen = genTrainingPlanSchema.safeParse(normalizeTrainingRaw(raw));
       if (!gen.success) return await fail();
 
@@ -332,6 +333,7 @@ Deno.serve(async (req: Request) => {
       console.error('coach-plan-gen nutrition model failed', { message: String(e) });
       return await fail();
     }
+    await recordCost(svc, usageId, provider.lastUsage());
     const gen = genNutritionPlanSchema.safeParse(raw);
     if (!gen.success) return await fail();
 

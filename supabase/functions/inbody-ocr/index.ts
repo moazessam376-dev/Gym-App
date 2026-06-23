@@ -14,6 +14,7 @@ import { getCaller, serviceClient } from '../_shared/clients.ts';
 import { inbodyOcrSchema } from '../_shared/schemas.ts';
 import { corsHeaders, json } from '../_shared/http.ts';
 import { getVisionProvider } from '../_shared/vision.ts';
+import { recordCost } from '../_shared/rate-limit.ts';
 import { encodeBase64 } from '@std/encoding/base64';
 
 const RATE_LIMIT = 60; // per-coach hourly backstop (the real cap is per-scan dedupe) (§9)
@@ -85,11 +86,15 @@ Deno.serve(async (req: Request) => {
       .gte('created_at', since);
     if ((count ?? 0) >= RATE_LIMIT) return json({ status: 'rate_limited' }, 200);
 
-    // 5. Record the attempt (the coach) BEFORE the model call (fail-closed).
+    // 5. Record the attempt (the coach) BEFORE the model call (fail-closed). Capture
+    //    the id so cost can be backfilled after the call (Phase 14c).
     const provider = getVisionProvider();
-    await svc
+    const { data: usageRow } = await svc
       .from('ai_usage_events')
-      .insert({ user_id: caller.id, kind: 'inbody_ocr', provider: provider.name });
+      .insert({ user_id: caller.id, kind: 'inbody_ocr', provider: provider.name })
+      .select('id')
+      .single();
+    const usageId = (usageRow as { id: string } | null)?.id ?? null;
 
     // 6. Download sanitized bytes from the private bucket; base64 for the provider.
     const { data: blob, error: dErr } = await svc.storage.from(media.bucket).download(media.path);
@@ -107,6 +112,7 @@ Deno.serve(async (req: Request) => {
       console.error('inbody-ocr vision failed', { message: String(e) });
       return json({ status: 'failed' }, 200);
     }
+    await recordCost(svc, usageId, provider.lastUsage());
 
     if (!raw.is_inbody_sheet || raw.weight_kg == null) return json({ status: 'not_readable' }, 200);
 

@@ -14,7 +14,7 @@ import { getCaller, serviceClient } from '../_shared/clients.ts';
 import { coachPlanNudgeSchema } from '../_shared/schemas.ts';
 import { corsHeaders, json } from '../_shared/http.ts';
 import { getVisionProvider } from '../_shared/vision.ts';
-import { DAY_MS, recordUsage, withinLimit } from '../_shared/rate-limit.ts';
+import { DAY_MS, recordCost, recordUsage, withinLimit } from '../_shared/rate-limit.ts';
 
 const RATE_LIMIT = 20; // per-coach DAILY
 
@@ -119,7 +119,7 @@ Deno.serve(async (req: Request) => {
     );
 
     const provider = getVisionProvider();
-    await recordUsage(svc, caller.id, 'plan_nudge', provider.name);
+    const usageId = await recordUsage(svc, caller.id, 'plan_nudge', provider.name);
 
     let analysis: string;
     try {
@@ -128,6 +128,7 @@ Deno.serve(async (req: Request) => {
       console.error('coach-plan-nudge model failed', { message: String(e) });
       return json({ status: 'failed' }, 200);
     }
+    await recordCost(svc, usageId, provider.lastUsage());
     if (!analysis) return json({ status: 'failed' }, 200);
 
     const { error: uErr } = await svc.from('plan_insights').upsert(

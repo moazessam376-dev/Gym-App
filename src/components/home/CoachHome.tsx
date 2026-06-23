@@ -4,17 +4,20 @@
 // Real data: active client count + pending invites. DEMO data: top performers +
 // activity (see src/mock/dashboard.ts) — remove MOCK_* when the InBody ranking
 // system lands.
-import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { listMyClients, listMyInvitations } from '@/lib/invitations';
-import { getMyName } from '@/lib/profile';
+import { useRouter, type Href } from 'expo-router';
 import { useAuth } from '@/lib/auth-context';
+import {
+  useMyName,
+  useMyClients,
+  useMyInvitations,
+  useBodyMetricsBoard,
+  useRefreshOnFocus,
+} from '@/lib/queries/home';
 import { Screen, Text, Avatar, GlassCard, StatBlock, EmptyState } from '@/components/ui';
 import { theme } from '@/theme';
-import { getBodyMetricsBoard, rankBoard, type BoardRow, type GoalProgress } from '@/lib/body-metrics';
 import { MOCK_ACTIVITY } from '@/mock/dashboard';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -23,31 +26,25 @@ export default function CoachHome() {
   const { session } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
-  const [name, setName] = useState<string | null>(null);
-  const [clients, setClients] = useState(0);
-  const [pending, setPending] = useState(0);
-  const [board, setBoard] = useState<(BoardRow & { progress: GoalProgress; rank: number })[]>([]);
 
-  const load = useCallback(async () => {
-    // allSettled so the (newer) body-metrics board can't blank the dashboard if it
-    // errors before the roster/invites load.
-    const [n, cs, invs, bm] = await Promise.allSettled([
-      userId ? getMyName(userId) : Promise.resolve(null),
-      listMyClients(),
-      listMyInvitations(),
-      getBodyMetricsBoard(),
-    ]);
-    if (n.status === 'fulfilled') setName(n.value);
-    if (cs.status === 'fulfilled') setClients(cs.value.length);
-    if (invs.status === 'fulfilled') setPending(invs.value.filter((i) => i.status === 'pending').length);
-    if (bm.status === 'fulfilled') setBoard(rankBoard(bm.value));
-  }, [userId]);
+  // Cached per-query reads → the hub renders its last-known stats instantly on
+  // revisit instead of flashing zeros while the roster/board reload.
+  const nameQ = useMyName(userId);
+  const clientsQ = useMyClients();
+  const invitesQ = useMyInvitations();
+  const boardQ = useBodyMetricsBoard();
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
+  useRefreshOnFocus(() => {
+    nameQ.refetch();
+    clientsQ.refetch();
+    invitesQ.refetch();
+    boardQ.refetch();
+  });
+
+  const name = nameQ.data ?? null;
+  const clients = clientsQ.data?.length ?? 0;
+  const pending = invitesQ.data?.filter((i) => i.status === 'pending').length ?? 0;
+  const board = boardQ.data ?? [];
 
   const go = (href: Href) => () => router.push(href);
   const pad2 = (n: number) => String(n).padStart(2, '0');

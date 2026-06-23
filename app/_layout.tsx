@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { BootSplash } from '../src/components/BootSplash';
 import { useFonts } from 'expo-font';
 import {
   SpaceGrotesk_400Regular,
@@ -15,13 +16,17 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '../src/lib/auth-context';
+import { queryClient, subscribeAppStateFocus } from '../src/lib/query';
+import { prefetchHome } from '../src/lib/queries/home';
+import { loadSavedLanguage } from '../src/i18n'; // side-effect: initializes i18next
 import { theme } from '../src/theme';
 
 // Role-aware routing. The role comes from the verified JWT claim (server-issued
 // by the access-token hook) — never from client input.
 function RootNavigator() {
-  const { session, role, initializing } = useAuth();
+  const { session, role, initializing, recovering } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -30,6 +35,14 @@ function RootNavigator() {
     const seg = segments[0];
     const inAuth = seg === '(auth)';
     const inOnboarding = seg === 'onboarding';
+
+    // A password-recovery link is active → force the set-new-password screen,
+    // overriding the normal "signed-in → app" routing below.
+    if (recovering) {
+      const onReset = inAuth && (segments as string[])[1] === 'reset-password';
+      if (!onReset) router.replace('/(auth)/reset-password');
+      return;
+    }
 
     if (!session) {
       if (!inAuth) router.replace('/(auth)/sign-in');
@@ -43,24 +56,48 @@ function RootNavigator() {
     }
     // Signed in with a role → keep them out of the auth / onboarding screens.
     if (inAuth || inOnboarding) router.replace('/(tabs)');
-  }, [session, role, initializing, segments, router]);
+  }, [session, role, initializing, recovering, segments, router]);
 
-  if (initializing) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: theme.colors.bg,
-        }}
-      >
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
-  }
+  // "Load buffer" on app open (the YouTube-style hold): warm the WHOLE cache for the
+  // role and keep the branded splash up until it settles, so the user enters a
+  // fully-populated app instead of watching values fill in. A timeout fail-opens so
+  // a slow/hung query can never trap the user on the splash. Runs once per signed-in
+  // user (a different sign-in re-boots); after this, focus-refresh + realtime keep
+  // data live.
+  const userId = session?.user?.id;
+  const [booting, setBooting] = useState(true);
+  const bootedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (initializing) return;
+    if (!session || !role || !userId) {
+      setBooting(false); // nothing to preload (signed out / no role) → enter now
+      return;
+    }
+    const key = `${userId}:${role}`;
+    if (bootedFor.current === key) return; // already warmed for this user
+    bootedFor.current = key;
+    setBooting(true);
+    let done = false;
+    const finish = () => {
+      if (!done) {
+        done = true;
+        setBooting(false);
+      }
+    };
+    const timeout = setTimeout(finish, 6000); // safety net — never hang the splash
+    prefetchHome(userId, role).finally(() => {
+      clearTimeout(timeout);
+      finish();
+    });
+    return () => clearTimeout(timeout);
+  }, [initializing, session, role, userId]);
+
+  // Pre-auth (we don't yet know session/role): hold the splash; the navigator isn't
+  // mounted yet, so routing can't run.
+  if (initializing) return <BootSplash />;
 
   return (
+    <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
     <Stack
       screenOptions={{
         headerShown: false,
@@ -109,6 +146,11 @@ function RootNavigator() {
       <Stack.Screen name="become-coach" options={{ headerShown: true, title: 'Become a coach' }} />
       <Stack.Screen name="admin/applications" options={{ headerShown: true, title: 'Coach applications' }} />
     </Stack>
+    {/* The navigator is mounted underneath (so routing + queries run and the cache
+        warms); the splash overlays it until the prefetch settles, then fades to
+        reveal a fully-populated app. */}
+    {booting ? <BootSplash /> : null}
+    </View>
   );
 }
 
@@ -125,6 +167,15 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  // Drive TanStack Query's focus state from app foreground/background (RN has no
+  // window-focus). Stale queries refetch when the app returns to the foreground.
+  useEffect(() => subscribeAppStateFocus(), []);
+
+  // Apply a saved language override (if any) over the device-detected default.
+  useEffect(() => {
+    loadSavedLanguage();
+  }, []);
 
   if (!fontsLoaded && !fontError) {
     return (
@@ -143,9 +194,11 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <RootNavigator />
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+      </QueryClientProvider>
     </SafeAreaProvider>
   );
 }

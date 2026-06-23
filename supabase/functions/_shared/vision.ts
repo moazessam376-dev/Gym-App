@@ -16,6 +16,7 @@
 // `fetch` (no SDK) is deliberate: Groq has no Deno SDK and one uniform fetch path serves
 // every provider behind the single adapter interface.
 import { z } from 'zod';
+import type { AiUsage } from './ai-pricing.ts';
 
 // ── Extraction contract ─────────────────────────────────────────────────────
 // Core fields are in HUMAN units (kg, %, kcal, level) as printed; the Edge Function
@@ -91,6 +92,12 @@ export interface VisionProvider {
    * `maxTokens` is per-call because a plan draft needs far more room than a macro fill.
    */
   generateJson(prompt: string, maxTokens: number): Promise<unknown>;
+  /**
+   * Token usage of the MOST RECENT call on this instance, for cost accounting
+   * (Phase 14c). Safe because each Edge Function invocation builds a fresh provider
+   * (getVisionProvider) and makes exactly one model call. Null before any call.
+   */
+  lastUsage(): AiUsage | null;
 }
 
 /** Thrown on a provider/transport/parse failure (distinct from a readable "not a sheet"). */
@@ -146,6 +153,11 @@ function parseRaw(text: string): RawInBody {
 class GroqVisionProvider implements VisionProvider {
   readonly name = 'groq';
   private model = Deno.env.get('GROQ_VISION_MODEL') ?? 'meta-llama/llama-4-scout-17b-16e-instruct';
+  private _lastUsage: AiUsage | null = null;
+
+  lastUsage(): AiUsage | null {
+    return this._lastUsage;
+  }
 
   private key(): string {
     const k = Deno.env.get('GROQ_API_KEY');
@@ -168,6 +180,12 @@ class GroqVisionProvider implements VisionProvider {
     const data = await res.json().catch(() => null);
     const text = data?.choices?.[0]?.message?.content;
     if (typeof text !== 'string') throw new VisionError('empty_response');
+    // OpenAI-style usage block. Record for cost accounting (§9 / Phase 14c).
+    this._lastUsage = {
+      model: typeof data?.model === 'string' ? data.model : this.model,
+      tokensIn: typeof data?.usage?.prompt_tokens === 'number' ? data.usage.prompt_tokens : null,
+      tokensOut: typeof data?.usage?.completion_tokens === 'number' ? data.usage.completion_tokens : null,
+    };
     return text;
   }
 
@@ -214,6 +232,11 @@ class GroqVisionProvider implements VisionProvider {
 class ClaudeVisionProvider implements VisionProvider {
   readonly name = 'anthropic';
   private model = Deno.env.get('ANTHROPIC_VISION_MODEL') ?? 'claude-sonnet-4-6';
+  private _lastUsage: AiUsage | null = null;
+
+  lastUsage(): AiUsage | null {
+    return this._lastUsage;
+  }
 
   private key(): string {
     const k = Deno.env.get('ANTHROPIC_API_KEY');
@@ -246,6 +269,12 @@ class ClaudeVisionProvider implements VisionProvider {
       ? data.content.find((b: { type?: string }) => b?.type === 'text')?.text
       : undefined;
     if (typeof text !== 'string') throw new VisionError('empty_response');
+    // Anthropic usage block. Record for cost accounting (§9 / Phase 14c).
+    this._lastUsage = {
+      model: typeof data?.model === 'string' ? data.model : this.model,
+      tokensIn: typeof data?.usage?.input_tokens === 'number' ? data.usage.input_tokens : null,
+      tokensOut: typeof data?.usage?.output_tokens === 'number' ? data.usage.output_tokens : null,
+    };
     return text;
   }
 

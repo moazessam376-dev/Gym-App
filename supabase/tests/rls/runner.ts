@@ -51,6 +51,7 @@ const migrationFiles = [
   '0027_ai_usage_events.sql',
   '0028_inbody_extras_insights_comments.sql',
   '0029_coach_ai.sql',
+  '0030_ai_usage_cost.sql',
 ];
 
 const baseUrl =

@@ -1,125 +1,66 @@
 // Client dashboard — the flagship. A big animated adherence ring for today's
 // workout, a streak chip, and a one-tap "log workout" CTA. Everything here is
 // fed by real completion-logging data (migration 0016); nothing is faked.
-import { useCallback, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth-context';
-import { getMyName } from '@/lib/profile';
-import { getMyAthleteProfile } from '@/lib/athlete-profile';
-import { getMyCoach } from '@/lib/invitations';
-import { listPlansForClient, listWeeks, listDays, listExerciseRows } from '@/lib/plans';
 import {
-  getAdherence,
-  getSessionForDay,
-  getStreak,
-  todayLocalDate,
-  type SessionStatus,
-} from '@/lib/sessions';
-import {
-  getDailyNutrition,
-  getTargets,
-  remaining,
-  type DailyNutrition,
-  type NutritionTargets,
-} from '@/lib/nutrition';
+  useMyName,
+  useStreak,
+  useMyCoach,
+  useMyAthleteProfile,
+  useTargets,
+  useDailyNutrition,
+  useTodayWorkout,
+  useRefreshOnFocus,
+} from '@/lib/queries/home';
+import { remaining } from '@/lib/nutrition';
 import { Screen, Text, Card, Avatar, Button, ProgressRing, EmptyState } from '@/components/ui';
 import { theme } from '@/theme';
-
-type TodayDay = { id: string; name: string; planId: string };
 
 export default function ClientHome() {
   const { session } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
 
-  const [name, setName] = useState<string | null>(null);
-  const [coachName, setCoachName] = useState<string | null>(null);
-  const [coachId, setCoachId] = useState<string | null>(null);
-  const [streak, setStreak] = useState(0);
-  const [today, setToday] = useState<TodayDay | null>(null);
-  const [plannedSets, setPlannedSets] = useState(0);
-  const [setsDone, setSetsDone] = useState(0);
-  const [status, setStatus] = useState<SessionStatus | 'none'>('none');
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const [nutTargets, setNutTargets] = useState<NutritionTargets | null>(null);
-  const [nutDaily, setNutDaily] = useState<DailyNutrition | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Each read is its own cached query (keyed per user), so revisiting the tab
+  // renders last-known values INSTANTLY — no more streak flashing 0→3. The slow
+  // plan→day→session walk is its own query so it can't block name/streak.
+  const nameQ = useMyName(userId);
+  const streakQ = useStreak(userId);
+  const coachQ = useMyCoach(userId);
+  const athleteQ = useMyAthleteProfile(userId);
+  const targetsQ = useTargets(userId);
+  const nutritionQ = useDailyNutrition(userId);
+  const workoutQ = useTodayWorkout(userId);
 
-  const load = useCallback(async () => {
-    if (!userId) return;
-    const today = todayLocalDate();
-    // allSettled: one failing read (e.g. nutrition) must NOT blank the whole
-    // dashboard — your name, streak and avatar should always render.
-    const [n, s, coach, plans, athlete, nt, nd] = await Promise.allSettled([
-      getMyName(userId),
-      getStreak(userId),
-      getMyCoach(userId),
-      listPlansForClient(userId),
-      getMyAthleteProfile(userId),
-      getTargets(userId),
-      getDailyNutrition(userId, today),
-    ]);
-    if (n.status === 'fulfilled') setName(n.value);
-    if (s.status === 'fulfilled') setStreak(s.value);
-    if (coach.status === 'fulfilled') {
-      setCoachName(coach.value?.full_name ?? null);
-      setCoachId(coach.value?.id ?? null);
-    }
-    if (athlete.status === 'fulfilled') setNeedsOnboarding(athlete.value?.onboarded_at == null);
-    if (nt.status === 'fulfilled') setNutTargets(nt.value);
-    if (nd.status === 'fulfilled') setNutDaily(nd.value);
+  // Refetch in the background when the tab regains focus (fresh data after logging
+  // elsewhere) without flashing — cached values stay on screen during the refetch.
+  useRefreshOnFocus(() => {
+    nameQ.refetch();
+    streakQ.refetch();
+    coachQ.refetch();
+    athleteQ.refetch();
+    targetsQ.refetch();
+    nutritionQ.refetch();
+    workoutQ.refetch();
+  });
 
-    try {
-      // Active training plan = most recent non-archived training plan.
-      const plan =
-        plans.status === 'fulfilled'
-          ? plans.value.find((p) => p.type === 'training' && p.status !== 'archived')
-          : undefined;
-      if (!plan) {
-        setToday(null);
-        return;
-      }
-      const weeks = await listWeeks(plan.id);
-      const week = weeks[0];
-      const days = week ? await listDays(week.id) : [];
-      const day = days[0];
-      if (!day) {
-        setToday(null);
-        return;
-      }
-      setToday({ id: day.id, name: day.name, planId: plan.id });
+  const name = nameQ.data ?? null;
+  const streak = streakQ.data ?? 0;
+  const coachName = coachQ.data?.full_name ?? null;
+  const coachId = coachQ.data?.id ?? null;
+  const needsOnboarding = athleteQ.isSuccess && athleteQ.data?.onboarded_at == null;
+  const nutTargets = targetsQ.data ?? null;
+  const nutDaily = nutritionQ.data ?? null;
 
-      const exercises = await listExerciseRows(day.id);
-      const planned = exercises.reduce((sum, e) => sum + (e.sets ?? 0), 0);
-
-      const existing = await getSessionForDay(userId, day.id, today);
-      if (existing) {
-        setStatus(existing.status);
-        const adh = await getAdherence(existing.id);
-        setSetsDone(adh?.sets_done ?? 0);
-        setPlannedSets(adh?.sets_planned || planned);
-      } else {
-        setStatus('none');
-        setSetsDone(0);
-        setPlannedSets(planned);
-      }
-    } catch {
-      /* plan section failed — leave the rest of the dashboard intact */
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
-
-  useFocusEffect(
-    useCallback(() => {
-      // Refetch silently on focus — keep the current content visible so revisiting
-      // the tab doesn't flash a loader (the initial cold load still shows one).
-      load();
-    }, [load]),
-  );
+  const today = workoutQ.data?.today ?? null;
+  const plannedSets = workoutQ.data?.plannedSets ?? 0;
+  const setsDone = workoutQ.data?.setsDone ?? 0;
+  const status = workoutQ.data?.status ?? 'none';
+  const workoutLoading = workoutQ.isPending;
 
   const progress = plannedSets > 0 ? setsDone / plannedSets : status === 'completed' ? 1 : 0;
   const pct = Math.round(progress * 100);
@@ -164,7 +105,7 @@ export default function ClientHome() {
           >
             <Text variant="bodyStrong">🔥</Text>
             <Text variant="bodyStrong" color="primary">
-              {streak}
+              {streakQ.isPending ? '—' : streak}
             </Text>
           </View>
           <Pressable onPress={() => router.push('/(tabs)/account')}>
@@ -233,7 +174,7 @@ export default function ClientHome() {
             <Button title="Review workout" variant="ghost" onPress={openWorkout} />
           ) : null}
         </Card>
-      ) : loading ? null : (
+      ) : workoutLoading ? null : (
         <Card padded={false}>
           <EmptyState
             icon="barbell-outline"

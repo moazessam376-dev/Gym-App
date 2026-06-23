@@ -1,36 +1,24 @@
 // Client → my plans tab. RLS returns only this client's NON-draft plans.
-import { useCallback, useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
-import { listPlansForClient, type Plan } from '../../src/lib/plans';
+import { usePlansForClient, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { Screen, Text, Card, Badge, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function PlansTab() {
   const { session } = useAuth();
   const router = useRouter();
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const userId = session?.user?.id;
-  const load = useCallback(async () => {
-    if (!userId) return;
-    try {
-      setPlans(await listPlansForClient(userId));
-    } catch {
-      /* keep prior */
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
+  // Cached + warmed on app open, so the plan list is ready on first visit.
+  const plansQ = usePlansForClient(userId);
+  useRefreshOnFocus(plansQ.refetch);
+
+  const plans = plansQ.data ?? [];
+  const loading = plansQ.isPending;
+  const load = () => plansQ.refetch();
 
   return (
     <Screen padded={false} gradient>

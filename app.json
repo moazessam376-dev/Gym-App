@@ -26,7 +26,8 @@
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos so you can upload progress photos and InBody scans.",
           "cameraPermission": "Allow $(PRODUCT_NAME) to use the camera so you can capture progress photos and InBody scans."
         }
-      ]
+      ],
+      "expo-localization"
     ]
   }
 }

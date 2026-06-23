@@ -1,17 +1,13 @@
 // Client → progress tab (Phase 11 hub). Streak + workout history (completion
 // logging) PLUS the progress pillars: weight trend, photos, and InBody scans.
 // Each pillar card taps through to its dedicated screen.
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
-import { getStreak, listSessions, type WorkoutSession } from '../../src/lib/sessions';
-import { listProgressWeights, type WeightEntry } from '../../src/lib/progress';
-import { listBodyMetrics, type BodyMetric } from '../../src/lib/body-metrics';
-import { countMediaFor } from '../../src/lib/media';
-import { getMyAthleteProfile } from '../../src/lib/athlete-profile';
-import { gramsToDisplay, formatWeight, type WeightUnit } from '../../src/lib/units';
+import { useStreak, useProgressData, useRefreshOnFocus } from '../../src/lib/queries/home';
+import { gramsToDisplay, formatWeight } from '../../src/lib/units';
 import { Screen, Text, Card, GlassCard, Badge, EmptyState, LineChart } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
@@ -72,43 +68,28 @@ export default function ProgressTab() {
   const { session } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
-  const [streak, setStreak] = useState(0);
-  const [sessions, setSessions] = useState<WorkoutSession[]>([]);
-  const [weights, setWeights] = useState<WeightEntry[]>([]);
-  const [unit, setUnit] = useState<WeightUnit>('kg');
-  const [photoCount, setPhotoCount] = useState(0);
-  const [inbodyCount, setInbodyCount] = useState(0);
-  const [bodyMetrics, setBodyMetrics] = useState<BodyMetric[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    if (!userId) return;
-    // allSettled so one failing read can't blank the whole screen (e.g. an empty
-    // media list vs a transient error on another call).
-    const [s, list, w, profile, photos, inbody, bm] = await Promise.allSettled([
-      getStreak(userId),
-      listSessions(userId),
-      listProgressWeights(userId),
-      getMyAthleteProfile(userId),
-      countMediaFor(userId, 'progress_photo'),
-      countMediaFor(userId, 'inbody'),
-      listBodyMetrics(userId),
-    ]);
-    if (s.status === 'fulfilled') setStreak(s.value);
-    if (list.status === 'fulfilled') setSessions(list.value);
-    if (w.status === 'fulfilled') setWeights(w.value);
-    if (profile.status === 'fulfilled' && profile.value?.weight_unit) setUnit(profile.value.weight_unit);
-    if (photos.status === 'fulfilled') setPhotoCount(photos.value);
-    if (inbody.status === 'fulfilled') setInbodyCount(inbody.value);
-    if (bm.status === 'fulfilled') setBodyMetrics(bm.value);
-    setLoading(false);
-  }, [userId]);
+  // Streak is the SAME cached query as Home/Nutrition; the rest is one cached
+  // composite. Both are warmed on app open, so the tab is ready on first visit.
+  const streakQ = useStreak(userId);
+  const progressQ = useProgressData(userId);
+  useRefreshOnFocus(() => {
+    streakQ.refetch();
+    progressQ.refetch();
+  });
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
+  const streak = streakQ.data ?? 0;
+  const sessions = progressQ.data?.sessions ?? [];
+  const weights = progressQ.data?.weights ?? [];
+  const unit = progressQ.data?.unit ?? 'kg';
+  const photoCount = progressQ.data?.photoCount ?? 0;
+  const inbodyCount = progressQ.data?.inbodyCount ?? 0;
+  const bodyMetrics = progressQ.data?.bodyMetrics ?? [];
+  const loading = progressQ.isPending;
+  const load = () => {
+    streakQ.refetch();
+    progressQ.refetch();
+  };
 
   const completed = sessions.filter((s) => s.status === 'completed').length;
 

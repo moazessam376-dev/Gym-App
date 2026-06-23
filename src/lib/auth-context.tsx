@@ -13,6 +13,7 @@ import {
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { queryClient } from './query';
 import { readUserRole } from './jwt';
 import type { Role } from '../schemas/profile';
 
@@ -21,17 +22,22 @@ type AuthState = {
   /** Server-issued `user_role` claim (UX/routing only — RLS enforces the real role). */
   role: Role | null;
   initializing: boolean;
+  /** True while a password-recovery link session is active — the root guard routes to
+   * the set-new-password screen instead of the app. Cleared on sign-out. */
+  recovering: boolean;
 };
 
 const AuthContext = createContext<AuthState>({
   session: null,
   role: null,
   initializing: true,
+  recovering: false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -44,8 +50,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
+      // A recovery link establishes a temporary session — flag it so the root guard
+      // sends the user to set-a-new-password instead of into the app.
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
+      // Drop every cached query on sign-out so the next account can't see warm
+      // data from the previous one (the cache is keyed per user, but clearing is
+      // the belt-and-suspenders guarantee).
+      if (event === 'SIGNED_OUT') {
+        setRecovering(false);
+        queryClient.clear();
+      }
     });
 
     return () => {
@@ -57,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const role = readUserRole(session?.access_token);
 
   return (
-    <AuthContext.Provider value={{ session, role, initializing }}>
+    <AuthContext.Provider value={{ session, role, initializing, recovering }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,39 +1,21 @@
 // Coach → leaderboard tab. Ranks the coach's OWN clients by sessions completed
 // this week. Data comes from the coach_leaderboard RPC (server-fenced to the
 // caller's cohort — it can never leak another coach's clients).
-import { useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
-import { getCoachLeaderboard, type LeaderboardRow } from '../../src/lib/sessions';
+import { useCoachLeaderboard, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { Screen, Text, Card, Avatar, Badge, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 const MEDALS = ['#FFD43B', '#C0C7D0', '#E8985E']; // gold / silver / bronze
 
 export default function LeaderboardTab() {
-  const [rows, setRows] = useState<LeaderboardRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Cached + warmed on app open; ranking (sort + rank index) happens in the query.
+  const boardQ = useCoachLeaderboard();
+  useRefreshOnFocus(boardQ.refetch);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await getCoachLeaderboard();
-      // Rank by sessions, then sets, descending.
-      data.sort((a, b) => b.sessions_done - a.sessions_done || b.sets_done - a.sets_done);
-      setRows(data);
-    } catch {
-      /* keep prior */
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
-
-  const ranked = useMemo(() => rows.map((r, i) => ({ ...r, rank: i + 1 })), [rows]);
+  const ranked = boardQ.data ?? [];
+  const loading = boardQ.isPending;
+  const load = () => boardQ.refetch();
 
   return (
     <Screen padded={false} gradient>

@@ -2,12 +2,11 @@
 // row for their coach. Tapping opens the thread (app/chat/[id]). The messages
 // backend (migration 0012) is live, so this works end-to-end. There's no
 // last-message/unread aggregation yet (deferred) — rows are the pairing only.
-import { useCallback, useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
-import { getMyCoach, listMyClients } from '../../src/lib/invitations';
+import { useMyClients, useMyCoach, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { Screen, Text, Avatar, GlassCard, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
@@ -17,32 +16,21 @@ export default function MessagesTab() {
   const { session, role } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
-  const [items, setItems] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    try {
-      if (role === 'coach') {
-        const clients = await listMyClients();
-        setItems(clients.map((c) => ({ id: c.id, name: c.full_name ?? c.invited_email ?? 'Client' })));
-      } else if (role === 'client' && userId) {
-        const coach = await getMyCoach(userId);
-        setItems(coach ? [{ id: coach.id, name: coach.full_name ?? 'Your coach' }] : []);
-      } else {
-        setItems([]);
-      }
-    } catch {
-      /* keep prior */
-    } finally {
-      setLoading(false);
-    }
-  }, [role, userId]);
+  // Conversations derive from the SAME cached reads the rest of the app uses, so the
+  // list is ready on first visit. The query for the wrong role just stays disabled.
+  const clientsQ = useMyClients();
+  const coachQ = useMyCoach(role === 'client' ? userId : undefined);
+  useRefreshOnFocus(role === 'coach' ? clientsQ.refetch : coachQ.refetch);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
+  const items: Conversation[] =
+    role === 'coach'
+      ? (clientsQ.data ?? []).map((c) => ({ id: c.id, name: c.full_name ?? c.invited_email ?? 'Client' }))
+      : role === 'client' && coachQ.data
+        ? [{ id: coachQ.data.id, name: coachQ.data.full_name ?? 'Your coach' }]
+        : [];
+  const loading = role === 'coach' ? clientsQ.isPending : coachQ.isPending;
+  const load = () => (role === 'coach' ? clientsQ.refetch() : coachQ.refetch());
 
   return (
     <Screen padded={false} gradient>

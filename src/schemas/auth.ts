@@ -9,3 +9,9 @@ export const credentialsSchema = z.object({
 });
 
 export type Credentials = z.infer<typeof credentialsSchema>;
+
+/** Email-only (forgot-password request). */
+export const emailSchema = z.object({ email: z.string().email() });
+
+/** A new password (reset / set-password flow). */
+export const passwordSchema = z.object({ password: z.string().min(8) });

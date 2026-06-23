@@ -11,7 +11,7 @@ import { getCaller, serviceClient } from '../_shared/clients.ts';
 import { coachExerciseSwapSchema, genExerciseSwapSchema } from '../_shared/schemas.ts';
 import { corsHeaders, json } from '../_shared/http.ts';
 import { getVisionProvider } from '../_shared/vision.ts';
-import { DAY_MS, recordUsage, withinLimit } from '../_shared/rate-limit.ts';
+import { DAY_MS, recordCost, recordUsage, withinLimit } from '../_shared/rate-limit.ts';
 
 const RATE_LIMIT = 30; // per-coach DAILY
 
@@ -61,7 +61,7 @@ Deno.serve(async (req: Request) => {
     if (exercises.length === 0) return json({ status: 'failed' }, 200);
 
     const provider = getVisionProvider();
-    await recordUsage(svc, caller.id, 'exercise_swap', provider.name);
+    const usageId = await recordUsage(svc, caller.id, 'exercise_swap', provider.name);
 
     const catalog = exercises.map((e) => `${e.id} | ${e.name} | ${e.muscle_group}`).join('\n');
     const prompt = [
@@ -89,6 +89,7 @@ Deno.serve(async (req: Request) => {
       console.error('coach-exercise-swap model failed', { message: String(e) });
       return json({ status: 'failed' }, 200);
     }
+    await recordCost(svc, usageId, provider.lastUsage());
     const gen = genExerciseSwapSchema.safeParse(raw);
     if (!gen.success) return json({ status: 'failed' }, 200);
 

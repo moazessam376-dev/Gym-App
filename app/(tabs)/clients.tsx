@@ -1,34 +1,22 @@
 // Coach → clients tab. RLS (is_coach_of) returns only this coach's clients.
-import { useCallback, useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { listMyClients, type Client } from '../../src/lib/invitations';
+import { useRouter } from 'expo-router';
+import { useMyClients, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { Screen, Text, Card, Avatar, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function ClientsTab() {
   const router = useRouter();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  // Shared cache: ['my-clients'] is warmed on app open and reused by Home + Chat,
+  // so this tab is populated on first visit instead of fetching cold.
+  const clientsQ = useMyClients();
+  useRefreshOnFocus(clientsQ.refetch);
 
-  const load = useCallback(async () => {
-    setError(false);
-    try {
-      setClients(await listMyClients());
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
+  const clients = clientsQ.data ?? [];
+  const loading = clientsQ.isPending;
+  const error = clientsQ.isError;
+  const load = () => clientsQ.refetch();
 
   return (
     <Screen padded={false} gradient>
