@@ -100,54 +100,74 @@ export const coachExerciseSwapSchema = z.object({
 // Generation emits ids the server then resolves against the coach-readable library
 // (drops unknowns); names/macros are copied from the real library row, never trusted
 // from the model. Quantities are integers (foundations §3); bounds mirror plan.ts.
+//
+// IMPORTANT (free-model tolerance): a free LLM frequently returns a stringified number
+// ("4" not 4) or a capitalized enum ("Primary"). A single such field would otherwise
+// fail the WHOLE parse and the generation silently returns "failed". So numeric fields
+// use z.coerce.number(), `block` is accepted as a loose string (the server normalizes
+// it to the training_block enum), bounds are generous, and arrays are forgiving. The
+// snapshot/id-resolution still happens server-side, so loosening here changes nothing
+// about what gets stored — only how robustly we accept a slightly-off shape.
 const planNote = z.string().max(2000).nullish();
-const reps = z.string().max(40).nullish();
+// reps is free text ("8-12"); coerce in case the model emits a bare number (10 -> "10").
+const reps = z.coerce.string().max(40).nullish();
+const intCoerce = (max: number) => z.coerce.number().int().min(0).max(max).nullish();
 
 const genExerciseSchema = z.object({
   exercise_id: looseUuid,
-  block: z.enum(['warmup', 'primary', 'accessory', 'conditioning', 'cooldown']).optional(),
-  sets: z.number().int().min(0).max(99).nullish(),
+  block: z.coerce.string().max(40).nullish(), // normalized to the enum server-side (default 'primary')
+  sets: intCoerce(99),
   reps,
-  rest_seconds: z.number().int().min(0).max(3600).nullish(),
-  tempo: z.string().max(40).nullish(),
+  rest_seconds: intCoerce(3600),
+  tempo: z.coerce.string().max(40).nullish(),
   note: planNote,
 });
 const genDaySchema = z.object({
   name: z.string().min(1).max(120),
   note: planNote,
-  exercises: z.array(genExerciseSchema).max(12),
+  exercises: z.array(genExerciseSchema).max(20),
 });
 const genWeekSchema = z.object({
   name: z.string().min(1).max(120),
   note: planNote,
   days: z.array(genDaySchema).min(1).max(7),
 });
-export const genTrainingPlanSchema = z.object({
-  title: z.string().min(1).max(120),
-  weeks: z.array(genWeekSchema).min(1).max(4),
-});
+// Accept either { weeks: [...] } or a singular { week: {...} } (some models ignore the
+// plural instruction) — wrap the singular before validating.
+export const genTrainingPlanSchema = z.preprocess(
+  (v) => {
+    if (v && typeof v === 'object' && !('weeks' in v) && 'week' in (v as Record<string, unknown>)) {
+      return { ...(v as Record<string, unknown>), weeks: [(v as Record<string, unknown>).week] };
+    }
+    return v;
+  },
+  z.object({
+    title: z.string().min(1).max(120),
+    weeks: z.array(genWeekSchema).min(1).max(8),
+  }),
+);
 
 const genMealItemSchema = z.object({
   food_id: looseUuid,
-  grams: z.number().int().min(0).max(5000),
+  grams: z.coerce.number().int().min(0).max(5000),
   note: planNote,
 });
 const genMealSchema = z.object({
   name: z.string().min(1).max(120),
   note: planNote,
-  items: z.array(genMealItemSchema).max(15),
+  items: z.array(genMealItemSchema).max(20),
 });
 export const genNutritionPlanSchema = z.object({
   title: z.string().min(1).max(120),
-  meals: z.array(genMealSchema).min(1).max(8),
+  meals: z.array(genMealSchema).min(1).max(10),
 });
 
 // Macro autofill: per-100g integers, bounds mirror src/schemas/nutrition.ts.
 export const genFoodMacrosSchema = z.object({
-  kcal_per_100g: z.number().int().min(0).max(2000),
-  protein_g_per_100g: z.number().int().min(0).max(100),
-  carbs_g_per_100g: z.number().int().min(0).max(100),
-  fat_g_per_100g: z.number().int().min(0).max(100),
+  kcal_per_100g: z.coerce.number().int().min(0).max(2000),
+  protein_g_per_100g: z.coerce.number().int().min(0).max(100),
+  carbs_g_per_100g: z.coerce.number().int().min(0).max(100),
+  fat_g_per_100g: z.coerce.number().int().min(0).max(100),
 });
 
 // Injury-aware swap suggestions: library ids + a short reason each (server resolves ids).
