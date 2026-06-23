@@ -2,12 +2,15 @@
 import { FlatList, RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
+import { forwardChevron } from '../../src/lib/rtl';
 import { usePlansForClient, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { Screen, Text, Card, Badge, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function PlansTab() {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
@@ -23,9 +26,9 @@ export default function PlansTab() {
   return (
     <Screen padded={false} gradient>
       <View style={{ paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.lg }}>
-        <Text variant="h1">My plans</Text>
+        <Text variant="h1">{t('plans.title')}</Text>
         <Text variant="caption" muted>
-          Training & nutrition from your coach
+          {t('plans.subtitle')}
         </Text>
       </View>
       <FlatList
@@ -39,8 +42,8 @@ export default function PlansTab() {
           loading ? null : (
             <EmptyState
               icon="barbell-outline"
-              title="No plans yet"
-              subtitle="Your coach will share training and nutrition plans here."
+              title={t('plans.emptyTitle')}
+              subtitle={t('plans.emptySub')}
             />
           )
         }
@@ -66,11 +69,11 @@ export default function PlansTab() {
               <View style={{ flex: 1, gap: 4 }}>
                 <Text variant="title">{item.title}</Text>
                 <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                  <Badge label={item.type} tone="secondary" />
-                  {item.status === 'archived' ? <Badge label="archived" tone="neutral" /> : null}
+                  <Badge label={t(`plans.type.${item.type}`)} tone="secondary" />
+                  {item.status === 'archived' ? <Badge label={t('plans.archived')} tone="neutral" /> : null}
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+              <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
             </View>
           </Card>
         )}

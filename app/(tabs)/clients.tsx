@@ -2,11 +2,14 @@
 import { FlatList, RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useMyClients, useRefreshOnFocus } from '../../src/lib/queries/home';
+import { forwardChevron } from '../../src/lib/rtl';
 import { Screen, Text, Card, Avatar, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function ClientsTab() {
+  const { t } = useTranslation();
   const router = useRouter();
   // Shared cache: ['my-clients'] is warmed on app open and reused by Home + Chat,
   // so this tab is populated on first visit instead of fetching cold.
@@ -30,9 +33,9 @@ export default function ClientsTab() {
         }}
       >
         <View>
-          <Text variant="h1">Clients</Text>
+          <Text variant="h1">{t('clients.title')}</Text>
           <Text variant="caption" muted>
-            {clients.length} active
+            {t('clients.activeCount', { count: clients.length })}
           </Text>
         </View>
         <Card
@@ -42,7 +45,7 @@ export default function ClientsTab() {
         >
           <Ionicons name="person-add" size={16} color={theme.colors.primary} />
           <Text variant="bodyStrong" color="primary">
-            Invite
+            {t('clients.invite')}
           </Text>
         </Card>
       </View>
@@ -57,15 +60,15 @@ export default function ClientsTab() {
           loading ? null : (
             <EmptyState
               icon="people-outline"
-              title={error ? 'Could not load clients' : 'No clients yet'}
-              subtitle={error ? 'Pull to retry.' : 'Invite your first client to get started.'}
-              actionLabel={error ? undefined : 'Invite a client'}
+              title={error ? t('clients.loadError') : t('clients.emptyTitle')}
+              subtitle={error ? t('clients.pullRetry') : t('clients.emptySub')}
+              actionLabel={error ? undefined : t('clients.inviteAction')}
               onAction={error ? undefined : () => router.push('/coach/invite')}
             />
           )
         }
         renderItem={({ item }) => {
-          const label = item.full_name ?? item.invited_email ?? 'Client';
+          const label = item.full_name ?? item.invited_email ?? t('home.client');
           return (
             <Card
               onPress={() =>
@@ -82,7 +85,7 @@ export default function ClientsTab() {
                     </Text>
                   ) : null}
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+                <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
               </View>
             </Card>
           );

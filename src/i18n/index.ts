@@ -13,13 +13,19 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { getPref, setPref } from '../lib/prefs';
 import en from './locales/en.json';
+import ar from './locales/ar.json';
 
-export const SUPPORTED_LANGUAGES = ['en'] as const; // + 'ar' in Phase 16
+export const SUPPORTED_LANGUAGES = ['en', 'ar'] as const; // Phase 16: Egyptian Arabic
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 
-// Languages that render right-to-left. Empty until Arabic lands (Phase 16); wired
-// now so enabling it is data-only.
-const RTL_LANGUAGES = new Set<string>([]); // + 'ar'
+// Display names for the switcher UI (each in its own script).
+export const LANGUAGE_NAMES: Record<Language, string> = {
+  en: 'English',
+  ar: 'العربية',
+};
+
+// Languages that render right-to-left (Phase 16: Arabic).
+const RTL_LANGUAGES = new Set<string>(['ar']);
 
 const LANGUAGE_PREF_KEY = 'app.language';
 
@@ -48,7 +54,7 @@ const deviceLanguage = getLocales()[0]?.languageCode ?? 'en';
 const initialLanguage: Language = isSupported(deviceLanguage) ? deviceLanguage : 'en';
 
 i18n.use(initReactI18next).init({
-  resources: { en: { translation: en } },
+  resources: { en: { translation: en }, ar: { translation: ar } },
   lng: initialLanguage,
   fallbackLng: 'en',
   supportedLngs: SUPPORTED_LANGUAGES as unknown as string[],

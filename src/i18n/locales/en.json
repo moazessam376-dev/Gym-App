@@ -18,6 +18,124 @@
     "chat": "Chat",
     "account": "Account"
   },
+  "home": {
+    "goodMorning": "Good morning",
+    "goodAfternoon": "Good afternoon",
+    "goodEvening": "Good evening",
+    "athlete": "Athlete",
+    "coach": "Coach",
+    "setGoalsTitle": "Set your goals",
+    "setGoalsSub": "Tell us your goals so your coach can tailor your plan.",
+    "todayDay": "Today · {{day}}",
+    "setsCount": "{{done}}/{{planned}} sets",
+    "workoutCrushed": "Workout crushed 💥",
+    "startWorkout": "Start workout",
+    "continueWorkout": "Continue workout",
+    "reviewWorkout": "Review workout",
+    "noPlanTitle": "No training plan yet",
+    "noPlanWithCoach": "{{coach}} will assign your plan soon.",
+    "noPlanNoCoach": "Once you have a coach and a plan, your daily workout shows up here.",
+    "nutritionToday": "Nutrition today",
+    "kcalLeft": "{{left}} kcal left",
+    "macroLine": "{{consumed}} / {{target}} kcal · {{p}}P / {{c}}C / {{f}}F",
+    "trackNutritionTitle": "Track your nutrition",
+    "trackNutritionSub": "Set a daily target and log your meals.",
+    "yourCoach": "Your coach",
+    "performanceHub": "PERFORMANCE HUB",
+    "activeClients": "Active clients",
+    "pendingInvites": "Pending invites",
+    "topPerformers": "Top performers · body composition",
+    "noReadingsTitle": "No verified readings yet",
+    "noReadingsSub": "Record an InBody reading from a client's profile and your ranked board appears here.",
+    "client": "Client"
+  },
+  "nutrition": {
+    "title": "Nutrition",
+    "today": "Today",
+    "slots": {
+      "breakfast": "Breakfast",
+      "lunch": "Lunch",
+      "dinner": "Dinner",
+      "snack": "Snacks"
+    },
+    "setTargetTitle": "Set your daily target",
+    "setTargetSub": "Your calorie & macro goal powers the ring below. Pick one — you can adjust it anytime.",
+    "usePlanTargets": "Use my plan’s targets · {{kcal}} kcal",
+    "useEstimate": "Use estimate · {{kcal}} kcal",
+    "completeProfile": "Complete your profile for an estimate",
+    "kcalLeft": "kcal left",
+    "protein": "PROTEIN",
+    "carbs": "CARBS",
+    "fat": "FAT",
+    "macroBarValue": "{{consumed}}/{{target}}g",
+    "coachSetTarget": "Target set by your coach",
+    "slotKcal": "· {{kcal}} kcal",
+    "logAll": "Log all",
+    "itemMacro": "{{grams}}g · {{kcal}} kcal · {{p}}P / {{c}}C / {{f}}F",
+    "extra": "extra",
+    "addFood": "Add a food",
+    "copyYesterday": "Copy yesterday’s log"
+  },
+  "progress": {
+    "title": "Progress",
+    "dayStreak": "Day streak 🔥",
+    "workoutsDone": "Workouts done",
+    "weight": "Weight",
+    "logWeight": "Log weight",
+    "logAgainTrend": "Log again to see your trend.",
+    "trackWeightOverTime": "Track your body weight over time.",
+    "progressPhotos": "Progress photos",
+    "photoCount_one": "{{count}} photo",
+    "photoCount_other": "{{count}} photos",
+    "addFirstPhoto": "Add your first photo",
+    "inbodyScans": "InBody scans",
+    "scanCount_one": "{{count}} scan",
+    "scanCount_other": "{{count}} scans",
+    "addScan": "Add a body-composition scan",
+    "bodyComposition": "Body composition",
+    "bodyCompWeight": "{{kg}} kg",
+    "bodyCompFat": " · {{pct}}% fat",
+    "bodyCompFallback": "Coach-verified InBody trends",
+    "recentWorkouts": "Recent workouts",
+    "noWorkoutsTitle": "No workouts logged yet",
+    "noWorkoutsSub": "Log your first workout from Home and your history will appear here.",
+    "tapContinue": "Tap to continue",
+    "tapReview": "Tap to review",
+    "status": {
+      "completed": "completed",
+      "inProgress": "in progress",
+      "skipped": "skipped"
+    }
+  },
+  "clients": {
+    "title": "Clients",
+    "activeCount": "{{count}} active",
+    "invite": "Invite",
+    "loadError": "Could not load clients",
+    "pullRetry": "Pull to retry.",
+    "emptyTitle": "No clients yet",
+    "emptySub": "Invite your first client to get started.",
+    "inviteAction": "Invite a client"
+  },
+  "ranks": {
+    "thisWeek": "This week",
+    "subtitle": "Ranked by workouts completed — consistency wins",
+    "emptyTitle": "No workouts logged yet",
+    "emptySub": "As your clients complete workouts, they'll climb the board here.",
+    "setsLogged_one": "{{count}} set logged",
+    "setsLogged_other": "{{count}} sets logged"
+  },
+  "plans": {
+    "title": "My plans",
+    "subtitle": "Training & nutrition from your coach",
+    "emptyTitle": "No plans yet",
+    "emptySub": "Your coach will share training and nutrition plans here.",
+    "type": {
+      "training": "training",
+      "nutrition": "nutrition"
+    },
+    "archived": "archived"
+  },
   "analytics": {
     "label": "KPI ANALYTICS",
     "title": "Analytics",
@@ -70,6 +188,10 @@
   },
   "language": {
     "en": "English",
-    "ar": "العربية"
+    "ar": "العربية",
+    "title": "Language",
+    "restartTitle": "Restart needed",
+    "restartBody": "The app will restart to apply the new layout direction.",
+    "restartConfirm": "Restart now"
   }
 }

@@ -6,7 +6,9 @@ import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
+import { forwardChevron, textStart } from '@/lib/rtl';
 import {
   useMyName,
   useMyClients,
@@ -18,6 +20,7 @@ import { Screen, Text, Avatar, GlassCard, StatBlock, EmptyState } from '@/compon
 import { theme } from '@/theme';
 
 export default function CoachHome() {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
@@ -49,12 +52,14 @@ export default function CoachHome() {
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View style={{ flex: 1 }}>
-          <Text variant="label" color="primary">
-            PERFORMANCE HUB
+          <Text variant="label" color="primary" style={textStart}>
+            {t('home.performanceHub')}
           </Text>
-          <Text variant="h1">{name ? name.split(' ')[0] : 'Coach'}</Text>
+          <Text variant="h1" style={textStart}>
+            {name ? name.split(' ')[0] : t('home.coach')}
+          </Text>
         </View>
-        <Avatar name={name ?? 'Coach'} size={48} />
+        <Avatar name={name ?? t('home.coach')} size={48} />
       </View>
 
       {/* Twin hero stats */}
@@ -71,7 +76,7 @@ export default function CoachHome() {
             padding: theme.spacing.lg,
           }}
         >
-          <StatBlock value={pad2(clients)} label="Active clients" valueColor={theme.colors.primary} />
+          <StatBlock value={pad2(clients)} label={t('home.activeClients')} valueColor={theme.colors.primary} />
         </LinearGradient>
         <View
           style={{
@@ -85,7 +90,7 @@ export default function CoachHome() {
         >
           <StatBlock
             value={pad2(pending)}
-            label="Pending invites"
+            label={t('home.pendingInvites')}
             valueColor={pending > 0 ? theme.colors.warning : theme.colors.text}
           />
         </View>
@@ -94,14 +99,14 @@ export default function CoachHome() {
       {/* Top performers — REAL, ranked by goal-relative InBody progress (0026) */}
       <View style={{ gap: theme.spacing.md }}>
         <Text variant="label" muted>
-          Top performers · body composition
+          {t('home.topPerformers')}
         </Text>
 
         {board.length === 0 ? (
           <EmptyState
             icon="trophy-outline"
-            title="No verified readings yet"
-            subtitle="Record an InBody reading from a client’s profile and your ranked board appears here."
+            title={t('home.noReadingsTitle')}
+            subtitle={t('home.noReadingsSub')}
           />
         ) : (
           board.map((r) => (
@@ -120,14 +125,14 @@ export default function CoachHome() {
                 >
                   {r.rank}
                 </Text>
-                <Avatar name={r.full_name ?? 'Client'} size={40} />
+                <Avatar name={r.full_name ?? t('home.client')} size={40} />
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Text variant="bodyStrong">{r.full_name ?? 'Client'}</Text>
+                  <Text variant="bodyStrong">{r.full_name ?? t('home.client')}</Text>
                   <Text variant="caption" color={r.progress.hasTrend ? 'primary' : theme.colors.textMuted}>
                     {r.progress.headline}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                <Ionicons name={forwardChevron()} size={18} color={theme.colors.textMuted} />
               </View>
             </GlassCard>
           ))

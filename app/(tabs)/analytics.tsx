@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
+import { forwardChevron } from '../../src/lib/rtl';
 import {
   useAnalyticsInsight,
   useBodyMetricsBoard,
@@ -216,7 +217,7 @@ export default function AnalyticsTab() {
                             {r.progress.headline}
                           </Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                        <Ionicons name={forwardChevron()} size={18} color={theme.colors.textMuted} />
                       </View>
                     </GlassCard>
                   ))
