@@ -1,7 +1,8 @@
 // Coach → one client's profile: progress snapshot + their assigned plans.
 // Plans are assigned from templates (not created here); tapping one opens the editor.
-// Progress stats are DEMO data (see src/mock/dashboard.ts) until completion logging
-// is live (streak/adherence) and the InBody system lands (lean-mass delta).
+// Progress stats are REAL (Phase 15): streak + this-week workouts come from completion
+// logging (0016), adherence is workouts vs the athlete's training-days target (0017),
+// and the lean-mass delta from verified InBody readings (0026).
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,10 +24,10 @@ import {
   type NutritionTargets,
   type WeekNutrition,
 } from '../../../src/lib/nutrition';
+import { getStreak, listSessions, type WorkoutSession } from '../../../src/lib/sessions';
 import { readCache, writeCache } from '../../../src/lib/screen-cache';
 import { Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
-import { IS_DEMO_DATA, MOCK_CLIENT_PROGRESS as P } from '../../../src/mock/dashboard';
 
 // Warm-cache snapshot so re-opening a client renders instantly (then refetches).
 type ClientSnapshot = {
@@ -40,6 +41,8 @@ type ClientSnapshot = {
   metrics: BodyMetric[];
   pendingOcr: BodyMetric[];
   nudge: string | null;
+  streak: number;
+  sessions: WorkoutSession[];
 };
 
 function label(s: string): string {
@@ -88,6 +91,8 @@ export default function ClientDetail() {
   const [notes, setNotes] = useState<WorkoutNote[]>(cached?.notes ?? []);
   const [metrics, setMetrics] = useState<BodyMetric[]>(cached?.metrics ?? []);
   const [pendingOcr, setPendingOcr] = useState<BodyMetric[]>(cached?.pendingOcr ?? []);
+  const [streak, setStreak] = useState(cached?.streak ?? 0);
+  const [sessions, setSessions] = useState<WorkoutSession[]>(cached?.sessions ?? []);
   const [loading, setLoading] = useState(cached === undefined);
 
   // Coach AI (Phase 13): plan-gen modal + plan-adjustment nudges. Coach-only.
@@ -103,7 +108,7 @@ export default function ClientDetail() {
     if (!id) return;
     try {
       const today = todayLocalDate();
-      const [p, g, t, d, w, s, n, m, o, ins] = await Promise.all([
+      const [p, g, t, d, w, s, n, m, o, ins, wk, sess] = await Promise.all([
         listPlansForClient(id),
         getAthleteProfileFor(id),
         getTargets(id),
@@ -114,6 +119,8 @@ export default function ClientDetail() {
         listBodyMetrics(id),
         listUnverifiedOcrMetrics(id),
         getPlanInsight(id).catch(() => null),
+        getStreak(id).catch(() => 0),
+        listSessions(id).catch(() => [] as WorkoutSession[]),
       ]);
       setPlans(p);
       setGoals(g);
@@ -125,8 +132,10 @@ export default function ClientDetail() {
       setMetrics(m);
       setPendingOcr(o);
       setNudge(ins?.analysis ?? null);
+      setStreak(wk);
+      setSessions(sess);
       writeCache<ClientSnapshot>(cacheKey, {
-        plans: p, goals: g, nutTargets: t, nutDaily: d, nutWeek: w, nutStreak: s, notes: n, metrics: m, pendingOcr: o, nudge: ins?.analysis ?? null,
+        plans: p, goals: g, nutTargets: t, nutDaily: d, nutWeek: w, nutStreak: s, notes: n, metrics: m, pendingOcr: o, nudge: ins?.analysis ?? null, streak: wk, sessions: sess,
       });
     } catch {
       /* keep prior */
@@ -152,6 +161,19 @@ export default function ClientDetail() {
             1000) *
             10,
         ) / 10
+      : null;
+
+  // Real "this week" adherence (0016/0017): completed sessions in the trailing 7 days vs
+  // the athlete's own training-days target. Null target → adherence can't be fairly scored.
+  const weekAgo = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().slice(0, 10);
+  })();
+  const workoutsThisWeek = sessions.filter((s) => s.status === 'completed' && s.session_date >= weekAgo).length;
+  const adherencePct =
+    goals?.training_days && goals.training_days > 0
+      ? Math.max(0, Math.min(100, Math.round((workoutsThisWeek / goals.training_days) * 100)))
       : null;
 
   async function onGenerate() {
@@ -224,31 +246,25 @@ export default function ClientDetail() {
               </View>
             </View>
 
-            {/* Progress snapshot (DEMO) */}
+            {/* Progress snapshot (REAL — completion logging 0016 + verified InBody 0026) */}
             <GlassCard glowColor={theme.colors.primary}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
                 <Text variant="label" muted>
                   This week
                 </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <Text variant="caption" muted>
-                    Lean mass
-                  </Text>
-                  <DeltaChip
-                    value={realLeanDeltaKg ?? P.leanMassDelta}
-                    suffix={realLeanDeltaKg != null ? ' kg' : '%'}
-                  />
-                  {realLeanDeltaKg == null && IS_DEMO_DATA ? (
-                    <Text variant="label" muted style={{ fontSize: 9, opacity: 0.6 }}>
-                      SAMPLE
+                {realLeanDeltaKg != null ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <Text variant="caption" muted>
+                      Lean mass
                     </Text>
-                  ) : null}
-                </View>
+                    <DeltaChip value={realLeanDeltaKg} suffix=" kg" />
+                  </View>
+                ) : null}
               </View>
               <View style={{ flexDirection: 'row' }}>
-                <MiniStat value={`${P.streak}🔥`} label="DAY STREAK" />
-                <MiniStat value={String(P.workoutsThisWeek)} label="WORKOUTS" />
-                <MiniStat value={`${P.adherencePct}%`} label="ADHERENCE" />
+                <MiniStat value={`${streak}🔥`} label="DAY STREAK" />
+                <MiniStat value={String(workoutsThisWeek)} label="WORKOUTS" />
+                <MiniStat value={adherencePct == null ? '—' : `${adherencePct}%`} label="ADHERENCE" />
               </View>
             </GlassCard>
 

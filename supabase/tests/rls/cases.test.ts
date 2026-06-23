@@ -2086,3 +2086,100 @@ describe('coach AI plan_insights (0029) — coach-only nudges, athlete never see
     ).rejects.toThrow();
   });
 });
+
+describe('coach analytics (0031, Phase 15) — coach-fenced KPI engine + coach-only summary (§2)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+
+  // ── coach_analytics_insights: the AI roster summary is COACH-OWNED (read by the
+  // owning coach, hidden from other coaches + clients; service-role write only). ──
+  it('the summary is readable by the OWNING coach; another coach, a client, and anon get nothing', async () => {
+    const owner = await asUser(COACH_A, (c) =>
+      c.query('select coach_id from public.coach_analytics_insights where coach_id = $1', [COACH_A.sub]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select coach_id from public.coach_analytics_insights where coach_id = $1', [COACH_A.sub]),
+    );
+    const client = await asUser(CLIENT_A1, (c) =>
+      c.query('select coach_id from public.coach_analytics_insights'),
+    );
+    const anon = await asAnon((c) => c.query('select coach_id from public.coach_analytics_insights'));
+    expect(owner.rows).toHaveLength(1);
+    expect(otherCoach.rows).toHaveLength(0); // cross-tenant denial
+    expect(client.rows).toHaveLength(0); // not a coach surface
+    expect(anon.rows).toHaveLength(0);
+  });
+
+  it('a client CANNOT write a summary (service-role only): insert rejected', async () => {
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query("insert into public.coach_analytics_insights (coach_id, analysis) values ($1, 'x')", [COACH_A.sub]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  // ── coach_adherence_overview: per-client roster counts, fenced to the caller ──
+  it('coach_adherence_overview returns only the caller’s own clients with their counts', async () => {
+    const a = await asUser(COACH_A, (c) =>
+      c.query('select client_id, sessions_completed, nutrition_days from public.coach_adherence_overview((current_date - 30)::date)'),
+    );
+    const ids = a.rows.map((r) => r.client_id);
+    expect(ids).toContain(CLIENT_A1.sub);
+    expect(ids).toContain(CLIENT_A2);
+    expect(ids).not.toContain(CLIENT_B1);
+    const a1 = a.rows.find((r) => r.client_id === CLIENT_A1.sub);
+    expect(a1.sessions_completed).toBe(3); // 3 completed sessions in the window (seed)
+    expect(a1.nutrition_days).toBe(2); // logged today + yesterday (seed)
+
+    const b = await asUser(COACH_B, (c) =>
+      c.query('select client_id from public.coach_adherence_overview((current_date - 30)::date)'),
+    );
+    const bIds = b.rows.map((r) => r.client_id);
+    expect(bIds).toContain(CLIENT_B1);
+    expect(bIds).not.toContain(CLIENT_A1.sub);
+  });
+
+  it('coach_adherence_overview rejects a client caller and anon', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('select * from public.coach_adherence_overview((current_date - 30)::date)')),
+    ).rejects.toThrow(); // not_a_coach
+    await expect(
+      asAnon((c) => c.query('select * from public.coach_adherence_overview((current_date - 30)::date)')),
+    ).rejects.toThrow(); // no execute grant
+  });
+
+  // ── coach_plan_effectiveness: PUBLISHED client plans only, fenced to the caller ──
+  it('coach_plan_effectiveness returns only the caller’s published, client-assigned plans', async () => {
+    const a = await asUser(COACH_A, (c) =>
+      c.query('select plan_id, plan_type, ai_generated, client_id, entries from public.coach_plan_effectiveness()'),
+    );
+    const planIds = a.rows.map((r) => r.plan_id);
+    // A1's published training plan (…0001) + published nutrition plan (…0004) appear.
+    expect(planIds).toContain('99990001-0000-0000-0000-000000000001');
+    expect(planIds).toContain('99990004-0000-0000-0000-000000000004');
+    // The A1 DRAFT nutrition plan (…0002) and the unassigned TEMPLATES (…0010/…0011) do not.
+    expect(planIds).not.toContain('99990002-0000-0000-0000-000000000002');
+    expect(planIds).not.toContain('99990010-0000-0000-0000-000000000010');
+    // Coach B's plan never leaks.
+    expect(planIds).not.toContain('99990003-0000-0000-0000-000000000003');
+    const training = a.rows.find((r) => r.plan_id === '99990001-0000-0000-0000-000000000001');
+    expect(training.ai_generated).toBe(true); // seed flagged it
+    expect(training.client_id).toBe(CLIENT_A1.sub);
+    expect(training.entries).toBe(2); // A1 has 2 verified readings (seed)
+
+    const b = await asUser(COACH_B, (c) =>
+      c.query('select plan_id from public.coach_plan_effectiveness()'),
+    );
+    const bIds = b.rows.map((r) => r.plan_id);
+    expect(bIds).toContain('99990003-0000-0000-0000-000000000003');
+    expect(bIds).not.toContain('99990001-0000-0000-0000-000000000001');
+  });
+
+  it('coach_plan_effectiveness rejects a client caller and anon', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('select * from public.coach_plan_effectiveness()')),
+    ).rejects.toThrow(); // not_a_coach
+    await expect(
+      asAnon((c) => c.query('select * from public.coach_plan_effectiveness()')),
+    ).rejects.toThrow(); // no execute grant
+  });
+});

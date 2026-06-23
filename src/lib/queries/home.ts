@@ -42,6 +42,11 @@ import {
 import type { UpsertTargets } from '@/schemas/nutrition';
 import { listProgressWeights, type WeightEntry } from '@/lib/progress';
 import { getBodyMetricsBoard, listBodyMetrics, rankBoard, type BodyMetric } from '@/lib/body-metrics';
+import {
+  getAdherenceOverview,
+  getAnalyticsInsight,
+  getPlanEffectiveness,
+} from '@/lib/analytics';
 import { countMediaFor } from '@/lib/media';
 import type { WeightUnit } from '@/lib/units';
 
@@ -257,6 +262,20 @@ export function useCoachLeaderboard() {
   return useQuery({ queryKey: ['coach-leaderboard'], queryFn: fetchCoachLeaderboard });
 }
 
+// ---- coach: KPI analytics tab (Phase 15) ----
+
+export function useCoachAdherence() {
+  return useQuery({ queryKey: ['coach-adherence'], queryFn: () => getAdherenceOverview() });
+}
+
+export function useCoachPlanEffectiveness() {
+  return useQuery({ queryKey: ['coach-plan-effectiveness'], queryFn: getPlanEffectiveness });
+}
+
+export function useAnalyticsInsight() {
+  return useQuery({ queryKey: ['analytics-insight'], queryFn: getAnalyticsInsight });
+}
+
 // ---- focus refresh + prefetch ----
 
 // Refetch in the background when the tab regains focus (so returning after a change
@@ -302,6 +321,9 @@ export async function prefetchHome(userId: string, role: Role): Promise<void> {
     warm(['my-invitations'], () => listMyInvitations());
     warm(['coach-board'], () => getBodyMetricsBoard());
     warm(['coach-leaderboard'], () => fetchCoachLeaderboard());
+    warm(['coach-adherence'], () => getAdherenceOverview());
+    warm(['coach-plan-effectiveness'], () => getPlanEffectiveness());
+    warm(['analytics-insight'], () => getAnalyticsInsight());
   }
   await Promise.allSettled(jobs);
 }
