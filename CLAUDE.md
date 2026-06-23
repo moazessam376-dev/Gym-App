@@ -182,8 +182,12 @@ These are now the defaults — follow them in new work (full detail in
 - **Data fetching:** read through the TanStack Query hooks in `src/lib/queries/` (cached,
   warmed under the boot splash) — not ad-hoc `useFocusEffect`+`useState`. Add a new screen's
   queries to `prefetchHome` so it's populated before reveal.
-- **i18n:** every user-facing string goes through `t()` (`src/i18n/`, strings in `en.json`).
-  Build new screens translation-ready; no hardcoded copy. (Full Arabic + RTL is a later phase.)
+- **i18n:** every user-facing string goes through `t()` (`src/i18n/`, strings in `en.json` **and**
+  `ar.json` — Egyptian colloquial). Build new screens translation-ready; no hardcoded copy. Arabic +
+  RTL is **live** (Phase 16); the bilingual switcher is in Account. RTL helpers in `src/lib/rtl.ts`
+  (`forwardChevron()`, `textStart`). **Phase 16 shipped Slice 1 only** — many screens are still
+  English (plan view/editor, pickers, chat, auth, profile, body-metrics): the remaining-screen
+  inventory + how-to is in `/docs/phases/phase-16-arabic-rtl.md` (Deferred section).
 - **AI cost:** every model call records usage via `recordCost(...)` on success
   (`_shared/rate-limit.ts`); cost is integer micro-USD on `ai_usage_events` (§6 discipline).
 

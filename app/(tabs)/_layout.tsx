@@ -103,6 +103,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="analytics"
+        options={{
+          title: t('tabs.analytics'),
+          href: showFor(isCoach),
+          lazy: eager(isCoach),
+          tabBarIcon: tabIcon('analytics', 'analytics-outline'),
+        }}
+      />
+      <Tabs.Screen
         name="messages"
         options={{
           title: t('tabs.chat'),

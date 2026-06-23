@@ -14,7 +14,8 @@ export type AiUsageKind =
   | 'coach_plan_gen'
   | 'plan_nudge'
   | 'food_macro_fill'
-  | 'exercise_swap';
+  | 'exercise_swap'
+  | 'coach_analytics';
 
 /** True if the user is still UNDER the limit for this kind in the trailing window. */
 export async function withinLimit(

@@ -7,10 +7,12 @@ import { useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/lib/auth-context';
+import { forwardChevron } from '../../src/lib/rtl';
 import { useMyName, useMyCoach, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { deleteAccount } from '../../src/lib/account';
 import { confirmDestructive } from '../../src/lib/confirm';
 import { Screen, Text, Card, Avatar, Badge, Button } from '../../src/components/ui';
+import { LanguageSwitcher } from '../../src/components/LanguageSwitcher';
 import { theme } from '../../src/theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -36,7 +38,7 @@ function LinkRow({ icon, label, onPress }: { icon: IconName; label: string; onPr
       <Text variant="bodyStrong" style={{ flex: 1 }}>
         {label}
       </Text>
-      <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+      <Ionicons name={forwardChevron()} size={18} color={theme.colors.textMuted} />
     </Pressable>
   );
 }
@@ -138,6 +140,8 @@ export default function AccountTab() {
           />
         ) : null}
       </View>
+
+      <LanguageSwitcher />
 
       <Button
         title={t('common.signOut')}

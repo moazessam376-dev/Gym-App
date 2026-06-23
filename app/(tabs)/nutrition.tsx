@@ -7,6 +7,7 @@ import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Redirect, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { useNutritionDay, useRefreshOnFocus } from '../../src/lib/queries/home';
 import {
@@ -26,11 +27,12 @@ import { mealSlotSchema, type MealSlot } from '../../src/schemas/nutrition';
 import { Screen, Text, Card, GlassCard, Button, ProgressRing, IconButton, Badge } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
-const SLOT_LABEL: Record<MealSlot, string> = {
-  breakfast: 'Breakfast',
-  lunch: 'Lunch',
-  dinner: 'Dinner',
-  snack: 'Snacks',
+// i18n keys for each diary slot (resolved via t() at render).
+const SLOT_LABEL_KEY: Record<MealSlot, string> = {
+  breakfast: 'nutrition.slots.breakfast',
+  lunch: 'nutrition.slots.lunch',
+  dinner: 'nutrition.slots.dinner',
+  snack: 'nutrition.slots.snack',
 };
 
 /** Map a plan meal's name to a diary slot (falls back to 'snack'). */
@@ -44,6 +46,7 @@ function mealNameToSlot(name: string): MealSlot {
 const MACRO_COLOR = { protein: theme.colors.primary, carbs: '#22D3EE', fat: '#A78BFA' };
 
 function MacroBar({ label, consumed, target, color }: { label: string; consumed: number; target: number; color: string }) {
+  const { t } = useTranslation();
   const pct = target > 0 ? Math.min(1, consumed / target) : 0;
   return (
     <View style={{ flex: 1, gap: 4 }}>
@@ -52,7 +55,7 @@ function MacroBar({ label, consumed, target, color }: { label: string; consumed:
           {label}
         </Text>
         <Text variant="label" style={{ fontSize: 10 }}>
-          {consumed}/{target}g
+          {t('nutrition.macroBarValue', { consumed, target })}
         </Text>
       </View>
       <View style={{ height: 6, borderRadius: 3, backgroundColor: theme.colors.glass, overflow: 'hidden' }}>
@@ -63,6 +66,7 @@ function MacroBar({ label, consumed, target, color }: { label: string; consumed:
 }
 
 export default function Nutrition() {
+  const { t } = useTranslation();
   const { role, session } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
@@ -94,11 +98,11 @@ export default function Nutrition() {
   const kcalLeft = remaining(consumed.kcal_total, kcalTarget);
   const progress = kcalTarget > 0 ? Math.min(1, consumed.kcal_total / kcalTarget) : 0;
 
-  async function applyTarget(t: UpsertTargets) {
+  async function applyTarget(target: UpsertTargets) {
     if (!userId) return;
     setBusy(true);
     try {
-      await upsertTargets(userId, t);
+      await upsertTargets(userId, target);
       await load();
     } catch {
       /* keep prior */
@@ -193,7 +197,7 @@ export default function Nutrition() {
     <Screen scroll gradient contentStyle={{ paddingTop: theme.spacing.lg, gap: theme.spacing.lg }}>
       {/* Header + date strip */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text variant="h1">Nutrition</Text>
+        <Text variant="h1">{t('nutrition.title')}</Text>
         <View
           style={{
             flexDirection: 'row',
@@ -216,20 +220,20 @@ export default function Nutrition() {
 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <IconButton name="chevron-back" onPress={() => setDate((d) => shiftDate(d, -1))} />
-        <Text variant="bodyStrong">{isToday ? 'Today' : date}</Text>
+        <Text variant="bodyStrong">{isToday ? t('nutrition.today') : date}</Text>
         <IconButton name="chevron-forward" onPress={() => setDate((d) => (d >= todayLocalDate() ? d : shiftDate(d, 1)))} />
       </View>
 
       {/* Targets prompt (no target set) OR the calorie ring */}
       {!targets ? (
         <GlassCard glowColor={theme.colors.primary} style={{ gap: theme.spacing.md }}>
-          <Text variant="title">Set your daily target</Text>
+          <Text variant="title">{t('nutrition.setTargetTitle')}</Text>
           <Text variant="caption" muted>
-            Your calorie & macro goal powers the ring below. Pick one — you can adjust it anytime.
+            {t('nutrition.setTargetSub')}
           </Text>
           {planTargets ? (
             <Button
-              title={`Use my plan’s targets · ${planTargets.kcal_target} kcal`}
+              title={t('nutrition.usePlanTargets', { kcal: planTargets.kcal_target })}
               onPress={() => applyTarget(planTargets)}
               loading={busy}
               left={<Ionicons name="clipboard" size={18} color={theme.colors.onPrimary} />}
@@ -237,7 +241,7 @@ export default function Nutrition() {
           ) : null}
           {estimate ? (
             <Button
-              title={`Use estimate · ${estimate.kcal_target} kcal`}
+              title={t('nutrition.useEstimate', { kcal: estimate.kcal_target })}
               variant={planTargets ? 'secondary' : 'primary'}
               onPress={() => applyTarget(estimate)}
               loading={busy}
@@ -245,7 +249,7 @@ export default function Nutrition() {
             />
           ) : null}
           {!estimate && !planTargets ? (
-            <Button title="Complete your profile for an estimate" variant="secondary" onPress={() => router.push('/profile-setup')} />
+            <Button title={t('nutrition.completeProfile')} variant="secondary" onPress={() => router.push('/profile-setup')} />
           ) : null}
         </GlassCard>
       ) : (
@@ -258,7 +262,7 @@ export default function Nutrition() {
                 </Text>
               </Animated.View>
               <Text variant="caption" muted>
-                kcal left
+                {t('nutrition.kcalLeft')}
               </Text>
               <Text variant="caption" muted>
                 {consumed.kcal_total} / {kcalTarget}
@@ -267,13 +271,13 @@ export default function Nutrition() {
           </ProgressRing>
 
           <View style={{ flexDirection: 'row', gap: theme.spacing.md, alignSelf: 'stretch' }}>
-            <MacroBar label="PROTEIN" consumed={consumed.protein_total} target={targets.protein_g_target} color={MACRO_COLOR.protein} />
-            <MacroBar label="CARBS" consumed={consumed.carbs_total} target={targets.carbs_g_target} color={MACRO_COLOR.carbs} />
-            <MacroBar label="FAT" consumed={consumed.fat_total} target={targets.fat_g_target} color={MACRO_COLOR.fat} />
+            <MacroBar label={t('nutrition.protein')} consumed={consumed.protein_total} target={targets.protein_g_target} color={MACRO_COLOR.protein} />
+            <MacroBar label={t('nutrition.carbs')} consumed={consumed.carbs_total} target={targets.carbs_g_target} color={MACRO_COLOR.carbs} />
+            <MacroBar label={t('nutrition.fat')} consumed={consumed.fat_total} target={targets.fat_g_target} color={MACRO_COLOR.fat} />
           </View>
           {targets.source === 'coach_set' ? (
             <Text variant="caption" muted>
-              Target set by your coach
+              {t('nutrition.coachSetTarget')}
             </Text>
           ) : null}
         </Card>
@@ -293,13 +297,13 @@ export default function Nutrition() {
           <View key={slot} style={{ gap: theme.spacing.sm }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text variant="label" muted>
-                {SLOT_LABEL[slot]} {slotKcal > 0 ? `· ${slotKcal} kcal` : ''}
+                {t(SLOT_LABEL_KEY[slot])} {slotKcal > 0 ? t('nutrition.slotKcal', { kcal: slotKcal }) : ''}
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
                 {pendingPlan > 0 ? (
                   <Pressable onPress={() => logSlotPlan(slot)} disabled={busy} hitSlop={6}>
                     <Text variant="caption" color="link">
-                      Log all
+                      {t('nutrition.logAll')}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -334,7 +338,7 @@ export default function Nutrition() {
                     <View style={{ flex: 1, gap: 2 }}>
                       <Text variant="bodyStrong">{it.food_name}</Text>
                       <Text variant="caption" muted>
-                        {it.grams}g · {m.kcal} kcal · {m.protein}P / {m.carbs}C / {m.fat}F
+                        {t('nutrition.itemMacro', { grams: it.grams, kcal: m.kcal, p: m.protein, c: m.carbs, f: m.fat })}
                       </Text>
                     </View>
                   </View>
@@ -351,10 +355,10 @@ export default function Nutrition() {
                     <View style={{ flex: 1, gap: 2 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                         <Text variant="bodyStrong">{e.food_name}</Text>
-                        {planItems.length > 0 ? <Badge label="extra" tone="neutral" /> : null}
+                        {planItems.length > 0 ? <Badge label={t('nutrition.extra')} tone="neutral" /> : null}
                       </View>
                       <Text variant="caption" muted>
-                        {e.grams}g · {m.kcal} kcal · {m.protein}P / {m.carbs}C / {m.fat}F
+                        {t('nutrition.itemMacro', { grams: e.grams, kcal: m.kcal, p: m.protein, c: m.carbs, f: m.fat })}
                       </Text>
                     </View>
                     <IconButton name="trash-outline" onPress={() => onDelete(e.id)} />
@@ -366,7 +370,7 @@ export default function Nutrition() {
             {isEmpty ? (
               <Card onPress={() => goAdd(slot)} style={{ paddingVertical: theme.spacing.md }}>
                 <Text variant="caption" muted>
-                  Add a food
+                  {t('nutrition.addFood')}
                 </Text>
               </Card>
             ) : null}
@@ -377,7 +381,7 @@ export default function Nutrition() {
       {/* Quick action: copy a previous day */}
       {!loading ? (
         <Button
-          title="Copy yesterday’s log"
+          title={t('nutrition.copyYesterday')}
           variant="ghost"
           onPress={onCopyYesterday}
           loading={busy}

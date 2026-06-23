@@ -5,7 +5,9 @@ import { useMemo } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
+import { forwardChevron } from '../../src/lib/rtl';
 import { useStreak, useProgressData, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { gramsToDisplay, formatWeight } from '../../src/lib/units';
 import { Screen, Text, Card, GlassCard, Badge, EmptyState, LineChart } from '../../src/components/ui';
@@ -58,13 +60,14 @@ function PillarRow({
             {hint}
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+        <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
       </View>
     </GlassCard>
   );
 }
 
 export default function ProgressTab() {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
@@ -103,7 +106,7 @@ export default function ProgressTab() {
   return (
     <Screen padded={false} gradient>
       <View style={{ paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.lg }}>
-        <Text variant="h1">Progress</Text>
+        <Text variant="h1">{t('progress.title')}</Text>
       </View>
       <FlatList
         data={sessions}
@@ -120,13 +123,13 @@ export default function ProgressTab() {
                   {streak}
                 </Text>
                 <Text variant="label" muted>
-                  Day streak 🔥
+                  {t('progress.dayStreak')}
                 </Text>
               </Card>
               <Card style={{ flex: 1, alignItems: 'center', gap: 4 }}>
                 <Text variant="display">{completed}</Text>
                 <Text variant="label" muted>
-                  Workouts done
+                  {t('progress.workoutsDone')}
                 </Text>
               </Card>
             </View>
@@ -135,20 +138,20 @@ export default function ProgressTab() {
             <GlassCard onPress={() => router.push('/client/progress/weight')} style={{ gap: theme.spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Text variant="label" muted>
-                  Weight
+                  {t('progress.weight')}
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
                   <Text variant="bodyStrong" color="primary">
-                    {latestWeight ? formatWeight(latestWeight.weight_grams, unit) : 'Log weight'}
+                    {latestWeight ? formatWeight(latestWeight.weight_grams, unit) : t('progress.logWeight')}
                   </Text>
-                  <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                  <Ionicons name={forwardChevron()} size={18} color={theme.colors.textMuted} />
                 </View>
               </View>
               {chartData.length >= 2 ? (
                 <LineChart data={chartData} unit={` ${unit}`} height={140} />
               ) : (
                 <Text variant="caption" muted>
-                  {latestWeight ? 'Log again to see your trend.' : 'Track your body weight over time.'}
+                  {latestWeight ? t('progress.logAgainTrend') : t('progress.trackWeightOverTime')}
                 </Text>
               )}
             </GlassCard>
@@ -156,29 +159,32 @@ export default function ProgressTab() {
             {/* Photos + InBody */}
             <PillarRow
               icon="camera"
-              label="Progress photos"
-              hint={photoCount > 0 ? `${photoCount} photo${photoCount === 1 ? '' : 's'}` : 'Add your first photo'}
+              label={t('progress.progressPhotos')}
+              hint={photoCount > 0 ? t('progress.photoCount', { count: photoCount }) : t('progress.addFirstPhoto')}
               onPress={() => router.push('/client/progress/photos')}
             />
             <PillarRow
               icon="document-text"
-              label="InBody scans"
-              hint={inbodyCount > 0 ? `${inbodyCount} scan${inbodyCount === 1 ? '' : 's'}` : 'Add a body-composition scan'}
+              label={t('progress.inbodyScans')}
+              hint={inbodyCount > 0 ? t('progress.scanCount', { count: inbodyCount }) : t('progress.addScan')}
               onPress={() => router.push('/client/progress/inbody')}
             />
             <PillarRow
               icon="body"
-              label="Body composition"
+              label={t('progress.bodyComposition')}
               hint={
                 latestBodyComp
-                  ? `${Math.round((latestBodyComp.weight_grams / 1000) * 10) / 10}kg${latestBodyComp.body_fat_bp != null ? ` · ${Math.round((latestBodyComp.body_fat_bp / 100) * 10) / 10}% fat` : ''}`
-                  : 'Coach-verified InBody trends'
+                  ? t('progress.bodyCompWeight', { kg: Math.round((latestBodyComp.weight_grams / 1000) * 10) / 10 }) +
+                    (latestBodyComp.body_fat_bp != null
+                      ? t('progress.bodyCompFat', { pct: Math.round((latestBodyComp.body_fat_bp / 100) * 10) / 10 })
+                      : '')
+                  : t('progress.bodyCompFallback')
               }
               onPress={() => router.push('/client/progress/body-comp')}
             />
 
             <Text variant="label" muted style={{ marginTop: theme.spacing.xs }}>
-              Recent workouts
+              {t('progress.recentWorkouts')}
             </Text>
           </View>
         }
@@ -186,8 +192,8 @@ export default function ProgressTab() {
           loading ? null : (
             <EmptyState
               icon="trending-up-outline"
-              title="No workouts logged yet"
-              subtitle="Log your first workout from Home and your history will appear here."
+              title={t('progress.noWorkoutsTitle')}
+              subtitle={t('progress.noWorkoutsSub')}
             />
           )
         }
@@ -211,11 +217,11 @@ export default function ProgressTab() {
                 <View style={{ flex: 1 }}>
                   <Text variant="bodyStrong">{formatDate(item.session_date)}</Text>
                   <Text variant="caption" muted>
-                    {item.note ? item.note : item.status === 'in_progress' ? 'Tap to continue' : 'Tap to review'}
+                    {item.note ? item.note : item.status === 'in_progress' ? t('progress.tapContinue') : t('progress.tapReview')}
                   </Text>
                 </View>
                 <Badge
-                  label={item.status === 'in_progress' ? 'in progress' : item.status}
+                  label={t(`progress.status.${item.status === 'in_progress' ? 'inProgress' : item.status}`)}
                   tone={item.status === 'completed' ? 'success' : 'neutral'}
                 />
               </View>

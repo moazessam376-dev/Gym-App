@@ -1,14 +1,14 @@
-// Coach "Performance Hub" — Neon Glassy Dark (blue family). Twin stat hero, top
-// performers with trend sparklines, and a recent-activity feed. No quick-action
-// grid (it duplicated the bottom tabs).
-// Real data: active client count + pending invites. DEMO data: top performers +
-// activity (see src/mock/dashboard.ts) — remove MOCK_* when the InBody ranking
-// system lands.
+// Coach "Performance Hub" — Neon Glassy Dark (blue family). Twin stat hero + top
+// performers ranked by goal-relative InBody progress. No quick-action grid (it
+// duplicated the bottom tabs). All data is REAL — the deeper KPI dashboard lives in
+// the Analytics tab (Phase 15); the old mock activity feed has been removed.
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
+import { forwardChevron, textStart } from '@/lib/rtl';
 import {
   useMyName,
   useMyClients,
@@ -18,11 +18,9 @@ import {
 } from '@/lib/queries/home';
 import { Screen, Text, Avatar, GlassCard, StatBlock, EmptyState } from '@/components/ui';
 import { theme } from '@/theme';
-import { MOCK_ACTIVITY } from '@/mock/dashboard';
-
-type IconName = keyof typeof Ionicons.glyphMap;
 
 export default function CoachHome() {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
@@ -51,15 +49,20 @@ export default function CoachHome() {
 
   return (
     <Screen scroll gradient contentStyle={{ paddingTop: theme.spacing.md, gap: theme.spacing.xl }}>
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ flex: 1 }}>
-          <Text variant="label" color="primary">
-            PERFORMANCE HUB
+      {/* Header. The text column is content-sized (flexShrink, NOT flex:1) so
+          space-between pushes the avatar to the opposite end in both LTR and RTL —
+          relying on flex:1 made the avatar hug the name under RTL. textStart keeps
+          the (possibly Latin) name flush to the writing-direction start. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.md }}>
+        <View style={{ flexShrink: 1 }}>
+          <Text variant="label" color="primary" style={textStart}>
+            {t('home.performanceHub')}
           </Text>
-          <Text variant="h1">{name ? name.split(' ')[0] : 'Coach'}</Text>
+          <Text variant="h1" style={textStart}>
+            {name ? name.split(' ')[0] : t('home.coach')}
+          </Text>
         </View>
-        <Avatar name={name ?? 'Coach'} size={48} />
+        <Avatar name={name ?? t('home.coach')} size={48} />
       </View>
 
       {/* Twin hero stats */}
@@ -76,7 +79,7 @@ export default function CoachHome() {
             padding: theme.spacing.lg,
           }}
         >
-          <StatBlock value={pad2(clients)} label="Active clients" valueColor={theme.colors.primary} />
+          <StatBlock value={pad2(clients)} label={t('home.activeClients')} valueColor={theme.colors.primary} />
         </LinearGradient>
         <View
           style={{
@@ -90,7 +93,7 @@ export default function CoachHome() {
         >
           <StatBlock
             value={pad2(pending)}
-            label="Pending invites"
+            label={t('home.pendingInvites')}
             valueColor={pending > 0 ? theme.colors.warning : theme.colors.text}
           />
         </View>
@@ -99,14 +102,14 @@ export default function CoachHome() {
       {/* Top performers — REAL, ranked by goal-relative InBody progress (0026) */}
       <View style={{ gap: theme.spacing.md }}>
         <Text variant="label" muted>
-          Top performers · body composition
+          {t('home.topPerformers')}
         </Text>
 
         {board.length === 0 ? (
           <EmptyState
             icon="trophy-outline"
-            title="No verified readings yet"
-            subtitle="Record an InBody reading from a client’s profile and your ranked board appears here."
+            title={t('home.noReadingsTitle')}
+            subtitle={t('home.noReadingsSub')}
           />
         ) : (
           board.map((r) => (
@@ -125,59 +128,18 @@ export default function CoachHome() {
                 >
                   {r.rank}
                 </Text>
-                <Avatar name={r.full_name ?? 'Client'} size={40} />
+                <Avatar name={r.full_name ?? t('home.client')} size={40} />
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Text variant="bodyStrong">{r.full_name ?? 'Client'}</Text>
+                  <Text variant="bodyStrong">{r.full_name ?? t('home.client')}</Text>
                   <Text variant="caption" color={r.progress.hasTrend ? 'primary' : theme.colors.textMuted}>
                     {r.progress.headline}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                <Ionicons name={forwardChevron()} size={18} color={theme.colors.textMuted} />
               </View>
             </GlassCard>
           ))
         )}
-      </View>
-
-      {/* Recent activity (DEMO) */}
-      <View style={{ gap: theme.spacing.md }}>
-        <Text variant="label" muted>
-          Recent activity
-        </Text>
-        <GlassCard padded={false} style={{ overflow: 'hidden' }}>
-          {MOCK_ACTIVITY.map((a, i) => (
-            <View
-              key={a.id}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: theme.spacing.md,
-                padding: theme.spacing.lg,
-                borderTopWidth: i === 0 ? 0 : 1,
-                borderTopColor: theme.colors.glassBorder,
-              }}
-            >
-              <View
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: theme.radii.sm,
-                  backgroundColor: theme.colors.glassStrong,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name={`${a.icon}-outline` as IconName} size={16} color={theme.colors.primary} />
-              </View>
-              <Text variant="body" style={{ flex: 1 }}>
-                {a.text}
-              </Text>
-              <Text variant="caption" muted>
-                {a.when}
-              </Text>
-            </View>
-          ))}
-        </GlassCard>
       </View>
     </Screen>
   );

@@ -5,7 +5,9 @@ import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
+import { forwardChevron, textStart } from '@/lib/rtl';
 import {
   useMyName,
   useStreak,
@@ -21,6 +23,7 @@ import { Screen, Text, Card, Avatar, Button, ProgressRing, EmptyState } from '@/
 import { theme } from '@/theme';
 
 export default function ClientHome() {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
@@ -84,10 +87,12 @@ export default function ClientHome() {
       {/* Top bar */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View>
-          <Text variant="caption" muted>
-            {greeting()}
+          <Text variant="caption" muted style={textStart}>
+            {t(greetingKey())}
           </Text>
-          <Text variant="h1">{name ? name.split(' ')[0] : 'Athlete'}</Text>
+          <Text variant="h1" style={textStart}>
+            {name ? name.split(' ')[0] : t('home.athlete')}
+          </Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
           <View
@@ -120,12 +125,12 @@ export default function ClientHome() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
             <Ionicons name="flag" size={22} color={theme.colors.primary} />
             <View style={{ flex: 1 }}>
-              <Text variant="bodyStrong">Set your goals</Text>
+              <Text variant="bodyStrong">{t('home.setGoalsTitle')}</Text>
               <Text variant="caption" muted>
-                Tell us your goals so your coach can tailor your plan.
+                {t('home.setGoalsSub')}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+            <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
           </View>
         </Card>
       ) : null}
@@ -134,7 +139,7 @@ export default function ClientHome() {
       {today ? (
         <Card style={{ alignItems: 'center', gap: theme.spacing.lg, paddingVertical: theme.spacing.xl }}>
           <Text variant="label" muted>
-            Today · {today.name}
+            {t('home.todayDay', { day: today.name })}
           </Text>
           <ProgressRing progress={progress} size={220} strokeWidth={18}>
             <View style={{ alignItems: 'center' }}>
@@ -147,7 +152,7 @@ export default function ClientHome() {
                 </Text>
               </Animated.View>
               <Text variant="caption" muted>
-                {setsDone}/{plannedSets} sets
+                {t('home.setsCount', { done: setsDone, planned: plannedSets })}
               </Text>
             </View>
           </ProgressRing>
@@ -159,30 +164,30 @@ export default function ClientHome() {
             >
               <Ionicons name="checkmark-circle" size={22} color={theme.colors.success} />
               <Text variant="title" color="success">
-                Workout crushed 💥
+                {t('home.workoutCrushed')}
               </Text>
             </Animated.View>
           ) : (
             <Button
-              title={status === 'in_progress' ? 'Continue workout' : 'Start workout'}
+              title={status === 'in_progress' ? t('home.continueWorkout') : t('home.startWorkout')}
               size="lg"
               onPress={openWorkout}
               left={<Ionicons name="flash" size={18} color={theme.colors.onPrimary} />}
             />
           )}
           {isDone ? (
-            <Button title="Review workout" variant="ghost" onPress={openWorkout} />
+            <Button title={t('home.reviewWorkout')} variant="ghost" onPress={openWorkout} />
           ) : null}
         </Card>
       ) : workoutLoading ? null : (
         <Card padded={false}>
           <EmptyState
             icon="barbell-outline"
-            title="No training plan yet"
+            title={t('home.noPlanTitle')}
             subtitle={
               coachName
-                ? `${coachName} will assign your plan soon.`
-                : 'Once you have a coach and a plan, your daily workout shows up here.'
+                ? t('home.noPlanWithCoach', { coach: coachName })
+                : t('home.noPlanNoCoach')
             }
           />
         </Card>
@@ -191,7 +196,7 @@ export default function ClientHome() {
       {/* Nutrition today — links into the Nutrition tab */}
       <View style={{ gap: theme.spacing.sm }}>
         <Text variant="label" muted>
-          Nutrition today
+          {t('home.nutritionToday')}
         </Text>
         <Card onPress={() => router.push('/(tabs)/nutrition')}>
           {nutTargets ? (
@@ -202,23 +207,29 @@ export default function ClientHome() {
                 </Text>
               </ProgressRing>
               <View style={{ flex: 1, gap: 2 }}>
-                <Text variant="title">{nutLeft} kcal left</Text>
+                <Text variant="title">{t('home.kcalLeft', { left: nutLeft })}</Text>
                 <Text variant="caption" muted>
-                  {consumedKcal} / {targetKcal} kcal · {nutDaily?.protein_total ?? 0}P / {nutDaily?.carbs_total ?? 0}C / {nutDaily?.fat_total ?? 0}F
+                  {t('home.macroLine', {
+                    consumed: consumedKcal,
+                    target: targetKcal,
+                    p: nutDaily?.protein_total ?? 0,
+                    c: nutDaily?.carbs_total ?? 0,
+                    f: nutDaily?.fat_total ?? 0,
+                  })}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+              <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
             </View>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
               <Ionicons name="restaurant" size={22} color={theme.colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text variant="bodyStrong">Track your nutrition</Text>
+                <Text variant="bodyStrong">{t('home.trackNutritionTitle')}</Text>
                 <Text variant="caption" muted>
-                  Set a daily target and log your meals.
+                  {t('home.trackNutritionSub')}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+              <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
             </View>
           )}
         </Card>
@@ -228,12 +239,12 @@ export default function ClientHome() {
       {coachName ? (
         <View style={{ gap: theme.spacing.sm }}>
           <Text variant="label" muted>
-            Your coach
+            {t('home.yourCoach')}
           </Text>
           <Card
             onPress={
               coachId
-                ? () => router.push({ pathname: '/chat/[id]', params: { id: coachId, name: coachName ?? 'Your coach' } })
+                ? () => router.push({ pathname: '/chat/[id]', params: { id: coachId, name: coachName ?? t('home.yourCoach') } })
                 : undefined
             }
           >
@@ -251,9 +262,9 @@ export default function ClientHome() {
   );
 }
 
-function greeting(): string {
+function greetingKey(): string {
   const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (h < 12) return 'home.goodMorning';
+  if (h < 18) return 'home.goodAfternoon';
+  return 'home.goodEvening';
 }

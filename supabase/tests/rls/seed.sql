@@ -270,4 +270,16 @@ insert into public.plan_insights (client_id, analysis, provider, created_by) val
    'Adherence strong; nudge protein +20g and add a 4th session.', 'groq',
    '11111111-1111-1111-1111-111111111111');
 
+-- Coach analytics (0031, Phase 15). Coach A's AI roster summary — COACH-ONLY, but
+-- unlike plan_insights the OWNER here is the coach, so the policy keeps an owner branch:
+-- proves Coach A reads their OWN summary while Coach B (cross-tenant) and Client A1
+-- cannot. Service-role write only. Also flag A1's published training plan as
+-- AI-generated so coach_plan_effectiveness's ai_generated passthrough is exercised.
+insert into public.coach_analytics_insights (coach_id, analysis, provider, model) values
+  ('11111111-1111-1111-1111-111111111111',
+   'Roster averaging strong adherence; 2 clients trending toward goal.', 'groq', 'llama-4-scout');
+
+update public.plans set ai_generated = true
+  where id = '99990001-0000-0000-0000-000000000001';
+
 alter table auth.users enable trigger on_auth_user_created;

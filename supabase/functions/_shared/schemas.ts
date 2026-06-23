@@ -97,6 +97,12 @@ export const coachExerciseSwapSchema = z.object({
   coach_prompt: coachPrompt,
 });
 
+// Phase 15: narrate the coach's already-computed roster KPIs. No client_id — it's a
+// roster-level summary for the calling coach. The optional prompt only steers framing.
+export const coachAnalyticsSummarySchema = z.object({
+  coach_prompt: coachPrompt,
+});
+
 // ── Model-output contracts (validated before any DB write, §9) ──────────────
 // Generation emits ids the server then resolves against the coach-readable library
 // (drops unknowns); names/macros are copied from the real library row, never trusted
