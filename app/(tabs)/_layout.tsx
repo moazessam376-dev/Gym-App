@@ -6,6 +6,7 @@
 // resolved before this layout mounts (no flicker).
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { theme } from '../../src/theme';
 
@@ -18,6 +19,7 @@ function tabIcon(active: IconName, inactive: IconName) {
 }
 
 export default function TabsLayout() {
+  const { t } = useTranslation();
   const { role } = useAuth();
   const isClient = role === 'client';
   const isCoach = role === 'coach';
@@ -26,6 +28,12 @@ export default function TabsLayout() {
   // `href: null` keeps the route available (deep links / programmatic nav) but
   // removes it from the bar for roles that shouldn't see it.
   const showFor = (visible: boolean) => (visible ? undefined : null);
+
+  // Eagerly mount the tabs this role actually sees (lazy:false) so they're built +
+  // populated UNDER the boot splash — the first tap shows an already-rendered screen
+  // instead of constructing it in front of you. Hidden cross-role tabs stay lazy
+  // (default), so they never mount (and can't fire a cross-role <Redirect>).
+  const eager = (visible: boolean) => !visible;
 
   return (
     <Tabs
@@ -47,63 +55,70 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Home', tabBarIcon: tabIcon('home', 'home-outline') }}
+        options={{ title: t('tabs.home'), lazy: false, tabBarIcon: tabIcon('home', 'home-outline') }}
       />
       <Tabs.Screen
         name="plans"
         options={{
-          title: 'Plans',
+          title: t('tabs.plans'),
           href: showFor(isClient),
+          lazy: eager(isClient),
           tabBarIcon: tabIcon('barbell', 'barbell-outline'),
         }}
       />
       <Tabs.Screen
         name="nutrition"
         options={{
-          title: 'Nutrition',
+          title: t('tabs.nutrition'),
           href: showFor(isClient),
+          lazy: eager(isClient),
           tabBarIcon: tabIcon('restaurant', 'restaurant-outline'),
         }}
       />
       <Tabs.Screen
         name="progress"
         options={{
-          title: 'Progress',
+          title: t('tabs.progress'),
           href: showFor(isClient),
+          lazy: eager(isClient),
           tabBarIcon: tabIcon('trending-up', 'trending-up-outline'),
         }}
       />
       <Tabs.Screen
         name="clients"
         options={{
-          title: 'Clients',
+          title: t('tabs.clients'),
           href: showFor(isCoach),
+          lazy: eager(isCoach),
           tabBarIcon: tabIcon('people', 'people-outline'),
         }}
       />
       <Tabs.Screen
         name="leaderboard"
         options={{
-          title: 'Ranks',
+          title: t('tabs.ranks'),
           href: showFor(isCoach),
+          lazy: eager(isCoach),
           tabBarIcon: tabIcon('trophy', 'trophy-outline'),
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Chat',
+          title: t('tabs.chat'),
           href: showFor(isClient || isCoach),
+          lazy: eager(isClient || isCoach),
           tabBarIcon: tabIcon('chatbubbles', 'chatbubbles-outline'),
         }}
       />
       <Tabs.Screen
         name="account"
         options={{
-          title: 'Account',
+          title: t('tabs.account'),
           // Clients reach Account from the Home header avatar (keeps the client bar
           // at five: Home · Plans · Nutrition · Progress · Chat). Coach/admin keep it.
           href: showFor(!isClient),
+          lazy: eager(!isClient),
           tabBarIcon: tabIcon('person-circle', 'person-circle-outline'),
         }}
       />

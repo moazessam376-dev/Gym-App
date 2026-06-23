@@ -67,6 +67,12 @@ export default function SignIn() {
 
           <Button title="Sign in" onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
 
+          <Pressable onPress={() => router.push('/(auth)/forgot-password')} style={{ alignSelf: 'center' }}>
+            <Text variant="body" color="link">
+              Forgot password?
+            </Text>
+          </Pressable>
+
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: theme.spacing.sm }}>
             <Text variant="body" muted>
               Don&apos;t have an account?{' '}

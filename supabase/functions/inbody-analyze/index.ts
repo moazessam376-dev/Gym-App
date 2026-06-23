@@ -12,6 +12,7 @@ import { getCaller, serviceClient } from '../_shared/clients.ts';
 import { analyzeInbodySchema } from '../_shared/schemas.ts';
 import { corsHeaders, json } from '../_shared/http.ts';
 import { getVisionProvider } from '../_shared/vision.ts';
+import { recordCost } from '../_shared/rate-limit.ts';
 
 const RATE_LIMIT = 30; // per-coach hourly cap for analysis re-runs (§9)
 const WINDOW_MS = 60 * 60 * 1000;
@@ -121,7 +122,12 @@ Deno.serve(async (req: Request) => {
     if ((count ?? 0) >= RATE_LIMIT) return json({ status: 'rate_limited' }, 200);
 
     const provider = getVisionProvider();
-    await svc.from('ai_usage_events').insert({ user_id: caller.id, kind: 'inbody_insight', provider: provider.name });
+    const { data: usageRow } = await svc
+      .from('ai_usage_events')
+      .insert({ user_id: caller.id, kind: 'inbody_insight', provider: provider.name })
+      .select('id')
+      .single();
+    const usageId = (usageRow as { id: string } | null)?.id ?? null;
 
     // Goal + verified trend for context.
     const [{ data: goal }, { data: verified }] = await Promise.all([
@@ -141,6 +147,7 @@ Deno.serve(async (req: Request) => {
       console.error('inbody-analyze model failed', { message: String(e) });
       return json({ status: 'failed' }, 200);
     }
+    await recordCost(svc, usageId, provider.lastUsage());
     if (!analysis) return json({ status: 'failed' }, 200);
 
     // Store as the coach-only insight (one per reading; re-running replaces it).

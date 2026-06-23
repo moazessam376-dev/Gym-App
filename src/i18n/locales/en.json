@@ -1,0 +1,41 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "retry": "Retry",
+    "loading": "Loading…",
+    "signOut": "Sign out"
+  },
+  "tabs": {
+    "home": "Home",
+    "plans": "Plans",
+    "nutrition": "Nutrition",
+    "progress": "Progress",
+    "clients": "Clients",
+    "ranks": "Ranks",
+    "chat": "Chat",
+    "account": "Account"
+  },
+  "account": {
+    "title": "Account",
+    "setYourName": "Set your name",
+    "editProfile": "Edit profile",
+    "coachingProfile": "Coaching profile",
+    "goalsProfile": "Goals & profile",
+    "foodPreferences": "Food preferences",
+    "acceptInvite": "Accept an invite",
+    "becomeCoach": "Become a coach",
+    "inviteClient": "Invite a client",
+    "planTemplates": "Plan templates",
+    "coachApplications": "Coach applications",
+    "language": "Language",
+    "dangerZone": "Danger zone",
+    "deleteAccount": "Delete account",
+    "deleteFailed": "Could not delete your account. Please try again."
+  },
+  "language": {
+    "en": "English",
+    "ar": "العربية"
+  }
+}

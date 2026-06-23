@@ -2,35 +2,23 @@
 // macros vs a personalized target (seeded from the Phase 9 profile or the coach's
 // assigned nutrition plan), meal-slot sections, a logging streak, and quick actions
 // (add, copy a previous day). All data is real (migration 0019); nothing is faked.
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
-import { Redirect, useFocusEffect, useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
-import { getMyAthleteProfile } from '../../src/lib/athlete-profile';
+import { useNutritionDay, useRefreshOnFocus } from '../../src/lib/queries/home';
 import {
   addFoodLog,
   copyDay,
   deleteFoodLog,
   entryMacros,
-  estimateTargets,
-  getAssignedNutritionPlanId,
-  getAssignedNutritionPlanMeals,
-  getDailyNutrition,
-  getLatestWeightGrams,
-  getNutritionStreak,
-  getTargets,
-  listFoodLog,
-  plannedDailyMacros,
   remaining,
   shiftDate,
   todayLocalDate,
   upsertTargets,
-  type DailyNutrition,
   type FoodLogEntry,
-  type NutritionTargets,
-  type PlanMealWithItems,
 } from '../../src/lib/nutrition';
 import type { MealItem } from '../../src/lib/plans';
 import type { UpsertTargets } from '../../src/schemas/nutrition';
@@ -80,54 +68,23 @@ export default function Nutrition() {
   const userId = session?.user?.id;
 
   const [date, setDate] = useState(todayLocalDate());
-  const [entries, setEntries] = useState<FoodLogEntry[]>([]);
-  const [daily, setDaily] = useState<DailyNutrition | null>(null);
-  const [targets, setTargets] = useState<NutritionTargets | null>(null);
-  const [streak, setStreak] = useState(0);
-  const [estimate, setEstimate] = useState<UpsertTargets | null>(null);
-  const [planTargets, setPlanTargets] = useState<UpsertTargets | null>(null);
-  const [planMeals, setPlanMeals] = useState<PlanMealWithItems[]>([]);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!userId) return;
-    try {
-      const [list, day, t, s, pm] = await Promise.all([
-        listFoodLog(userId, date),
-        getDailyNutrition(userId, date),
-        getTargets(userId),
-        getNutritionStreak(userId),
-        getAssignedNutritionPlanMeals(userId),
-      ]);
-      setEntries(list);
-      setDaily(day);
-      setTargets(t);
-      setStreak(s);
-      setPlanMeals(pm);
+  // One cached composite per day (entries + roll-up + targets + streak + plan meals
+  // + suggestion sources). Warmed on app open for "today" so the tab is instant on
+  // first visit; switching days fetches+caches that day. Mutations refetch this.
+  const dayQ = useNutritionDay(userId, date);
+  useRefreshOnFocus(dayQ.refetch);
+  const load = () => dayQ.refetch();
 
-      // Only compute the suggestion sources when there's no target yet.
-      if (!t) {
-        const [profile, weight, planId] = await Promise.all([
-          getMyAthleteProfile(userId),
-          getLatestWeightGrams(userId),
-          getAssignedNutritionPlanId(userId),
-        ]);
-        setEstimate(profile ? estimateTargets(profile, weight) : null);
-        setPlanTargets(planId ? await plannedDailyMacros(planId) : null);
-      }
-    } catch {
-      /* keep prior */
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, date]);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
+  const entries = dayQ.data?.entries ?? [];
+  const daily = dayQ.data?.daily ?? null;
+  const targets = dayQ.data?.targets ?? null;
+  const streak = dayQ.data?.streak ?? 0;
+  const planMeals = dayQ.data?.planMeals ?? [];
+  const estimate = dayQ.data?.estimate ?? null;
+  const planTargets = dayQ.data?.planTargets ?? null;
+  const loading = dayQ.isPending;
 
   if (role && role !== 'client') return <Redirect href="/" />;
 

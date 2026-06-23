@@ -171,3 +171,25 @@ they are expensive to change later:
 - Skip webhook signature verification.
 - Return raw DB/internal errors to the client.
 - Install a package without confirming it exists.
+
+---
+
+## 13. Build conventions established in Phase 14 (apply to all new screens/AI)
+
+These are now the defaults — follow them in new work (full detail in
+`/docs/phases/phase-14-foundations.md`):
+
+- **Data fetching:** read through the TanStack Query hooks in `src/lib/queries/` (cached,
+  warmed under the boot splash) — not ad-hoc `useFocusEffect`+`useState`. Add a new screen's
+  queries to `prefetchHome` so it's populated before reveal.
+- **i18n:** every user-facing string goes through `t()` (`src/i18n/`, strings in `en.json`).
+  Build new screens translation-ready; no hardcoded copy. (Full Arabic + RTL is a later phase.)
+- **AI cost:** every model call records usage via `recordCost(...)` on success
+  (`_shared/rate-limit.ts`); cost is integer micro-USD on `ai_usage_events` (§6 discipline).
+
+**Deferred work** (not lost — tracked, with the "why", in `/docs/pre-launch-checklist.md` and
+project memory): the tab-switch render flash is a dev-mode artifact to confirm on a release
+build; OAuth (Google/Apple), phone/SMS, a server-enforced account *deactivate*, and the native
+password-reset deep-link are a **"launch auth" follow-up** (each needs external provider config
++ device testing); gyms/org tenancy, friends/followers, and multi-week AI plan-gen stay deferred
+per the roadmap.

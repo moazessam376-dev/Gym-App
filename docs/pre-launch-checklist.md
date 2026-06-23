@@ -1,0 +1,56 @@
+# Pre-launch checklist (verify on a REAL release build before publishing)
+
+> Things that look fine (or look broken) in Expo Go dev mode but **must be confirmed on a
+> production/release build** before the app is published. Dev mode (non-minified JS, dev-mode
+> React, no Hermes optimization, Metro over the network) is much slower than a release build,
+> so performance artifacts seen in Expo Go are often absent in production — and a few real
+> things only exist in a release build. Re-check every item here on an **EAS preview/release
+> build** (or `npx expo start --no-dev --minify` for a quick production-JS approximation).
+
+## Performance / UX
+- [ ] **Tab-switch render flash (Phase 14a).** In Expo Go dev mode, switching tabs shows a
+  brief "screen taking its place" render even though the data is prefetched and the tabs are
+  eager-mounted (`lazy: false`) under the boot splash. This is the react-native-screens
+  render-on-focus cost, heavily amplified by dev mode. **Verify it is imperceptible on a
+  release build.** If it still shows on a true release build, the next lever is
+  `freezeOnBlur: false` on the visible tabs in `app/(tabs)/_layout.tsx` (keeps inactive
+  tabs rendered so focus doesn't trigger an unfreeze re-render — small CPU cost, ~5 tabs).
+  Quick check: `npx expo start --no-dev --minify`.
+- [ ] **Boot-splash hold duration.** Confirm the `prefetchHome` hold (`app/_layout.tsx`,
+  6s timeout) feels right on a real device + real network, not just the dev machine.
+
+## AI / cost (from earlier phases)
+- [ ] **Flip the model to Claude at launch:** set `VISION_PROVIDER=anthropic` (+ `ANTHROPIC_API_KEY`)
+  so multi-week plan-gen and stronger OCR/analysis turn on. The Groq pilot is free but
+  single-week only. No code change — config only.
+- [ ] Confirm AI cost accounting (Phase 14c) is recording real token counts once the paid
+  model is live (Groq pilot is $0, so dollars only appear after the flip).
+
+## Legal / privacy (gates public surfaces)
+- [ ] **Privacy policy (PDPL)** drafted and linked **before** any public profile / leaderboard
+  surface goes live (Phases 19–20). Health data (InBody, photos) is sensitive; cover lawful
+  basis, EU-Frankfurt transfer basis, AI-processing disclosure, retention, right-to-erasure.
+- [ ] **Account delete (Phase 14d)** path verified end-to-end (PDPL erasure): removes PII,
+  anonymizes (never hard-deletes) any financial rows.
+
+## Uploads / media
+- [ ] Re-confirm the progress-photo / InBody upload path on a release build (the known RN
+  `Blob` → `File.bytes()` 0-byte gotcha was a device-only failure).
+
+## Auth — "launch auth" follow-up (Phase 14d deferred; needs external config + device testing)
+- [ ] **Supabase Auth → URL Configuration:** add the password-reset redirect targets to the
+  allowlist — `gymapp://reset-password` (native) and `<web-origin>/reset-password`. Customize the
+  reset email template. Then **device-test** the full native reset: email → deep link → set new
+  password (needs a deep-link handler that extracts the recovery tokens and calls `setSession`;
+  the request email + web completion already work).
+- [ ] **Google + Apple OAuth:** create credentials (Google Cloud OAuth client, Apple Service ID +
+  key), enable the providers in Supabase, add `signInWithOAuth` buttons + native handling
+  (`expo-web-browser`), and device-test. **Apple sign-in is App-Store-required** once any
+  third-party login exists.
+- [ ] **Phone linking (optional):** configure a paid SMS provider (Twilio) in Supabase before
+  exposing `updateUser({ phone })` + OTP. Not a pilot blocker.
+- [ ] **Account deactivate:** build the reversible, server-enforced version (account-state flag +
+  reactivation gate) — distinct from delete, which is done.
+- [ ] **Account delete:** device-test the `account-delete` Edge Function end-to-end (storage objects
+  removed + auth user + cascades gone). When `transactions` lands (Phase 23) it must FK
+  `on delete set null` and the function must anonymize payer/payee (never hard-delete financial rows).

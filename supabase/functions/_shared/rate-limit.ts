@@ -6,6 +6,7 @@
 // The ledger is append-only + service-role-write-only (its RLS has no INSERT policy),
 // so both calls take the service client. `kind` is the per-feature counter key.
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { costMicros, type AiUsage } from './ai-pricing.ts';
 
 export type AiUsageKind =
   | 'inbody_ocr'
@@ -47,6 +48,36 @@ export async function recordUsage(
     .select('id')
     .single();
   return (data as { id: string } | null)?.id ?? null;
+}
+
+/** Backfill an attempt row with model + token usage + integer micro-USD cost AFTER a
+ * successful model call (Phase 14c). The attempt is recorded BEFORE the call (fail-closed),
+ * so cost — known only post-call — is a follow-up UPDATE by the service role (the ledger
+ * has no client write path; service_role bypasses RLS, like refundUsage's DELETE). No-op
+ * if the slot was refunded (id cleared) or usage is unavailable. Failed-but-refunded calls
+ * are intentionally not cost-recorded (rare; $0 on the free pilot) — a minor undercount. */
+export async function recordCost(
+  svc: SupabaseClient,
+  id: string | null,
+  usage: AiUsage | null,
+): Promise<void> {
+  if (!id || !usage) return;
+  // Cost accounting is SECONDARY — it must never fail the actual AI feature. Swallow
+  // any error (e.g. the 0030 columns not yet applied, a transient DB blip) and log
+  // it server-side; the user's successful call still returns normally.
+  try {
+    await svc
+      .from('ai_usage_events')
+      .update({
+        model: usage.model,
+        tokens_in: usage.tokensIn,
+        tokens_out: usage.tokensOut,
+        cost_micros: costMicros(usage.model, usage.tokensIn, usage.tokensOut),
+      })
+      .eq('id', id);
+  } catch (e) {
+    console.error('recordCost failed (non-fatal)', { message: String(e) });
+  }
 }
 
 /** Refund a previously-recorded slot when the call produced NOTHING (model/parse error).

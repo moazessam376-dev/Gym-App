@@ -8,7 +8,7 @@ import { getCaller, serviceClient } from '../_shared/clients.ts';
 import { coachFoodMacrosSchema, genFoodMacrosSchema } from '../_shared/schemas.ts';
 import { corsHeaders, json } from '../_shared/http.ts';
 import { getVisionProvider } from '../_shared/vision.ts';
-import { DAY_MS, recordUsage, withinLimit } from '../_shared/rate-limit.ts';
+import { DAY_MS, recordCost, recordUsage, withinLimit } from '../_shared/rate-limit.ts';
 
 const RATE_LIMIT = 30; // per-coach DAILY
 
@@ -41,7 +41,7 @@ Deno.serve(async (req: Request) => {
       return json({ status: 'rate_limited' }, 200);
     }
     const provider = getVisionProvider();
-    await recordUsage(svc, caller.id, 'food_macro_fill', provider.name);
+    const usageId = await recordUsage(svc, caller.id, 'food_macro_fill', provider.name);
 
     const prompt = [
       'Estimate the nutrition of a food PER 100 GRAMS as JSON. Understand the name even if it is in Arabic; reply with numbers only.',
@@ -59,6 +59,7 @@ Deno.serve(async (req: Request) => {
       console.error('coach-food-macros model failed', { message: String(e) });
       return json({ status: 'failed' }, 200);
     }
+    await recordCost(svc, usageId, provider.lastUsage());
     const gen = genFoodMacrosSchema.safeParse(raw);
     if (!gen.success) return json({ status: 'failed' }, 200);
 
