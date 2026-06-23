@@ -26,3 +26,16 @@ export const createBodyMetricSchema = z.object({
   note: z.string().max(500).nullable().optional(),
 });
 export type CreateBodyMetric = z.infer<typeof createBodyMetricSchema>;
+
+// Coach confirms (and may correct) an OCR-staged reading — same fields as a manual
+// entry minus the scan link (media_id stays fixed on the row). On save the data layer
+// flips source → coach_entered, which makes the 0026 trigger stamp the verifier.
+export const confirmBodyMetricSchema = createBodyMetricSchema.omit({ media_id: true });
+export type ConfirmBodyMetric = z.infer<typeof confirmBodyMetricSchema>;
+
+// Coach's comment on a client's InBody reading (Phase 12b). Allowlist: just the text;
+// metric_id is passed by the data layer and author_id is server-set by the DB trigger.
+export const metricCommentSchema = z.object({
+  body: z.string().trim().min(1, 'Write a comment').max(2000),
+});
+export type MetricCommentInput = z.infer<typeof metricCommentSchema>;

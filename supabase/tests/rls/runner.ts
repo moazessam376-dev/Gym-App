@@ -48,6 +48,8 @@ const migrationFiles = [
   '0024_one_published_plan_per_type.sql',
   '0025_exercise_unit_prefs.sql',
   '0026_body_metrics.sql',
+  '0027_ai_usage_events.sql',
+  '0028_inbody_extras_insights_comments.sql',
 ];
 
 const baseUrl =

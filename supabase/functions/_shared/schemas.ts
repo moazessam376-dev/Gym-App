@@ -40,3 +40,16 @@ export const finalizeSchema = z.object({
 export const signedUrlSchema = z.object({
   media_id: z.string().uuid(),
 });
+
+// ── InBody OCR (Phase 12b, §9) ──────────────────────────────────────────────
+// The athlete asks the server to read an already-uploaded InBody scan (a `media`
+// row of kind 'inbody'). The function re-checks ownership/kind against the verified
+// caller; nothing here is trusted beyond the shape.
+export const inbodyOcrSchema = z.object({
+  media_id: z.string().uuid(),
+});
+
+// Coach asks for the on-demand, goal-relative AI analysis of a reading (coach-only).
+export const analyzeInbodySchema = z.object({
+  metric_id: z.string().uuid(),
+});

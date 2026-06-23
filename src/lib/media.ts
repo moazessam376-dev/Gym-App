@@ -64,26 +64,35 @@ export async function uploadToInbox(
   if (error) throw error;
 }
 
-/** Step 3 — sanitize + register; returns the new media id. */
-export async function finalizeUpload(input: FinalizeUpload): Promise<string> {
+/**
+ * Result of finalizing an upload: the new media id, or a `dailyLimit` marker when the
+ * server caps the upload (InBody is one-per-day per athlete — Phase 12b).
+ */
+export type FinalizeResult = { mediaId: string } | { dailyLimit: true };
+
+/** Step 3 — sanitize + register; returns the new media id (or the daily-limit marker). */
+export async function finalizeUpload(input: FinalizeUpload): Promise<FinalizeResult> {
   const body = finalizeSchema.parse(input);
   const { data, error } = await supabase.functions.invoke('media-finalize', { body });
   if (error) throw error;
-  return (data as { media_id: string }).media_id;
+  const d = data as { media_id?: string; status?: string };
+  if (d?.status === 'daily_limit') return { dailyLimit: true };
+  if (!d?.media_id) throw new Error('finalize_failed');
+  return { mediaId: d.media_id };
 }
 
 /**
  * End-to-end convenience: request → upload → finalize. The `file` bytes MUST already
  * be JPEG/PNG/PDF (convert HEIC→JPEG on-device first, §7 — the server rejects the
  * rest). Pass raw bytes (Uint8Array/ArrayBuffer), not a Blob (see uploadToInbox).
- * Returns the new media id.
+ * Returns the new media id, or a `dailyLimit` marker (InBody is one-per-day per athlete).
  */
 export async function uploadMedia(args: {
   file: ArrayBuffer | ArrayBufferView;
   mimeType: MediaMime;
   kind: MediaKind;
   progressEntryId?: string;
-}): Promise<string> {
+}): Promise<FinalizeResult> {
   const { file, mimeType, kind, progressEntryId } = args;
   const { path, token } = await requestUpload({ mime_type: mimeType, size_bytes: file.byteLength });
   await uploadToInbox(path, token, file, mimeType);
@@ -129,6 +138,25 @@ export async function countMediaFor(ownerId: string, kind?: MediaKind): Promise<
     .eq('status', 'ready');
   if (kind) query = query.eq('kind', kind);
   const { count, error } = await query;
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
+ * How many `ready` InBody scans `ownerId` has uploaded so far *today* (the device's local
+ * day). Drives the athlete's one-submission-per-day gate (Phase 12b); the server enforces
+ * the same cap (UTC day) in media-finalize.
+ */
+export async function countInbodyToday(ownerId: string): Promise<number> {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const { count, error } = await supabase
+    .from('media')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', ownerId)
+    .eq('kind', 'inbody')
+    .eq('status', 'ready')
+    .gte('created_at', start.toISOString());
   if (error) throw error;
   return count ?? 0;
 }

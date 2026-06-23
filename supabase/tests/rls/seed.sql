@@ -229,4 +229,36 @@ insert into public.body_metrics
   ('b0d70003-0000-0000-0000-000000000003', 'bbbb0001-0000-0000-0000-000000000001',
    now() - interval '3 days',  50100, 2030, 21800, 'coach_entered');
 
+-- AI usage ledger (0027, Phase 12b). One InBody-OCR attempt by Client A1. Proves the
+-- owner reads their own usage while their coach (and any other user) cannot — a coach has
+-- no business reading a client's AI counters, so this policy (unlike body_metrics) has no
+-- is_coach_of branch.
+insert into public.ai_usage_events (user_id, kind, provider) values
+  ('aaaa0001-0000-0000-0000-000000000001', 'inbody_ocr', 'groq');
+
+-- An UNVERIFIED OCR reading (0026 + Phase 12b) staged for Client A2 (Coach A's other
+-- client, with no other metrics). source='inbody_ocr' → the verification trigger forces
+-- verified_*=null. Proves the coach-confirm UPDATE stamps verification and that the
+-- athlete cannot self-confirm. Distinct id; A2 has no verified rows so it stays off the
+-- board until the confirm test runs.
+insert into public.body_metrics
+  (id, user_id, measured_at, weight_grams, body_fat_bp, skeletal_muscle_mass_grams, source) values
+  ('b0d70004-0000-0000-0000-000000000004', 'aaaa0002-0000-0000-0000-000000000002',
+   now() - interval '2 days', 81000, 1850, 35000, 'inbody_ocr');
+
+-- Coach-only AI insight on Client A2's OCR reading (0028). Proves the coach reads it
+-- while the athlete (the owner) cannot — the analysis is the coach's private
+-- decision-support, not client-facing.
+insert into public.body_metric_insights (metric_id, analysis, provider, created_by) values
+  ('b0d70004-0000-0000-0000-000000000004',
+   'Down 1.2% body fat vs baseline; trending toward the fat-loss goal.', 'groq',
+   '11111111-1111-1111-1111-111111111111');
+
+-- A coach comment on Client A2's reading (0028). Proves the owner + their coach read it,
+-- the athlete cannot author one, and another coach cannot read it. author_id is given
+-- explicitly (the trigger only overrides it when auth.uid() is set; null in seed).
+insert into public.body_metric_comments (id, metric_id, author_id, body) values
+  ('c0de0001-0000-0000-0000-000000000001', 'b0d70004-0000-0000-0000-000000000004',
+   '11111111-1111-1111-1111-111111111111', 'Great progress — keep protein high this week.');
+
 alter table auth.users enable trigger on_auth_user_created;
