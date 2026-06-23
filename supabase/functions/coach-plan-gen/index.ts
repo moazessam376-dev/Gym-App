@@ -16,7 +16,7 @@
 // on delete restrict) nor smuggle wrong macros. Output is Zod-validated before any write.
 // Rate-limited per coach via the ai_usage_events ledger, recorded before the call.
 import { getCaller, serviceClient } from '../_shared/clients.ts';
-import { coachPlanGenSchema, genNutritionPlanSchema, genTrainingPlanSchema } from '../_shared/schemas.ts';
+import { coachPlanGenSchema, genNutritionPlanSchema, genTrainingPlanSchema, normalizeTrainingRaw } from '../_shared/schemas.ts';
 import { corsHeaders, json } from '../_shared/http.ts';
 import { getVisionProvider } from '../_shared/vision.ts';
 import { DAY_MS, recordUsage, refundUsage, withinLimit } from '../_shared/rate-limit.ts';
@@ -70,20 +70,21 @@ const GUARD =
   'Output ONLY the JSON object described — no markdown, no commentary.';
 
 // Exercises per day, scaled by experience so an advanced client isn't under-programmed.
-// For multi-week plans we trim the upper bound so the whole JSON fits the model's output
-// ceiling (~8k tokens) — otherwise the response truncates into invalid JSON and fails.
-function densityFor(level: string | null, weeks: number): string {
-  if (weeks >= 3) return level === 'beginner' ? '4 to 5 exercises' : '5 to 6 exercises';
+function densityFor(level: string | null): string {
   if (level === 'advanced') return '6 to 8 exercises';
   if (level === 'intermediate') return '5 to 7 exercises';
   return '4 to 6 exercises'; // beginner / unset
 }
 
-function trainingPrompt(p: Profile, lib: ExLib[], weeks: number, coachPrompt: string | undefined): string {
+// ONE week is the reliable unit on the free pilot model: dense multi-week JSON either
+// truncates past the output ceiling or just duplicates week 1 (no real progression). The
+// coach extends with the editor's "Duplicate week" button or "Adjust with AI" — and true
+// multi-week generation returns automatically at launch on the stronger Claude model.
+function trainingPrompt(p: Profile, lib: ExLib[], coachPrompt: string | undefined): string {
   const days = p.training_days && p.training_days > 0 ? p.training_days : 3;
   const catalog = lib.map((e) => `${e.id} | ${e.name} | ${e.muscle_group}`).join('\n');
   return [
-    `You are assisting a fitness COACH. Draft a ${weeks}-week training plan as JSON for the coach to review and edit before assigning it.`,
+    'You are assisting a fitness COACH. Draft a one-week training plan as JSON for the coach to review and edit before assigning it.',
     'Understand Arabic in the inputs if present, but WRITE ALL OUTPUT IN ENGLISH.',
     '',
     'Client profile:',
@@ -98,22 +99,17 @@ function trainingPrompt(p: Profile, lib: ExLib[], weeks: number, coachPrompt: st
     'Pick exercises ONLY from this library — use the exact id. Do NOT invent ids or names:',
     catalog,
     '',
-    'Return ONLY this JSON shape:',
-    '{ "title": string, "weeks": [ { "name": string, "note"?: string, "days": [ { "name": string, "note"?: string, "exercises": [ { "exercise_id": string, "block"?: "warmup"|"primary"|"accessory"|"conditioning"|"cooldown", "sets"?: integer, "reps"?: string, "rest_seconds"?: integer, "tempo"?: string, "note"?: string } ] } ] } ] }',
+    'Return ONLY this JSON shape (no extra keys):',
+    '{ "title": string, "weeks": [ { "name": string, "days": [ { "name": string, "exercises": [ { "exercise_id": string, "block": "warmup"|"primary"|"accessory"|"conditioning"|"cooldown", "sets": integer, "reps": string, "rest_seconds": integer, "tempo": string, "note": string } ] } ] } ] }',
     'Rules:',
-    `- Produce EXACTLY ${weeks} week object(s), and EXACTLY ${days} day object(s) in EACH week.`,
-    `- Each training day MUST have ${densityFor(p.experience_level, weeks)} (match the client's experience level — do NOT under-program an intermediate/advanced client).`,
+    `- Produce EXACTLY ONE week object, with EXACTLY ${days} day object(s).`,
+    `- Each training day MUST have ${densityFor(p.experience_level)} (match the client's experience level — do NOT under-program an intermediate/advanced client).`,
     '- exercise_id MUST be one of the ids listed above.',
     '- "reps" is free text like "8-12" or "AMRAP". "sets" and "rest_seconds" are whole numbers (not strings).',
-    weeks > 1
-      ? '- Apply PROGRESSIVE OVERLOAD across weeks: keep a similar exercise selection but increase the challenge week to week (e.g. add a set, lower the rep range, or shorten rest). Name the weeks "Week 1", "Week 2", etc.'
-      : '',
+    '- "note" is a SHORT coaching cue for EVERY exercise (e.g. "keep elbows tucked", "2s pause at the bottom"). "tempo" is optional (e.g. "3-1-1").',
     '- Respect injuries — avoid contraindicated movements.',
-    '- Keep "note" fields SHORT (a few words) or omit them, and omit "tempo" unless important — the whole response must be valid, complete JSON.',
     GUARD,
-  ]
-    .filter(Boolean)
-    .join('\n');
+  ].join('\n');
 }
 
 function nutritionPrompt(
@@ -170,7 +166,6 @@ Deno.serve(async (req: Request) => {
   const parsed = coachPlanGenSchema.safeParse(body);
   if (!parsed.success) return json({ error: 'invalid_request' }, 400);
   const { client_id, type, coach_prompt } = parsed.data;
-  const weeks = parsed.data.weeks ?? 1; // training only
 
   const svc = serviceClient();
 
@@ -215,16 +210,18 @@ Deno.serve(async (req: Request) => {
       const exercises = (lib ?? []) as ExLib[];
       if (exercises.length === 0) return await fail();
 
-      // Larger plans need a bigger budget; capped at the model's output ceiling.
-      const tokenBudget = Math.min(8000, 2500 + 1500 * weeks);
+      // Use the model's full output ceiling so one dense week can't truncate into invalid
+      // JSON. max_tokens is an upper bound, not a floor — the response still stops at the
+      // JSON end, so a short plan costs nothing extra.
+      const tokenBudget = 8000;
       let raw: unknown;
       try {
-        raw = await provider.generateJson(trainingPrompt(profile as Profile, exercises, weeks, coach_prompt), tokenBudget);
+        raw = await provider.generateJson(trainingPrompt(profile as Profile, exercises, coach_prompt), tokenBudget);
       } catch (e) {
         console.error('coach-plan-gen training model failed', { message: String(e) });
         return await fail();
       }
-      const gen = genTrainingPlanSchema.safeParse(raw);
+      const gen = genTrainingPlanSchema.safeParse(normalizeTrainingRaw(raw));
       if (!gen.success) return await fail();
 
       // Resolve every exercise_id against the allowed library; drop unknowns; copy the

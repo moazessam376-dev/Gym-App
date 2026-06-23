@@ -8,7 +8,7 @@
 // is destructive on the draft's children only (weeks/days/exercises or meals/items), then
 // re-inserts the revised structure. Generic errors to the client; details server-side (§4).
 import { getCaller, serviceClient } from '../_shared/clients.ts';
-import { coachPlanAdjustSchema, genNutritionPlanSchema, genTrainingPlanSchema } from '../_shared/schemas.ts';
+import { coachPlanAdjustSchema, genNutritionPlanSchema, genTrainingPlanSchema, normalizeTrainingRaw } from '../_shared/schemas.ts';
 import { corsHeaders, json } from '../_shared/http.ts';
 import { getVisionProvider } from '../_shared/vision.ts';
 import { DAY_MS, recordUsage, refundUsage, withinLimit } from '../_shared/rate-limit.ts';
@@ -142,20 +142,20 @@ Deno.serve(async (req: Request) => {
         'Pick exercises ONLY from this library — use the exact id. Do NOT invent ids:',
         catalog,
         '',
-        'Return ONLY this JSON shape:',
-        '{ "title": string, "weeks": [ { "name": string, "note"?: string, "days": [ { "name": string, "note"?: string, "exercises": [ { "exercise_id": string, "block"?: "warmup"|"primary"|"accessory"|"conditioning"|"cooldown", "sets"?: integer, "reps"?: string, "rest_seconds"?: integer, "tempo"?: string, "note"?: string } ] } ] } ] }',
-        `Rules: return EXACTLY ${weekCount} week object(s). exercise_id MUST be from the library above. "sets"/"rest_seconds" are whole numbers (not strings). Keep what works; change what the coach asked. Respect any injuries. Keep notes SHORT (or omit) and omit "tempo" unless important so the whole response is valid, complete JSON.`,
+        'Return ONLY this JSON shape (no extra keys):',
+        '{ "title": string, "weeks": [ { "name": string, "days": [ { "name": string, "exercises": [ { "exercise_id": string, "block": "warmup"|"primary"|"accessory"|"conditioning"|"cooldown", "sets": integer, "reps": string, "rest_seconds": integer, "tempo": string, "note": string } ] } ] } ] }',
+        `Rules: return EXACTLY ${weekCount} week object(s). exercise_id MUST be from the library above. "sets"/"rest_seconds" are whole numbers (not strings). Include a SHORT coaching "note" cue for every exercise ("tempo" optional). Keep what works; change what the coach asked. Respect any injuries.`,
         GUARD,
       ].join('\n');
 
       let raw: unknown;
       try {
-        raw = await provider.generateJson(prompt, Math.min(8000, 2500 + 1500 * weekCount));
+        raw = await provider.generateJson(prompt, 8000);
       } catch (e) {
         console.error('coach-plan-adjust training model failed', { message: String(e) });
         return await fail();
       }
-      const gen = genTrainingPlanSchema.safeParse(raw);
+      const gen = genTrainingPlanSchema.safeParse(normalizeTrainingRaw(raw));
       if (!gen.success) return await fail();
 
       const byId = new Map(exercises.map((e) => [e.id, e]));
@@ -244,7 +244,7 @@ Deno.serve(async (req: Request) => {
           svc.from('nutrition_targets').select('kcal_target, protein_g_target, carbs_g_target, fat_g_target').eq('user_id', plan.client_id).maybeSingle(),
           svc.from('food_preferences').select('food_id, kind').eq('user_id', plan.client_id),
         ])
-      : [{ data: null }, { data: [] }];
+      : [{ data: null }, { data: [] as { food_id: string; kind: string }[] }];
     const nameById = new Map(foods.map((f) => [f.id, f.name]));
     const likes: string[] = [];
     const avoids: string[] = [];

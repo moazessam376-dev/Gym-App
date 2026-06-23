@@ -14,19 +14,18 @@ export type PlanGenStatus =
   | 'failed';
 export type PlanGenResult = { status: PlanGenStatus; plan_id?: string };
 
-/** Draft a training or nutrition plan for a client. `coachPrompt` is optional steering;
- *  `weeks` (1–4, training only) lets the AI write multiple progressive weeks. */
+/** Draft a training or nutrition plan for a client. `coachPrompt` is optional steering.
+ *  Generates ONE week of training (or one day of meals); the coach extends it in the
+ *  editor (Duplicate week / Adjust with AI). Multi-week returns at launch on Claude. */
 export async function generatePlan(input: {
   clientId: string;
   type: PlanType;
-  weeks?: number;
   coachPrompt?: string;
 }): Promise<PlanGenResult> {
   const { data, error } = await supabase.functions.invoke('coach-plan-gen', {
     body: {
       client_id: input.clientId,
       type: input.type,
-      weeks: input.type === 'training' ? input.weeks : undefined,
       coach_prompt: input.coachPrompt || undefined,
     },
   });
