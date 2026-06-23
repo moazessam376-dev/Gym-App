@@ -3,11 +3,13 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../src/lib/auth-context';
-import { deleteExerciseRow, getExerciseRow, updateExerciseRow, type ExerciseRow } from '../../../src/lib/plans';
+import { deleteExerciseRow, getDayPlanClient, getExerciseRow, swapPlanExercise, updateExerciseRow, type ExerciseRow } from '../../../src/lib/plans';
+import { suggestExerciseSwap, type SwapSuggestion } from '../../../src/lib/coach-ai';
 import { updateExerciseRowSchema, type TrainingBlock } from '../../../src/schemas/plan';
 import { BLOCK_LABEL, BLOCK_ORDER } from '../../../src/lib/plan-ui';
-import { Screen, Text, Input, Button } from '../../../src/components/ui';
+import { Screen, Text, Input, Button, GlassCard } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 function intOrNull(s: string): number | null {
@@ -32,6 +34,11 @@ export default function ExerciseRowEditor() {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Injury-aware AI swap (Phase 13) — only when this exercise is in a client's plan.
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [swaps, setSwaps] = useState<SwapSuggestion[] | null>(null);
+  const [swapBusy, setSwapBusy] = useState(false);
+
   const load = useCallback(async () => {
     if (!id) return;
     try {
@@ -44,6 +51,7 @@ export default function ExerciseRowEditor() {
         setRest(r.rest_seconds?.toString() ?? '');
         setTempo(r.tempo ?? '');
         setNote(r.note ?? '');
+        setClientId(await getDayPlanClient(r.day_id).catch(() => null));
       }
     } finally {
       setLoading(false);
@@ -96,6 +104,40 @@ export default function ExerciseRowEditor() {
       Alert.alert('Error', 'Could not save.');
       setSaving(false);
     }
+  }
+
+  async function onSuggestSwap() {
+    if (!id || !row || !clientId || swapBusy) return;
+    setSwapBusy(true);
+    try {
+      const res = await suggestExerciseSwap({ clientId, exerciseId: row.exercise_id });
+      if (res.status === 'suggested' && res.suggestions) {
+        setSwaps(res.suggestions);
+      } else if (res.status === 'rate_limited') {
+        Alert.alert('Daily limit reached', 'You’ve reached today’s suggestion limit. Try again tomorrow.');
+      } else {
+        Alert.alert('No suggestions', 'Could not find a suitable swap. Please try again.');
+      }
+    } finally {
+      setSwapBusy(false);
+    }
+  }
+
+  function onApplySwap(s: SwapSuggestion) {
+    Alert.alert('Swap exercise', `Replace "${row!.exercise_name}" with "${s.name}"? Sets, reps and notes are kept.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Swap',
+        onPress: async () => {
+          try {
+            await swapPlanExercise(id!, s.exercise_id, s.name);
+            router.back();
+          } catch {
+            Alert.alert('Error', 'Could not swap the exercise.');
+          }
+        },
+      },
+    ]);
   }
 
   function onDelete() {
@@ -168,6 +210,34 @@ export default function ExerciseRowEditor() {
             multiline
             style={{ minHeight: 70, textAlignVertical: 'top' }}
           />
+
+          {/* Injury-aware AI swap — only for an exercise inside a client's plan. */}
+          {clientId ? (
+            <View style={{ gap: theme.spacing.sm }}>
+              <Button
+                title="Suggest a swap (injury-aware)"
+                variant="ghost"
+                left={<Ionicons name="sparkles" size={16} color={theme.colors.primary} />}
+                onPress={onSuggestSwap}
+                loading={swapBusy}
+              />
+              {swaps?.map((s) => (
+                <GlassCard key={s.exercise_id} onPress={() => onApplySwap(s)}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text variant="bodyStrong">{s.name}</Text>
+                      <Text variant="caption" muted>
+                        {s.reason}
+                      </Text>
+                    </View>
+                    <Text variant="caption" color="primary">
+                      Swap ›
+                    </Text>
+                  </View>
+                </GlassCard>
+              ))}
+            </View>
+          ) : null}
 
           <Button title="Save" onPress={onSave} loading={saving} size="lg" style={{ marginTop: theme.spacing.sm }} />
           <Button title="Remove exercise" variant="ghost" onPress={onDelete} />

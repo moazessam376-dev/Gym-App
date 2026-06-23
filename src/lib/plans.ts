@@ -326,6 +326,35 @@ export async function updateExerciseRow(rowId: string, input: UpdateExerciseRow)
   if (error) throw error;
 }
 
+/** The client a day's plan is assigned to (null = a template). Used to scope the
+ *  injury-aware AI exercise-swap to a real client; RLS keeps it to the coach's own. */
+export async function getDayPlanClient(dayId: string): Promise<string | null> {
+  const { data: day, error: dErr } = await supabase
+    .from('plan_days')
+    .select('plan_id')
+    .eq('id', dayId)
+    .maybeSingle();
+  if (dErr) throw dErr;
+  if (!day) return null;
+  const { data: plan, error: pErr } = await supabase
+    .from('plans')
+    .select('client_id')
+    .eq('id', (day as { plan_id: string }).plan_id)
+    .maybeSingle();
+  if (pErr) throw pErr;
+  return (plan as { client_id: string | null } | null)?.client_id ?? null;
+}
+
+/** Swap the library exercise a row points at (narrow allowlist: id + snapshot name).
+ *  Other fields — sets/reps/etc. — are intentionally preserved. RLS: can_write_day. */
+export async function swapPlanExercise(rowId: string, exerciseId: string, exerciseName: string): Promise<void> {
+  const { error } = await supabase
+    .from('plan_exercises')
+    .update({ exercise_id: exerciseId, exercise_name: exerciseName })
+    .eq('id', rowId);
+  if (error) throw error;
+}
+
 export async function deleteExerciseRow(rowId: string): Promise<void> {
   const { error } = await supabase.from('plan_exercises').delete().eq('id', rowId);
   if (error) throw error;

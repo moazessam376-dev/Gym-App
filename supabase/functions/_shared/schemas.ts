@@ -53,3 +53,129 @@ export const inbodyOcrSchema = z.object({
 export const analyzeInbodySchema = z.object({
   metric_id: z.string().uuid(),
 });
+
+// ── Coach AI: plan generation, nudges, utility (Phase 13, §9) ───────────────
+// All coach-only. The optional `coach_prompt` is a short steering instruction the
+// coach can type; it is UNTRUSTED free text — the prompt guards against injection
+// and every model output is Zod-validated below before any DB write. Library ids
+// the model returns are resolved against the coach-readable library server-side, so
+// the model can never invent an id or smuggle macros (the snapshot is copied from
+// the real row). The lenient UUID matches src/schemas/plan.ts (seeded global ids
+// aren't RFC-4122, so z.string().uuid() would wrongly reject picking a global).
+const looseUuid = z
+  .string()
+  .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/, 'Invalid id');
+const coachPrompt = z.string().max(280).optional();
+
+export const coachPlanGenSchema = z.object({
+  client_id: z.string().uuid(),
+  type: z.enum(['training', 'nutrition']),
+  // Pilot generates ONE week (reliable on the free model); the coach extends via the
+  // editor's Duplicate-week / Adjust-with-AI. Multi-week returns at launch on Claude.
+  coach_prompt: coachPrompt,
+});
+
+export const coachPlanNudgeSchema = z.object({
+  client_id: z.string().uuid(),
+  coach_prompt: coachPrompt,
+});
+
+// Adjust an existing DRAFT plan in place (rewrites its contents from a coach prompt).
+export const coachPlanAdjustSchema = z.object({
+  plan_id: looseUuid,
+  coach_prompt: coachPrompt,
+});
+
+export const coachFoodMacrosSchema = z.object({
+  name: z.string().min(1).max(120),
+  coach_prompt: coachPrompt,
+});
+
+export const coachExerciseSwapSchema = z.object({
+  client_id: z.string().uuid(),
+  exercise_id: looseUuid,
+  coach_prompt: coachPrompt,
+});
+
+// ── Model-output contracts (validated before any DB write, §9) ──────────────
+// Generation emits ids the server then resolves against the coach-readable library
+// (drops unknowns); names/macros are copied from the real library row, never trusted
+// from the model. Quantities are integers (foundations §3); bounds mirror plan.ts.
+//
+// IMPORTANT (free-model tolerance): a free LLM frequently returns a stringified number
+// ("4" not 4) or a capitalized enum ("Primary"). A single such field would otherwise
+// fail the WHOLE parse and the generation silently returns "failed". So numeric fields
+// use z.coerce.number(), `block` is accepted as a loose string (the server normalizes
+// it to the training_block enum), bounds are generous, and arrays are forgiving. The
+// snapshot/id-resolution still happens server-side, so loosening here changes nothing
+// about what gets stored — only how robustly we accept a slightly-off shape.
+const planNote = z.string().max(2000).nullish();
+// reps is free text ("8-12"); coerce in case the model emits a bare number (10 -> "10").
+const reps = z.coerce.string().max(40).nullish();
+const intCoerce = (max: number) => z.coerce.number().int().min(0).max(max).nullish();
+
+const genExerciseSchema = z.object({
+  exercise_id: looseUuid,
+  block: z.coerce.string().max(40).nullish(), // normalized to the enum server-side (default 'primary')
+  sets: intCoerce(99),
+  reps,
+  rest_seconds: intCoerce(3600),
+  tempo: z.coerce.string().max(40).nullish(),
+  note: planNote,
+});
+const genDaySchema = z.object({
+  name: z.string().min(1).max(120),
+  note: planNote,
+  exercises: z.array(genExerciseSchema).max(20),
+});
+const genWeekSchema = z.object({
+  name: z.string().min(1).max(120),
+  note: planNote,
+  days: z.array(genDaySchema).min(1).max(7),
+});
+export const genTrainingPlanSchema = z.object({
+  title: z.string().min(1).max(120),
+  weeks: z.array(genWeekSchema).min(1).max(8),
+});
+
+// Some models ignore the "weeks" array instruction and return a singular { week: {...} }.
+// Normalize that to the array shape BEFORE validating. We do this in a plain helper rather
+// than z.preprocess on purpose: a preprocess pipe erases the schema's OUTPUT type (the
+// parsed `gen.data` becomes `unknown` under a strict typecheck), which would force `as`
+// casts at every call site. A plain z.object keeps `gen.data` correctly typed.
+export function normalizeTrainingRaw(v: unknown): unknown {
+  if (v && typeof v === 'object' && !('weeks' in v) && 'week' in (v as Record<string, unknown>)) {
+    return { ...(v as Record<string, unknown>), weeks: [(v as Record<string, unknown>).week] };
+  }
+  return v;
+}
+
+const genMealItemSchema = z.object({
+  food_id: looseUuid,
+  grams: z.coerce.number().int().min(0).max(5000),
+  note: planNote,
+});
+const genMealSchema = z.object({
+  name: z.string().min(1).max(120),
+  note: planNote,
+  items: z.array(genMealItemSchema).max(20),
+});
+export const genNutritionPlanSchema = z.object({
+  title: z.string().min(1).max(120),
+  meals: z.array(genMealSchema).min(1).max(10),
+});
+
+// Macro autofill: per-100g integers, bounds mirror src/schemas/nutrition.ts.
+export const genFoodMacrosSchema = z.object({
+  kcal_per_100g: z.coerce.number().int().min(0).max(2000),
+  protein_g_per_100g: z.coerce.number().int().min(0).max(100),
+  carbs_g_per_100g: z.coerce.number().int().min(0).max(100),
+  fat_g_per_100g: z.coerce.number().int().min(0).max(100),
+});
+
+// Injury-aware swap suggestions: library ids + a short reason each (server resolves ids).
+export const genExerciseSwapSchema = z.object({
+  suggestions: z
+    .array(z.object({ exercise_id: looseUuid, reason: z.string().max(200) }))
+    .max(6),
+});

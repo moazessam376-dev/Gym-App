@@ -101,7 +101,10 @@ These are live, tested, and waiting for screens. Designing them is "just" UI —
   a `media_kind`). Design the chat with these in mind even if v1 omits them.
 - ⛔ **Chat: conversations list / unread badges** — no aggregate view yet.
 - ⛔ **InBody OCR (AI)** — Phase 7; capture UI should anticipate an "extracted values" review step.
-- ⛔ **AI plan-generation** — Phase 7; coach builder should anticipate an "AI draft → human confirm" entry point.
+- ✅ **AI plan-generation (coach-side)** — Phase 13. Coach drafts a training/nutrition plan for a
+  client from their profile/preferences (`coach-plan-gen` → draft plan → coach edits + publishes).
+  Plus plan-adjustment nudges (coach-only) and utility AI (food-macro autofill, injury-aware swaps).
+  Reuses the 12b adapter + `ai_usage_events`. Built; deploy + device-test pending WiFi.
 - ⛔ **Payments / billing** — Phase 6, fully stubbed. Seat counts, subscription status,
   coach payouts. Money is integer minor units (piastres) + currency. Design should leave
   room for a billing/subscription surface but **nothing is live**.
@@ -136,4 +139,4 @@ These are live, tested, and waiting for screens. Designing them is "just" UI —
 | 4 | Progress & uploads | 🔌 backend only (PR #5) |
 | 5 | Chat & realtime | 🔌 backend only (PR #5) |
 | 6 | Payments (stub → live) | ⛔ deferred to near launch |
-| 7 | AI (InBody OCR + plan-gen) | ⛔ deferred |
+| 7 | AI (InBody OCR + plan-gen) | ✅ built — InBody OCR (12b) + coach plan-gen/nudges/utility (13) |

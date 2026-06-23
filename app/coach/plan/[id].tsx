@@ -6,7 +6,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -52,6 +54,7 @@ import {
   sumMacros,
   type Macros,
 } from '../../../src/lib/plan-ui';
+import { adjustPlan, getPlanInsight } from '../../../src/lib/coach-ai';
 import { theme } from '../../../src/theme';
 
 export default function PlanEditor() {
@@ -69,6 +72,10 @@ export default function PlanEditor() {
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState('');
   const [busy, setBusy] = useState(false);
+  // "Adjust with AI" (Phase 13): draft-only rewrite from a coach instruction.
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustPrompt, setAdjustPrompt] = useState('');
+  const [adjustBusy, setAdjustBusy] = useState(false);
 
   const loadWeekDays = useCallback(async (wid: string) => {
     const ds = await listDays(wid);
@@ -281,6 +288,43 @@ export default function PlanEditor() {
     }
   }
 
+  async function openAdjust() {
+    if (!plan) return;
+    setAdjustPrompt('');
+    setAdjustOpen(true);
+    // If the plan is assigned, prefill with the client's latest AI suggestions so the
+    // coach can apply the nudge in one tap (editable before sending).
+    if (plan.client_id) {
+      try {
+        const insight = await getPlanInsight(plan.client_id);
+        if (insight?.analysis) setAdjustPrompt(insight.analysis);
+      } catch {
+        /* no suggestions yet — fine */
+      }
+    }
+  }
+
+  async function onAdjust() {
+    if (!plan || adjustBusy) return;
+    setAdjustBusy(true);
+    try {
+      const res = await adjustPlan(plan.id, adjustPrompt.trim() || undefined);
+      if (res.status === 'adjusted') {
+        setAdjustOpen(false);
+        setAdjustPrompt('');
+        await load();
+      } else if (res.status === 'not_draft') {
+        Alert.alert('Publish first', 'Only draft plans can be adjusted. Unpublish it to make changes.');
+      } else if (res.status === 'rate_limited') {
+        Alert.alert('Daily limit reached', 'You’ve reached today’s AI limit. Try again tomorrow.');
+      } else {
+        Alert.alert('Could not adjust', 'The AI adjustment failed. Please try again.');
+      }
+    } finally {
+      setAdjustBusy(false);
+    }
+  }
+
   async function savePlanTitle(text: string) {
     if (!plan) return;
     await updatePlan(plan.id, { title: text.trim() });
@@ -346,6 +390,13 @@ export default function PlanEditor() {
               </Text>
             </Pressable>
           )}
+
+          {/* Adjust with AI — drafts only (published plans are locked). */}
+          {plan.status === 'draft' ? (
+            <Pressable style={[styles.headerBtn, styles.adjust]} onPress={openAdjust} disabled={busy}>
+              <Text style={styles.headerBtnText}>✨ Adjust with AI</Text>
+            </Pressable>
+          ) : null}
 
           <NoteEditor
             label="Plan note"
@@ -447,6 +498,47 @@ export default function PlanEditor() {
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Adjust-with-AI sheet: a coach instruction (prefilled from the client's latest
+          AI suggestions when assigned) rewrites the DRAFT plan's contents in place. */}
+      <Modal visible={adjustOpen} transparent animationType="slide" onRequestClose={() => setAdjustOpen(false)}>
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <Pressable style={styles.sheetOverlay} onPress={() => !adjustBusy && setAdjustOpen(false)}>
+            <Pressable style={styles.sheet} onPress={Keyboard.dismiss}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={styles.sheetTitle}>✨ Adjust with AI</Text>
+                <Pressable onPress={() => !adjustBusy && setAdjustOpen(false)} hitSlop={8}>
+                  <Text style={{ color: theme.colors.textMuted, fontSize: 22 }}>✕</Text>
+                </Pressable>
+              </View>
+              <Text style={styles.sheetHint}>
+                Tell the AI how to change this draft (e.g. “make it harder”, “more compound lifts”, “lower carbs”). It rewrites the plan; you review before publishing.
+              </Text>
+              <TextInput
+                style={styles.adjustInput}
+                value={adjustPrompt}
+                onChangeText={setAdjustPrompt}
+                placeholder="e.g. add more volume for chest, swap in dumbbell work"
+                placeholderTextColor={theme.colors.textMuted}
+                editable={!adjustBusy}
+                multiline
+              />
+              <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                <Pressable onPress={() => !adjustBusy && setAdjustOpen(false)} style={{ paddingVertical: 13, paddingHorizontal: 16 }}>
+                  <Text style={{ color: theme.colors.link, fontSize: 15, fontWeight: '600' }}>Cancel</Text>
+                </Pressable>
+                <Pressable style={[styles.adjustSend, adjustBusy && { opacity: 0.6 }]} onPress={onAdjust} disabled={adjustBusy}>
+                  {adjustBusy ? (
+                    <ActivityIndicator color={theme.colors.onPrimary} />
+                  ) : (
+                    <Text style={styles.adjustSendText}>Adjust plan</Text>
+                  )}
+                </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -708,7 +800,25 @@ const styles = StyleSheet.create({
   assign: { backgroundColor: c.secondary },
   publish: { backgroundColor: c.success },
   unpublish: { backgroundColor: c.warning },
+  adjust: { backgroundColor: c.glass, borderWidth: 1, borderColor: c.glassBorder },
   headerBtnText: { color: c.white, fontSize: 15, fontWeight: '600' },
+  sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: c.overlay },
+  sheet: { backgroundColor: c.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20, paddingBottom: 28, gap: 12 },
+  sheetTitle: { color: c.text, fontSize: 18, fontWeight: '700', flex: 1 },
+  sheetHint: { color: c.textMuted, fontSize: 13 },
+  adjustInput: {
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.glassBorder,
+    borderRadius: 10,
+    padding: 12,
+    color: c.text,
+    fontSize: 15,
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
+  adjustSend: { backgroundColor: c.primary, borderRadius: 10, paddingVertical: 13, alignItems: 'center', flex: 1 },
+  adjustSendText: { color: c.onPrimary, fontSize: 15, fontWeight: '700' },
   totalCard: { backgroundColor: c.glass, borderWidth: 1, borderColor: c.glassBorder, borderRadius: 12, padding: 12, marginTop: 4 },
   totalLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: c.primary },
   totalMacros: { fontSize: 15, fontWeight: '700', color: c.text, marginTop: 2 },

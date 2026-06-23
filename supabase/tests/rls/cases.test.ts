@@ -2056,3 +2056,33 @@ describe('InBody insights + comments (0028) — coach-only analysis, coach→cli
     ).rejects.toThrow();
   });
 });
+
+describe('coach AI plan_insights (0029) — coach-only nudges, athlete never sees them (§2)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT = CLIENT_A1.sub; // Coach A's client, owner of the seeded nudge
+
+  it('the nudge is COACH-ONLY: the client’s coach reads it; the client (owner), another coach, and anon cannot', async () => {
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select client_id from public.plan_insights where client_id = $1', [CLIENT]),
+    );
+    const owner = await asUser(CLIENT_A1, (c) =>
+      c.query('select client_id from public.plan_insights where client_id = $1', [CLIENT]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select client_id from public.plan_insights where client_id = $1', [CLIENT]),
+    );
+    const anon = await asAnon((c) => c.query('select client_id from public.plan_insights'));
+    expect(coach.rows).toHaveLength(1);
+    expect(owner.rows).toHaveLength(0); // the client never sees the coach's private suggestions
+    expect(otherCoach.rows).toHaveLength(0); // cross-tenant denial
+    expect(anon.rows).toHaveLength(0);
+  });
+
+  it('a client CANNOT write a nudge (service-role only): insert rejected', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("insert into public.plan_insights (client_id, analysis) values ($1, 'x')", [CLIENT]),
+      ),
+    ).rejects.toThrow();
+  });
+});

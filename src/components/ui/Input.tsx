@@ -22,6 +22,12 @@ export function Input({ label, error, containerStyle, style, onFocus, onBlur, ..
       ) : null}
       <TextInput
         placeholderTextColor={theme.colors.textMuted}
+        // Keyboard correction ON by default (overridable per-field: email/token/
+        // password fields pass autoCapitalize="none"/autoCorrect={false}, which win
+        // because {...rest} is spread after these).
+        autoCapitalize="sentences"
+        autoCorrect
+        spellCheck
         onFocus={(e) => {
           setFocused(true);
           onFocus?.(e);

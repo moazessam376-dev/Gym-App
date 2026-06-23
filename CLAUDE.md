@@ -127,6 +127,14 @@ they are expensive to change later:
 - Treat all user-supplied content fed to OpenAI (images, coach prompts) as untrusted:
   guard against prompt injection, validate model output against a Zod schema before
   storing, and keep a human-in-the-loop confirm step on AI output.
+- **Scope each AI feature to the model's real capability.** The free pilot model
+  (Groq Llama 4 Scout) is reliable for one small structured unit (one week of training,
+  one day of meals) but truncates large JSON past ~8k output tokens and can't do genuine
+  multi-step reasoning (e.g. progressive overload across weeks — it just duplicates week 1).
+  Design pilot AI around one reliable unit plus a coach edit/extend step; defer richer
+  generation to the stronger launch model (`VISION_PROVIDER=anthropic`) rather than forcing
+  it on the free tier. When generation can fail, refund the rate-limit slot (a clean failure
+  shouldn't burn the user's daily quota; a true crash still consumes it — fail-closed).
 
 ---
 
