@@ -110,7 +110,24 @@ risk, bounded by the one-week scope and mandatory coach edit.
 - [x] Integers only (sets/reps-as-text/grams/macros); library ids resolved, never invented.
 - [x] Secrets via `Deno.env.get`; generic client errors, details server-side.
 - [x] RLS harness: `plan_insights` coach-reads / owner-denied / cross-tenant-denied / client-insert-rejected; 0029 registered in `runner.ts`. `tsc` green.
-- [ ] Device test on WiFi after deploy (apply 0029, deploy 4 functions, check advisors).
+- [x] Device-tested on WiFi (3 rounds) — deployed, advisors clean. **Pilot generates ONE week**
+  (see Build notes); coaches extend via the editor's Duplicate-week / Adjust-with-AI.
+
+## Build notes / learnings (free pilot model)
+- **One week is the reliable unit on Groq.** 4-week generation truncated past the model's
+  ~8k output ceiling (→ "failed"); 2-week just duplicated week 1 (no real progression). Both
+  are model-capacity limits, not bugs. So plan-gen drafts one week with a short coaching `note`
+  on every exercise; the coach extends with the editor's existing **Duplicate week** /
+  **Adjust with AI**. Multi-week re-enables automatically at launch on Claude — no code change.
+  (Cross-cutting rule: CLAUDE.md §9 "scope each AI feature to the model's capability".)
+- **Don't use `z.preprocess` on a schema whose parsed output you then use.** Under Deno's strict
+  typecheck a preprocess pipe erases the schema's OUTPUT type (`gen.data` becomes `unknown`),
+  which forces `as` casts at every call site. Use a plain `z.object` + a normalize helper run
+  before `.safeParse` instead (`normalizeTrainingRaw` keeps the singular-`week` safety net).
+- **Deploying a function via the Supabase MCP re-supplies ALL files each time** (entrypoint +
+  every `_shared/*` import + `deno.json`) — there's no path-based deploy. Deploy the exact repo
+  files so the deployed copy doesn't drift from disk (a partial/compacted deploy is a latent
+  trap for the next deploy from `main`).
 
 ## Deferred (later)
 - Multi-week mesocycle generation (one week + duplicate-week for now).
