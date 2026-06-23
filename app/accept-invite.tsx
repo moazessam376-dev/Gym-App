@@ -49,7 +49,7 @@ export default function AcceptInvite() {
   if (done) {
     return (
       <Screen gradient edges={['bottom']}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.md }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.md, padding: theme.spacing.xl }}>
           <View
             style={{
               width: 72,
@@ -68,7 +68,7 @@ export default function AcceptInvite() {
           <Text variant="body" muted align="center">
             Your coach can now see you on their roster.
           </Text>
-          <Button title="Go to home" fullWidth={false} onPress={() => router.replace('/(tabs)')} style={{ marginTop: theme.spacing.sm }} />
+          <Button title="Go to home" onPress={() => router.replace('/(tabs)')} style={{ marginTop: theme.spacing.lg, alignSelf: 'stretch' }} />
         </View>
       </Screen>
     );

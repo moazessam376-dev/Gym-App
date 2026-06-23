@@ -48,6 +48,19 @@ function label(s: string): string {
 
 const STATUS_TONE = { draft: 'warning', published: 'success', archived: 'neutral' } as const;
 
+// Quick-add prompt chips so coaches get high-quality AI output without typing much.
+const PROMPT_CHIPS: Record<PlanType, string[]> = {
+  training: ['Push/Pull/Legs split', 'Upper/Lower split', 'Full body', 'Knee-friendly', 'Minimal equipment', 'Progressive overload', 'Include core work'],
+  nutrition: ['High protein', 'Budget-friendly', 'Quick to prepare', 'More vegetables', 'Low carb', 'Vegetarian'],
+};
+
+/** Append a chip phrase to the prompt (comma-separated), avoiding duplicates. */
+function appendChip(prev: string, phrase: string): string {
+  const parts = prev.split(',').map((s) => s.trim()).filter(Boolean);
+  if (parts.some((p) => p.toLowerCase() === phrase.toLowerCase())) return prev;
+  return [...parts, phrase].join(', ');
+}
+
 function MiniStat({ value, label }: { value: string; label: string }) {
   return (
     <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
@@ -80,6 +93,7 @@ export default function ClientDetail() {
   // Coach AI (Phase 13): plan-gen modal + plan-adjustment nudges. Coach-only.
   const [aiOpen, setAiOpen] = useState(false);
   const [aiType, setAiType] = useState<PlanType>('training');
+  const [aiWeeks, setAiWeeks] = useState(1);
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [nudge, setNudge] = useState<string | null>(cached?.nudge ?? null);
@@ -145,7 +159,7 @@ export default function ClientDetail() {
     if (!id || aiBusy) return;
     setAiBusy(true);
     try {
-      const res = await generatePlan({ clientId: id, type: aiType, coachPrompt: aiPrompt.trim() || undefined });
+      const res = await generatePlan({ clientId: id, type: aiType, weeks: aiWeeks, coachPrompt: aiPrompt.trim() || undefined });
       if (res.status === 'generated' && res.plan_id) {
         setAiOpen(false);
         setAiPrompt('');
@@ -522,20 +536,37 @@ export default function ClientDetail() {
                 { value: 'nutrition', label: 'Nutrition' },
               ]}
             />
+            {/* Weeks selector (training only). Each week is AI-written with progression. */}
+            {aiType === 'training' ? (
+              <View style={{ gap: theme.spacing.xs }}>
+                <Text variant="label" muted>
+                  Weeks
+                </Text>
+                <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+                  {[1, 2, 3, 4].map((n) => (
+                    <Chip key={n} label={String(n)} active={aiWeeks === n} onPress={() => setAiWeeks(n)} />
+                  ))}
+                </View>
+              </View>
+            ) : null}
             <Input
               value={aiPrompt}
               onChangeText={setAiPrompt}
-              placeholder={
-                aiType === 'training'
-                  ? 'Optional: e.g. upper/lower split, knee-friendly'
-                  : 'Optional: e.g. budget-friendly, high protein'
-              }
+              placeholder="Optional — tap a chip below or type your own"
               editable={!aiBusy}
               multiline
               style={{ minHeight: 60, textAlignVertical: 'top' }}
             />
+            {/* Quick-add chips: append proven phrases so the output is high quality. */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
+              {PROMPT_CHIPS[aiType].map((c) => (
+                <Chip key={c} label={`+ ${c}`} onPress={() => setAiPrompt((p) => appendChip(p, c))} />
+              ))}
+            </View>
             <Text variant="label" muted style={{ fontSize: 10 }}>
-              {aiType === 'training' ? 'Drafts one week sized to their training days.' : 'Drafts one day of meals toward their macro target.'}
+              {aiType === 'training'
+                ? `Drafts ${aiWeeks} week${aiWeeks > 1 ? 's' : ''} sized to their training days.`
+                : 'Drafts one day of meals toward their macro target.'}
             </Text>
             <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
               <Button title="Cancel" variant="ghost" fullWidth={false} onPress={() => setAiOpen(false)} disabled={aiBusy} />

@@ -70,11 +70,18 @@ const coachPrompt = z.string().max(280).optional();
 export const coachPlanGenSchema = z.object({
   client_id: z.string().uuid(),
   type: z.enum(['training', 'nutrition']),
+  weeks: z.number().int().min(1).max(4).optional(), // training only; default 1
   coach_prompt: coachPrompt,
 });
 
 export const coachPlanNudgeSchema = z.object({
   client_id: z.string().uuid(),
+  coach_prompt: coachPrompt,
+});
+
+// Adjust an existing DRAFT plan in place (rewrites its contents from a coach prompt).
+export const coachPlanAdjustSchema = z.object({
+  plan_id: looseUuid,
   coach_prompt: coachPrompt,
 });
 
@@ -110,13 +117,14 @@ const genDaySchema = z.object({
   note: planNote,
   exercises: z.array(genExerciseSchema).max(12),
 });
+const genWeekSchema = z.object({
+  name: z.string().min(1).max(120),
+  note: planNote,
+  days: z.array(genDaySchema).min(1).max(7),
+});
 export const genTrainingPlanSchema = z.object({
   title: z.string().min(1).max(120),
-  week: z.object({
-    name: z.string().min(1).max(120),
-    note: planNote,
-    days: z.array(genDaySchema).min(1).max(7),
-  }),
+  weeks: z.array(genWeekSchema).min(1).max(4),
 });
 
 const genMealItemSchema = z.object({
