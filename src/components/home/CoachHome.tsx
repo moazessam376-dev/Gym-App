@@ -49,9 +49,12 @@ export default function CoachHome() {
 
   return (
     <Screen scroll gradient contentStyle={{ paddingTop: theme.spacing.md, gap: theme.spacing.xl }}>
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ flex: 1 }}>
+      {/* Header. The text column is content-sized (flexShrink, NOT flex:1) so
+          space-between pushes the avatar to the opposite end in both LTR and RTL —
+          relying on flex:1 made the avatar hug the name under RTL. textStart keeps
+          the (possibly Latin) name flush to the writing-direction start. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.md }}>
+        <View style={{ flexShrink: 1 }}>
           <Text variant="label" color="primary" style={textStart}>
             {t('home.performanceHub')}
           </Text>

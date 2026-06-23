@@ -88,9 +88,35 @@ ranks. Plus Arabic-Indic digit formatting + date localization if the founder wan
   strings in both `en.json` + `ar.json`; directional icons flip under RTL.
 - [ ] `tsc` green; manual en⇄ar round-trip verified.
 
-## Deferred (later slices)
-- The remaining ~40 screens (editor, pickers, modals, auth, profile, chat, ranks, body-metrics).
-- Arabic-Indic digits + Arabic date formatting (UTC stays under the hood).
-- Making user-facing **AI output** returnable in Arabic (the coach AI prompts currently force
-  English; revisit when the Claude launch model lands).
+## Deferred — REMAINING SCREENS TO TRANSLATE (Slice 2+)
+> Founder is fine deferring these for now (2026-06-24). When picking this up: the pattern is
+> established — `import { useTranslation }`, add a per-screen namespace to **both** `en.json` and
+> `ar.json` (Egyptian colloquial; include Arabic plural forms for counted strings), wrap strings in
+> `t()`, use `forwardChevron()` for drill-in chevrons + `textStart` for headers with Latin content.
+> Run the en/ar key-parity check (the node one-liner used in this phase) + `tsc`.
+
+Concrete remaining-screen inventory (all still hardcoded English):
+- **Plan viewing/editing** (founder explicitly flagged "the plans side"): `app/client/plan/[id].tsx`
+  (client plan detail), `app/coach/plan/[id].tsx` (coach plan editor), `app/coach/new-plan.tsx`,
+  `app/coach/assign/[id].tsx`, `app/coach/templates.tsx`, `app/coach/exercise/[id].tsx`,
+  `app/coach/meal-item/[id].tsx`.
+- **Pickers / modals:** `app/coach/food-picker.tsx`, `app/coach/exercise-picker.tsx`,
+  `app/food/add.tsx`, `app/food/preferences.tsx`.
+- **Chat:** `app/(tabs)/messages.tsx`, `app/chat/[id].tsx`.
+- **Coach client detail:** `app/coach/client/[id].tsx` (the AI plan-gen modal, nudges, etc.).
+- **Auth:** `app/(auth)/*` (sign-in/up, forgot/reset password).
+- **Profile/onboarding:** `app/profile.tsx`, `app/profile-setup.tsx`, `app/become-coach.tsx`,
+  `app/accept-invite.tsx`, `app/admin/*`.
+- **Body-metrics / InBody:** `app/coach/body-metric.tsx`, `app/client/progress/*` (weight, photos,
+  inbody, body-comp detail screens).
+- **AdminHome** (`src/components/home/AdminHome.tsx`).
+- **Library-sourced English strings** not yet keyed: `goalProgress()` headlines in
+  `src/lib/body-metrics.ts` ("First reading logged", "−2% body fat", "Needs a body-fat reading"),
+  surfaced on CoachHome/Analytics board cards.
+
+Also deferred:
+- Arabic-Indic digits + Arabic date formatting (UTC stays under the hood; `toLocaleDateString` in
+  progress.tsx currently uses device locale).
+- Making user-facing **AI output** returnable in Arabic (the coach AI prompts force English; revisit
+  at the Claude launch model).
 </content>
