@@ -14,19 +14,41 @@ export type PlanGenStatus =
   | 'failed';
 export type PlanGenResult = { status: PlanGenStatus; plan_id?: string };
 
-/** Draft a training or nutrition plan for a client. `coachPrompt` is optional steering. */
+/** Draft a training or nutrition plan for a client. `coachPrompt` is optional steering;
+ *  `weeks` (1–4, training only) lets the AI write multiple progressive weeks. */
 export async function generatePlan(input: {
   clientId: string;
   type: PlanType;
+  weeks?: number;
   coachPrompt?: string;
 }): Promise<PlanGenResult> {
   const { data, error } = await supabase.functions.invoke('coach-plan-gen', {
-    body: { client_id: input.clientId, type: input.type, coach_prompt: input.coachPrompt || undefined },
+    body: {
+      client_id: input.clientId,
+      type: input.type,
+      weeks: input.type === 'training' ? input.weeks : undefined,
+      coach_prompt: input.coachPrompt || undefined,
+    },
   });
   if (error || !data || typeof (data as PlanGenResult).status !== 'string') {
     return { status: 'failed' };
   }
   return data as PlanGenResult;
+}
+
+// ── Adjust an existing DRAFT plan (coach-plan-adjust) ───────────────────────
+export type PlanAdjustStatus = 'adjusted' | 'not_draft' | 'rate_limited' | 'failed';
+export type PlanAdjustResult = { status: PlanAdjustStatus; plan_id?: string };
+
+/** Rewrite a DRAFT plan's contents from a coach instruction (typed or seeded from a nudge). */
+export async function adjustPlan(planId: string, coachPrompt?: string): Promise<PlanAdjustResult> {
+  const { data, error } = await supabase.functions.invoke('coach-plan-adjust', {
+    body: { plan_id: planId, coach_prompt: coachPrompt || undefined },
+  });
+  if (error || !data || typeof (data as PlanAdjustResult).status !== 'string') {
+    return { status: 'failed' };
+  }
+  return data as PlanAdjustResult;
 }
 
 // ── Plan-adjustment nudges (coach-plan-nudge) ───────────────────────────────
