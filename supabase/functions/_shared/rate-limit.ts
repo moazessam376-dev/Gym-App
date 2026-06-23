@@ -33,14 +33,29 @@ export async function withinLimit(
   return (count ?? 0) < limit;
 }
 
-/** Append one usage row for this user/kind. Call BEFORE the model request (fail-closed). */
+/** Append one usage row for this user/kind. Call BEFORE the model request (fail-closed).
+ * Returns the new row id so a clean failure can REFUND the slot (see refundUsage). */
 export async function recordUsage(
   svc: SupabaseClient,
   userId: string,
   kind: AiUsageKind,
   provider: string,
-): Promise<void> {
-  await svc.from('ai_usage_events').insert({ user_id: userId, kind, provider });
+): Promise<string | null> {
+  const { data } = await svc
+    .from('ai_usage_events')
+    .insert({ user_id: userId, kind, provider })
+    .select('id')
+    .single();
+  return (data as { id: string } | null)?.id ?? null;
+}
+
+/** Refund a previously-recorded slot when the call produced NOTHING (model/parse error).
+ * The slot is recorded before the call (fail-closed) so a true crash still consumes it;
+ * but a clean "failed" result shouldn't burn the user's daily quota — especially on the
+ * free pilot model, where a retry is expected. (Successful calls keep their slot.) */
+export async function refundUsage(svc: SupabaseClient, id: string | null): Promise<void> {
+  if (!id) return;
+  await svc.from('ai_usage_events').delete().eq('id', id);
 }
 
 // Common windows.

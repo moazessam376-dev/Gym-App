@@ -19,9 +19,16 @@ import { getCaller, serviceClient } from '../_shared/clients.ts';
 import { coachPlanGenSchema, genNutritionPlanSchema, genTrainingPlanSchema } from '../_shared/schemas.ts';
 import { corsHeaders, json } from '../_shared/http.ts';
 import { getVisionProvider } from '../_shared/vision.ts';
-import { DAY_MS, recordUsage, withinLimit } from '../_shared/rate-limit.ts';
+import { DAY_MS, recordUsage, refundUsage, withinLimit } from '../_shared/rate-limit.ts';
 
 const RATE_LIMIT = 10; // per-coach DAILY (CLAUDE.md §9 target: plan-gen 10/day/coach)
+
+// The model returns a loose block string; normalize to the training_block enum.
+const BLOCKS = new Set(['warmup', 'primary', 'accessory', 'conditioning', 'cooldown']);
+const normBlock = (b: string | null | undefined): string => {
+  const v = (b ?? '').toLowerCase();
+  return BLOCKS.has(v) ? v : 'primary';
+};
 
 type Profile = {
   primary_goal: string | null;
@@ -63,7 +70,10 @@ const GUARD =
   'Output ONLY the JSON object described — no markdown, no commentary.';
 
 // Exercises per day, scaled by experience so an advanced client isn't under-programmed.
-function densityFor(level: string | null): string {
+// For multi-week plans we trim the upper bound so the whole JSON fits the model's output
+// ceiling (~8k tokens) — otherwise the response truncates into invalid JSON and fails.
+function densityFor(level: string | null, weeks: number): string {
+  if (weeks >= 3) return level === 'beginner' ? '4 to 5 exercises' : '5 to 6 exercises';
   if (level === 'advanced') return '6 to 8 exercises';
   if (level === 'intermediate') return '5 to 7 exercises';
   return '4 to 6 exercises'; // beginner / unset
@@ -92,14 +102,14 @@ function trainingPrompt(p: Profile, lib: ExLib[], weeks: number, coachPrompt: st
     '{ "title": string, "weeks": [ { "name": string, "note"?: string, "days": [ { "name": string, "note"?: string, "exercises": [ { "exercise_id": string, "block"?: "warmup"|"primary"|"accessory"|"conditioning"|"cooldown", "sets"?: integer, "reps"?: string, "rest_seconds"?: integer, "tempo"?: string, "note"?: string } ] } ] } ] }',
     'Rules:',
     `- Produce EXACTLY ${weeks} week object(s), and EXACTLY ${days} day object(s) in EACH week.`,
-    `- Each training day MUST have ${densityFor(p.experience_level)} (match the client's experience level — do NOT under-program an intermediate/advanced client).`,
+    `- Each training day MUST have ${densityFor(p.experience_level, weeks)} (match the client's experience level — do NOT under-program an intermediate/advanced client).`,
     '- exercise_id MUST be one of the ids listed above.',
-    '- "reps" is free text like "8-12" or "AMRAP". "sets" and "rest_seconds" are whole numbers.',
+    '- "reps" is free text like "8-12" or "AMRAP". "sets" and "rest_seconds" are whole numbers (not strings).',
     weeks > 1
       ? '- Apply PROGRESSIVE OVERLOAD across weeks: keep a similar exercise selection but increase the challenge week to week (e.g. add a set, lower the rep range, or shorten rest). Name the weeks "Week 1", "Week 2", etc.'
       : '',
     '- Respect injuries — avoid contraindicated movements.',
-    '- "note" fields are short coaching cues for the trainee, in English.',
+    '- Keep "note" fields SHORT (a few words) or omit them, and omit "tempo" unless important — the whole response must be valid, complete JSON.',
     GUARD,
   ]
     .filter(Boolean)
@@ -187,7 +197,12 @@ Deno.serve(async (req: Request) => {
       return json({ status: 'rate_limited' }, 200);
     }
     const provider = getVisionProvider();
-    await recordUsage(svc, caller.id, 'coach_plan_gen', provider.name);
+    const usageId = await recordUsage(svc, caller.id, 'coach_plan_gen', provider.name);
+    // A clean failure produced nothing → refund the slot so a retry isn't penalized.
+    const fail = async () => {
+      await refundUsage(svc, usageId);
+      return json({ status: 'failed' }, 200);
+    };
 
     if (type === 'training') {
       // Library = globals + this coach's own customs (service role bypasses RLS, so
@@ -198,7 +213,7 @@ Deno.serve(async (req: Request) => {
         .or(`coach_id.is.null,coach_id.eq.${caller.id}`)
         .order('name');
       const exercises = (lib ?? []) as ExLib[];
-      if (exercises.length === 0) return json({ status: 'failed' }, 200);
+      if (exercises.length === 0) return await fail();
 
       // Larger plans need a bigger budget; capped at the model's output ceiling.
       const tokenBudget = Math.min(8000, 2500 + 1500 * weeks);
@@ -207,10 +222,10 @@ Deno.serve(async (req: Request) => {
         raw = await provider.generateJson(trainingPrompt(profile as Profile, exercises, weeks, coach_prompt), tokenBudget);
       } catch (e) {
         console.error('coach-plan-gen training model failed', { message: String(e) });
-        return json({ status: 'failed' }, 200);
+        return await fail();
       }
       const gen = genTrainingPlanSchema.safeParse(raw);
-      if (!gen.success) return json({ status: 'failed' }, 200);
+      if (!gen.success) return await fail();
 
       // Resolve every exercise_id against the allowed library; drop unknowns; copy the
       // canonical name snapshot from the real row (never trust the model's text).
@@ -230,7 +245,7 @@ Deno.serve(async (req: Request) => {
             }),
         })),
       }));
-      if (total === 0) return json({ status: 'failed' }, 200);
+      if (total === 0) return await fail();
 
       // Insert as a DRAFT assigned to the client (mirrors clone_template's deep copy).
       const { data: plan, error: pErr } = await svc
@@ -240,7 +255,7 @@ Deno.serve(async (req: Request) => {
         .single();
       if (pErr || !plan) {
         console.error('coach-plan-gen plan insert failed', { message: pErr?.message });
-        return json({ status: 'failed' }, 200);
+        return await fail();
       }
       for (let wi = 0; wi < genWeeks.length; wi++) {
         const w = genWeeks[wi];
@@ -269,7 +284,7 @@ Deno.serve(async (req: Request) => {
             day_id: day.id,
             exercise_id: x.exercise_id,
             exercise_name: x.name,
-            block: x.block ?? 'primary',
+            block: normBlock(x.block),
             position: xi,
             sets: x.sets ?? null,
             reps: x.reps ?? null,
@@ -299,7 +314,7 @@ Deno.serve(async (req: Request) => {
       svc.from('food_preferences').select('food_id, kind').eq('user_id', client_id),
     ]);
     const foods = (lib ?? []) as FoodLib[];
-    if (foods.length === 0) return json({ status: 'failed' }, 200);
+    if (foods.length === 0) return await fail();
 
     const nameById = new Map(foods.map((f) => [f.id, f.name]));
     const likes: string[] = [];
@@ -318,10 +333,10 @@ Deno.serve(async (req: Request) => {
       );
     } catch (e) {
       console.error('coach-plan-gen nutrition model failed', { message: String(e) });
-      return json({ status: 'failed' }, 200);
+      return await fail();
     }
     const gen = genNutritionPlanSchema.safeParse(raw);
-    if (!gen.success) return json({ status: 'failed' }, 200);
+    if (!gen.success) return await fail();
 
     // Resolve every food_id; drop unknowns; copy name + macro snapshot from the real row.
     const foodById = new Map(foods.map((f) => [f.id, f]));
@@ -337,7 +352,7 @@ Deno.serve(async (req: Request) => {
           return { food_id: it.food_id, grams: it.grams, note: it.note ?? null, food: f };
         }),
     }));
-    if (total === 0) return json({ status: 'failed' }, 200);
+    if (total === 0) return await fail();
 
     const { data: plan, error: pErr } = await svc
       .from('plans')
@@ -346,7 +361,7 @@ Deno.serve(async (req: Request) => {
       .single();
     if (pErr || !plan) {
       console.error('coach-plan-gen plan insert failed', { message: pErr?.message });
-      return json({ status: 'failed' }, 200);
+      return await fail();
     }
     for (let mi = 0; mi < meals.length; mi++) {
       const m = meals[mi];
