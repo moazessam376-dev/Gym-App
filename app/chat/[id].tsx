@@ -18,6 +18,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming, ZoomIn } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -42,6 +43,7 @@ import { REACTION_EMOJIS, type ReactionEmoji } from '../../src/schemas/message';
 import type { ReportReason } from '../../src/schemas/moderation';
 import { ReportMessageSheet } from '../../src/components/ReportMessageSheet';
 import { MessageActionsSheet } from '../../src/components/MessageActionsSheet';
+import { Emoji } from '../../src/components/Emoji';
 import { Screen, Text } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
@@ -100,32 +102,31 @@ function ReactionChips({
       }}
     >
       {groups.map((g) => (
-        <Pressable
-          key={g.emoji}
-          onPress={() => onToggle(g.emoji)}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 3,
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-            borderRadius: theme.radii.full,
-            backgroundColor: g.mineReacted ? theme.colors.primary : theme.colors.glass,
-            borderWidth: 1,
-            borderColor: g.mineReacted ? theme.colors.primary : theme.colors.glassBorder,
-          }}
-        >
-          <Text variant="caption" style={{ fontSize: 12 }}>
-            {g.emoji}
-          </Text>
-          <Text
-            variant="caption"
-            color={g.mineReacted ? theme.colors.onPrimary : theme.colors.textMuted}
-            style={{ fontSize: 11 }}
+        <Animated.View key={g.emoji} entering={ZoomIn.duration(220)}>
+          <Pressable
+            onPress={() => onToggle(g.emoji)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              borderRadius: theme.radii.full,
+              backgroundColor: g.mineReacted ? theme.colors.primary : theme.colors.glass,
+              borderWidth: 1,
+              borderColor: g.mineReacted ? theme.colors.primary : theme.colors.glassBorder,
+            }}
           >
-            {g.count}
-          </Text>
-        </Pressable>
+            <Emoji char={g.emoji} size={14} />
+            <Text
+              variant="caption"
+              color={g.mineReacted ? theme.colors.onPrimary : theme.colors.textMuted}
+              style={{ fontSize: 11 }}
+            >
+              {g.count}
+            </Text>
+          </Pressable>
+        </Animated.View>
       ))}
     </View>
   );
@@ -140,6 +141,7 @@ function Bubble({
   myId,
   onLongPress,
   onToggleReaction,
+  onDoubleTap,
 }: {
   mine: boolean;
   body: string;
@@ -149,31 +151,65 @@ function Bubble({
   myId: string;
   onLongPress: () => void;
   onToggleReaction: (emoji: ReactionEmoji) => void;
+  /** Double-tap the bubble to ❤️ it (Instagram/Telegram-style). Omitted ⇒ disabled. */
+  onDoubleTap?: () => void;
 }) {
   const { t } = useTranslation();
   const time = new Date(at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+  // Double-tap detection + a transient heart "burst" over the bubble.
+  const lastTap = useRef(0);
+  const burst = useSharedValue(0);
+  const burstStyle = useAnimatedStyle(() => ({
+    opacity: burst.value,
+    transform: [{ scale: 0.4 + burst.value }],
+  }));
+  function handlePress() {
+    if (!onDoubleTap) return;
+    const now = Date.now();
+    if (now - lastTap.current < 280) {
+      lastTap.current = 0;
+      burst.value = withSequence(withTiming(1, { duration: 140 }), withTiming(0, { duration: 420 }));
+      onDoubleTap();
+    } else {
+      lastTap.current = now;
+    }
+  }
+
   return (
     <View style={{ alignItems: mine ? 'flex-end' : 'flex-start', marginVertical: 3 }}>
-      {/* Long-press any bubble for actions (react / edit / report) — Phase 18 Slice 2. */}
-      <Pressable
-        onLongPress={onLongPress}
-        delayLongPress={300}
-        style={{
-          maxWidth: '82%',
-          backgroundColor: mine ? theme.colors.primary : theme.colors.glass,
-          borderWidth: mine ? 0 : 1,
-          borderColor: theme.colors.glassBorder,
-          borderRadius: theme.radii.lg,
-          borderBottomRightRadius: mine ? 4 : theme.radii.lg,
-          borderBottomLeftRadius: mine ? theme.radii.lg : 4,
-          paddingHorizontal: theme.spacing.md,
-          paddingVertical: theme.spacing.sm,
-        }}
-      >
-        <Text variant="body" color={mine ? theme.colors.onPrimary : theme.colors.text}>
-          {body}
-        </Text>
-      </Pressable>
+      <View>
+        {/* Long-press for actions (react / edit / report); double-tap to ❤️ — Phase 18 Slice 2. */}
+        <Pressable
+          onPress={handlePress}
+          onLongPress={onLongPress}
+          delayLongPress={300}
+          style={{
+            maxWidth: '82%',
+            backgroundColor: mine ? theme.colors.primary : theme.colors.glass,
+            borderWidth: mine ? 0 : 1,
+            borderColor: theme.colors.glassBorder,
+            borderRadius: theme.radii.lg,
+            borderBottomRightRadius: mine ? 4 : theme.radii.lg,
+            borderBottomLeftRadius: mine ? theme.radii.lg : 4,
+            paddingHorizontal: theme.spacing.md,
+            paddingVertical: theme.spacing.sm,
+          }}
+        >
+          <Text variant="body" color={mine ? theme.colors.onPrimary : theme.colors.text}>
+            {body}
+          </Text>
+        </Pressable>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+            burstStyle,
+          ]}
+        >
+          <Emoji char="❤️" size={44} />
+        </Animated.View>
+      </View>
       <ReactionChips reactions={reactions} myId={myId} mine={mine} onToggle={onToggleReaction} />
       <Text variant="caption" muted style={{ fontSize: 10, marginTop: 2, marginHorizontal: 4 }}>
         {time}
@@ -365,6 +401,13 @@ export default function ChatThread() {
     [reactions, myId],
   );
 
+  // Double-tap a bubble → ❤️ it (adds the heart if it isn't already there; the burst
+  // animation plays in the bubble regardless). Removal stays on the chip / actions sheet.
+  function heartMessage(messageId: string) {
+    if (!myId || banned) return;
+    if (!myReactionEmojis(messageId).includes('❤️')) toggleReaction(messageId, '❤️');
+  }
+
   async function toggleReaction(messageId: string, emoji: ReactionEmoji) {
     if (!myId || banned) return;
     const mineReacted = myReactionEmojis(messageId).includes(emoji);
@@ -459,6 +502,7 @@ export default function ChatThread() {
                       myId={myId ?? ''}
                       onLongPress={() => setActionsFor(item)}
                       onToggleReaction={(emoji) => toggleReaction(item.id, emoji)}
+                      onDoubleTap={banned ? undefined : () => heartMessage(item.id)}
                     />
                   </View>
                 );
