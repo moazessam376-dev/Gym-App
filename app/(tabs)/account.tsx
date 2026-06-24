@@ -151,6 +151,12 @@ export default function AccountTab() {
             />
           </>
         ) : null}
+
+        <LinkRow
+          icon="book-outline"
+          label={t('account.communityGuidelines')}
+          onPress={go('/community-guidelines')}
+        />
       </View>
 
       <LanguageSwitcher />

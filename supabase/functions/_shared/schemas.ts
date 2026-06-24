@@ -25,6 +25,13 @@ export const moderateReportSchema = z.object({
   decision: z.enum(['dismiss', 'ban', 'unban']),
 });
 
+// Admin resolves a banned user's appeal: approve (lift the ban) or reject (keep it).
+// Server re-validates; only an admin may call it.
+export const resolveAppealSchema = z.object({
+  appeal_id: z.string().uuid(),
+  decision: z.enum(['approve', 'reject']),
+});
+
 // ── Media uploads (Phase 4, §7) ─────────────────────────────────────────────
 // The allowlist is enforced here AND by magic-byte detection in media-finalize.
 export const MEDIA_MIME_TYPES = ['image/jpeg', 'image/png', 'application/pdf'] as const;

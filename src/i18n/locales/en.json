@@ -184,6 +184,7 @@
     "planTemplates": "Plan templates",
     "coachApplications": "Coach applications",
     "reportedMessages": "Reported messages",
+    "communityGuidelines": "Community guidelines",
     "language": "Language",
     "dangerZone": "Danger zone",
     "deleteAccount": "Delete account",
@@ -251,7 +252,13 @@
     "editWindowBody": "Messages can only be edited for a short time after sending.",
     "sendFailed": "Couldn't send. Please try again.",
     "blockedTitle": "You can't send messages",
-    "blockedBody": "Your account has been restricted for violating our community guidelines."
+    "blockedBody": "Your account has been restricted for violating our community guidelines.",
+    "appealCta": "Appeal this decision",
+    "appealPending": "Appeal under review",
+    "disclaimerTitle": "Before you start chatting",
+    "disclaimerBody": "Keep it respectful. Harassment, threats, or abuse get your whole account banned — and if the other person asks, we'll support legal action and share what the law allows.",
+    "disclaimerAgree": "I understand & agree",
+    "readGuidelines": "Read our community guidelines"
   },
   "report": {
     "title": "Report message",
@@ -287,6 +294,38 @@
     "unbanTitle": "Unban user",
     "unbanBody": "Restore messaging for {{name}}?",
     "bannedUsersTitle": "Banned users",
-    "bannedSince": "Banned {{when}}"
+    "bannedSince": "Banned {{when}}",
+    "appealsTitle": "Ban appeals",
+    "appealNote": "Appeal: {{note}}",
+    "approve": "Approve & unban",
+    "reject": "Reject",
+    "approveTitle": "Approve appeal",
+    "approveBody": "Lift the ban on {{name}}? They'll be able to message again.",
+    "rejectTitle": "Reject appeal",
+    "rejectBody": "Keep {{name}} banned and close this appeal?"
+  },
+  "appeal": {
+    "title": "Appeal your ban",
+    "prompt": "Tell us why this ban should be reviewed. Our team reads every appeal.",
+    "notePlaceholder": "What happened, in your words…",
+    "submit": "Submit appeal",
+    "submittedTitle": "Appeal submitted",
+    "submittedBody": "Our team will review it and get back to you.",
+    "failTitle": "Couldn't submit appeal",
+    "failBody": "Please try again in a moment."
+  },
+  "guidelines": {
+    "title": "Community guidelines",
+    "intro": "This is a space for coaches and clients to work together. A few rules keep it safe for everyone.",
+    "conductTitle": "Be respectful",
+    "conductBody": "Treat people the way you'd want to be treated. No harassment, hate, threats, or sharing someone's private information.",
+    "banTitle": "Zero tolerance",
+    "banBody": "Harassment, threats, or abuse get your entire account banned — not just one conversation. We review every report.",
+    "reportTitle": "Reporting",
+    "reportBody": "Long-press any message sent to you and tap Report. We see only the reported message, never your whole conversation.",
+    "appealTitle": "Appeals",
+    "appealBody": "If your account is banned, you can appeal from any chat. An admin will review it and either restore your access or keep the ban.",
+    "legalTitle": "Legal escalation",
+    "legalBody": "If the other party requests it, we will support legal action and cooperate with the relevant authorities, sharing the account information the law allows."
   }
 }

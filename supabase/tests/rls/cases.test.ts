@@ -2693,3 +2693,175 @@ describe('message replies (0037, Phase 18 Slice 2) — quote a message in your t
     ).rejects.toThrow(/message_immutable_fields/);
   });
 });
+
+describe('ban appeals (0038, Phase 18 Slice 3) — a banned user appeals; admin resolves (§2/§8)', () => {
+  const ADMIN: Identity = { sub: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userRole: 'admin' };
+
+  // ── insert: only a BANNED account may appeal; user_id + status are server-set ──
+  it('a banned account files an appeal (user_id + status server-set); a non-banned account cannot', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      // Ban Client A1 as the service role (bypasses the profiles immutability trigger).
+      await c.query('set local role service_role');
+      await c.query('update public.profiles set banned_at = now() where id = $1', [CLIENT_A1.sub]);
+      await c.query('reset role');
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: CLIENT_A1.sub, role: 'authenticated', user_role: 'client' }),
+      ]);
+      const ins = await c.query(
+        "insert into public.ban_appeals (note) values ('please review my case') returning user_id, status",
+      );
+      expect(ins.rows[0].user_id).toBe(CLIENT_A1.sub); // server-set, not client-supplied
+      expect(ins.rows[0].status).toBe('open');
+      // A second OPEN appeal is blocked by the partial unique index.
+      await expect(c.query("insert into public.ban_appeals (note) values ('again')")).rejects.toThrow();
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+    // Outside the rolled-back txn, CLIENT_A1 is NOT banned → the trigger rejects.
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query("insert into public.ban_appeals (note) values ('no reason')")),
+    ).rejects.toThrow();
+  });
+
+  // ── read RLS: the appellant + admin only; another tenant + anon get 0 rows ─────
+  it('the appellant and an admin read an appeal; another tenant and anon do not', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role service_role');
+      await c.query('update public.profiles set banned_at = now() where id = $1', [CLIENT_B1]);
+      await c.query("insert into public.ban_appeals (user_id, note) values ($1, 'let me back in')", [CLIENT_B1]);
+      await c.query('reset role');
+      await c.query('set local role authenticated');
+      const claims = (sub: string, ur: string) =>
+        c.query("select set_config('request.jwt.claims', $1, true)", [
+          JSON.stringify({ sub, role: 'authenticated', user_role: ur }),
+        ]);
+      await claims(CLIENT_B1, 'client');
+      const owner = await c.query('select id from public.ban_appeals');
+      await claims(CLIENT_A1.sub, 'client'); // a different tenant
+      const otherTenant = await c.query('select id from public.ban_appeals');
+      await claims(ADMIN.sub, 'admin');
+      const admin = await c.query('select id from public.ban_appeals');
+      await c.query('reset role');
+      await c.query('set local role anon');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+      const anon = await c.query('select id from public.ban_appeals');
+      expect(owner.rows.length).toBeGreaterThanOrEqual(1);
+      expect(otherTenant.rows).toHaveLength(0);
+      expect(admin.rows.length).toBeGreaterThanOrEqual(1);
+      expect(anon.rows).toHaveLength(0);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('a client cannot UPDATE or DELETE an appeal (append-only; not granted)', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query("update public.ban_appeals set status = 'approved'")),
+    ).rejects.toThrow();
+    await expect(asUser(CLIENT_A1, (c) => c.query('delete from public.ban_appeals'))).rejects.toThrow();
+  });
+
+  // ── resolve RPC: admin-only, the sole writer of appeal status + the unban ──────
+  it('resolve_ban_appeal (approve) clears the ban and approves the appeal', async () => {
+    const r = await asService(async (c) => {
+      await c.query('update public.profiles set banned_at = now() where id = $1', [CLIENT_A1.sub]);
+      const ins = await c.query(
+        "insert into public.ban_appeals (user_id, note) values ($1, 'sorry, it won''t happen again') returning id",
+        [CLIENT_A1.sub],
+      );
+      const appealId = ins.rows[0].id;
+      await c.query('select public.resolve_ban_appeal($1, $2, $3)', [appealId, 'approve', ADMIN.sub]);
+      const prof = await c.query('select banned_at from public.profiles where id = $1', [CLIENT_A1.sub]);
+      const ap = await c.query('select status, reviewed_by from public.ban_appeals where id = $1', [appealId]);
+      return { banned: prof.rows[0].banned_at, status: ap.rows[0].status, reviewer: ap.rows[0].reviewed_by };
+    });
+    expect(r.banned).toBeNull(); // unbanned
+    expect(r.status).toBe('approved');
+    expect(r.reviewer).toBe(ADMIN.sub);
+  });
+
+  it('resolve_ban_appeal (reject) keeps the ban and rejects the appeal', async () => {
+    const r = await asService(async (c) => {
+      await c.query('update public.profiles set banned_at = now() where id = $1', [CLIENT_A1.sub]);
+      const ins = await c.query(
+        "insert into public.ban_appeals (user_id, note) values ($1, 'whatever') returning id",
+        [CLIENT_A1.sub],
+      );
+      const appealId = ins.rows[0].id;
+      await c.query('select public.resolve_ban_appeal($1, $2, $3)', [appealId, 'reject', ADMIN.sub]);
+      const prof = await c.query('select banned_at from public.profiles where id = $1', [CLIENT_A1.sub]);
+      const ap = await c.query('select status from public.ban_appeals where id = $1', [appealId]);
+      return { banned: prof.rows[0].banned_at, status: ap.rows[0].status };
+    });
+    expect(r.banned).not.toBeNull(); // still banned
+    expect(r.status).toBe('rejected');
+  });
+
+  it('resolve_ban_appeal rejects a non-admin reviewer and is not callable by clients', async () => {
+    const FAKE = '7e900099-0000-0000-0000-000000000099';
+    // A non-admin reviewer id → the in-function admin check fails (before the lookup).
+    await expect(
+      asService((c) => c.query('select public.resolve_ban_appeal($1, $2, $3)', [FAKE, 'approve', CLIENT_A1.sub])),
+    ).rejects.toThrow();
+    // EXECUTE is revoked from authenticated → a client can't call it at all.
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('select public.resolve_ban_appeal($1, $2, $3)', [FAKE, 'approve', CLIENT_A1.sub])),
+    ).rejects.toThrow();
+  });
+});
+
+describe('chat acknowledgments (0039, Phase 18 Slice 3) — per-person disclaimer gate (§8)', () => {
+  it('a user records an acknowledgment; user_id is server-set (a forged owner is overwritten)', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        'insert into public.chat_acknowledgments (user_id, peer_id) values ($1, $2) returning user_id',
+        [COACH_B_ID, COACH_A.sub], // forge user_id = Coach B
+      ),
+    );
+    expect(r.rows[0].user_id).toBe(CLIENT_A1.sub); // not the forged COACH_B_ID
+  });
+
+  it('acknowledgments are own-only: the peer and anon cannot read them', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: CLIENT_A1.sub, role: 'authenticated', user_role: 'client' }),
+      ]);
+      await c.query('insert into public.chat_acknowledgments (peer_id) values ($1)', [COACH_A.sub]);
+      const own = await c.query('select peer_id from public.chat_acknowledgments');
+      // The peer (Coach A) is not the owner → own-only policy hides it.
+      await c.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: COACH_A.sub, role: 'authenticated', user_role: 'coach' }),
+      ]);
+      const peer = await c.query('select peer_id from public.chat_acknowledgments');
+      await c.query('reset role');
+      await c.query('set local role anon');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+      const anon = await c.query('select peer_id from public.chat_acknowledgments');
+      expect(own.rows.length).toBeGreaterThanOrEqual(1);
+      expect(peer.rows).toHaveLength(0);
+      expect(anon.rows).toHaveLength(0);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('a client cannot UPDATE or DELETE an acknowledgment (append-only; not granted)', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('update public.chat_acknowledgments set accepted_at = now()')),
+    ).rejects.toThrow();
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('delete from public.chat_acknowledgments')),
+    ).rejects.toThrow();
+  });
+});
