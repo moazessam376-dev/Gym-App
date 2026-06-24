@@ -22,6 +22,7 @@
     "title": "حسابك",
     "setYourName": "اكتب اسمك",
     "editProfile": "تعديل الملف",
+    "notifications": "الإشعارات",
     "coachingProfile": "ملف الكوتش",
     "goalsProfile": "أهدافك وملفك",
     "foodPreferences": "تفضيلات الأكل",
@@ -209,5 +210,40 @@
     "failed": "مش قادرين نعمل ملخّص. حاول تاني.",
     "emptyTitle": "لسه مفيش عملاء",
     "emptySub": "ادعِ عملاء وهتلاقي لوحة الأداء بتتملّى هنا."
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "markAllRead": "اعتبر الكل مقروء",
+    "emptyTitle": "لسه مفيش إشعارات",
+    "emptySub": "لما يحصل حاجة هتلاقيها هنا.",
+    "someone": "حد",
+    "justNow": "دلوقتي",
+    "minutesAgo": "من {{n}} د",
+    "hoursAgo": "من {{n}} س",
+    "daysAgo": "من {{n}} يوم",
+    "message": {
+      "title": "رسالة جديدة",
+      "body": "{{name}} بعتلك رسالة"
+    },
+    "coachComment": {
+      "title": "ملاحظة من الكوتش",
+      "body": "{{name}} علّق على قياس الإن-بودي بتاعك"
+    },
+    "planPublished": {
+      "title": "خطة جديدة",
+      "body": "{{name}} نشرلك خطة {{type}}: {{title}}"
+    },
+    "pr": {
+      "title": "رقم قياسي جديد 💪",
+      "body": "{{exercise}}"
+    },
+    "settingsTitle": "إعدادات الإشعارات",
+    "settingsSub": "اختار تتبلّغ بإيه.",
+    "prefs": {
+      "message": "الرسائل",
+      "coachComment": "ملاحظات الكوتش",
+      "planPublished": "الخطط الجديدة",
+      "prAchieved": "الأرقام القياسية"
+    }
   }
 }

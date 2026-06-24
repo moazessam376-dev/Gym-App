@@ -2183,3 +2183,191 @@ describe('coach analytics (0031, Phase 15) — coach-fenced KPI engine + coach-o
     ).rejects.toThrow(); // no execute grant
   });
 });
+
+describe('notifications (0032, Phase 17) — in-app feed, prefs, event triggers (§2/§8)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_A2_ID: Identity = { sub: CLIENT_A2, userRole: 'client' };
+  const A1_NUT_DRAFT = '99990002-0000-0000-0000-000000000002'; // A1 draft nutrition plan
+  const SESS_A1 = '5e550001-0000-0000-0000-000000000001'; // A1 session w/ seeded bench sets
+
+  // The seed commits notifications as a SIDE EFFECT of the event triggers: A1's
+  // inbound "Welcome aboard!" message + two published assigned plans → A1 has a feed.
+
+  // ── feed RLS: a personal surface, recipient-only (no coach/admin override, §8) ──
+  it('a recipient reads only their OWN feed; their coach, another tenant, and anon see nothing', async () => {
+    const owner = await asUser(CLIENT_A1, (c) =>
+      c.query('select recipient_id from public.notifications'),
+    );
+    expect(owner.rows.length).toBeGreaterThanOrEqual(1); // seeded message + published plans
+    expect(owner.rows.every((r) => r.recipient_id === CLIENT_A1.sub)).toBe(true);
+
+    const coach = await asUser(COACH_A, (c) =>
+      c.query('select id from public.notifications where recipient_id = $1', [CLIENT_A1.sub]),
+    );
+    const otherClient = await asUser(CLIENT_A2_ID, (c) =>
+      c.query('select id from public.notifications where recipient_id = $1', [CLIENT_A1.sub]),
+    );
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select id from public.notifications where recipient_id = $1', [CLIENT_A1.sub]),
+    );
+    const anon = await asAnon((c) => c.query('select id from public.notifications'));
+    expect(coach.rows).toHaveLength(0); // a personal feed — not even the assigned coach
+    expect(otherClient.rows).toHaveLength(0);
+    expect(otherCoach.rows).toHaveLength(0);
+    expect(anon.rows).toHaveLength(0);
+  });
+
+  it('a client cannot INSERT or UPDATE notifications (server-side only); they may dismiss their own', async () => {
+    // No insert grant/policy — a client must never mint a feed row (for self or others).
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("insert into public.notifications (recipient_id, type) values ($1, 'message')", [CLIENT_A1.sub]),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("insert into public.notifications (recipient_id, type) values ($1, 'message')", [CLIENT_A2]),
+      ),
+    ).rejects.toThrow();
+    // No UPDATE path (read-state flips via the RPC) — a direct UPDATE can't tamper.
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query('update public.notifications set read_at = now() where recipient_id = $1', [CLIENT_A1.sub]),
+      ),
+    ).rejects.toThrow();
+    // Dismiss own (delete) is allowed; deleting another's affects nothing.
+    const own = await asUser(CLIENT_A1, (c) =>
+      c.query('delete from public.notifications where recipient_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(own.rowCount).toBeGreaterThanOrEqual(1);
+    const cross = await asUser(COACH_B, (c) =>
+      c.query('delete from public.notifications where recipient_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(cross.rowCount).toBe(0);
+  });
+
+  it('mark_all_notifications_read clears the owner’s unread; a stranger cannot mark another’s', async () => {
+    const cleared = await asUser(CLIENT_A1, async (c) => {
+      await c.query('select public.mark_all_notifications_read()');
+      return c.query(
+        'select count(*)::int as n from public.notifications where recipient_id = $1 and read_at is null',
+        [CLIENT_A1.sub],
+      );
+    });
+    expect(cleared.rows[0].n).toBe(0);
+
+    // A2 calling the single-row RPC on one of A1's rows updates nothing (scoped to auth.uid()).
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role service_role');
+      const row = await c.query(
+        'select id from public.notifications where recipient_id = $1 and read_at is null limit 1',
+        [CLIENT_A1.sub],
+      );
+      const id = row.rows[0]?.id;
+      expect(id).toBeTruthy();
+      await c.query('reset role');
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: CLIENT_A2, role: 'authenticated', user_role: 'client' }),
+      ]);
+      await c.query('select public.mark_notification_read($1)', [id]);
+      await c.query('reset role');
+      await c.query('set local role service_role');
+      const after = await c.query('select read_at from public.notifications where id = $1', [id]);
+      expect(after.rows[0].read_at).toBeNull(); // A2's call left A1's row untouched
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  // ── prefs: owner-controlled (with_check forces user_id = auth.uid()) ──────────
+  it('a client upserts their OWN prefs but cannot create one for another user; anon sees none', async () => {
+    const ok = await asUser(CLIENT_A1, (c) =>
+      c.query('insert into public.notification_prefs (user_id, message) values ($1, false) returning user_id', [
+        CLIENT_A1.sub,
+      ]),
+    );
+    expect(ok.rows[0].user_id).toBe(CLIENT_A1.sub);
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query('insert into public.notification_prefs (user_id) values ($1)', [CLIENT_A2]),
+      ),
+    ).rejects.toThrow();
+    const anon = await asAnon((c) => c.query('select user_id from public.notification_prefs'));
+    expect(anon.rows).toHaveLength(0);
+  });
+
+  // ── event triggers (insert + observe in one service-role txn) ────────────────
+  it('a new message emits a feed row for the recipient, deep-linked to the sender’s chat', async () => {
+    const r = await asService(async (c) => {
+      await c.query('insert into public.messages (sender_id, recipient_id, body) values ($1, $2, $3)', [
+        COACH_B_ID,
+        CLIENT_B1,
+        'Trigger test',
+      ]);
+      return c.query(
+        "select entity_type, entity_id from public.notifications where recipient_id = $1 and type = 'message' and actor_id = $2",
+        [CLIENT_B1, COACH_B_ID],
+      );
+    });
+    expect(r.rows.length).toBeGreaterThanOrEqual(1);
+    expect(r.rows[0].entity_type).toBe('chat');
+    expect(r.rows[0].entity_id).toBe(COACH_B_ID); // tap → open chat with the sender
+  });
+
+  it('a per-type opt-out suppresses the emit (smart, not spammy)', async () => {
+    const n = await asService(async (c) => {
+      await c.query('insert into public.notification_prefs (user_id, message) values ($1, false)', [CLIENT_B1]);
+      await c.query('insert into public.messages (sender_id, recipient_id, body) values ($1, $2, $3)', [
+        COACH_B_ID,
+        CLIENT_B1,
+        'Should be silent',
+      ]);
+      return c.query(
+        "select count(*)::int as n from public.notifications where recipient_id = $1 and type = 'message' and actor_id = $2",
+        [CLIENT_B1, COACH_B_ID],
+      );
+    });
+    expect(n.rows[0].n).toBe(0); // pref off → no feed row
+  });
+
+  it('publishing a plan emits a plan_published feed row for the assigned client', async () => {
+    const r = await asService(async (c) => {
+      await c.query("update public.plans set status = 'published' where id = $1", [A1_NUT_DRAFT]);
+      return c.query(
+        "select params->>'plan_title' as title from public.notifications where recipient_id = $1 and type = 'plan_published' and entity_id = $2",
+        [CLIENT_A1.sub, A1_NUT_DRAFT],
+      );
+    });
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0].title).toBe('A1 Cut (draft)');
+  });
+
+  it('a completed set beating the prior best emits one pr_achieved row (a first log is a baseline, not a PR)', async () => {
+    const r = await asService(async (c) => {
+      const before = await c.query(
+        "select count(*)::int as n from public.notifications where recipient_id = $1 and type = 'pr_achieved'",
+        [CLIENT_A1.sub],
+      );
+      // A1's seeded bench best e1RM is 76000g; 70kg×8 → 88667g beats it.
+      await c.query(
+        "insert into public.exercise_set_logs (session_id, exercise_name, set_index, reps_done, load_grams, is_completed) values ($1, 'Barbell Bench Press', 99, 8, 70000, true)",
+        [SESS_A1],
+      );
+      const after = await c.query(
+        "select count(*)::int as n from public.notifications where recipient_id = $1 and type = 'pr_achieved'",
+        [CLIENT_A1.sub],
+      );
+      const row = await c.query(
+        "select params->>'e1rm_grams' as e1rm from public.notifications where recipient_id = $1 and type = 'pr_achieved' order by created_at desc limit 1",
+        [CLIENT_A1.sub],
+      );
+      return { before: before.rows[0].n, after: after.rows[0].n, e1rm: row.rows[0].e1rm };
+    });
+    expect(r.after).toBe(r.before + 1);
+    expect(Number(r.e1rm)).toBe(88667); // round(70000 × (30+8) / 30)
+  });
+});

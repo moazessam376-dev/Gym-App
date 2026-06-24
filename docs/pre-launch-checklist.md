@@ -37,6 +37,20 @@
 - [ ] Re-confirm the progress-photo / InBody upload path on a release build (the known RN
   `Blob` → `File.bytes()` 0-byte gotcha was a device-only failure).
 
+## Notifications — Phase 17 deferred slices (Slice 1 in-app shipped)
+- [ ] **Slice 2 — native push (Expo Push).** `device_tokens` table + a service-role `push-send`
+  Edge Function + token registration on launch, fanning out from the same `emit_notification`
+  path. **Prerequisite:** an EAS **development build** — native push does NOT work in Expo Go, so
+  it can't be device-tested in the current setup. Wire the `expo-notifications` plugin in `app.json`
+  + an `eas.json` first.
+- [ ] **Slice 3 — email + scheduled reminders + smart delivery.** Transactional email (confirm
+  Resend/SES on npm), train/eat **reminders** (need a scheduler — `pg_cron` or a cron'd Edge
+  Function), quiet hours (UTC→user tz), frequency caps, digest batching. Extend `notification_prefs`
+  with channel + quiet-hours columns. Ground default cadence in published engagement research.
+- [ ] **New event types** as features land: leaderboard rank change (Phase 20), booking
+  request/confirm (Phase 21) — both reuse the 0032 backbone.
+- See `docs/phases/phase-17-notifications.md` for the full slice plan.
+
 ## Auth — "launch auth" follow-up (Phase 14d deferred; needs external config + device testing)
 - [ ] **Supabase Auth → URL Configuration:** add the password-reset redirect targets to the
   allowlist — `gymapp://reset-password` (native) and `<web-origin>/reset-password`. Customize the

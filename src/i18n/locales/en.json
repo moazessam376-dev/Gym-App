@@ -173,6 +173,7 @@
     "title": "Account",
     "setYourName": "Set your name",
     "editProfile": "Edit profile",
+    "notifications": "Notifications",
     "coachingProfile": "Coaching profile",
     "goalsProfile": "Goals & profile",
     "foodPreferences": "Food preferences",
@@ -193,5 +194,40 @@
     "restartTitle": "Restart needed",
     "restartBody": "The app will restart to apply the new layout direction.",
     "restartConfirm": "Restart now"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "emptyTitle": "No notifications yet",
+    "emptySub": "When something happens, it'll show up here.",
+    "someone": "Someone",
+    "justNow": "Just now",
+    "minutesAgo": "{{n}}m ago",
+    "hoursAgo": "{{n}}h ago",
+    "daysAgo": "{{n}}d ago",
+    "message": {
+      "title": "New message",
+      "body": "{{name}} sent you a message"
+    },
+    "coachComment": {
+      "title": "Coach feedback",
+      "body": "{{name}} commented on your InBody"
+    },
+    "planPublished": {
+      "title": "New plan",
+      "body": "{{name}} published your {{type}} plan: {{title}}"
+    },
+    "pr": {
+      "title": "New personal record 💪",
+      "body": "{{exercise}}"
+    },
+    "settingsTitle": "Notification settings",
+    "settingsSub": "Choose what you get notified about.",
+    "prefs": {
+      "message": "Messages",
+      "coachComment": "Coach feedback",
+      "planPublished": "New plans",
+      "prAchieved": "Personal records"
+    }
   }
 }

@@ -4,10 +4,16 @@
 // hopping tabs. Query keys are user-scoped so a logout/login can never bleed one
 // account's cache into another. Several screens share a key (e.g. ['my-clients'] is
 // read by Home, Clients and Chat) so warming it once makes all of them instant.
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query';
+import { supabase } from '@/lib/supabase';
+import {
+  getUnreadCount,
+  listNotifications,
+  subscribeToNotifications,
+} from '@/lib/notifications';
 import type { Role } from '@/schemas/profile';
 import { getMyName } from '@/lib/profile';
 import { getMyAthleteProfile } from '@/lib/athlete-profile';
@@ -262,6 +268,40 @@ export function useCoachLeaderboard() {
   return useQuery({ queryKey: ['coach-leaderboard'], queryFn: fetchCoachLeaderboard });
 }
 
+// ---- notifications (all roles): feed + unread badge + live updates ----
+
+export function useNotifications(userId?: string) {
+  return useQuery({
+    queryKey: ['notifications', userId],
+    queryFn: () => listNotifications(),
+    enabled: !!userId,
+  });
+}
+
+export function useUnreadNotificationCount(userId?: string) {
+  return useQuery({
+    queryKey: ['notifications-unread', userId],
+    queryFn: () => getUnreadCount(),
+    enabled: !!userId,
+  });
+}
+
+// Subscribe once (at the app root) to live notifications for the signed-in user and
+// invalidate the feed + badge on each insert, so the bell count updates without a
+// manual refresh. Realtime respects RLS — only the user's own rows arrive.
+export function useNotificationsRealtime(userId?: string) {
+  useEffect(() => {
+    if (!userId) return;
+    const channel = subscribeToNotifications(userId, () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+      queryClient.invalidateQueries({ queryKey: ['notifications-unread', userId] });
+    });
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+}
+
 // ---- coach: KPI analytics tab (Phase 15) ----
 
 export function useCoachAdherence() {
@@ -303,6 +343,9 @@ export async function prefetchHome(userId: string, role: Role): Promise<void> {
   const jobs: Promise<unknown>[] = [];
   const warm = (queryKey: unknown[], queryFn: () => Promise<unknown>) =>
     jobs.push(queryClient.prefetchQuery({ queryKey, queryFn }));
+  // The notification feed + unread badge live in the home header for every role.
+  warm(['notifications', userId], () => listNotifications());
+  warm(['notifications-unread', userId], () => getUnreadCount());
   if (role === 'client') {
     const today = todayLocalDate();
     warm(['my-name', userId], () => getMyName(userId));

@@ -110,6 +110,11 @@ export default function AccountTab() {
       <View style={{ gap: theme.spacing.sm }}>
         <LinkRow icon="person-outline" label={t('account.editProfile')} onPress={go('/profile')} />
         <LinkRow
+          icon="notifications-outline"
+          label={t('account.notifications')}
+          onPress={go('/notification-settings')}
+        />
+        <LinkRow
           icon={role === 'coach' ? 'ribbon-outline' : 'flag-outline'}
           label={role === 'coach' ? t('account.coachingProfile') : t('account.goalsProfile')}
           onPress={go('/profile-setup')}
