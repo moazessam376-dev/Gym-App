@@ -2,11 +2,12 @@
 // via the Expo Push API (Phase 17, Slice 2).
 //
 // Invoked ONLY by the notifications AFTER INSERT trigger (0041) over pg_net, which
-// carries the service-role key as its bearer. We re-check that bearer against the
-// service-role key so an end user can never trigger an arbitrary push (§2/§3). The
-// payload is just the notification id; everything else is loaded server-side with
-// the service-role client. Per-type opt-outs were already enforced before the row
-// existed (emit_notification, 0032), so any row we receive is opt-in.
+// carries the Vault service-role key as its bearer. With verify_jwt on, the gateway
+// validates the signature; we then require the JWT's role claim to be `service_role`
+// so an end user can never trigger an arbitrary push (§2/§3). The payload is just the
+// notification id; everything else is loaded server-side with the service-role client.
+// Per-type opt-outs were already enforced before the row existed (emit_notification,
+// 0032), so any row we receive is opt-in.
 //
 // Push copy is rendered HERE, per device locale (device_tokens.locale), because the
 // in-app feed localizes on-device but a push can't. The strings intentionally mirror
@@ -62,6 +63,24 @@ function str(params: Record<string, unknown> | null, key: string): string {
   return typeof v === 'string' ? v : '';
 }
 
+/**
+ * Read the `role` claim from a JWT WITHOUT verifying its signature — verify_jwt is
+ * on, so the Supabase gateway has already validated the signature before the request
+ * reaches us. Authorizing on the role claim (rather than byte-matching a specific
+ * service-role key value) is robust to legacy-vs-new key formats. Returns undefined
+ * when the bearer isn't a JWT.
+ */
+function jwtRole(token: string): string | undefined {
+  try {
+    const part = token.split('.')[1];
+    if (!part) return undefined;
+    const b64 = part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '=');
+    return (JSON.parse(atob(b64)) as { role?: string }).role;
+  } catch {
+    return undefined;
+  }
+}
+
 type NotificationRow = {
   recipient_id: string;
   type: 'message' | 'coach_comment' | 'plan_published' | 'pr_achieved';
@@ -98,9 +117,11 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
 
-  // Trusted-path gate: only the service role (the 0041 trigger) may fan out push.
+  // Trusted-path gate: only a service-role caller (the 0041 trigger, carrying the
+  // Vault service-role key) may fan out push. The gateway already validated the
+  // signature (verify_jwt), so we authorize on the role claim.
   const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
-  if (!bearer || bearer !== Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+  if (jwtRole(bearer) !== 'service_role') {
     return json({ error: 'unauthorized' }, 401);
   }
 
@@ -148,7 +169,10 @@ Deno.serve(async (req: Request) => {
   };
   const messages = tokens.map((tk) => {
     const { title, body } = render(notification, (tk.locale as Locale) ?? 'en');
-    return { to: tk.token as string, title, body, sound: 'default', data };
+    // priority:high + channelId target the high-importance Android channel the app
+    // creates (src/lib/push.ts), so a backgrounded push shows as a heads-up banner;
+    // both are no-ops on iOS.
+    return { to: tk.token as string, title, body, sound: 'default', priority: 'high', channelId: 'default', data };
   });
 
   let tickets: Array<{ status?: string; details?: { error?: string } }> = [];
