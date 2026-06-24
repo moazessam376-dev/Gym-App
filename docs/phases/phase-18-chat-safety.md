@@ -1,9 +1,19 @@
 # Phase 18 — Chat enhancements + safety
 
+> **STATUS: COMPLETE (2026-06-24).** All three slices are merged to `main` **and
+> deployed to prod** — Slice 1 (safety core, 0034/0035, PR #20/#21), Slice 2
+> (engagement extras, 0036/0037, PR #22–#24), Slice 3 (legal & accountability,
+> 0038/0039, PR #25). Device-test fixes: PR #26 (self-referential reply embed
+> PGRST200 → hint by FK **column** name `messages!reply_to_id`, not the constraint
+> name; disclaimer-gate flash) and PR #27 (web chat-bubble collapse → `maxWidth`
+> belongs on the bubble **wrapper**, not the `Pressable`, or RN-Web resolves it to
+> min-content). **AI auto-moderation was DROPPED** (founder: silent chat scanning is
+> intrusive). **Only deferred item:** voice notes → the EAS dev-build batch (with push
+> notifications). The slice-by-slice detail below is kept for reference.
+
 Trust & safety for the coach⇄client chat, plus (later) engagement extras. Per the
 founder roadmap (`~/.claude/plans/i-have-features-that-snuggly-tome.md`, Tier 3),
-**safety is the founder priority**, so this phase is **sliced** the way 16/17 were —
-**this doc covers Slice 1 (safety core), which is what ships now.**
+**safety is the founder priority**, so this phase is **sliced** the way 16/17 were.
 
 ---
 
