@@ -129,6 +129,10 @@ insert into public.messages (id, sender_id, recipient_id, body) values
   ('ab000003-0000-0000-0000-000000000003',
    '11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', 'Heads up about something');
 
+-- Chat replies (0037, Phase 18 Slice 2). A1 → Coach A replying to Coach A's ab000001.
+update public.messages set reply_to_id = 'ab000001-0000-0000-0000-000000000001'
+  where id = 'ab000002-0000-0000-0000-000000000002';
+
 -- Chat safety (0034, Phase 18). Client A1 reported Coach A's message ab000003.
 -- reporter/reported are set explicitly (the trigger only derives them when
 -- auth.uid() is set; null in the seed). Proves: the reporter and an admin read it,

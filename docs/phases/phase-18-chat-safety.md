@@ -172,6 +172,27 @@ above the correct (oldest-of-day) message in the inverted list.
   rejects every banned send regardless of UI), cosmetic only; fix by gating the composer
   on ban-state load if desired.
 
+### Replies (migration `0037_message_replies.sql`)
+
+Threaded replies — a message may quote an earlier message **in the same thread** via
+`messages.reply_to_id` (self-FK, `on delete set null`). **No new table / no new policy:**
+a reply is just a column on the existing `messages` row, so the 0012/0034 RLS (sender
+or recipient only) already governs visibility, and the quote embed
+(`reply_to:messages!messages_reply_to_id_fkey`) is RLS-filtered. The two triggers are
+re-asserted (full body): **INSERT** validates `reply_to_id` references a message the
+sender can see (under their own RLS — cross-thread quoting raises `invalid_reply`, §8);
+**UPDATE** adds `reply_to_id` to the immutable set (an edit can't rewire the quote).
+
+- **UI:** swipe a bubble **right** to reply (PanResponder — no gesture-handler dep,
+  works in Expo Go + web; only claims clearly-horizontal drags so scroll/tap survive) +
+  a "Reply" row in the long-press sheet. A composer "Replying to {name}" bar (cancel ✕),
+  and a quote block at the top of a reply bubble. Reply + edit are mutually exclusive
+  composer modes; disabled while banned. Realtime reply rows resolve their quote from
+  already-loaded messages (the embed isn't in the raw realtime payload).
+- **Tests** (`message replies (0037)` in cases.test.ts): in-thread reply positive;
+  cross-thread quote rejected (`invalid_reply`); `reply_to_id` immutable on edit. Seed
+  sets `ab000002`'s `reply_to_id`. `0037` in `runner.ts`.
+
 ## Deferred to Slice 3 (tracked in `docs/pre-launch-checklist.md`)
 
 - **Slice 3 — richer safety:** AI auto-moderation (cheap server text check first, AI

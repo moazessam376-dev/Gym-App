@@ -12,6 +12,7 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  PanResponder,
   Platform,
   Pressable,
   TextInput,
@@ -37,6 +38,7 @@ import {
   subscribeToReactions,
   type Message,
   type Reaction,
+  type ReplyPreview,
 } from '../../src/lib/messages';
 import { fetchMyBanState, reportMessage } from '../../src/lib/moderation';
 import { REACTION_EMOJIS, type ReactionEmoji } from '../../src/schemas/message';
@@ -132,27 +134,70 @@ function ReactionChips({
   );
 }
 
+function QuoteBox({
+  reply,
+  mine,
+  authorLabel,
+}: {
+  reply: ReplyPreview;
+  mine: boolean;
+  authorLabel: string;
+}) {
+  return (
+    <View
+      style={{
+        borderLeftWidth: 3,
+        borderLeftColor: mine ? 'rgba(255,255,255,0.7)' : theme.colors.primary,
+        backgroundColor: mine ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.05)',
+        borderRadius: theme.radii.sm,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 4,
+        marginBottom: 6,
+      }}
+    >
+      <Text variant="caption" color={mine ? theme.colors.onPrimary : theme.colors.primary} style={{ fontSize: 11 }}>
+        {authorLabel}
+      </Text>
+      <Text
+        variant="caption"
+        numberOfLines={1}
+        color={mine ? theme.colors.onPrimary : theme.colors.textMuted}
+        style={{ fontSize: 12, opacity: 0.85 }}
+      >
+        {reply.body}
+      </Text>
+    </View>
+  );
+}
+
 function Bubble({
   mine,
   body,
   at,
   edited,
+  reply,
+  counterpartName,
   reactions,
   myId,
   onLongPress,
   onToggleReaction,
   onDoubleTap,
+  onReply,
 }: {
   mine: boolean;
   body: string;
   at: string;
   edited: boolean;
+  reply: ReplyPreview | null;
+  counterpartName: string;
   reactions: Reaction[];
   myId: string;
   onLongPress: () => void;
   onToggleReaction: (emoji: ReactionEmoji) => void;
   /** Double-tap the bubble to ❤️ it (Instagram/Telegram-style). Omitted ⇒ disabled. */
   onDoubleTap?: () => void;
+  /** Swipe the bubble right to reply. Omitted ⇒ disabled (e.g. banned). */
+  onReply?: () => void;
 }) {
   const { t } = useTranslation();
   const time = new Date(at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -176,45 +221,88 @@ function Bubble({
     }
   }
 
+  // Swipe-right-to-reply (PanResponder — no extra native dep, works in Expo Go + web).
+  // Only claims clearly-horizontal drags so vertical scroll + taps still work.
+  const onReplyRef = useRef(onReply);
+  onReplyRef.current = onReply;
+  const translateX = useSharedValue(0);
+  const slideStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }));
+  const arrowStyle = useAnimatedStyle(() => {
+    const p = Math.min(translateX.value / 46, 1);
+    return { opacity: p, transform: [{ scale: 0.6 + p * 0.4 }] };
+  });
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) =>
+        !!onReplyRef.current && g.dx > 12 && g.dx > Math.abs(g.dy) * 1.6,
+      onPanResponderMove: (_, g) => {
+        translateX.value = Math.min(Math.max(g.dx, 0), 72);
+      },
+      onPanResponderRelease: (_, g) => {
+        if (g.dx > 46) onReplyRef.current?.();
+        translateX.value = withTiming(0, { duration: 160 });
+      },
+      onPanResponderTerminate: () => {
+        translateX.value = withTiming(0, { duration: 160 });
+      },
+    }),
+  ).current;
+
+  const authorLabel = reply ? (reply.sender_id === myId ? t('chat.you') : counterpartName) : '';
+
   return (
-    <View style={{ alignItems: mine ? 'flex-end' : 'flex-start', marginVertical: 3 }}>
-      <View>
-        {/* Long-press for actions (react / edit / report); double-tap to ❤️ — Phase 18 Slice 2. */}
-        <Pressable
-          onPress={handlePress}
-          onLongPress={onLongPress}
-          delayLongPress={300}
-          style={{
-            maxWidth: '82%',
-            backgroundColor: mine ? theme.colors.primary : theme.colors.glass,
-            borderWidth: mine ? 0 : 1,
-            borderColor: theme.colors.glassBorder,
-            borderRadius: theme.radii.lg,
-            borderBottomRightRadius: mine ? 4 : theme.radii.lg,
-            borderBottomLeftRadius: mine ? theme.radii.lg : 4,
-            paddingHorizontal: theme.spacing.md,
-            paddingVertical: theme.spacing.sm,
-          }}
-        >
-          <Text variant="body" color={mine ? theme.colors.onPrimary : theme.colors.text}>
-            {body}
-          </Text>
-        </Pressable>
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
-            burstStyle,
-          ]}
-        >
-          <Emoji char="❤️" size={44} />
-        </Animated.View>
-      </View>
-      <ReactionChips reactions={reactions} myId={myId} mine={mine} onToggle={onToggleReaction} />
-      <Text variant="caption" muted style={{ fontSize: 10, marginTop: 2, marginHorizontal: 4 }}>
-        {time}
-        {edited ? ` · ${t('chat.edited')}` : ''}
-      </Text>
+    <View style={{ marginVertical: 3 }}>
+      {/* Reply affordance revealed under the bubble as you swipe right. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[{ position: 'absolute', left: 4, top: 0, bottom: 0, justifyContent: 'center' }, arrowStyle]}
+      >
+        <Ionicons name="arrow-undo" size={20} color={theme.colors.primary} />
+      </Animated.View>
+
+      <Animated.View
+        style={[{ alignItems: mine ? 'flex-end' : 'flex-start' }, slideStyle]}
+        {...pan.panHandlers}
+      >
+        <View>
+          {/* Long-press for actions; double-tap to ❤️; swipe right to reply — Phase 18 Slice 2. */}
+          <Pressable
+            onPress={handlePress}
+            onLongPress={onLongPress}
+            delayLongPress={300}
+            style={{
+              maxWidth: '82%',
+              backgroundColor: mine ? theme.colors.primary : theme.colors.glass,
+              borderWidth: mine ? 0 : 1,
+              borderColor: theme.colors.glassBorder,
+              borderRadius: theme.radii.lg,
+              borderBottomRightRadius: mine ? 4 : theme.radii.lg,
+              borderBottomLeftRadius: mine ? theme.radii.lg : 4,
+              paddingHorizontal: theme.spacing.md,
+              paddingVertical: theme.spacing.sm,
+            }}
+          >
+            {reply ? <QuoteBox reply={reply} mine={mine} authorLabel={authorLabel} /> : null}
+            <Text variant="body" color={mine ? theme.colors.onPrimary : theme.colors.text}>
+              {body}
+            </Text>
+          </Pressable>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+              burstStyle,
+            ]}
+          >
+            <Emoji char="❤️" size={44} />
+          </Animated.View>
+        </View>
+        <ReactionChips reactions={reactions} myId={myId} mine={mine} onToggle={onToggleReaction} />
+        <Text variant="caption" muted style={{ fontSize: 10, marginTop: 2, marginHorizontal: 4 }}>
+          {time}
+          {edited ? ` · ${t('chat.edited')}` : ''}
+        </Text>
+      </Animated.View>
     </View>
   );
 }
@@ -267,6 +355,7 @@ export default function ChatThread() {
   const [hasMore, setHasMore] = useState(true);
   const [banned, setBanned] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [actionsFor, setActionsFor] = useState<Message | null>(null);
 
   // Report flow (Phase 18 Slice 1): which incoming message is being reported.
@@ -320,7 +409,20 @@ export default function ChatThread() {
     const msgChannel = subscribeToIncoming(
       myId,
       (m) => {
-        if (m.sender_id === otherId) setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [m, ...prev]));
+        if (m.sender_id !== otherId) return;
+        setMessages((prev) => {
+          if (prev.some((x) => x.id === m.id)) return prev;
+          // Realtime rows have no embedded quote — resolve it from loaded messages.
+          let resolved = m;
+          if (m.reply_to_id && !m.reply_to) {
+            const parent = prev.find((p) => p.id === m.reply_to_id);
+            resolved = {
+              ...m,
+              reply_to: parent ? { id: parent.id, body: parent.body, sender_id: parent.sender_id } : null,
+            };
+          }
+          return [resolved, ...prev];
+        });
       },
       (m) => {
         if (m.sender_id === otherId)
@@ -382,17 +484,27 @@ export default function ChatThread() {
       return;
     }
 
+    const replyId = replyTo?.id;
     setInput('');
+    setReplyTo(null);
     setSending(true);
     try {
-      const sent = await sendMessage({ recipient_id: otherId, body });
+      const sent = await sendMessage({ recipient_id: otherId, body, reply_to_id: replyId });
       setMessages((prev) => (prev.some((x) => x.id === sent.id) ? prev : [sent, ...prev]));
     } catch (err) {
       setInput(body); // restore on failure
+      if (replyTo) setReplyTo(replyTo);
       if (errIs(err, 'banned')) setBanned(true);
     } finally {
       setSending(false);
     }
+  }
+
+  // Reply + edit are mutually exclusive composer modes.
+  function startReply(m: Message) {
+    setActionsFor(null);
+    setEditingId(null);
+    setReplyTo(m);
   }
 
   const myReactionEmojis = useCallback(
@@ -425,6 +537,7 @@ export default function ChatThread() {
 
   function startEdit(m: Message) {
     setActionsFor(null);
+    setReplyTo(null);
     setEditingId(m.id);
     setInput(m.body);
   }
@@ -498,11 +611,14 @@ export default function ChatThread() {
                       body={item.body}
                       at={item.created_at}
                       edited={item.edited_at != null}
+                      reply={item.reply_to}
+                      counterpartName={name ?? t('chat.them')}
                       reactions={reactions[item.id] ?? []}
                       myId={myId ?? ''}
                       onLongPress={() => setActionsFor(item)}
                       onToggleReaction={(emoji) => toggleReaction(item.id, emoji)}
                       onDoubleTap={banned ? undefined : () => heartMessage(item.id)}
+                      onReply={banned ? undefined : () => startReply(item)}
                     />
                   </View>
                 );
@@ -556,13 +672,39 @@ export default function ChatThread() {
                   </Pressable>
                 </View>
               ) : null}
+              {replyTo && !editingId ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                    paddingHorizontal: theme.spacing.lg,
+                    paddingTop: theme.spacing.sm,
+                  }}
+                >
+                  <Ionicons name="arrow-undo-outline" size={16} color={theme.colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text variant="caption" color={theme.colors.primary} style={{ fontSize: 11 }}>
+                      {t('chat.replyingTo', {
+                        name: replyTo.sender_id === myId ? t('chat.you') : name ?? t('chat.them'),
+                      })}
+                    </Text>
+                    <Text variant="caption" muted numberOfLines={1} style={{ fontSize: 12 }}>
+                      {replyTo.body}
+                    </Text>
+                  </View>
+                  <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
+                    <Ionicons name="close" size={18} color={theme.colors.textMuted} />
+                  </Pressable>
+                </View>
+              ) : null}
               <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'flex-end',
                   gap: theme.spacing.sm,
                   padding: theme.spacing.md,
-                  borderTopWidth: editingId ? 0 : 1,
+                  borderTopWidth: editingId || replyTo ? 0 : 1,
                   borderTopColor: theme.colors.border,
                   backgroundColor: theme.colors.bg,
                 }}
@@ -617,6 +759,7 @@ export default function ChatThread() {
           mine={actionTarget?.sender_id === myId}
           canEdit={actionTarget != null && canEdit(actionTarget) && !banned}
           canReact={!banned}
+          canReply={!banned}
           myReactions={actionTarget ? myReactionEmojis(actionTarget.id) : []}
           busy={false}
           onReact={(emoji) => {
@@ -624,6 +767,7 @@ export default function ChatThread() {
             setActionsFor(null);
             if (target) toggleReaction(target.id, emoji);
           }}
+          onReply={() => actionTarget && startReply(actionTarget)}
           onEdit={() => actionTarget && startEdit(actionTarget)}
           onReport={() => {
             const target = actionTarget;

@@ -16,9 +16,11 @@ export function MessageActionsSheet({
   mine,
   canEdit,
   canReact,
+  canReply,
   myReactions,
   busy,
   onReact,
+  onReply,
   onEdit,
   onReport,
   onClose,
@@ -27,9 +29,11 @@ export function MessageActionsSheet({
   mine: boolean;
   canEdit: boolean;
   canReact: boolean;
+  canReply: boolean;
   myReactions: ReactionEmoji[];
   busy: boolean;
   onReact: (emoji: ReactionEmoji) => void;
+  onReply: () => void;
   onEdit: () => void;
   onReport: () => void;
   onClose: () => void;
@@ -93,6 +97,9 @@ export function MessageActionsSheet({
           </View>
           ) : null}
 
+          {canReply ? (
+            <Action icon="arrow-undo-outline" label={t('chat.replyAction')} onPress={onReply} busy={busy} />
+          ) : null}
           {canEdit ? (
             <Action icon="create-outline" label={t('chat.editAction')} onPress={onEdit} busy={busy} />
           ) : null}
