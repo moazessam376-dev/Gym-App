@@ -17,6 +17,7 @@ import {
   useRefreshOnFocus,
 } from '@/lib/queries/home';
 import { Screen, Text, Avatar, GlassCard, StatBlock, EmptyState } from '@/components/ui';
+import { NotificationBell } from '@/components/NotificationBell';
 import { theme } from '@/theme';
 
 export default function CoachHome() {
@@ -62,7 +63,10 @@ export default function CoachHome() {
             {name ? name.split(' ')[0] : t('home.coach')}
           </Text>
         </View>
-        <Avatar name={name ?? t('home.coach')} size={48} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+          <NotificationBell />
+          <Avatar name={name ?? t('home.coach')} size={48} />
+        </View>
       </View>
 
       {/* Twin hero stats */}

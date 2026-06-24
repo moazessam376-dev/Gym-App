@@ -19,7 +19,7 @@ import {
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '../src/lib/auth-context';
 import { queryClient, subscribeAppStateFocus } from '../src/lib/query';
-import { prefetchHome } from '../src/lib/queries/home';
+import { prefetchHome, useNotificationsRealtime } from '../src/lib/queries/home';
 import { loadSavedLanguage } from '../src/i18n'; // side-effect: initializes i18next
 import { theme } from '../src/theme';
 
@@ -65,6 +65,11 @@ function RootNavigator() {
   // user (a different sign-in re-boots); after this, focus-refresh + realtime keep
   // data live.
   const userId = session?.user?.id;
+
+  // Live notifications for the signed-in user → the home-header bell badge stays
+  // current without a manual refresh (Realtime is RLS-scoped to their own rows).
+  useNotificationsRealtime(userId);
+
   const [booting, setBooting] = useState(true);
   const bootedFor = useRef<string | null>(null);
   useEffect(() => {
@@ -145,6 +150,9 @@ function RootNavigator() {
       <Stack.Screen name="profile-setup" options={{ headerShown: true, title: 'Goals & profile' }} />
       <Stack.Screen name="become-coach" options={{ headerShown: true, title: 'Become a coach' }} />
       <Stack.Screen name="admin/applications" options={{ headerShown: true, title: 'Coach applications' }} />
+      {/* Phase 17 notifications. Titles are set in-screen (localized). */}
+      <Stack.Screen name="notifications" options={{ headerShown: true, title: 'Notifications' }} />
+      <Stack.Screen name="notification-settings" options={{ headerShown: true, title: 'Notifications' }} />
     </Stack>
     {/* The navigator is mounted underneath (so routing + queries run and the cache
         warms); the splash overlays it until the prefetch settles, then fades to

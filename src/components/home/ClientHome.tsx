@@ -20,6 +20,7 @@ import {
 } from '@/lib/queries/home';
 import { remaining } from '@/lib/nutrition';
 import { Screen, Text, Card, Avatar, Button, ProgressRing, EmptyState } from '@/components/ui';
+import { NotificationBell } from '@/components/NotificationBell';
 import { theme } from '@/theme';
 
 export default function ClientHome() {
@@ -113,6 +114,7 @@ export default function ClientHome() {
               {streakQ.isPending ? '—' : streak}
             </Text>
           </View>
+          <NotificationBell />
           <Pressable onPress={() => router.push('/(tabs)/account')}>
             <Avatar name={name ?? 'Athlete'} size={44} />
           </Pressable>
