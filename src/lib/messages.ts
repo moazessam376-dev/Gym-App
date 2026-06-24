@@ -42,9 +42,12 @@ export type Reaction = {
 };
 
 // Embeds the quoted message via the self FK so a reply renders its quote in one read.
+// PostgREST resolves a SELF-referential embed by the FK COLUMN name (`reply_to_id`),
+// NOT the constraint name — the constraint-name hint (messages_reply_to_id_fkey)
+// returns PGRST200 "Could not find a relationship between 'messages' and 'messages'".
 const MSG_COLS =
   'id, sender_id, recipient_id, body, created_at, edited_at, reply_to_id, ' +
-  'reply_to:messages!messages_reply_to_id_fkey(id, body, sender_id)';
+  'reply_to:messages!reply_to_id(id, body, sender_id)';
 
 // PostgREST types a to-one embed as either an object or a single-element array; this
 // normalizes the row into our flat Message shape.

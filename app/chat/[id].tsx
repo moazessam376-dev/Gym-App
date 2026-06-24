@@ -368,6 +368,8 @@ export default function ChatThread() {
   const [appealSheetOpen, setAppealSheetOpen] = useState(false);
   const [appealing, setAppealing] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
+  // Gate the disclaimer on this so it never flashes before the ack state has loaded.
+  const [ackLoaded, setAckLoaded] = useState(false);
   const [acking, setAcking] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -421,6 +423,8 @@ export default function ChatThread() {
         if (active) setAcknowledged(acked);
       } catch {
         /* non-fatal: the gate just shows; accepting is idempotent */
+      } finally {
+        if (active) setAckLoaded(true);
       }
     })();
     return () => {
@@ -619,7 +623,8 @@ export default function ChatThread() {
   // Gate the very first message to a new person behind the disclaimer. Shown only
   // for a brand-new pairing (you haven't sent here yet); existing/legacy threads and
   // banned users are never gated here.
-  const needsAck = !banned && !acknowledged && !messages.some((m) => m.sender_id === myId);
+  const needsAck =
+    !loading && ackLoaded && !banned && !acknowledged && !messages.some((m) => m.sender_id === myId);
 
   return (
     <>
