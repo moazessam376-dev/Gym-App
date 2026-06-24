@@ -272,14 +272,16 @@ function Bubble({
         style={[{ alignItems: mine ? 'flex-end' : 'flex-start' }, slideStyle]}
         {...pan.panHandlers}
       >
-        <View>
+        {/* maxWidth lives on this wrapper (a child of the full-width aligned row), NOT
+            on the Pressable. On RN-Web a percentage maxWidth on a shrink-wrapped parent
+            resolves to min-content and collapses the bubble to one character per line. */}
+        <View style={{ maxWidth: '82%' }}>
           {/* Long-press for actions; double-tap to ❤️; swipe right to reply — Phase 18 Slice 2. */}
           <Pressable
             onPress={handlePress}
             onLongPress={onLongPress}
             delayLongPress={300}
             style={{
-              maxWidth: '82%',
               backgroundColor: mine ? theme.colors.primary : theme.colors.glass,
               borderWidth: mine ? 0 : 1,
               borderColor: theme.colors.glassBorder,
