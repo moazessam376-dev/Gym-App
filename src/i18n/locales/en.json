@@ -232,6 +232,23 @@
       "prAchieved": "Personal records"
     }
   },
+  "chat": {
+    "title": "Chat",
+    "messagePlaceholder": "Message…",
+    "emptyTitle": "No messages yet",
+    "emptySub": "Say hello 👋",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "edited": "edited",
+    "editAction": "Edit message",
+    "reportAction": "Report message",
+    "editingBanner": "Editing message",
+    "editWindowTitle": "Can't edit",
+    "editWindowBody": "Messages can only be edited for a short time after sending.",
+    "sendFailed": "Couldn't send. Please try again.",
+    "blockedTitle": "You can't send messages",
+    "blockedBody": "Your account has been restricted for violating our community guidelines."
+  },
   "report": {
     "title": "Report message",
     "policy": "Harassment, threats, or abuse aren't tolerated and can lead to a permanent ban. Our team reviews every report.",
@@ -264,6 +281,8 @@
     "banBody": "Ban {{name}} from sending messages? They can be unbanned later.",
     "unban": "Unban",
     "unbanTitle": "Unban user",
-    "unbanBody": "Restore messaging for {{name}}?"
+    "unbanBody": "Restore messaging for {{name}}?",
+    "bannedUsersTitle": "Banned users",
+    "bannedSince": "Banned {{when}}"
   }
 }

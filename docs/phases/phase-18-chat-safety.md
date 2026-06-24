@@ -96,12 +96,66 @@ role. Generic errors only (§4).
 
 ---
 
-## Deferred to later Slices (tracked in `docs/pre-launch-checklist.md`)
+## Slice 2 — chat engagement extras + the banned-user UX (BUILT)
 
-- **Slice 2 — engagement extras:** day dividers (UI-only), reactions
-  (`message_reactions`), soft message edit (`edited_at` + a history-preserving UPDATE
-  policy), and a "blocked" UX for the banned user (currently the send just fails).
+Migration `0036_chat_engagement.sql` (reactions + soft edit). Everything else is
+client-only. Testable in Expo Go / web.
+
+- **Day dividers** — UI-only. The inverted thread shows a "Today / Yesterday / date"
+  pill above the first (oldest) message of each calendar day. No DB change.
+- **Reactions (`message_reactions`)** — a participant reacts to a message in their own
+  thread with one of a fixed emoji allowlist (👍 ❤️ 😂 🔥 💪 🎉, mirrored by a DB
+  `CHECK` + the `REACTION_EMOJIS` const). `user_id` is **server-set** by a BEFORE-INSERT
+  trigger (no forged reactor); RLS limits every row to the **two parties of the
+  underlying message** via an `exists (… messages …)` subquery that runs under the
+  caller's own RLS — the same trick the report trigger uses, so an outsider (§8) can't
+  read or add reactions. Delete is own-only (toggle off). A **banned** account can't
+  react (ban = no chat engagement). `replica identity full` so realtime DELETE carries
+  the full row → the exact reaction can be removed live. Added to the realtime
+  publication.
+- **Soft edit (`messages.edited_at` + `original_body`)** — the sender corrects their
+  **own** message for a **15-minute window**. A BEFORE-UPDATE trigger owns the
+  bookkeeping: it sets `edited_at`, captures the **first** `original_body` once
+  (history-preserving — an edit can't silently erase what was said), forbids touching
+  `id`/sender/recipient/created_at, blocks edits from a **banned** account, and enforces
+  the window. The UPDATE policy is **sender-only**. The UI shows an "edited" marker and
+  reflects the counterpart's edits live (the realtime `messages` sub now handles UPDATE).
+- **"You're blocked" UX** — the chat reads the caller's own `profiles.banned_at`
+  (RLS-permitted: `id = auth.uid()`) on open; a banned user sees a non-interactive
+  "You can't send messages" banner **in place of the composer** instead of a silent
+  send failure. A `banned` error mid-session (send/edit/react) also flips into that
+  state. A banned user can still **report** incoming messages (they may be a victim).
+- **Reliable unban (admin)** — the Slice-1 unban path (RPC + Edge fn + button) existed
+  but was only reachable from an **open** report, and banning closes the report. Fix is
+  **client-only, no new server surface:** every ban flows through a report
+  (`moderate_message_report` is the sole writer of `banned_at`), so a still-banned user
+  always has an `actioned` report — `listBannedUsers()` surfaces them in a new "Banned
+  users" section on `app/admin/reports.tsx`, and Unban reuses
+  `moderate_message_report(thatReport, 'unban')`.
+
+**Client:** `src/schemas/message.ts` (+ `editMessageSchema`, `reactToMessageSchema`,
+`REACTION_EMOJIS`), `src/lib/messages.ts` (+ `editMessage` / `listReactions` /
+`addReaction` / `removeReaction` / `subscribeToReactions`; `subscribeToIncoming` now
+also delivers edits), `src/lib/moderation.ts` (+ `listBannedUsers`, `fetchMyBanState`,
+`BannedUser`), `src/components/MessageActionsSheet.tsx` (long-press → quick-react row +
+Edit/Report), `app/chat/[id].tsx` (dividers, reactions, edit mode, blocked banner),
+`app/admin/reports.tsx` (Banned-users section). en+ar copy: `chat.*`,
+`moderation.bannedUsersTitle` / `bannedSince`.
+
+**Tests** appended to `cases.test.ts` (`chat engagement (0036, Phase 18 Slice 2)`):
+reactions read both-parties / outsider-anon-0, server-set reactor, forged-reactor
+overwrite, can't-react-cross-tenant, own-only delete, ban-blocks-react; edit positive
+(edited_at + original_body), recipient-can't-edit, immutable-fields raise, edit-window
+raise, ban-blocks-edit. Seed gains reaction `4eac0001`. `0036` in `runner.ts`.
+
+**Device-test watch items:** confirm reactions appear **live** on the counterpart's
+device (realtime RLS evaluates the participant subquery); confirm the day-divider sits
+above the correct (oldest-of-day) message in the inverted list.
+
+## Deferred to Slice 3 (tracked in `docs/pre-launch-checklist.md`)
+
 - **Slice 3 — richer safety:** AI auto-moderation (cheap server text check first, AI
   only if needed) gated on **both parties' consent** to disable; voice notes
   (`audio` kind in the media pipeline) with their own moderation; appeal flow; legal
-  escalation copy.
+  escalation copy. Optional engagement follow-ups: reaction notifications, edit-history
+  surfacing for moderation.

@@ -2,6 +2,10 @@
 // (migration 0012): RLS limits rows to the two parties, the DB trigger sets
 // sender_id, and realtime delivers incoming messages. Newest-at-bottom via an
 // inverted list; pull up (onEndReached) loads older history by cursor.
+//
+// Phase 18 Slice 2 layers on engagement + the banned-user UX: day dividers,
+// emoji reactions (long-press a bubble), soft edit of your own recent message, and
+// a "you're blocked" notice in place of the composer when your account is banned.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,35 +26,137 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/lib/auth-context';
 import {
   CONVERSATION_PAGE_SIZE,
+  addReaction,
+  editMessage,
   listConversation,
+  listReactions,
+  removeReaction,
   sendMessage,
   subscribeToIncoming,
+  subscribeToReactions,
   type Message,
+  type Reaction,
 } from '../../src/lib/messages';
-import { reportMessage } from '../../src/lib/moderation';
+import { fetchMyBanState, reportMessage } from '../../src/lib/moderation';
+import { REACTION_EMOJIS, type ReactionEmoji } from '../../src/schemas/message';
 import type { ReportReason } from '../../src/schemas/moderation';
 import { ReportMessageSheet } from '../../src/components/ReportMessageSheet';
+import { MessageActionsSheet } from '../../src/components/MessageActionsSheet';
 import { Screen, Text } from '../../src/components/ui';
 import { theme } from '../../src/theme';
+
+const EDIT_WINDOW_MS = 15 * 60 * 1000; // mirrors the 0036 server-side edit window
+
+const errIs = (err: unknown, code: string) =>
+  typeof (err as { message?: unknown })?.message === 'string' &&
+  (err as { message: string }).message.includes(code);
+
+const dayKey = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+};
+
+type ReactionMap = Record<string, Reaction[]>;
+
+// Reactions keyed by message; helpers keep updates idempotent (realtime can echo
+// our own optimistic change back to us).
+function addToMap(map: ReactionMap, r: Reaction): ReactionMap {
+  const list = map[r.message_id] ?? [];
+  if (list.some((x) => x.user_id === r.user_id && x.emoji === r.emoji)) return map;
+  return { ...map, [r.message_id]: [...list, r] };
+}
+function removeFromMap(map: ReactionMap, r: Reaction): ReactionMap {
+  const list = map[r.message_id];
+  if (!list) return map;
+  return { ...map, [r.message_id]: list.filter((x) => !(x.user_id === r.user_id && x.emoji === r.emoji)) };
+}
+
+function ReactionChips({
+  reactions,
+  myId,
+  mine,
+  onToggle,
+}: {
+  reactions: Reaction[];
+  myId: string;
+  mine: boolean;
+  onToggle: (emoji: ReactionEmoji) => void;
+}) {
+  // Count per emoji + whether I'm among the reactors, preserving the allowlist order.
+  const groups = REACTION_EMOJIS.map((emoji) => {
+    const forEmoji = reactions.filter((r) => r.emoji === emoji);
+    return { emoji, count: forEmoji.length, mineReacted: forEmoji.some((r) => r.user_id === myId) };
+  }).filter((g) => g.count > 0);
+  if (groups.length === 0) return null;
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 4,
+        marginTop: 4,
+        marginHorizontal: 4,
+        justifyContent: mine ? 'flex-end' : 'flex-start',
+      }}
+    >
+      {groups.map((g) => (
+        <Pressable
+          key={g.emoji}
+          onPress={() => onToggle(g.emoji)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 3,
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            borderRadius: theme.radii.full,
+            backgroundColor: g.mineReacted ? theme.colors.primary : theme.colors.glass,
+            borderWidth: 1,
+            borderColor: g.mineReacted ? theme.colors.primary : theme.colors.glassBorder,
+          }}
+        >
+          <Text variant="caption" style={{ fontSize: 12 }}>
+            {g.emoji}
+          </Text>
+          <Text
+            variant="caption"
+            color={g.mineReacted ? theme.colors.onPrimary : theme.colors.textMuted}
+            style={{ fontSize: 11 }}
+          >
+            {g.count}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
 
 function Bubble({
   mine,
   body,
   at,
+  edited,
+  reactions,
+  myId,
   onLongPress,
+  onToggleReaction,
 }: {
   mine: boolean;
   body: string;
   at: string;
-  onLongPress?: () => void;
+  edited: boolean;
+  reactions: Reaction[];
+  myId: string;
+  onLongPress: () => void;
+  onToggleReaction: (emoji: ReactionEmoji) => void;
 }) {
+  const { t } = useTranslation();
   const time = new Date(at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   return (
     <View style={{ alignItems: mine ? 'flex-end' : 'flex-start', marginVertical: 3 }}>
-      {/* Long-press an incoming message to report it (Phase 18 safety). */}
+      {/* Long-press any bubble for actions (react / edit / report) — Phase 18 Slice 2. */}
       <Pressable
         onLongPress={onLongPress}
-        disabled={!onLongPress}
         delayLongPress={300}
         style={{
           maxWidth: '82%',
@@ -68,9 +174,41 @@ function Bubble({
           {body}
         </Text>
       </Pressable>
+      <ReactionChips reactions={reactions} myId={myId} mine={mine} onToggle={onToggleReaction} />
       <Text variant="caption" muted style={{ fontSize: 10, marginTop: 2, marginHorizontal: 4 }}>
         {time}
+        {edited ? ` · ${t('chat.edited')}` : ''}
       </Text>
+    </View>
+  );
+}
+
+function DayDivider({ at }: { at: string }) {
+  const { t } = useTranslation();
+  const d = new Date(at);
+  const today = dayKey(new Date().toISOString());
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  let label: string;
+  if (dayKey(at) === today) label = t('chat.today');
+  else if (dayKey(at) === dayKey(yesterday.toISOString())) label = t('chat.yesterday');
+  else label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return (
+    <View style={{ alignItems: 'center', marginVertical: theme.spacing.md }}>
+      <View
+        style={{
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: 4,
+          borderRadius: theme.radii.full,
+          backgroundColor: theme.colors.glass,
+          borderWidth: 1,
+          borderColor: theme.colors.glassBorder,
+        }}
+      >
+        <Text variant="caption" muted style={{ fontSize: 11 }}>
+          {label}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -83,9 +221,174 @@ export default function ChatThread() {
   // Measured header height → exact keyboard offset (the hardcoded 90 clipped).
   const headerHeight = useHeaderHeight();
 
-  // Report flow (Phase 18 safety): which incoming message is being reported.
+  // Stored newest-first to feed an inverted FlatList (index 0 renders at bottom).
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [reactions, setReactions] = useState<ReactionMap>({});
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [banned, setBanned] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [actionsFor, setActionsFor] = useState<Message | null>(null);
+
+  // Report flow (Phase 18 Slice 1): which incoming message is being reported.
   const [reportId, setReportId] = useState<string | null>(null);
   const [reporting, setReporting] = useState(false);
+
+  // Loaded message ids — lets the reactions realtime handler ignore other threads.
+  const loadedIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    loadedIds.current = new Set(messages.map((m) => m.id));
+  }, [messages]);
+
+  const canEdit = useCallback(
+    (m: Message) => m.sender_id === myId && Date.now() - new Date(m.created_at).getTime() < EDIT_WINDOW_MS,
+    [myId],
+  );
+
+  // Initial page + reactions + my ban state.
+  useEffect(() => {
+    if (!myId || !otherId) return;
+    let active = true;
+    (async () => {
+      try {
+        const page = await listConversation(myId, otherId); // oldest-first
+        const rx = await listReactions(page.map((m) => m.id));
+        if (active) {
+          setMessages([...page].reverse()); // → newest-first
+          setHasMore(page.length === CONVERSATION_PAGE_SIZE);
+          setReactions(rx.reduce((acc, r) => addToMap(acc, r), {} as ReactionMap));
+        }
+      } catch {
+        /* keep empty */
+      } finally {
+        if (active) setLoading(false);
+      }
+      try {
+        const isBanned = await fetchMyBanState(myId);
+        if (active) setBanned(isBanned);
+      } catch {
+        /* non-fatal: send still fails closed server-side */
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [myId, otherId]);
+
+  // Realtime: the counterpart's new messages + their edits, and reaction changes.
+  useEffect(() => {
+    if (!myId || !otherId) return;
+    const msgChannel = subscribeToIncoming(
+      myId,
+      (m) => {
+        if (m.sender_id === otherId) setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [m, ...prev]));
+      },
+      (m) => {
+        if (m.sender_id === otherId)
+          setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, body: m.body, edited_at: m.edited_at } : x)));
+      },
+    );
+    const rxChannel = subscribeToReactions(myId, ({ type, reaction }) => {
+      if (type === 'INSERT') {
+        if (loadedIds.current.has(reaction.message_id)) setReactions((prev) => addToMap(prev, reaction));
+      } else {
+        setReactions((prev) => removeFromMap(prev, reaction));
+      }
+    });
+    const channels: RealtimeChannel[] = [msgChannel, rxChannel];
+    return () => {
+      channels.forEach((c) => supabase.removeChannel(c));
+    };
+  }, [myId, otherId]);
+
+  const loadOlder = useCallback(async () => {
+    if (!myId || !otherId || loadingMore || !hasMore || messages.length === 0) return;
+    setLoadingMore(true);
+    try {
+      const oldest = messages[messages.length - 1]!;
+      const page = await listConversation(myId, otherId, { before: oldest.created_at }); // oldest-first
+      setMessages((prev) => [...prev, ...[...page].reverse()]); // append older to the end
+      setHasMore(page.length === CONVERSATION_PAGE_SIZE);
+      const rx = await listReactions(page.map((m) => m.id));
+      setReactions((prev) => rx.reduce((acc, r) => addToMap(acc, r), { ...prev }));
+    } catch {
+      /* ignore */
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [myId, otherId, loadingMore, hasMore, messages]);
+
+  async function onSend() {
+    const body = input.trim();
+    if (!body || !otherId || sending) return;
+
+    // Edit mode: update the existing message instead of sending a new one.
+    if (editingId) {
+      const id = editingId;
+      setSending(true);
+      try {
+        const updated = await editMessage({ message_id: id, body });
+        setMessages((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, body: updated.body, edited_at: updated.edited_at } : m)),
+        );
+        setEditingId(null);
+        setInput('');
+      } catch (err) {
+        if (errIs(err, 'banned')) setBanned(true);
+        else if (errIs(err, 'edit_window')) Alert.alert(t('chat.editWindowTitle'), t('chat.editWindowBody'));
+        else Alert.alert(t('common.error'), t('chat.sendFailed'));
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
+    setInput('');
+    setSending(true);
+    try {
+      const sent = await sendMessage({ recipient_id: otherId, body });
+      setMessages((prev) => (prev.some((x) => x.id === sent.id) ? prev : [sent, ...prev]));
+    } catch (err) {
+      setInput(body); // restore on failure
+      if (errIs(err, 'banned')) setBanned(true);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const myReactionEmojis = useCallback(
+    (messageId: string): ReactionEmoji[] =>
+      (reactions[messageId] ?? []).filter((r) => r.user_id === myId).map((r) => r.emoji),
+    [reactions, myId],
+  );
+
+  async function toggleReaction(messageId: string, emoji: ReactionEmoji) {
+    if (!myId || banned) return;
+    const mineReacted = myReactionEmojis(messageId).includes(emoji);
+    const r: Reaction = { message_id: messageId, user_id: myId, emoji };
+    // Optimistic; reconcile on failure.
+    setReactions((prev) => (mineReacted ? removeFromMap(prev, r) : addToMap(prev, r)));
+    try {
+      if (mineReacted) await removeReaction({ message_id: messageId, emoji });
+      else await addReaction({ message_id: messageId, emoji });
+    } catch (err) {
+      setReactions((prev) => (mineReacted ? addToMap(prev, r) : removeFromMap(prev, r))); // revert
+      if (errIs(err, 'banned')) setBanned(true);
+    }
+  }
+
+  function startEdit(m: Message) {
+    setActionsFor(null);
+    setEditingId(m.id);
+    setInput(m.body);
+  }
+  function cancelEdit() {
+    setEditingId(null);
+    setInput('');
+  }
 
   async function submitReport(reason: ReportReason) {
     const id = reportId;
@@ -102,83 +405,11 @@ export default function ChatThread() {
     }
   }
 
-  // Stored newest-first to feed an inverted FlatList (index 0 renders at bottom).
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const channelRef = useRef<RealtimeChannel | null>(null);
-
-  // Initial page.
-  useEffect(() => {
-    if (!myId || !otherId) return;
-    let active = true;
-    (async () => {
-      try {
-        const page = await listConversation(myId, otherId); // oldest-first
-        if (active) {
-          setMessages([...page].reverse()); // → newest-first
-          setHasMore(page.length === CONVERSATION_PAGE_SIZE);
-        }
-      } catch {
-        /* keep empty */
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [myId, otherId]);
-
-  // Realtime: append incoming messages from this counterpart.
-  useEffect(() => {
-    if (!myId || !otherId) return;
-    const channel = subscribeToIncoming(myId, (m) => {
-      if (m.sender_id === otherId) setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [m, ...prev]));
-    });
-    channelRef.current = channel;
-    return () => {
-      supabase.removeChannel(channel);
-      channelRef.current = null;
-    };
-  }, [myId, otherId]);
-
-  const loadOlder = useCallback(async () => {
-    if (!myId || !otherId || loadingMore || !hasMore || messages.length === 0) return;
-    setLoadingMore(true);
-    try {
-      const oldest = messages[messages.length - 1]!;
-      const page = await listConversation(myId, otherId, { before: oldest.created_at }); // oldest-first
-      setMessages((prev) => [...prev, ...[...page].reverse()]); // append older to the end
-      setHasMore(page.length === CONVERSATION_PAGE_SIZE);
-    } catch {
-      /* ignore */
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [myId, otherId, loadingMore, hasMore, messages]);
-
-  async function onSend() {
-    const body = input.trim();
-    if (!body || !otherId || sending) return;
-    setInput('');
-    setSending(true);
-    try {
-      const sent = await sendMessage({ recipient_id: otherId, body });
-      setMessages((prev) => (prev.some((x) => x.id === sent.id) ? prev : [sent, ...prev]));
-    } catch {
-      setInput(body); // restore on failure
-    } finally {
-      setSending(false);
-    }
-  }
+  const actionTarget = actionsFor;
 
   return (
     <>
-      <Stack.Screen options={{ title: name ?? 'Chat' }} />
+      <Stack.Screen options={{ title: name ?? t('chat.title') }} />
       <Screen gradient padded={false} edges={['bottom']}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -203,76 +434,160 @@ export default function ChatThread() {
               }
               ListEmptyComponent={
                 <View style={{ alignItems: 'center', paddingTop: theme.spacing.xxl }}>
-                  <Text variant="body" muted align="center">
-                    No messages yet. Say hello 👋
+                  <Text variant="title" align="center">
+                    {t('chat.emptyTitle')}
+                  </Text>
+                  <Text variant="body" muted align="center" style={{ marginTop: theme.spacing.xs }}>
+                    {t('chat.emptySub')}
                   </Text>
                 </View>
               }
-              renderItem={({ item }) => (
-                <Bubble
-                  mine={item.sender_id === myId}
-                  body={item.body}
-                  at={item.created_at}
-                  onLongPress={item.sender_id !== myId ? () => setReportId(item.id) : undefined}
-                />
-              )}
+              renderItem={({ item, index }) => {
+                // Inverted list: the visually-older neighbour is at index+1. Show a day
+                // divider above the first (oldest) message of each calendar day.
+                const older = messages[index + 1];
+                const showDivider = !older || dayKey(older.created_at) !== dayKey(item.created_at);
+                return (
+                  <View>
+                    {showDivider ? <DayDivider at={item.created_at} /> : null}
+                    <Bubble
+                      mine={item.sender_id === myId}
+                      body={item.body}
+                      at={item.created_at}
+                      edited={item.edited_at != null}
+                      reactions={reactions[item.id] ?? []}
+                      myId={myId ?? ''}
+                      onLongPress={() => setActionsFor(item)}
+                      onToggleReaction={(emoji) => toggleReaction(item.id, emoji)}
+                    />
+                  </View>
+                );
+              }}
             />
           )}
 
-          {/* Composer */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'flex-end',
-              gap: theme.spacing.sm,
-              padding: theme.spacing.md,
-              borderTopWidth: 1,
-              borderTopColor: theme.colors.border,
-              backgroundColor: theme.colors.bg,
-            }}
-          >
-            <TextInput
-              value={input}
-              onChangeText={setInput}
-              placeholder="Message…"
-              placeholderTextColor={theme.colors.textMuted}
-              multiline
-              maxLength={4000}
+          {/* Composer — replaced by a blocked notice when the account is banned. */}
+          {banned ? (
+            <View
               style={{
-                flex: 1,
-                maxHeight: 120,
-                backgroundColor: theme.colors.surface,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                borderRadius: theme.radii.lg,
-                paddingHorizontal: theme.spacing.lg,
-                paddingTop: theme.spacing.md,
-                paddingBottom: theme.spacing.md,
-                color: theme.colors.text,
-                fontFamily: theme.fontFamily.bodyRegular,
-                fontSize: 15,
-              }}
-            />
-            <Pressable
-              onPress={onSend}
-              disabled={sending || input.trim().length === 0}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: input.trim().length === 0 ? theme.colors.surfaceElevated : theme.colors.primary,
+                flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
+                gap: theme.spacing.md,
+                padding: theme.spacing.lg,
+                borderTopWidth: 1,
+                borderTopColor: theme.colors.border,
+                backgroundColor: theme.colors.surface,
               }}
             >
-              <Ionicons
-                name="send"
-                size={18}
-                color={input.trim().length === 0 ? theme.colors.textMuted : theme.colors.onPrimary}
-              />
-            </Pressable>
-          </View>
+              <Ionicons name="ban-outline" size={22} color={theme.colors.danger} />
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyStrong" color={theme.colors.danger}>
+                  {t('chat.blockedTitle')}
+                </Text>
+                <Text variant="caption" muted>
+                  {t('chat.blockedBody')}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View>
+              {editingId ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                    paddingHorizontal: theme.spacing.lg,
+                    paddingTop: theme.spacing.sm,
+                  }}
+                >
+                  <Ionicons name="create-outline" size={14} color={theme.colors.primary} />
+                  <Text variant="caption" color={theme.colors.primary} style={{ flex: 1 }}>
+                    {t('chat.editingBanner')}
+                  </Text>
+                  <Pressable onPress={cancelEdit} hitSlop={8}>
+                    <Text variant="caption" muted>
+                      {t('common.cancel')}
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'flex-end',
+                  gap: theme.spacing.sm,
+                  padding: theme.spacing.md,
+                  borderTopWidth: editingId ? 0 : 1,
+                  borderTopColor: theme.colors.border,
+                  backgroundColor: theme.colors.bg,
+                }}
+              >
+                <TextInput
+                  value={input}
+                  onChangeText={setInput}
+                  placeholder={t('chat.messagePlaceholder')}
+                  placeholderTextColor={theme.colors.textMuted}
+                  multiline
+                  maxLength={4000}
+                  style={{
+                    flex: 1,
+                    maxHeight: 120,
+                    backgroundColor: theme.colors.surface,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.radii.lg,
+                    paddingHorizontal: theme.spacing.lg,
+                    paddingTop: theme.spacing.md,
+                    paddingBottom: theme.spacing.md,
+                    color: theme.colors.text,
+                    fontFamily: theme.fontFamily.bodyRegular,
+                    fontSize: 15,
+                  }}
+                />
+                <Pressable
+                  onPress={onSend}
+                  disabled={sending || input.trim().length === 0}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: input.trim().length === 0 ? theme.colors.surfaceElevated : theme.colors.primary,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons
+                    name={editingId ? 'checkmark' : 'send'}
+                    size={18}
+                    color={input.trim().length === 0 ? theme.colors.textMuted : theme.colors.onPrimary}
+                  />
+                </Pressable>
+              </View>
+            </View>
+          )}
         </KeyboardAvoidingView>
+
+        <MessageActionsSheet
+          visible={actionTarget !== null}
+          mine={actionTarget?.sender_id === myId}
+          canEdit={actionTarget != null && canEdit(actionTarget) && !banned}
+          canReact={!banned}
+          myReactions={actionTarget ? myReactionEmojis(actionTarget.id) : []}
+          busy={false}
+          onReact={(emoji) => {
+            const target = actionTarget;
+            setActionsFor(null);
+            if (target) toggleReaction(target.id, emoji);
+          }}
+          onEdit={() => actionTarget && startEdit(actionTarget)}
+          onReport={() => {
+            const target = actionTarget;
+            setActionsFor(null);
+            if (target) setReportId(target.id);
+          }}
+          onClose={() => setActionsFor(null)}
+        />
 
         <ReportMessageSheet
           visible={reportId !== null}

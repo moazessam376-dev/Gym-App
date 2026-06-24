@@ -139,6 +139,14 @@ insert into public.message_reports
    'aaaa0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111',
    'harassment', 'Made me uncomfortable', 'Heads up about something');
 
+-- Chat engagement (0036, Phase 18 Slice 2). Client A1 reacted 👍 to Coach A's
+-- message ab000001. user_id is set explicitly (the trigger only derives it when
+-- auth.uid() is set; null in the seed). Proves: both parties read the reaction,
+-- outsiders cannot, and a reactor can remove their own.
+insert into public.message_reactions (id, message_id, user_id, emoji) values
+  ('4eac0001-0000-0000-0000-000000000001', 'ab000001-0000-0000-0000-000000000001',
+   'aaaa0001-0000-0000-0000-000000000001', '👍');
+
 -- One sanitized media row owned by Client A1 (a progress photo) — proves the owner
 -- and their Coach A can read it, while Coach B / Client B1 cannot. Inserted by the
 -- superuser seed (the table has no client-write policy; finalize writes it live).

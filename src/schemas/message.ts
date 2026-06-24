@@ -10,3 +10,23 @@ export const sendMessageSchema = z.object({
   body: z.string().trim().min(1).max(4000),
 });
 export type SendMessage = z.infer<typeof sendMessageSchema>;
+
+// Soft edit (Phase 18 Slice 2): the sender corrects their OWN recent message. Only
+// the body is caller-supplied; edited_at / original_body are server-owned (a trigger
+// enforces the sender-only, within-window, not-banned rules).
+export const editMessageSchema = z.object({
+  message_id: z.string().uuid(),
+  body: z.string().trim().min(1).max(4000),
+});
+export type EditMessage = z.infer<typeof editMessageSchema>;
+
+// Reactions (Phase 18 Slice 2): a fixed emoji allowlist mirrored by the DB CHECK in
+// 0036. user_id is server-set (a trigger), so it is NOT part of this schema.
+export const REACTION_EMOJIS = ['👍', '❤️', '😂', '🔥', '💪', '🎉'] as const;
+export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
+
+export const reactToMessageSchema = z.object({
+  message_id: z.string().uuid(),
+  emoji: z.enum(REACTION_EMOJIS),
+});
+export type ReactToMessage = z.infer<typeof reactToMessageSchema>;

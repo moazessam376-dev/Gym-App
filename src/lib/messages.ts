@@ -2,9 +2,21 @@
 // RLS: you only see messages you sent or received, and may only send to your
 // pairing (coach↔client). The sender is set server-side by a trigger, so we never
 // send sender_id. Inserts are Zod-validated; the server re-validates via RLS.
+//
+// Phase 18 Slice 2 adds soft edit (edited_at) and emoji reactions — both server-
+// guarded (a trigger owns edit bookkeeping + the reactor id; RLS limits reactions to
+// the two parties of the message). See 0036_chat_engagement.sql.
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { sendMessageSchema, type SendMessage } from '../schemas/message';
+import {
+  editMessageSchema,
+  reactToMessageSchema,
+  sendMessageSchema,
+  type EditMessage,
+  type ReactionEmoji,
+  type ReactToMessage,
+  type SendMessage,
+} from '../schemas/message';
 
 export type Message = {
   id: string;
@@ -12,9 +24,17 @@ export type Message = {
   recipient_id: string;
   body: string;
   created_at: string;
+  /** null = never edited; set by the server on a soft edit (Phase 18 Slice 2). */
+  edited_at: string | null;
 };
 
-const MSG_COLS = 'id, sender_id, recipient_id, body, created_at';
+export type Reaction = {
+  message_id: string;
+  user_id: string;
+  emoji: ReactionEmoji;
+};
+
+const MSG_COLS = 'id, sender_id, recipient_id, body, created_at, edited_at';
 
 /** Default conversation page size (newest N, then page backwards by `before`). */
 export const CONVERSATION_PAGE_SIZE = 30;
@@ -28,6 +48,23 @@ export async function sendMessage(input: SendMessage): Promise<Message> {
   const { data, error } = await supabase
     .from('messages')
     .insert({ recipient_id: v.recipient_id, body: v.body })
+    .select(MSG_COLS)
+    .single();
+  if (error) throw error;
+  return data as Message;
+}
+
+/**
+ * Edit (correct) one of your OWN recent messages. The server owns edited_at and the
+ * history-preserving original_body, and enforces the sender-only / within-window /
+ * not-banned rules (trigger in 0036). Only the body is sent.
+ */
+export async function editMessage(input: EditMessage): Promise<Message> {
+  const v = editMessageSchema.parse(input);
+  const { data, error } = await supabase
+    .from('messages')
+    .update({ body: v.body })
+    .eq('id', v.message_id)
     .select(MSG_COLS)
     .single();
   if (error) throw error;
@@ -68,26 +105,86 @@ export async function listConversation(
 }
 
 /**
- * Subscribe to messages newly addressed TO me (live). Realtime respects RLS, so
- * only rows where I'm the recipient arrive. Returns the channel; call
- * `supabase.removeChannel(channel)` to unsubscribe. (Own sent messages are added
- * optimistically by the caller, so we only listen for incoming.)
+ * Reactions on a set of messages. RLS limits rows to messages the caller is a party
+ * to, so this only returns reactions on the caller's own threads. Empty in → empty out.
+ */
+export async function listReactions(messageIds: string[]): Promise<Reaction[]> {
+  if (messageIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('message_reactions')
+    .select('message_id, user_id, emoji')
+    .in('message_id', messageIds);
+  if (error) throw error;
+  return (data ?? []) as Reaction[];
+}
+
+/** Add one of my reactions to a message in my thread (user_id is server-set). */
+export async function addReaction(input: ReactToMessage): Promise<void> {
+  const v = reactToMessageSchema.parse(input);
+  const { error } = await supabase
+    .from('message_reactions')
+    .insert({ message_id: v.message_id, emoji: v.emoji });
+  if (error) throw error;
+}
+
+/** Remove my reaction (RLS limits the delete to my own rows). */
+export async function removeReaction(input: ReactToMessage): Promise<void> {
+  const v = reactToMessageSchema.parse(input);
+  const { error } = await supabase
+    .from('message_reactions')
+    .delete()
+    .eq('message_id', v.message_id)
+    .eq('emoji', v.emoji);
+  if (error) throw error;
+}
+
+/**
+ * Subscribe to messages newly addressed TO me (live) and to edits of those messages.
+ * Realtime respects RLS, so only rows where I'm the recipient arrive. Returns the
+ * channel; call `supabase.removeChannel(channel)` to unsubscribe. (Own sent/edited
+ * messages are reflected optimistically by the caller, so we only listen for the
+ * counterpart's inserts + edits.)
  */
 export function subscribeToIncoming(
   myUserId: string,
-  onMessage: (m: Message) => void,
+  onInsert: (m: Message) => void,
+  onEdit?: (m: Message) => void,
 ): RealtimeChannel {
   return supabase
     .channel(`messages:to:${myUserId}`)
     .on(
       'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `recipient_id=eq.${myUserId}`,
-      },
-      (payload) => onMessage(payload.new as Message),
+      { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${myUserId}` },
+      (payload) => onInsert(payload.new as Message),
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'messages', filter: `recipient_id=eq.${myUserId}` },
+      (payload) => onEdit?.(payload.new as Message),
+    )
+    .subscribe();
+}
+
+/**
+ * Subscribe to reaction changes on my threads (live). RLS scopes delivery to messages
+ * I'm a party to; DELETE payloads carry the full row (replica identity full in 0036),
+ * so the caller can remove the exact reaction. The caller filters to loaded messages.
+ */
+export function subscribeToReactions(
+  myUserId: string,
+  onChange: (event: { type: 'INSERT' | 'DELETE'; reaction: Reaction }) => void,
+): RealtimeChannel {
+  return supabase
+    .channel(`reactions:${myUserId}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'message_reactions' },
+      (payload) => onChange({ type: 'INSERT', reaction: payload.new as Reaction }),
+    )
+    .on(
+      'postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'message_reactions' },
+      (payload) => onChange({ type: 'DELETE', reaction: payload.old as Reaction }),
     )
     .subscribe();
 }
