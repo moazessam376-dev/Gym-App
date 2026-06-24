@@ -65,3 +65,4 @@ create policy chat_acknowledgments_insert on public.chat_acknowledgments
 -- No UPDATE / DELETE policy on purpose (append-only).
 
 grant select, insert on public.chat_acknowledgments to authenticated;
+grant select on public.chat_acknowledgments to anon;  -- RLS -> 0 rows for anon
