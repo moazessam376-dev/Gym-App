@@ -32,6 +32,14 @@ export const resolveAppealSchema = z.object({
   decision: z.enum(['approve', 'reject']),
 });
 
+// ── Native push fan-out (Phase 17 Slice 2, §3/§8) ───────────────────────────
+// push-send is invoked ONLY by the notifications AFTER INSERT trigger (0041) via
+// pg_net, carrying the service-role key as its bearer. The payload is just the id
+// of the freshly-inserted feed row; the function loads everything else server-side.
+export const pushSendSchema = z.object({
+  notification_id: z.string().uuid(),
+});
+
 // ── Media uploads (Phase 4, §7) ─────────────────────────────────────────────
 // The allowlist is enforced here AND by magic-byte detection in media-finalize.
 export const MEDIA_MIME_TYPES = ['image/jpeg', 'image/png', 'application/pdf'] as const;

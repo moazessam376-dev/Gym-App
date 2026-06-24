@@ -16,6 +16,12 @@
       "bundler": "metro",
       "output": "static"
     },
+    "android": {
+      "package": "com.mo2adev.gymapp"
+    },
+    "ios": {
+      "bundleIdentifier": "com.mo2adev.gymapp"
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
@@ -27,7 +33,15 @@
           "cameraPermission": "Allow $(PRODUCT_NAME) to use the camera so you can capture progress photos and InBody scans."
         }
       ],
-      "expo-localization"
-    ]
+      "expo-localization",
+      "expo-notifications"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d5ddd6ee-80ec-4a11-8048-18af107ca1d1"
+      }
+    },
+    "owner": "mo2adev"
   }
 }

@@ -61,6 +61,8 @@ const migrationFiles = [
   '0037_message_replies.sql',
   '0038_ban_appeals.sql',
   '0039_chat_acknowledgments.sql',
+  '0040_device_tokens.sql',
+  '0041_push_fanout.sql',
 ];
 
 const baseUrl =

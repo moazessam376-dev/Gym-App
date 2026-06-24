@@ -20,6 +20,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '../src/lib/auth-context';
 import { queryClient, subscribeAppStateFocus } from '../src/lib/query';
 import { prefetchHome, useNotificationsRealtime } from '../src/lib/queries/home';
+import { usePushNotifications } from '../src/lib/push';
 import { loadSavedLanguage } from '../src/i18n'; // side-effect: initializes i18next
 import { theme } from '../src/theme';
 
@@ -69,6 +70,10 @@ function RootNavigator() {
   // Live notifications for the signed-in user → the home-header bell badge stays
   // current without a manual refresh (Realtime is RLS-scoped to their own rows).
   useNotificationsRealtime(userId);
+
+  // Register this device for native push (once per user) + route a push tap to the
+  // matching screen. No-op in Expo Go / web / simulator — active only on an EAS build.
+  usePushNotifications(userId);
 
   const [booting, setBooting] = useState(true);
   const bootedFor = useRef<string | null>(null);
