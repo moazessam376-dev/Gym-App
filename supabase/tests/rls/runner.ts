@@ -57,6 +57,7 @@ const migrationFiles = [
   '0033_notifications_harden.sql',
   '0034_chat_safety.sql',
   '0035_restore_immutables_search_path.sql',
+  '0036_chat_engagement.sql',
 ];
 
 const baseUrl =

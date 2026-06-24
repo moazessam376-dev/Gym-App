@@ -2499,3 +2499,157 @@ describe('chat safety (0034, Phase 18) — message reports + ban enforcement (§
     ).rejects.toThrow();
   });
 });
+
+describe('chat engagement (0036, Phase 18 Slice 2) — reactions + soft edit (§2/§8)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const COACH_A_ID = '11111111-1111-1111-1111-111111111111';
+  const MSG_TO_A1 = 'ab000001-0000-0000-0000-000000000001'; // Coach A → A1
+  const MSG_FROM_A1 = 'ab000002-0000-0000-0000-000000000002'; // A1 → Coach A
+  const SEED_REACTION = '4eac0001-0000-0000-0000-000000000001'; // A1 reacted 👍 to MSG_TO_A1
+
+  // ── reactions read: both parties see them; outsiders + anon do not ───────────
+  it('both parties read a reaction on their thread; another tenant and anon do not', async () => {
+    const coachA = await asUser(COACH_A, (c) => c.query('select id from public.message_reactions'));
+    const clientA1 = await asUser(CLIENT_A1, (c) => c.query('select id from public.message_reactions'));
+    const coachB = await asUser(COACH_B, (c) => c.query('select id from public.message_reactions'));
+    const anon = await asAnon((c) => c.query('select id from public.message_reactions'));
+    expect(coachA.rows.length).toBeGreaterThanOrEqual(1);
+    expect(clientA1.rows.length).toBeGreaterThanOrEqual(1);
+    expect(coachB.rows).toHaveLength(0);
+    expect(anon.rows).toHaveLength(0);
+  });
+
+  // ── reactions insert: server-set reactor; only on a message you can see ──────
+  it('a participant reacts to a message in their thread; user_id is server-set', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        "insert into public.message_reactions (message_id, emoji) values ($1, '❤️') returning user_id",
+        [MSG_TO_A1],
+      ),
+    );
+    expect(r.rows[0].user_id).toBe(CLIENT_A1.sub);
+  });
+
+  it('the server forces user_id = auth.uid() (a forged reactor is overwritten)', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        "insert into public.message_reactions (user_id, message_id, emoji) values ($1, $2, '🔥') returning user_id",
+        [COACH_B_ID, MSG_TO_A1],
+      ),
+    );
+    expect(r.rows[0].user_id).toBe(CLIENT_A1.sub); // not the forged COACH_B_ID
+  });
+
+  it('cannot react to a message you cannot see (cross-tenant outsider)', async () => {
+    await expect(
+      asUser(COACH_B, (c) =>
+        c.query("insert into public.message_reactions (message_id, emoji) values ($1, '🔥')", [MSG_TO_A1]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('a reactor removes their OWN reaction; another party cannot delete it', async () => {
+    const mine = await asUser(CLIENT_A1, (c) =>
+      c.query('delete from public.message_reactions where id = $1', [SEED_REACTION]),
+    );
+    expect(mine.rowCount).toBe(1);
+    // Coach A can SEE A1's reaction (party) but the delete policy is own-only → 0 rows.
+    const others = await asUser(COACH_A, (c) =>
+      c.query('delete from public.message_reactions where id = $1', [SEED_REACTION]),
+    );
+    expect(others.rowCount).toBe(0);
+  });
+
+  it('a banned account cannot react', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role service_role');
+      await c.query('update public.profiles set banned_at = now() where id = $1', [CLIENT_A1.sub]);
+      await c.query('reset role');
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: CLIENT_A1.sub, role: 'authenticated', user_role: 'client' }),
+      ]);
+      await expect(
+        c.query("insert into public.message_reactions (message_id, emoji) values ($1, '🔥')", [MSG_FROM_A1]),
+      ).rejects.toThrow();
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  // ── soft edit: sender-only, body-only, within window, not banned ─────────────
+  it('the sender edits their OWN recent message; edited_at + original_body are set', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query(
+        "update public.messages set body = 'fixed' where id = $1 returning edited_at, original_body, body",
+        [MSG_TO_A1],
+      ),
+    );
+    expect(r.rows[0].edited_at).not.toBeNull();
+    expect(r.rows[0].original_body).toBe('Welcome aboard!'); // the first original is preserved
+    expect(r.rows[0].body).toBe('fixed');
+  });
+
+  it('the recipient cannot edit the sender’s message (RLS update is sender-only)', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query("update public.messages set body = 'nope' where id = $1", [MSG_TO_A1]),
+    );
+    expect(r.rowCount).toBe(0); // not their message → 0 rows, no leak
+  });
+
+  it('an edit cannot change sender / recipient / created_at', async () => {
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query('update public.messages set recipient_id = $1 where id = $2', [COACH_B_ID, MSG_TO_A1]),
+      ),
+    ).rejects.toThrow(/message_immutable_fields/);
+  });
+
+  it('a message past the edit window cannot be edited', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      // Seed an OLD Coach A → A1 message as the service role (bypasses the send path).
+      await c.query('set local role service_role');
+      const old = await c.query(
+        "insert into public.messages (sender_id, recipient_id, body, created_at) values ($1, $2, 'old', now() - interval '1 hour') returning id",
+        [COACH_A_ID, CLIENT_A1.sub],
+      );
+      const oldId = old.rows[0].id;
+      await c.query('reset role');
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: COACH_A_ID, role: 'authenticated', user_role: 'coach' }),
+      ]);
+      await expect(
+        c.query("update public.messages set body = 'late edit' where id = $1", [oldId]),
+      ).rejects.toThrow(/edit_window/);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('a banned account cannot edit', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role service_role');
+      await c.query('update public.profiles set banned_at = now() where id = $1', [COACH_A_ID]);
+      await c.query('reset role');
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: COACH_A_ID, role: 'authenticated', user_role: 'coach' }),
+      ]);
+      await expect(
+        c.query("update public.messages set body = 'while banned' where id = $1", [MSG_TO_A1]),
+      ).rejects.toThrow(/banned/);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+});
