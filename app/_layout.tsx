@@ -180,12 +180,18 @@ export default function RootLayout() {
   // window-focus). Stale queries refetch when the app returns to the foreground.
   useEffect(() => subscribeAppStateFocus(), []);
 
-  // Apply a saved language override (if any) over the device-detected default.
+  // Apply a saved language override (if any) BEFORE the first render, and gate paint
+  // on it. RN only lays a view tree out in the right writing direction if I18nManager
+  // (forceRTL) is set before that tree mounts — applying it after first render (the old
+  // fire-and-forget effect) left the tab bar laid out LTR until a full native restart.
+  // Gating here means every boot, including the switcher's reloadAppAsync(), paints in
+  // the correct direction. loadSavedLanguage swallows its own errors and always resolves.
+  const [langReady, setLangReady] = useState(false);
   useEffect(() => {
-    loadSavedLanguage();
+    loadSavedLanguage().finally(() => setLangReady(true));
   }, []);
 
-  if (!fontsLoaded && !fontError) {
+  if ((!fontsLoaded && !fontError) || !langReady) {
     return (
       <View
         style={{
