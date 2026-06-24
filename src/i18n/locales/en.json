@@ -5,7 +5,8 @@
     "delete": "Delete",
     "retry": "Retry",
     "loading": "Loading…",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "error": "Something went wrong"
   },
   "tabs": {
     "home": "Home",
@@ -182,6 +183,7 @@
     "inviteClient": "Invite a client",
     "planTemplates": "Plan templates",
     "coachApplications": "Coach applications",
+    "reportedMessages": "Reported messages",
     "language": "Language",
     "dangerZone": "Danger zone",
     "deleteAccount": "Delete account",
@@ -229,5 +231,39 @@
       "planPublished": "New plans",
       "prAchieved": "Personal records"
     }
+  },
+  "report": {
+    "title": "Report message",
+    "policy": "Harassment, threats, or abuse aren't tolerated and can lead to a permanent ban. Our team reviews every report.",
+    "reasons": {
+      "harassment": "Harassment or abuse",
+      "spam": "Spam",
+      "inappropriate": "Inappropriate content",
+      "other": "Something else"
+    },
+    "thanksTitle": "Thanks for reporting",
+    "thanksBody": "Our team will review this message.",
+    "failTitle": "Couldn't send report",
+    "failBody": "Please try again in a moment."
+  },
+  "moderation": {
+    "emptyTitle": "Nothing to review",
+    "emptySub": "Reported messages will show up here.",
+    "reportedBy": "Reported by {{name}}",
+    "reporterNote": "Note: {{note}}",
+    "messageUnavailable": "Message unavailable",
+    "alreadyBanned": "Banned",
+    "unknownUser": "Unknown user",
+    "thisUser": "this user",
+    "failed": "Could not complete the action. Please try again.",
+    "dismiss": "Dismiss",
+    "dismissTitle": "Dismiss report",
+    "dismissBody": "Close this report with no action?",
+    "ban": "Ban user",
+    "banTitle": "Ban user",
+    "banBody": "Ban {{name}} from sending messages? They can be unbanned later.",
+    "unban": "Unban",
+    "unbanTitle": "Unban user",
+    "unbanBody": "Restore messaging for {{name}}?"
   }
 }

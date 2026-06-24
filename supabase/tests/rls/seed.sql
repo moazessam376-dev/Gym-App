@@ -123,7 +123,21 @@ insert into public.messages (id, sender_id, recipient_id, body) values
   ('ab000001-0000-0000-0000-000000000001',
    '11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', 'Welcome aboard!'),
   ('ab000002-0000-0000-0000-000000000002',
-   'aaaa0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Thanks coach!');
+   'aaaa0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Thanks coach!'),
+  -- A third Coach A → A1 message that A1 has reported (seed row below). Leaves
+  -- ab000001 unreported so the report-INSERT positive control has a clean target.
+  ('ab000003-0000-0000-0000-000000000003',
+   '11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', 'Heads up about something');
+
+-- Chat safety (0034, Phase 18). Client A1 reported Coach A's message ab000003.
+-- reporter/reported are set explicitly (the trigger only derives them when
+-- auth.uid() is set; null in the seed). Proves: the reporter and an admin read it,
+-- while the REPORTED user (Coach A) and an unrelated tenant (Coach B) cannot.
+insert into public.message_reports
+  (id, message_id, reporter_id, reported_user_id, reason, note, reported_body) values
+  ('7e900001-0000-0000-0000-000000000001', 'ab000003-0000-0000-0000-000000000003',
+   'aaaa0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111',
+   'harassment', 'Made me uncomfortable', 'Heads up about something');
 
 -- One sanitized media row owned by Client A1 (a progress photo) — proves the owner
 -- and their Coach A can read it, while Coach B / Client B1 cannot. Inserted by the
