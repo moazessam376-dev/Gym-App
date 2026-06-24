@@ -138,11 +138,18 @@ export default function AccountTab() {
         ) : null}
 
         {role === 'admin' ? (
-          <LinkRow
-            icon="clipboard-outline"
-            label={t('account.coachApplications')}
-            onPress={go('/admin/applications')}
-          />
+          <>
+            <LinkRow
+              icon="clipboard-outline"
+              label={t('account.coachApplications')}
+              onPress={go('/admin/applications')}
+            />
+            <LinkRow
+              icon="shield-checkmark-outline"
+              label={t('account.reportedMessages')}
+              onPress={go('/admin/reports')}
+            />
+          </>
         ) : null}
       </View>
 

@@ -51,6 +51,16 @@
   request/confirm (Phase 21) — both reuse the 0032 backbone.
 - See `docs/phases/phase-17-notifications.md` for the full slice plan.
 
+## Chat safety — Phase 18 deferred slices (Slice 1 safety core shipped)
+- [ ] **Slice 2 — engagement extras.** Day dividers (UI-only, no schema), reactions
+  (`message_reactions`, two-party RLS), soft message edit (`edited_at` + a history-preserving
+  UPDATE policy — `messages` is append-only today), and a proper "you're blocked" UX for a
+  banned user (the send currently just fails with a generic error).
+- [ ] **Slice 3 — richer safety.** AI auto-moderation (cheap server text check first, AI only if
+  needed) gated on **both parties' consent** to disable; voice notes (`audio` kind in the media
+  pipeline) with their own moderation; report **appeal** flow; legal-escalation copy.
+- See `docs/phases/phase-18-chat-safety.md` for the full slice plan.
+
 ## Auth — "launch auth" follow-up (Phase 14d deferred; needs external config + device testing)
 - [ ] **Supabase Auth → URL Configuration:** add the password-reset redirect targets to the
   allowlist — `gymapp://reset-password` (native) and `<web-origin>/reset-password`. Customize the

@@ -55,6 +55,7 @@ const migrationFiles = [
   '0031_coach_analytics.sql',
   '0032_notifications.sql',
   '0033_notifications_harden.sql',
+  '0034_chat_safety.sql',
 ];
 
 const baseUrl =

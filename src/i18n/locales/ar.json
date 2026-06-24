@@ -5,7 +5,8 @@
     "delete": "امسح",
     "retry": "حاول تاني",
     "loading": "بنحمّل…",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "error": "حصل خطأ"
   },
   "tabs": {
     "home": "الرئيسية",
@@ -31,6 +32,7 @@
     "inviteClient": "ادعِ عميل",
     "planTemplates": "قوالب الخطط",
     "coachApplications": "طلبات الكوتشينج",
+    "reportedMessages": "الرسائل المُبلّغ عنها",
     "language": "اللغة",
     "dangerZone": "منطقة الخطر",
     "deleteAccount": "امسح الحساب",
@@ -245,5 +247,39 @@
       "planPublished": "الخطط الجديدة",
       "prAchieved": "الأرقام القياسية"
     }
+  },
+  "report": {
+    "title": "بلّغ عن الرسالة",
+    "policy": "التحرش أو التهديد أو الإساءة ممنوعين وممكن يوصّلوا لحظر دائم. فريقنا بيراجع كل بلاغ.",
+    "reasons": {
+      "harassment": "تحرش أو إساءة",
+      "spam": "سبام",
+      "inappropriate": "محتوى غير لائق",
+      "other": "حاجة تانية"
+    },
+    "thanksTitle": "شكراً على البلاغ",
+    "thanksBody": "فريقنا هيراجع الرسالة دي.",
+    "failTitle": "مش قادرين نبعت البلاغ",
+    "failBody": "حاول تاني بعد شوية."
+  },
+  "moderation": {
+    "emptyTitle": "مفيش حاجة للمراجعة",
+    "emptySub": "الرسائل المُبلّغ عنها هتظهر هنا.",
+    "reportedBy": "بلّغ عنها {{name}}",
+    "reporterNote": "ملاحظة: {{note}}",
+    "messageUnavailable": "الرسالة مش متاحة",
+    "alreadyBanned": "محظور",
+    "unknownUser": "مستخدم غير معروف",
+    "thisUser": "المستخدم ده",
+    "failed": "مش قادرين نكمّل العملية. حاول تاني.",
+    "dismiss": "تجاهل",
+    "dismissTitle": "تجاهل البلاغ",
+    "dismissBody": "تقفل البلاغ ده من غير أي إجراء؟",
+    "ban": "احظر المستخدم",
+    "banTitle": "حظر المستخدم",
+    "banBody": "تحظر {{name}} من إرسال الرسائل؟ تقدر تفك الحظر بعدين.",
+    "unban": "فك الحظر",
+    "unbanTitle": "فك حظر المستخدم",
+    "unbanBody": "ترجّع الرسائل لـ {{name}}؟"
   }
 }

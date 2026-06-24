@@ -2371,3 +2371,131 @@ describe('notifications (0032, Phase 17) — in-app feed, prefs, event triggers 
     expect(Number(r.e1rm)).toBe(88667); // round(70000 × (30+8) / 30)
   });
 });
+
+describe('chat safety (0034, Phase 18) — message reports + ban enforcement (§2/§8)', () => {
+  const ADMIN: Identity = { sub: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userRole: 'admin' };
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const COACH_A_ID = '11111111-1111-1111-1111-111111111111';
+  const REPORT = '7e900001-0000-0000-0000-000000000001'; // seeded: A1 reported Coach A's ab000003
+  const MSG_TO_A1 = 'ab000001-0000-0000-0000-000000000001'; // Coach A → A1 (unreported)
+  const MSG_FROM_A1 = 'ab000002-0000-0000-0000-000000000002'; // A1 → Coach A
+  const MSG_REPORTED = 'ab000003-0000-0000-0000-000000000003'; // Coach A → A1 (already reported)
+
+  // ── report feed RLS: reporter + admin only; the REPORTED user never sees it ──
+  it('the reporter and an admin read a report; the reported user, another tenant, and anon do not', async () => {
+    const reporter = await asUser(CLIENT_A1, (c) => c.query('select id from public.message_reports'));
+    const admin = await asUser(ADMIN, (c) => c.query('select id from public.message_reports'));
+    const reported = await asUser(COACH_A, (c) => c.query('select id from public.message_reports')); // Coach A is reported
+    const otherTenant = await asUser(COACH_B, (c) => c.query('select id from public.message_reports'));
+    const anon = await asAnon((c) => c.query('select id from public.message_reports'));
+    expect(reporter.rows.length).toBeGreaterThanOrEqual(1);
+    expect(admin.rows.length).toBeGreaterThanOrEqual(1);
+    expect(reported.rows).toHaveLength(0); // the reported user cannot read reports filed against them
+    expect(otherTenant.rows).toHaveLength(0);
+    expect(anon.rows).toHaveLength(0);
+  });
+
+  // ── report insert: reporter/reported server-set; only a message addressed to you ──
+  it('a participant reports a message ADDRESSED TO THEM; reporter + reported are server-set', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        "insert into public.message_reports (message_id, reason) values ($1, 'spam') returning reporter_id, reported_user_id, status",
+        [MSG_TO_A1],
+      ),
+    );
+    expect(r.rows[0].reporter_id).toBe(CLIENT_A1.sub);
+    expect(r.rows[0].reported_user_id).toBe(COACH_A_ID); // the message's sender, derived server-side
+    expect(r.rows[0].status).toBe('open');
+  });
+
+  it('cannot report your OWN message, a message you cannot see, or file a duplicate', async () => {
+    // ab000002 was SENT BY A1 (A1 is the sender, not the recipient) → rejected.
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("insert into public.message_reports (message_id, reason) values ($1, 'other')", [MSG_FROM_A1]),
+      ),
+    ).rejects.toThrow();
+    // Coach B can't see Coach A↔A1's DM (§8) → cannot report it (cross-tenant).
+    await expect(
+      asUser(COACH_B, (c) =>
+        c.query("insert into public.message_reports (message_id, reason) values ($1, 'other')", [MSG_TO_A1]),
+      ),
+    ).rejects.toThrow();
+    // A1 already reported ab000003 (seed) → unique (message_id, reporter_id) blocks a re-file.
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("insert into public.message_reports (message_id, reason) values ($1, 'spam')", [MSG_REPORTED]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('a client cannot UPDATE or DELETE a report (append-only; status is service-role-only)', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("update public.message_reports set status = 'dismissed' where id = $1", [REPORT]),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('delete from public.message_reports where id = $1', [REPORT])),
+    ).rejects.toThrow();
+  });
+
+  // ── ban enforcement: a banned user cannot send (set ban + send in one txn) ────
+  it('a banned account cannot send messages', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      // Ban Client A1 as the service role (bypasses the profiles immutability trigger).
+      await c.query('set local role service_role');
+      await c.query('update public.profiles set banned_at = now() where id = $1', [CLIENT_A1.sub]);
+      // Now act as the banned A1 → the send trigger rejects.
+      await c.query('reset role');
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: CLIENT_A1.sub, role: 'authenticated', user_role: 'client' }),
+      ]);
+      await expect(
+        c.query('insert into public.messages (recipient_id, body) values ($1, $2)', [COACH_A_ID, 'while banned']),
+      ).rejects.toThrow();
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('a client cannot ban anyone (banned_at is immutable from the client)', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query('update public.profiles set banned_at = now() where id = $1', [CLIENT_A1.sub]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  // ── moderation RPC: admin-only, the sole writer of report status + the ban ────
+  it('moderate_message_report (ban) bans the reported user and actions the report', async () => {
+    const r = await asService(async (c) => {
+      await c.query('select public.moderate_message_report($1, $2, $3)', [REPORT, 'ban', ADMIN.sub]);
+      const prof = await c.query('select banned_at from public.profiles where id = $1', [COACH_A_ID]);
+      const rep = await c.query('select status, reviewed_by from public.message_reports where id = $1', [REPORT]);
+      return { banned: prof.rows[0].banned_at, status: rep.rows[0].status, reviewer: rep.rows[0].reviewed_by };
+    });
+    expect(r.banned).not.toBeNull();
+    expect(r.status).toBe('actioned');
+    expect(r.reviewer).toBe(ADMIN.sub);
+  });
+
+  it('moderate_message_report rejects a non-admin reviewer and is not callable by clients', async () => {
+    // A non-admin reviewer id → the in-function admin check fails.
+    await expect(
+      asService((c) =>
+        c.query('select public.moderate_message_report($1, $2, $3)', [REPORT, 'dismiss', CLIENT_A1.sub]),
+      ),
+    ).rejects.toThrow();
+    // EXECUTE is revoked from authenticated → a client can't call it at all.
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query('select public.moderate_message_report($1, $2, $3)', [REPORT, 'dismiss', CLIENT_A1.sub]),
+      ),
+    ).rejects.toThrow();
+  });
+});

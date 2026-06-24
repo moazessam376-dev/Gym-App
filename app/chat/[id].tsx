@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -25,14 +27,31 @@ import {
   subscribeToIncoming,
   type Message,
 } from '../../src/lib/messages';
+import { reportMessage } from '../../src/lib/moderation';
+import type { ReportReason } from '../../src/schemas/moderation';
+import { ReportMessageSheet } from '../../src/components/ReportMessageSheet';
 import { Screen, Text } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
-function Bubble({ mine, body, at }: { mine: boolean; body: string; at: string }) {
+function Bubble({
+  mine,
+  body,
+  at,
+  onLongPress,
+}: {
+  mine: boolean;
+  body: string;
+  at: string;
+  onLongPress?: () => void;
+}) {
   const time = new Date(at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   return (
     <View style={{ alignItems: mine ? 'flex-end' : 'flex-start', marginVertical: 3 }}>
-      <View
+      {/* Long-press an incoming message to report it (Phase 18 safety). */}
+      <Pressable
+        onLongPress={onLongPress}
+        disabled={!onLongPress}
+        delayLongPress={300}
         style={{
           maxWidth: '82%',
           backgroundColor: mine ? theme.colors.primary : theme.colors.glass,
@@ -48,7 +67,7 @@ function Bubble({ mine, body, at }: { mine: boolean; body: string; at: string })
         <Text variant="body" color={mine ? theme.colors.onPrimary : theme.colors.text}>
           {body}
         </Text>
-      </View>
+      </Pressable>
       <Text variant="caption" muted style={{ fontSize: 10, marginTop: 2, marginHorizontal: 4 }}>
         {time}
       </Text>
@@ -58,10 +77,30 @@ function Bubble({ mine, body, at }: { mine: boolean; body: string; at: string })
 
 export default function ChatThread() {
   const { id: otherId, name } = useLocalSearchParams<{ id: string; name?: string }>();
+  const { t } = useTranslation();
   const { session } = useAuth();
   const myId = session?.user?.id;
   // Measured header height → exact keyboard offset (the hardcoded 90 clipped).
   const headerHeight = useHeaderHeight();
+
+  // Report flow (Phase 18 safety): which incoming message is being reported.
+  const [reportId, setReportId] = useState<string | null>(null);
+  const [reporting, setReporting] = useState(false);
+
+  async function submitReport(reason: ReportReason) {
+    const id = reportId;
+    setReportId(null); // close the sheet immediately
+    if (!id) return;
+    setReporting(true);
+    try {
+      await reportMessage({ message_id: id, reason });
+      Alert.alert(t('report.thanksTitle'), t('report.thanksBody'));
+    } catch {
+      Alert.alert(t('report.failTitle'), t('report.failBody'));
+    } finally {
+      setReporting(false);
+    }
+  }
 
   // Stored newest-first to feed an inverted FlatList (index 0 renders at bottom).
   const [messages, setMessages] = useState<Message[]>([]);
@@ -170,7 +209,12 @@ export default function ChatThread() {
                 </View>
               }
               renderItem={({ item }) => (
-                <Bubble mine={item.sender_id === myId} body={item.body} at={item.created_at} />
+                <Bubble
+                  mine={item.sender_id === myId}
+                  body={item.body}
+                  at={item.created_at}
+                  onLongPress={item.sender_id !== myId ? () => setReportId(item.id) : undefined}
+                />
               )}
             />
           )}
@@ -229,6 +273,13 @@ export default function ChatThread() {
             </Pressable>
           </View>
         </KeyboardAvoidingView>
+
+        <ReportMessageSheet
+          visible={reportId !== null}
+          busy={reporting}
+          onPick={submitReport}
+          onClose={() => setReportId(null)}
+        />
       </Screen>
     </>
   );

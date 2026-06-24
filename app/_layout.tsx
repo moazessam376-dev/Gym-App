@@ -150,6 +150,7 @@ function RootNavigator() {
       <Stack.Screen name="profile-setup" options={{ headerShown: true, title: 'Goals & profile' }} />
       <Stack.Screen name="become-coach" options={{ headerShown: true, title: 'Become a coach' }} />
       <Stack.Screen name="admin/applications" options={{ headerShown: true, title: 'Coach applications' }} />
+      <Stack.Screen name="admin/reports" options={{ headerShown: true, title: 'Reported messages' }} />
       {/* Phase 17 notifications. Titles are set in-screen (localized). */}
       <Stack.Screen name="notifications" options={{ headerShown: true, title: 'Notifications' }} />
       <Stack.Screen name="notification-settings" options={{ headerShown: true, title: 'Notifications' }} />
