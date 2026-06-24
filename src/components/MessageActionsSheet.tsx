@@ -7,6 +7,7 @@ import { Modal, Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { REACTION_EMOJIS, type ReactionEmoji } from '../schemas/message';
+import { Emoji } from './Emoji';
 import { Text } from './ui';
 import { theme } from '../theme';
 
@@ -81,12 +82,11 @@ export function MessageActionsSheet({
                     backgroundColor: active ? theme.colors.primary : theme.colors.surface,
                     borderWidth: 1,
                     borderColor: active ? theme.colors.primary : theme.colors.border,
-                    opacity: pressed || busy ? 0.7 : 1,
+                    opacity: busy ? 0.7 : 1,
+                    transform: [{ scale: pressed ? 0.86 : 1 }],
                   })}
                 >
-                  <Text variant="body" style={{ fontSize: 22 }}>
-                    {emoji}
-                  </Text>
+                  <Emoji char={emoji} size={26} />
                 </Pressable>
               );
             })}

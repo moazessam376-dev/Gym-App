@@ -152,6 +152,26 @@ raise, ban-blocks-edit. Seed gains reaction `4eac0001`. `0036` in `runner.ts`.
 device (realtime RLS evaluates the participant subquery); confirm the day-divider sits
 above the correct (oldest-of-day) message in the inverted list.
 
+### Slice 2 polish (founder device-test feedback, client-only — no migration)
+
+- **Twemoji glyphs** — reactions render via `src/components/Emoji.tsx`, a Twemoji
+  `<Image>` off the jsDelivr CDN (jdecked/twemoji, pinned `15.1.0`) so the look is
+  identical on iOS/Android/web; falls back to the native glyph on load failure. Chosen
+  over Lottie animated emoji because Lottie needs an EAS dev build (not testable in Expo
+  Go, same blocker as push). Fixed Android emoji vertical-clipping in the actions sheet
+  (`includeFontPadding:false` / `lineHeight`) along the way.
+- **Double-tap to ❤️** (Instagram/Telegram-style) — double-tapping a bubble adds the
+  heart reaction (if absent) and plays a Reanimated heart "burst" over the bubble.
+  Removal stays on the chip / actions sheet. Disabled while banned.
+- **Reaction motion** — new chips pop in (`ZoomIn`); quick-react buttons scale on press.
+- **Pilot-review notes** (in `docs/pre-launch-checklist.md`, "Phase 18 pilot-review
+  items"): (1) ban is **send-block only** by founder decision — a coach can still message
+  a banned client and the banned user can still log in/browse; revisit whether to freeze
+  the thread / add a full lockout before the pilot. (2) the banned-user composer flashes
+  briefly before the blocked banner loads — **server-mitigated** (the 0034 send trigger
+  rejects every banned send regardless of UI), cosmetic only; fix by gating the composer
+  on ban-state load if desired.
+
 ## Deferred to Slice 3 (tracked in `docs/pre-launch-checklist.md`)
 
 - **Slice 3 — richer safety:** AI auto-moderation (cheap server text check first, AI

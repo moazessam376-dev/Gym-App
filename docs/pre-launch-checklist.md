@@ -51,11 +51,24 @@
   request/confirm (Phase 21) — both reuse the 0032 backbone.
 - See `docs/phases/phase-17-notifications.md` for the full slice plan.
 
-## Chat safety — Phase 18 deferred slices (Slice 1 safety core shipped)
-- [ ] **Slice 2 — engagement extras.** Day dividers (UI-only, no schema), reactions
-  (`message_reactions`, two-party RLS), soft message edit (`edited_at` + a history-preserving
-  UPDATE policy — `messages` is append-only today), and a proper "you're blocked" UX for a
-  banned user (the send currently just fails with a generic error).
+## Chat safety — Phase 18 deferred slices (Slice 1 + Slice 2 shipped)
+- [x] **Slice 2 — engagement extras.** Day dividers, reactions (`message_reactions`), soft edit
+  (`edited_at` + history-preserving `original_body`), "you're blocked" UX, reliable admin unban.
+  Shipped PR #22 + 0036 deployed 2026-06-24.
+
+### Phase 18 pilot-review items (decide/verify before the pilot)
+- [ ] **Ban is one-directional (send-block only) — confirm this is the desired product rule.**
+  A banned client can't *send*, but their **coach can still message them**, and the banned user
+  can still **log in and browse** (it's a send-block, not an account lockout). Founder confirmed
+  send-block-only is intended for now (2026-06-24). Pre-pilot decision: should a coach→banned-client
+  message also be blocked / the thread frozen, and/or should ban become a full lockout (boot-gate on
+  `profiles.banned_at`)? All are additive; none built yet by that choice.
+- [ ] **Banned-user composer flash.** When a banned user opens a chat, the input is briefly visible
+  before `fetchMyBanState` resolves and the "you're blocked" banner replaces it. **Abuse is
+  server-mitigated:** the 0034 send trigger rejects every send from a banned account regardless of
+  UI (fails closed), so a send during the flash still fails. Cosmetic only. Fix if desired by gating
+  the composer until ban-state loads (trade-off: a brief no-composer flash for *all* users) — verify
+  on a release build (dev mode amplifies the flash, like the tab-switch artifact above).
 - [ ] **Slice 3 — richer safety.** AI auto-moderation (cheap server text check first, AI only if
   needed) gated on **both parties' consent** to disable; voice notes (`audio` kind in the media
   pipeline) with their own moderation; report **appeal** flow; legal-escalation copy.
