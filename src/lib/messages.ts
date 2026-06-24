@@ -18,6 +18,9 @@ import {
   type SendMessage,
 } from '../schemas/message';
 
+/** A lightweight quote of the message being replied to (same thread). */
+export type ReplyPreview = { id: string; body: string; sender_id: string };
+
 export type Message = {
   id: string;
   sender_id: string;
@@ -26,6 +29,10 @@ export type Message = {
   created_at: string;
   /** null = never edited; set by the server on a soft edit (Phase 18 Slice 2). */
   edited_at: string | null;
+  /** The quoted message id, or null (Phase 18 Slice 2 replies). */
+  reply_to_id: string | null;
+  /** Resolved quote of the replied-to message (embedded on read; may be null). */
+  reply_to: ReplyPreview | null;
 };
 
 export type Reaction = {
@@ -34,7 +41,18 @@ export type Reaction = {
   emoji: ReactionEmoji;
 };
 
-const MSG_COLS = 'id, sender_id, recipient_id, body, created_at, edited_at';
+// Embeds the quoted message via the self FK so a reply renders its quote in one read.
+const MSG_COLS =
+  'id, sender_id, recipient_id, body, created_at, edited_at, reply_to_id, ' +
+  'reply_to:messages!messages_reply_to_id_fkey(id, body, sender_id)';
+
+// PostgREST types a to-one embed as either an object or a single-element array; this
+// normalizes the row into our flat Message shape.
+function mapRow(row: unknown): Message {
+  const r = row as Omit<Message, 'reply_to'> & { reply_to: ReplyPreview | ReplyPreview[] | null };
+  const reply = Array.isArray(r.reply_to) ? (r.reply_to[0] ?? null) : r.reply_to ?? null;
+  return { ...r, reply_to: reply };
+}
 
 /** Default conversation page size (newest N, then page backwards by `before`). */
 export const CONVERSATION_PAGE_SIZE = 30;
@@ -47,11 +65,11 @@ export async function sendMessage(input: SendMessage): Promise<Message> {
   const v = sendMessageSchema.parse(input);
   const { data, error } = await supabase
     .from('messages')
-    .insert({ recipient_id: v.recipient_id, body: v.body })
+    .insert({ recipient_id: v.recipient_id, body: v.body, reply_to_id: v.reply_to_id ?? null })
     .select(MSG_COLS)
     .single();
   if (error) throw error;
-  return data as Message;
+  return mapRow(data);
 }
 
 /**
@@ -68,7 +86,7 @@ export async function editMessage(input: EditMessage): Promise<Message> {
     .select(MSG_COLS)
     .single();
   if (error) throw error;
-  return data as Message;
+  return mapRow(data);
 }
 
 /**
@@ -101,7 +119,7 @@ export async function listConversation(
   if (opts.before) query = query.lt('created_at', opts.before);
   const { data, error } = await query;
   if (error) throw error;
-  return ((data ?? []) as Message[]).reverse();
+  return (data ?? []).map(mapRow).reverse();
 }
 
 /**
@@ -150,17 +168,20 @@ export function subscribeToIncoming(
   onInsert: (m: Message) => void,
   onEdit?: (m: Message) => void,
 ): RealtimeChannel {
+  // Raw realtime rows have the columns (incl. reply_to_id) but not the embedded
+  // reply_to quote — default it to null; the caller resolves the quote from state.
+  const coerce = (row: unknown): Message => ({ ...(row as Message), reply_to: (row as Message).reply_to ?? null });
   return supabase
     .channel(`messages:to:${myUserId}`)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${myUserId}` },
-      (payload) => onInsert(payload.new as Message),
+      (payload) => onInsert(coerce(payload.new)),
     )
     .on(
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'messages', filter: `recipient_id=eq.${myUserId}` },
-      (payload) => onEdit?.(payload.new as Message),
+      (payload) => onEdit?.(coerce(payload.new)),
     )
     .subscribe();
 }

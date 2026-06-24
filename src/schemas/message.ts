@@ -8,6 +8,9 @@ export const sendMessageSchema = z.object({
   // Trim + bound to match the DB check (1..4000 chars). Render must not treat
   // this as HTML (§8) — RN <Text> is inherently safe.
   body: z.string().trim().min(1).max(4000),
+  // Optional reply: the quoted message id (must be in the same thread; the server
+  // trigger validates the sender can see it).
+  reply_to_id: z.string().uuid().optional(),
 });
 export type SendMessage = z.infer<typeof sendMessageSchema>;
 

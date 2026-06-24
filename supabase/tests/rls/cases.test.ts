@@ -2653,3 +2653,43 @@ describe('chat engagement (0036, Phase 18 Slice 2) — reactions + soft edit (§
     }
   });
 });
+
+describe('message replies (0037, Phase 18 Slice 2) — quote a message in your thread (§8)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const COACH_A_ID = '11111111-1111-1111-1111-111111111111';
+  const MSG_TO_A1 = 'ab000001-0000-0000-0000-000000000001'; // Coach A → A1 (A1 can see it)
+  const MSG_FROM_A1 = 'ab000002-0000-0000-0000-000000000002'; // A1 → Coach A; seeded reply_to ab000001
+
+  it('a participant replies quoting a message in their own thread', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        'insert into public.messages (recipient_id, body, reply_to_id) values ($1, $2, $3) returning reply_to_id',
+        [COACH_A_ID, 'replying to you', MSG_TO_A1],
+      ),
+    );
+    expect(r.rows[0].reply_to_id).toBe(MSG_TO_A1);
+  });
+
+  it('cannot quote a message you cannot see (cross-thread reply is rejected)', async () => {
+    // Coach B → their own client B1 is a valid send, but quoting Coach A↔A1's DM (§8)
+    // is rejected by the trigger (invalid_reply) — B can't see that message.
+    await expect(
+      asUser(COACH_B, (c) =>
+        c.query('insert into public.messages (recipient_id, body, reply_to_id) values ($1, $2, $3)', [
+          CLIENT_B1,
+          'sneaky quote',
+          MSG_TO_A1,
+        ]),
+      ),
+    ).rejects.toThrow(/invalid_reply/);
+  });
+
+  it('an edit cannot change reply_to_id (the reply target is immutable)', async () => {
+    // A1 owns MSG_FROM_A1 (seeded reply_to ab000001); rewiring the quote is rejected.
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query('update public.messages set reply_to_id = null where id = $1', [MSG_FROM_A1]),
+      ),
+    ).rejects.toThrow(/message_immutable_fields/);
+  });
+});
