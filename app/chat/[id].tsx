@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming, ZoomIn } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/lib/auth-context';
@@ -40,13 +40,21 @@ import {
   type Reaction,
   type ReplyPreview,
 } from '../../src/lib/messages';
-import { fetchMyBanState, reportMessage } from '../../src/lib/moderation';
+import {
+  acknowledgeChatTerms,
+  fetchChatAcknowledged,
+  fetchMyBanState,
+  fetchMyOpenAppeal,
+  reportMessage,
+  submitBanAppeal,
+} from '../../src/lib/moderation';
 import { REACTION_EMOJIS, type ReactionEmoji } from '../../src/schemas/message';
 import type { ReportReason } from '../../src/schemas/moderation';
 import { ReportMessageSheet } from '../../src/components/ReportMessageSheet';
+import { BanAppealSheet } from '../../src/components/BanAppealSheet';
 import { MessageActionsSheet } from '../../src/components/MessageActionsSheet';
 import { Emoji } from '../../src/components/Emoji';
-import { Screen, Text } from '../../src/components/ui';
+import { Screen, Text, Button } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 const EDIT_WINDOW_MS = 15 * 60 * 1000; // mirrors the 0036 server-side edit window
@@ -340,6 +348,7 @@ function DayDivider({ at }: { at: string }) {
 export default function ChatThread() {
   const { id: otherId, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const { t } = useTranslation();
+  const router = useRouter();
   const { session } = useAuth();
   const myId = session?.user?.id;
   // Measured header height → exact keyboard offset (the hardcoded 90 clipped).
@@ -354,6 +363,12 @@ export default function ChatThread() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [banned, setBanned] = useState(false);
+  // Phase 18 Slice 3: appeal (when banned) + the per-person disclaimer gate.
+  const [hasOpenAppeal, setHasOpenAppeal] = useState(false);
+  const [appealSheetOpen, setAppealSheetOpen] = useState(false);
+  const [appealing, setAppealing] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [acking, setAcking] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [actionsFor, setActionsFor] = useState<Message | null>(null);
@@ -394,8 +409,18 @@ export default function ChatThread() {
       try {
         const isBanned = await fetchMyBanState(myId);
         if (active) setBanned(isBanned);
+        if (isBanned) {
+          const open = await fetchMyOpenAppeal(myId);
+          if (active) setHasOpenAppeal(open);
+        }
       } catch {
         /* non-fatal: send still fails closed server-side */
+      }
+      try {
+        const acked = await fetchChatAcknowledged(myId, otherId);
+        if (active) setAcknowledged(acked);
+      } catch {
+        /* non-fatal: the gate just shows; accepting is idempotent */
       }
     })();
     return () => {
@@ -561,7 +586,40 @@ export default function ChatThread() {
     }
   }
 
+  // A banned user appeals; idempotent server-side (one open appeal per user).
+  async function submitAppeal(note: string) {
+    setAppealing(true);
+    try {
+      await submitBanAppeal(note);
+      setHasOpenAppeal(true);
+      setAppealSheetOpen(false);
+      Alert.alert(t('appeal.submittedTitle'), t('appeal.submittedBody'));
+    } catch {
+      Alert.alert(t('appeal.failTitle'), t('appeal.failBody'));
+    } finally {
+      setAppealing(false);
+    }
+  }
+
+  // Accept the per-person chat disclaimer; unlocks the composer for this thread.
+  async function acceptDisclaimer() {
+    if (!otherId) return;
+    setAcking(true);
+    try {
+      await acknowledgeChatTerms(otherId);
+      setAcknowledged(true);
+    } catch {
+      Alert.alert(t('chat.sendFailed'), '');
+    } finally {
+      setAcking(false);
+    }
+  }
+
   const actionTarget = actionsFor;
+  // Gate the very first message to a new person behind the disclaimer. Shown only
+  // for a brand-new pairing (you haven't sent here yet); existing/legacy threads and
+  // banned users are never gated here.
+  const needsAck = !banned && !acknowledged && !messages.some((m) => m.sender_id === myId);
 
   return (
     <>
@@ -626,12 +684,13 @@ export default function ChatThread() {
             />
           )}
 
-          {/* Composer — replaced by a blocked notice when the account is banned. */}
+          {/* Composer — replaced by a blocked notice (banned) or the per-person
+              disclaimer gate (first contact). */}
           {banned ? (
             <View
               style={{
                 flexDirection: 'row',
-                alignItems: 'center',
+                alignItems: 'flex-start',
                 gap: theme.spacing.md,
                 padding: theme.spacing.lg,
                 borderTopWidth: 1,
@@ -640,14 +699,55 @@ export default function ChatThread() {
               }}
             >
               <Ionicons name="ban-outline" size={22} color={theme.colors.danger} />
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, gap: theme.spacing.sm }}>
                 <Text variant="bodyStrong" color={theme.colors.danger}>
                   {t('chat.blockedTitle')}
                 </Text>
                 <Text variant="caption" muted>
                   {t('chat.blockedBody')}
                 </Text>
+                {hasOpenAppeal ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
+                    <Ionicons name="time-outline" size={14} color={theme.colors.textMuted} />
+                    <Text variant="caption" muted>
+                      {t('chat.appealPending')}
+                    </Text>
+                  </View>
+                ) : (
+                  <Button
+                    title={t('chat.appealCta')}
+                    variant="ghost"
+                    onPress={() => setAppealSheetOpen(true)}
+                    style={{ alignSelf: 'flex-start' }}
+                  />
+                )}
               </View>
+            </View>
+          ) : needsAck ? (
+            <View
+              style={{
+                gap: theme.spacing.md,
+                padding: theme.spacing.lg,
+                borderTopWidth: 1,
+                borderTopColor: theme.colors.border,
+                backgroundColor: theme.colors.surface,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.md }}>
+                <Ionicons name="shield-outline" size={22} color={theme.colors.primary} />
+                <View style={{ flex: 1, gap: theme.spacing.xs }}>
+                  <Text variant="bodyStrong">{t('chat.disclaimerTitle')}</Text>
+                  <Text variant="caption" muted>
+                    {t('chat.disclaimerBody')}
+                  </Text>
+                  <Pressable onPress={() => router.push('/community-guidelines')} hitSlop={8}>
+                    <Text variant="caption" color={theme.colors.primary}>
+                      {t('chat.readGuidelines')}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+              <Button title={t('chat.disclaimerAgree')} onPress={acceptDisclaimer} loading={acking} />
             </View>
           ) : (
             <View>
@@ -782,6 +882,13 @@ export default function ChatThread() {
           busy={reporting}
           onPick={submitReport}
           onClose={() => setReportId(null)}
+        />
+
+        <BanAppealSheet
+          visible={appealSheetOpen}
+          busy={appealing}
+          onSubmit={submitAppeal}
+          onClose={() => setAppealSheetOpen(false)}
         />
       </Screen>
     </>

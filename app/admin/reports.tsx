@@ -14,29 +14,39 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import {
   listBannedUsers,
+  listOpenAppeals,
   listOpenReports,
   moderateReport,
+  resolveAppeal,
   type BannedUser,
+  type OpenAppeal,
   type OpenReport,
 } from '../../src/lib/moderation';
 import { Screen, Text, Avatar, GlassCard, Button, EmptyState, Badge } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 type Decision = 'dismiss' | 'ban' | 'unban';
+type AppealDecision = 'approve' | 'reject';
 
 export default function AdminReports() {
   const { t } = useTranslation();
   const { role } = useAuth();
   const [reports, setReports] = useState<OpenReport[]>([]);
   const [banned, setBanned] = useState<BannedUser[]>([]);
+  const [appeals, setAppeals] = useState<OpenAppeal[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [open, bannedUsers] = await Promise.all([listOpenReports(), listBannedUsers()]);
+      const [open, bannedUsers, openAppeals] = await Promise.all([
+        listOpenReports(),
+        listBannedUsers(),
+        listOpenAppeals(),
+      ]);
       setReports(open);
       setBanned(bannedUsers);
+      setAppeals(openAppeals);
     } catch {
       /* keep prior */
     } finally {
@@ -101,6 +111,36 @@ export default function AdminReports() {
     ]);
   }
 
+  async function runAppeal(appealId: string, decision: AppealDecision) {
+    setBusyId(appealId);
+    try {
+      await resolveAppeal({ appeal_id: appealId, decision });
+      await load();
+    } catch {
+      Alert.alert(t('common.error'), t('moderation.failed'));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function confirmAppeal(appeal: OpenAppeal, decision: AppealDecision) {
+    const who = appeal.user_name ?? t('moderation.thisUser');
+    const title = decision === 'approve' ? t('moderation.approveTitle') : t('moderation.rejectTitle');
+    const body =
+      decision === 'approve'
+        ? t('moderation.approveBody', { name: who })
+        : t('moderation.rejectBody', { name: who });
+    const cta = decision === 'approve' ? t('moderation.approve') : t('moderation.reject');
+    Alert.alert(title, body, [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: cta,
+        style: decision === 'reject' ? 'destructive' : 'default',
+        onPress: () => runAppeal(appeal.id, decision),
+      },
+    ]);
+  }
+
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
@@ -109,7 +149,51 @@ export default function AdminReports() {
     );
   }
 
-  const empty = reports.length === 0 && banned.length === 0;
+  const empty = reports.length === 0 && banned.length === 0 && appeals.length === 0;
+
+  // Ban-appeals section (header above the open queue) — only when someone appealed.
+  const AppealsSection =
+    appeals.length === 0 ? null : (
+      <View style={{ marginBottom: theme.spacing.lg, gap: theme.spacing.sm }}>
+        <Text variant="caption" muted style={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+          {t('moderation.appealsTitle')}
+        </Text>
+        {appeals.map((a) => {
+          const busy = busyId === a.id;
+          return (
+            <GlassCard key={a.id}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                <Avatar name={a.user_name ?? '?'} size={40} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyStrong">{a.user_name ?? t('moderation.unknownUser')}</Text>
+                  <Text variant="caption" muted>
+                    {new Date(a.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
+              </View>
+              <Text variant="body" muted style={{ marginTop: theme.spacing.sm }}>
+                {t('moderation.appealNote', { note: a.note })}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: theme.spacing.md, marginTop: theme.spacing.md }}>
+                <Button
+                  title={t('moderation.reject')}
+                  variant="ghost"
+                  onPress={() => confirmAppeal(a, 'reject')}
+                  disabled={busy}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title={t('moderation.approve')}
+                  onPress={() => confirmAppeal(a, 'approve')}
+                  loading={busy}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </GlassCard>
+          );
+        })}
+      </View>
+    );
 
   // Banned-users section (header above the open queue) — only when someone is banned.
   const BannedSection =
@@ -148,7 +232,14 @@ export default function AdminReports() {
         contentContainerStyle={
           empty ? { flexGrow: 1, justifyContent: 'center' } : { padding: theme.spacing.lg, gap: theme.spacing.md }
         }
-        ListHeaderComponent={BannedSection}
+        ListHeaderComponent={
+          AppealsSection || BannedSection ? (
+            <>
+              {AppealsSection}
+              {BannedSection}
+            </>
+          ) : null
+        }
         ListEmptyComponent={
           empty ? (
             <EmptyState

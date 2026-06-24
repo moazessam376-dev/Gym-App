@@ -59,6 +59,8 @@ const migrationFiles = [
   '0035_restore_immutables_search_path.sql',
   '0036_chat_engagement.sql',
   '0037_message_replies.sql',
+  '0038_ban_appeals.sql',
+  '0039_chat_acknowledgments.sql',
 ];
 
 const baseUrl =

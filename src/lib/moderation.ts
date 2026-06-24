@@ -6,10 +6,13 @@
 // report status + the ban (§2). Inputs Zod-validated.
 import { supabase } from './supabase';
 import {
+  banAppealSchema,
   moderateReportSchema,
   reportMessageSchema,
+  resolveAppealSchema,
   type ModerateReport,
   type ReportMessage,
+  type ResolveAppeal,
 } from '../schemas/moderation';
 
 export type ReportStatus = 'open' | 'actioned' | 'dismissed';
@@ -40,6 +43,15 @@ export type BannedUser = {
   user_id: string;
   name: string | null;
   banned_at: string | null;
+};
+
+// An open ban appeal in the admin review queue, with the appellant's name.
+export type OpenAppeal = {
+  id: string;
+  user_id: string;
+  user_name: string | null;
+  note: string;
+  created_at: string;
 };
 
 const REPORT_COLS =
@@ -156,4 +168,88 @@ export async function fetchMyBanState(myUserId: string): Promise<boolean> {
     .maybeSingle();
   if (error) throw error;
   return data?.banned_at != null;
+}
+
+// ── Ban appeals (Phase 18 Slice 3) ───────────────────────────────────────────
+
+/**
+ * A banned user appeals their ban. user_id + the workflow columns are server-set by
+ * the trigger, which also rejects the insert unless the caller is actually banned.
+ * A second appeal while one is open is a no-op conflict (unique partial index).
+ */
+export async function submitBanAppeal(note: string): Promise<void> {
+  const v = banAppealSchema.parse({ note });
+  const { error } = await supabase.from('ban_appeals').insert({ note: v.note });
+  // Already has an open appeal → unique violation; treat as success (idempotent).
+  if (error && error.code !== '23505') throw error;
+}
+
+/** Whether the signed-in user already has an OPEN appeal (drives "Appeal pending"). */
+export async function fetchMyOpenAppeal(myUserId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('ban_appeals')
+    .select('id')
+    .eq('user_id', myUserId)
+    .eq('status', 'open')
+    .maybeSingle();
+  if (error) throw error;
+  return data != null;
+}
+
+/** Admin: the open ban-appeal queue with the appellant's name (oldest first). */
+export async function listOpenAppeals(): Promise<OpenAppeal[]> {
+  const { data, error } = await supabase
+    .from('ban_appeals')
+    .select(
+      `id, user_id, note, created_at,
+       user:profiles!ban_appeals_user_id_fkey(full_name)`,
+    )
+    .eq('status', 'open')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row) => {
+    const r = row as {
+      id: string;
+      user_id: string;
+      note: string;
+      created_at: string;
+      user: { full_name: string | null } | { full_name: string | null }[] | null;
+    };
+    const user = Array.isArray(r.user) ? r.user[0] : r.user;
+    return {
+      id: r.id,
+      user_id: r.user_id,
+      note: r.note,
+      created_at: r.created_at,
+      user_name: user?.full_name ?? null,
+    };
+  });
+}
+
+/** Admin: resolve an appeal (approve = unban / reject) via the Edge Function. */
+export async function resolveAppeal(input: ResolveAppeal): Promise<void> {
+  const body = resolveAppealSchema.parse(input);
+  const { error } = await supabase.functions.invoke('resolve-ban-appeal', { body });
+  if (error) throw error;
+}
+
+// ── Chat disclaimer acknowledgment (Phase 18 Slice 3) ────────────────────────
+
+/** Whether the signed-in user already accepted the chat terms for this peer. */
+export async function fetchChatAcknowledged(myUserId: string, peerId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('chat_acknowledgments')
+    .select('peer_id')
+    .eq('user_id', myUserId)
+    .eq('peer_id', peerId)
+    .maybeSingle();
+  if (error) throw error;
+  return data != null;
+}
+
+/** Record acceptance of the chat disclaimer for this peer (user_id is server-set). */
+export async function acknowledgeChatTerms(peerId: string): Promise<void> {
+  const { error } = await supabase.from('chat_acknowledgments').insert({ peer_id: peerId });
+  // Re-accept (already recorded) → unique violation; treat as success (idempotent).
+  if (error && error.code !== '23505') throw error;
 }

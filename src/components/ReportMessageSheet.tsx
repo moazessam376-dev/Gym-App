@@ -2,6 +2,7 @@
 // Presentational: the parent owns which message is being reported and performs the
 // report call on pick. Includes the in-product policy line (§8 safety copy).
 import { Modal, Pressable, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { REPORT_REASONS, type ReportReason } from '../schemas/moderation';
@@ -27,6 +28,7 @@ export function ReportMessageSheet({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const router = useRouter();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable
@@ -49,9 +51,21 @@ export function ReportMessageSheet({
           }}
         >
           <Text variant="title">{t('report.title')}</Text>
-          <Text variant="caption" muted style={{ marginBottom: theme.spacing.sm }}>
+          <Text variant="caption" muted>
             {t('report.policy')}
           </Text>
+          <Pressable
+            onPress={() => {
+              onClose();
+              router.push('/community-guidelines');
+            }}
+            hitSlop={8}
+            style={{ marginBottom: theme.spacing.sm }}
+          >
+            <Text variant="caption" color={theme.colors.primary}>
+              {t('chat.readGuidelines')}
+            </Text>
+          </Pressable>
 
           {REPORT_REASONS.map((reason) => (
             <Pressable
