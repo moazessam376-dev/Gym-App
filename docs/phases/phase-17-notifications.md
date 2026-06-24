@@ -80,10 +80,8 @@ Two tables, both ship **with** RLS in the same migration (deny-by-default, §2).
 
 These are tracked in `docs/pre-launch-checklist.md` and project memory.
 
-- **Slice 2 — native push (Expo Push).** `device_tokens` table + a service-role
-  `push-send` Edge Function + token registration on launch. **Prerequisite:** an EAS
-  **development build** — native push does **not** work in Expo Go, so it can't be
-  device-tested in the current setup. Defer until a dev build exists.
+- **Slice 2 — native push (Expo Push). CODE COMPLETE (2026-06-24); needs external
+  setup + a dev build to activate.** See "Slice 2 — build + setup" below.
 - **Slice 3 — email + scheduled reminders + smart delivery.** Transactional email
   (confirm Resend/SES on npm), train/eat **reminders** (need a scheduler — `pg_cron`
   or a cron'd Edge Function; an in-app-only reminder is pointless since you only see it
@@ -101,3 +99,43 @@ These are tracked in `docs/pre-launch-checklist.md` and project memory.
 - `npm run typecheck` clean; gitleaks + `npm audit` (CI).
 - Device/web: send a message / publish a plan / log a PR → the badge + feed update
   live; tapping deep-links and marks read; toggles in settings suppress the type.
+
+---
+
+## Slice 2 — native push (Expo Push): build + setup
+
+**Architecture (one fan-out point).** Every notification is minted through
+`emit_notification()` (0032), so a single AFTER INSERT trigger on `notifications`
+(**migration `0041_push_fanout.sql`**) fans every event type out to the **`push-send`**
+Edge Function via `pg_net`. push-send loads the recipient's `device_tokens`, renders
+the title/body **server-side per device locale** (mirrors `notifications.*` in
+`src/i18n/locales/*.json`), and POSTs to the Expo Push API. The coalescing message
+UPDATE (0032) is not an INSERT, so a chat burst doesn't re-fire push.
+
+**What's built (in the repo):**
+- `device_tokens` registry + `register_device_token(token, platform, locale)` RPC
+  (owner-forced; **migration `0040_device_tokens.sql`**) + RLS tests.
+- `0041_push_fanout.sql` — the trigger, guarded so the CI shim applies it as a no-op
+  (pg_net/Vault absent there). Reads `push_send_url` + `push_send_service_key` from
+  **Vault**, never the repo (§3); no-ops if either secret is unset (feed row still created).
+- `supabase/functions/push-send/` — service-role-gated; prunes `DeviceNotRegistered` tokens.
+- Client: `src/lib/push.ts` (`usePushNotifications`, mounted in `app/_layout.tsx`) — registers
+  the token post-auth + routes a tap via `notificationHref`. **No-op in Expo Go / web / simulator.**
+- `app.json` `expo-notifications` plugin; `eas.json` (Android-first dev/preview/production).
+- Deps installed (SDK-54): `expo-notifications`, `expo-device`, `expo-constants`.
+
+**External setup to activate (all free; Android-first — see `docs/pre-launch-checklist.md`):**
+1. **Expo account:** `npx eas login`, then `npx eas init` (writes `extra.eas.projectId` into `app.json`).
+2. **Firebase project → FCM** for Android push; upload the FCM key via `eas credentials`
+   (or the dashboard). iOS push (APNs) needs the **Apple Developer account ($99/yr)** — defer.
+3. **Set the Vault secrets** (Supabase → Project Settings → Vault), so 0041 can deliver:
+   - `push_send_url` = `https://ugpxcuocfemhvxhnsvic.supabase.co/functions/v1/push-send`
+   - `push_send_service_key` = the project **service-role key** (Vault keeps it off the device/repo).
+4. **Deploy** `push-send` (Supabase MCP / dashboard) and **apply** migrations `0040` + `0041`.
+   `0041` enables `pg_net` where available.
+5. **Build + install:** `npx eas build --profile development --platform android`, install the APK
+   on a real device, sign in → permission prompt → token registers.
+
+**Verification (Slice 2):** `npm run test:rls` green (device_tokens denial/positive/RPC,
+0041 no-op apply); on a dev build — send a message → push arrives → tap opens the chat;
+confirm Supabase advisors clean and a `DeviceNotRegistered` token is pruned.

@@ -38,11 +38,16 @@
   `Blob` → `File.bytes()` 0-byte gotcha was a device-only failure).
 
 ## Notifications — Phase 17 deferred slices (Slice 1 in-app shipped)
-- [ ] **Slice 2 — native push (Expo Push).** `device_tokens` table + a service-role `push-send`
-  Edge Function + token registration on launch, fanning out from the same `emit_notification`
-  path. **Prerequisite:** an EAS **development build** — native push does NOT work in Expo Go, so
-  it can't be device-tested in the current setup. Wire the `expo-notifications` plugin in `app.json`
-  + an `eas.json` first.
+- [x] **Slice 2 — native push (Expo Push). CODE COMPLETE (2026-06-24).** `device_tokens` (0040) +
+  `register_device_token` RPC + the `notifications`→`push-send` fan-out trigger (0041, Vault-keyed) +
+  the `push-send` Edge Function + `src/lib/push.ts` (mounted in `app/_layout.tsx`) + `app.json`
+  plugin + `eas.json`. Deps installed (`expo-notifications`/`expo-device`/`expo-constants`). **No-op
+  until activated.** Remaining = external setup + a dev build (the steps below); the full build/setup
+  guide is in `docs/phases/phase-17-notifications.md` → "Slice 2 — build + setup".
+- [ ] **Activate Slice 2 push (your action; Android-first, all free):** `eas login` + `eas init`;
+  Firebase/FCM key via `eas credentials`; set Vault secrets `push_send_url` + `push_send_service_key`;
+  deploy `push-send` + apply migrations 0040/0041; `eas build --profile development --platform android`;
+  install on a device and confirm message→push→tap. (iOS push needs the Apple Developer account — defer.)
 - [ ] **Slice 3 — email + scheduled reminders + smart delivery.** Transactional email (confirm
   Resend/SES on npm), train/eat **reminders** (need a scheduler — `pg_cron` or a cron'd Edge
   Function), quiet hours (UTC→user tz), frequency caps, digest batching. Extend `notification_prefs`

@@ -2865,3 +2865,154 @@ describe('chat acknowledgments (0039, Phase 18 Slice 3) — per-person disclaime
     ).rejects.toThrow();
   });
 });
+
+describe('device tokens (0040, Phase 17 Slice 2) — push registry, owner-only, server-forced owner (§2)', () => {
+  const CLIENT_A2_ID: Identity = { sub: CLIENT_A2, userRole: 'client' };
+  const TOKEN_A1 = 'ExponentPushToken[a1-device-aaaaaaaaaaaa]';
+  const TOKEN_SHARED = 'ExponentPushToken[shared-device-bbbbbbbb]';
+
+  // The harness ROLLS BACK every asUser/asService call, so a token registered in one
+  // call never persists into the next. The cross-identity cases below therefore
+  // register AND assert inside ONE transaction, switching role + JWT claims inline
+  // (the pattern used by the mark_read / chat_acknowledgments cases above).
+  type TestClient = Awaited<ReturnType<typeof pool.connect>>;
+  async function actAs(c: TestClient, who: Identity | 'anon' | 'service'): Promise<void> {
+    await c.query('reset role');
+    if (who === 'service') {
+      await c.query('set local role service_role');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+    } else if (who === 'anon') {
+      await c.query('set local role anon');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+    } else {
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: who.sub, role: 'authenticated', user_role: who.userRole }),
+      ]);
+    }
+  }
+
+  // ── registration is a server-forced upsert (user_id is always auth.uid()) ────
+  it('register_device_token stamps the caller as owner — the client never supplies a user_id', async () => {
+    const r = await asUser(CLIENT_A1, async (c) => {
+      await c.query('select public.register_device_token($1, $2)', [TOKEN_A1, 'android']);
+      return c.query('select user_id, platform from public.device_tokens where token = $1', [TOKEN_A1]);
+    });
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0].user_id).toBe(CLIENT_A1.sub);
+    expect(r.rows[0].platform).toBe('android');
+  });
+
+  it('register_device_token rejects an invalid platform / empty token / bad locale', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('select public.register_device_token($1, $2)', [TOKEN_A1, 'desktop'])),
+    ).rejects.toThrow();
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('select public.register_device_token($1, $2)', ['', 'android'])),
+    ).rejects.toThrow();
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('select public.register_device_token($1, $2, $3)', [TOKEN_A1, 'android', 'fr'])),
+    ).rejects.toThrow();
+  });
+
+  it('anon cannot register a token (execute revoked from anon)', async () => {
+    await expect(
+      asAnon((c) => c.query('select public.register_device_token($1, $2)', [TOKEN_A1, 'android'])),
+    ).rejects.toThrow();
+  });
+
+  it('a client cannot directly INSERT or UPDATE a token (registration is the RPC only)', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("insert into public.device_tokens (token, user_id, platform) values ($1, $2, 'android')", [
+          'ExponentPushToken[forged-cccc]',
+          CLIENT_A1.sub,
+        ]),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query("update public.device_tokens set platform = 'web' where token = $1", [TOKEN_A1])),
+    ).rejects.toThrow();
+  });
+
+  // ── feed RLS: tokens are private to their owner; not even the assigned coach ──
+  it('an owner reads only their own tokens; another tenant, the coach, and anon see nothing', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await actAs(c, CLIENT_A1);
+      await c.query('select public.register_device_token($1, $2, $3)', [TOKEN_A1, 'android', 'en']);
+      const owner = await c.query('select token from public.device_tokens');
+      await actAs(c, CLIENT_A2_ID);
+      const otherClient = await c.query('select token from public.device_tokens');
+      await actAs(c, COACH_A);
+      const coach = await c.query('select token from public.device_tokens');
+      await actAs(c, 'anon');
+      const anon = await c.query('select token from public.device_tokens');
+      expect(owner.rows.some((r) => r.token === TOKEN_A1)).toBe(true);
+      expect(otherClient.rows).toHaveLength(0);
+      expect(coach.rows).toHaveLength(0); // raw tokens never leak, even to the coach
+      expect(anon.rows).toHaveLength(0);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  // ── device hand-off: re-registering a token reassigns it to the new owner ─────
+  it('re-registering the same token as a different user reassigns ownership (shared device)', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await actAs(c, CLIENT_A1);
+      await c.query('select public.register_device_token($1, $2, $3)', [TOKEN_SHARED, 'android', 'en']);
+      await actAs(c, CLIENT_A2_ID);
+      await c.query('select public.register_device_token($1, $2, $3)', [TOKEN_SHARED, 'ios', 'ar']);
+      const a2 = await c.query('select user_id, platform from public.device_tokens where token = $1', [TOKEN_SHARED]);
+      await actAs(c, CLIENT_A1);
+      const a1 = await c.query('select token from public.device_tokens where token = $1', [TOKEN_SHARED]);
+      expect(a1.rows).toHaveLength(0); // previous owner no longer receives this device's pushes
+      expect(a2.rows).toHaveLength(1);
+      expect(a2.rows[0].user_id).toBe(CLIENT_A2);
+      expect(a2.rows[0].platform).toBe('ios');
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('an owner can delete their own token; a non-owner delete affects nothing', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await actAs(c, CLIENT_A1);
+      await c.query('select public.register_device_token($1, $2, $3)', [TOKEN_A1, 'android', 'en']);
+      // A2 is not the owner — the owner-scoped delete policy hits 0 rows.
+      await actAs(c, CLIENT_A2_ID);
+      const cross = await c.query('delete from public.device_tokens where token = $1', [TOKEN_A1]);
+      // The owner can delete it.
+      await actAs(c, CLIENT_A1);
+      const own = await c.query('delete from public.device_tokens where token = $1', [TOKEN_A1]);
+      expect(cross.rowCount).toBe(0);
+      expect(own.rowCount).toBe(1);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('service_role reads every token (the fan-out path)', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await actAs(c, CLIENT_A1);
+      await c.query('select public.register_device_token($1, $2, $3)', [TOKEN_A1, 'android', 'en']);
+      await actAs(c, 'service');
+      const all = await c.query('select token from public.device_tokens');
+      expect(all.rows.length).toBeGreaterThanOrEqual(1);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+});
