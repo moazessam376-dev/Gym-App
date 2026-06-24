@@ -51,10 +51,16 @@
   request/confirm (Phase 21) — both reuse the 0032 backbone.
 - See `docs/phases/phase-17-notifications.md` for the full slice plan.
 
-## Chat safety — Phase 18 deferred slices (Slice 1 + Slice 2 shipped)
+## Chat safety — Phase 18 (Slices 1–3 shipped + deployed; phase COMPLETE bar the EAS batch)
 - [x] **Slice 2 — engagement extras.** Day dividers, reactions (`message_reactions`), soft edit
   (`edited_at` + history-preserving `original_body`), "you're blocked" UX, reliable admin unban.
   Shipped PR #22 + 0036 deployed 2026-06-24.
+- [x] **Slice 3 — legal & accountability.** Ban-appeal flow (`ban_appeals` + `resolve-ban-appeal`
+  Edge fn), per-person disclaimer **acknowledgment gate** (`chat_acknowledgments`), bilingual
+  **Community Guidelines** screen + admin Appeals queue. Migrations 0038/0039. Shipped PR #25 +
+  deployed 2026-06-24. **AI auto-moderation DROPPED** (founder: silent chat scanning is intrusive —
+  reporting stays the only content path). Device-test fixes PR #26 (self-ref reply embed PGRST200;
+  disclaimer-flash) + PR #27 (web bubble-width min-content collapse).
 
 ### Phase 18 pilot-review items (decide/verify before the pilot)
 - [ ] **Ban is one-directional (send-block only) — confirm this is the desired product rule.**
@@ -69,9 +75,10 @@
   UI (fails closed), so a send during the flash still fails. Cosmetic only. Fix if desired by gating
   the composer until ban-state loads (trade-off: a brief no-composer flash for *all* users) — verify
   on a release build (dev mode amplifies the flash, like the tab-switch artifact above).
-- [ ] **Slice 3 — richer safety.** AI auto-moderation (cheap server text check first, AI only if
-  needed) gated on **both parties' consent** to disable; voice notes (`audio` kind in the media
-  pipeline) with their own moderation; report **appeal** flow; legal-escalation copy.
+- [ ] **Voice notes (EAS dev-build batch).** The one Phase-18 item left, deferred *with* push
+  notifications: `audio` kind in the media pipeline (validator/allowlist + `expo-audio` + mic
+  permission) — untestable in Expo Go, needs a native build. AI auto-moderation was **dropped**, not
+  deferred (founder decision); the appeal flow + legal-escalation copy **shipped** in Slice 3.
 - See `docs/phases/phase-18-chat-safety.md` for the full slice plan.
 
 ## Auth — "launch auth" follow-up (Phase 14d deferred; needs external config + device testing)
