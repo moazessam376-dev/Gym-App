@@ -6,48 +6,12 @@ import { useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/lib/auth-context';
-import { forwardChevron } from '../../src/lib/rtl';
 import { useMyName, useMyCoach, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { deleteAccount } from '../../src/lib/account';
 import { confirmDestructive } from '../../src/lib/confirm';
-import { Icon, type IconName, Screen, Text, Card, Avatar, Badge, Button } from '../../src/components/ui';
-import { LanguageSwitcher } from '../../src/components/LanguageSwitcher';
+import { Icon, Screen, Text, Card, Avatar, Badge, Button } from '../../src/components/ui';
+import { SettingsLinkRow as LinkRow, SettingsSectionLabel as SectionLabel } from '../../src/components/SettingsRow';
 import { theme } from '../../src/theme';
-
-
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <Text variant="label" muted style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.xs }}>
-      {children}
-    </Text>
-  );
-}
-
-function LinkRow({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing.md,
-        paddingVertical: theme.spacing.md,
-        paddingHorizontal: theme.spacing.lg,
-        backgroundColor: theme.colors.surface,
-        borderRadius: theme.radii.md,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        opacity: pressed ? 0.85 : 1,
-      })}
-    >
-      <Icon name={icon} size={20} color={theme.colors.primary} />
-      <Text variant="bodyStrong" style={{ flex: 1 }}>
-        {label}
-      </Text>
-      <Icon name={forwardChevron()} size={18} color={theme.colors.textMuted} />
-    </Pressable>
-  );
-}
 
 export default function AccountTab() {
   const { t } = useTranslation();
@@ -117,11 +81,6 @@ export default function AccountTab() {
         <SectionLabel>{t('account.sectionProfile')}</SectionLabel>
         <LinkRow icon="person-outline" label={t('account.editProfile')} onPress={go('/profile')} />
         <LinkRow
-          icon="notifications-outline"
-          label={t('account.notifications')}
-          onPress={go('/notification-settings')}
-        />
-        <LinkRow
           icon={role === 'coach' ? 'ribbon-outline' : 'flag-outline'}
           label={role === 'coach' ? t('account.coachingProfile') : t('account.goalsProfile')}
           onPress={go('/profile-setup')}
@@ -148,23 +107,17 @@ export default function AccountTab() {
           </>
         ) : null}
 
-        {role === 'client' || role === 'coach' || role === 'admin' ? (
+        {/* Role-defining actions. Coach day-to-day actions (Invite, Templates) now
+            live on the Clients tab; food preferences moved to the Nutrition tab. */}
+        {role === 'client' || role === 'admin' ? (
           <SectionLabel>{t('account.sectionManage')}</SectionLabel>
         ) : null}
         {role === 'client' ? (
           <>
-            <LinkRow icon="heart-outline" label={t('account.foodPreferences')} onPress={go('/food/preferences')} />
             {!hasCoach ? (
               <LinkRow icon="ticket-outline" label={t('account.acceptInvite')} onPress={go('/accept-invite')} />
             ) : null}
             <LinkRow icon="ribbon-outline" label={t('account.becomeCoach')} onPress={go('/become-coach')} />
-          </>
-        ) : null}
-
-        {role === 'coach' ? (
-          <>
-            <LinkRow icon="person-add-outline" label={t('account.inviteClient')} onPress={go('/coach/invite')} />
-            <LinkRow icon="documents-outline" label={t('account.planTemplates')} onPress={go('/coach/templates')} />
           </>
         ) : null}
 
@@ -183,15 +136,9 @@ export default function AccountTab() {
           </>
         ) : null}
 
-        <LinkRow
-          icon="book-outline"
-          label={t('account.communityGuidelines')}
-          onPress={go('/community-guidelines')}
-        />
+        <SectionLabel>{t('account.sectionPreferences')}</SectionLabel>
+        <LinkRow icon="settings" label={t('account.settings')} onPress={go('/settings')} />
       </View>
-
-      <SectionLabel>{t('account.sectionPreferences')}</SectionLabel>
-      <LanguageSwitcher />
 
       <Button
         title={t('common.signOut')}

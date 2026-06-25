@@ -125,6 +125,10 @@ function RootNavigator() {
         // Show only the back arrow — never the previous route's name (e.g. "(tabs)").
         headerBackButtonDisplayMode: 'minimal',
         headerBackTitle: '',
+        // Brand screen transition: a short right-slide (auto-mirrored in RTL). Kept
+        // brief so navigation feels responsive, not sluggish. Tuned in theme.motion.
+        animation: theme.motion.screen,
+        animationDuration: theme.motion.screenMs,
       }}
     >
       <Stack.Screen name="(tabs)" />
@@ -160,6 +164,7 @@ function RootNavigator() {
       <Stack.Screen name="profile" options={{ headerShown: true, title: 'Edit profile' }} />
       <Stack.Screen name="profile-setup" options={{ headerShown: true, title: 'Goals & profile' }} />
       <Stack.Screen name="become-coach" options={{ headerShown: true, title: 'Become a coach' }} />
+      <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
       <Stack.Screen name="admin/applications" options={{ headerShown: true, title: 'Coach applications' }} />
       <Stack.Screen name="admin/reports" options={{ headerShown: true, title: 'Reported messages' }} />
       {/* Title set in-screen (localized). */}

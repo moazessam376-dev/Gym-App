@@ -22,6 +22,12 @@ export default function PlansTab() {
   const loading = plansQ.isPending;
   const load = () => plansQ.refetch();
 
+  // The training plan that drives the Home "today" ring is the newest non-archived
+  // one (same pick as fetchTodayWorkout). Flag it so a client with several plans can
+  // tell which one is live instead of guessing.
+  const activeTrainingId =
+    plans.find((p) => p.type === 'training' && p.status !== 'archived')?.id ?? null;
+
   return (
     <Screen padded={false} gradient>
       <View style={{ paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.lg }}>
@@ -69,6 +75,7 @@ export default function PlansTab() {
                 <Text variant="title">{item.title}</Text>
                 <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
                   <Badge label={t(`plans.type.${item.type}`)} tone="secondary" />
+                  {item.id === activeTrainingId ? <Badge label={t('plans.active')} tone="primary" /> : null}
                   {item.status === 'archived' ? <Badge label={t('plans.archived')} tone="neutral" /> : null}
                 </View>
               </View>

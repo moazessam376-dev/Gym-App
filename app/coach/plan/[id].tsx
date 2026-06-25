@@ -28,6 +28,7 @@ import {
   createWeek,
   deleteDay,
   deleteMeal,
+  deletePlan,
   deleteWeek,
   duplicateWeek,
   getPlan,
@@ -291,6 +292,27 @@ export default function PlanEditor() {
     }
   }
 
+  // Throw away a draft (e.g. a bad AI generation) instead of leaving it orphaned.
+  // Drafts are never visible to the client, so this is safe; published plans use
+  // the unpublish path instead. RLS plans_delete allows the authoring coach.
+  async function onDiscardDraft() {
+    if (!plan) return;
+    const ok = await confirmDestructive(
+      t('planEditor.discardTitle'),
+      t('planEditor.discardBody'),
+      t('planEditor.discardDraft'),
+    );
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await deletePlan(plan.id);
+      router.back();
+    } catch {
+      setBusy(false);
+      Alert.alert(t('common.errorTitle'), t('planEditor.deleteError'));
+    }
+  }
+
   async function openAdjust() {
     if (!plan) return;
     setAdjustPrompt('');
@@ -375,6 +397,12 @@ export default function PlanEditor() {
           </View>
           <Text style={styles.type}>{t(`common.${plan.type}`)}</Text>
 
+          {/* Make the draft→published boundary explicit: an assigned draft is the
+              coach's WIP and isn't visible to the client until Published. */}
+          {!isTemplate && plan.status === 'draft' ? (
+            <Text style={styles.draftHint}>{t('planEditor.draftHint')}</Text>
+          ) : null}
+
           {isTemplate ? (
             <Pressable
               style={[styles.headerBtn, styles.assign]}
@@ -398,6 +426,14 @@ export default function PlanEditor() {
           {plan.status === 'draft' ? (
             <Pressable style={[styles.headerBtn, styles.adjust]} onPress={openAdjust} disabled={busy}>
               <Text style={styles.headerBtnText}>{t('planEditor.adjustWithAi')}</Text>
+            </Pressable>
+          ) : null}
+
+          {/* Discard — only for an assigned draft (never a template, never published).
+              Explicit alternative to silently leaving an orphaned draft behind. */}
+          {!isTemplate && plan.status === 'draft' ? (
+            <Pressable style={[styles.headerBtn, styles.discard]} onPress={onDiscardDraft} disabled={busy}>
+              <Text style={styles.discardText}>{t('planEditor.discardDraft')}</Text>
             </Pressable>
           ) : null}
 
@@ -817,7 +853,10 @@ const styles = StyleSheet.create({
   publish: { backgroundColor: c.success },
   unpublish: { backgroundColor: c.warning },
   adjust: { backgroundColor: c.glass, borderWidth: 1, borderColor: c.glassBorder },
+  discard: { backgroundColor: c.glass, borderWidth: 1, borderColor: c.danger },
   headerBtnText: { color: c.white, fontSize: 15, fontFamily: f.bodySemiBold },
+  draftHint: { color: c.textMuted, fontSize: 13, fontFamily: f.bodyRegular, marginTop: 2 },
+  discardText: { color: c.danger, fontSize: 15, fontFamily: f.bodySemiBold },
   sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: c.overlay },
   sheet: { backgroundColor: c.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20, paddingBottom: 28, gap: 12 },
   sheetTitle: { color: c.text, fontSize: 18, fontFamily: f.displaySemiBold, flex: 1 },

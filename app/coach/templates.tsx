@@ -6,9 +6,10 @@ import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { forwardChevron } from '../../src/lib/rtl';
-import { listTemplates, type Plan } from '../../src/lib/plans';
+import { deletePlan, listTemplates, type Plan } from '../../src/lib/plans';
 import { type PlanType } from '../../src/schemas/plan';
-import { Icon, Screen, Text, Button, GlassCard, Segmented, EmptyState } from '../../src/components/ui';
+import { confirmDestructive } from '../../src/lib/confirm';
+import { Icon, IconButton, Screen, Text, Button, GlassCard, Segmented, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function Templates() {
@@ -34,6 +35,23 @@ export default function Templates() {
       load();
     }, [load]),
   );
+
+  // Delete a template (RLS plans_delete already allows the authoring coach). Confirm
+  // first, drop it locally on success, and re-sync from the server on any failure.
+  async function onDelete(plan: Plan) {
+    const ok = await confirmDestructive(
+      t('templates.deleteTitle'),
+      t('templates.deleteMsg', { title: plan.title }),
+      t('common.delete'),
+    );
+    if (!ok) return;
+    try {
+      await deletePlan(plan.id);
+      setTemplates((prev) => prev.filter((p) => p.id !== plan.id));
+    } catch {
+      load();
+    }
+  }
 
   if (role && role !== 'coach') return <Redirect href="/" />;
 
@@ -81,6 +99,7 @@ export default function Templates() {
               <Text variant="title" style={{ flex: 1 }}>
                 {item.title}
               </Text>
+              <IconButton name="trash-outline" onPress={() => onDelete(item)} />
               <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
             </View>
           </GlassCard>

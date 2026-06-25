@@ -39,6 +39,8 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // Subtle cross-shift when switching tabs (not a hard cut). Tuned in theme.motion.
+        animation: theme.motion.tab,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarStyle: {

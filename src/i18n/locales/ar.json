@@ -38,6 +38,7 @@
   },
   "account": {
     "title": "حسابك",
+    "settings": "الإعدادات",
     "sectionProfile": "الملف",
     "sectionCommunity": "المجتمع",
     "sectionManage": "الإدارة",
@@ -62,6 +63,9 @@
     "dangerZone": "منطقة الخطر",
     "deleteAccount": "امسح الحساب",
     "deleteFailed": "مش قادرين نمسح حسابك. حاول تاني."
+  },
+  "settings": {
+    "title": "الإعدادات"
   },
   "publicProfile": {
     "editTitle": "ملفك العام",
@@ -298,13 +302,16 @@
       "training": "تمارين",
       "nutrition": "أكل"
     },
-    "archived": "مؤرشف"
+    "archived": "مؤرشف",
+    "active": "نشطة"
   },
   "templates": {
     "newPlan": "خطة جديدة (قالب أو فاضية)",
     "yourPlans": "خطط {{type}} بتاعتك",
     "emptyTitle": "لسه مفيش قوالب",
-    "emptySub": "اعمل أول خطة من فوق."
+    "emptySub": "اعمل أول خطة من فوق.",
+    "deleteTitle": "تمسح الخطة؟",
+    "deleteMsg": "ده هيمسح \"{{title}}\" نهائيًا. مش هتقدر تتراجع."
   },
   "assign": {
     "intro": "اسند القالب ده لعميل. هياخد نسخة خاصة بيه يقدر يعدّلها كمسودة — انشرها لما تجهز.",
@@ -436,7 +443,11 @@
     "tapToSetDetails": "اضغط لتحديد التفاصيل",
     "addExercise": "＋ ضيف تمرين",
     "gramsShort": "{{grams}} جم",
-    "addFood": "＋ ضيف أكل"
+    "addFood": "＋ ضيف أكل",
+    "draftHint": "مسودة — انت بس اللي شايفها. انشرها عشان تظهر للعميل.",
+    "discardDraft": "امسح المسودة",
+    "discardTitle": "تمسح المسودة دي؟",
+    "discardBody": "ده هيمسح الخطة المسودة. مش هتقدر تتراجع."
   },
   "analytics": {
     "label": "التحليلات",

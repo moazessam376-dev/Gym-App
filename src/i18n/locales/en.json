@@ -160,13 +160,16 @@
       "training": "training",
       "nutrition": "nutrition"
     },
-    "archived": "archived"
+    "archived": "archived",
+    "active": "Active"
   },
   "templates": {
     "newPlan": "New plan (template or blank)",
     "yourPlans": "Your {{type}} plans",
     "emptyTitle": "No templates yet",
-    "emptySub": "Create your first plan above."
+    "emptySub": "Create your first plan above.",
+    "deleteTitle": "Delete plan?",
+    "deleteMsg": "This permanently removes \"{{title}}\". This can't be undone."
   },
   "assign": {
     "intro": "Assign this template to a client. They get their own editable copy as a draft — publish it when ready.",
@@ -298,7 +301,11 @@
     "tapToSetDetails": "tap to set details",
     "addExercise": "＋ Add exercise",
     "gramsShort": "{{grams}} g",
-    "addFood": "＋ Add food"
+    "addFood": "＋ Add food",
+    "draftHint": "Draft — only you can see this. Publish to share it with your client.",
+    "discardDraft": "Discard draft",
+    "discardTitle": "Discard this draft?",
+    "discardBody": "This deletes the draft plan. This can't be undone."
   },
   "analytics": {
     "label": "KPI ANALYTICS",
@@ -335,6 +342,7 @@
   },
   "account": {
     "title": "Account",
+    "settings": "Settings",
     "sectionProfile": "Profile",
     "sectionCommunity": "Community",
     "sectionManage": "Manage",
@@ -359,6 +367,9 @@
     "dangerZone": "Danger zone",
     "deleteAccount": "Delete account",
     "deleteFailed": "Could not delete your account. Please try again."
+  },
+  "settings": {
+    "title": "Settings"
   },
   "publicProfile": {
     "editTitle": "Public profile",

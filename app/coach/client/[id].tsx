@@ -7,7 +7,8 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
-import { listPlansForClient, type Plan } from '../../../src/lib/plans';
+import { deletePlan, listPlansForClient, type Plan } from '../../../src/lib/plans';
+import { confirmDestructive } from '../../../src/lib/confirm';
 import { generatePlan, getPlanInsight, requestPlanNudge } from '../../../src/lib/coach-ai';
 import type { PlanType } from '../../../src/schemas/plan';
 import { getAthleteProfileFor, type AthleteProfile } from '../../../src/lib/athlete-profile';
@@ -25,7 +26,7 @@ import {
 } from '../../../src/lib/nutrition';
 import { getStreak, listSessions, type WorkoutSession } from '../../../src/lib/sessions';
 import { readCache, writeCache } from '../../../src/lib/screen-cache';
-import { Icon, Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented } from '../../../src/components/ui';
+import { Icon, IconButton, Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 // Warm-cache snapshot so re-opening a client renders instantly (then refetches).
@@ -174,6 +175,23 @@ export default function ClientDetail() {
     goals?.training_days && goals.training_days > 0
       ? Math.max(0, Math.min(100, Math.round((workoutsThisWeek / goals.training_days) * 100)))
       : null;
+
+  // Remove an assigned plan (RLS plans_delete allows the authoring coach). Confirm,
+  // drop it locally on success, and re-sync from the server on any failure.
+  async function onDeletePlan(plan: Plan) {
+    const ok = await confirmDestructive(
+      'Delete plan?',
+      `This permanently removes "${plan.title}". This can't be undone.`,
+      'Delete',
+    );
+    if (!ok) return;
+    try {
+      await deletePlan(plan.id);
+      setPlans((prev) => prev.filter((p) => p.id !== plan.id));
+    } catch {
+      load();
+    }
+  }
 
   async function onGenerate() {
     if (!id || aiBusy) return;
@@ -507,6 +525,7 @@ export default function ClientDetail() {
                 <Text variant="bodyStrong">{item.title}</Text>
                 <Badge label={item.status} tone={STATUS_TONE[item.status]} />
               </View>
+              <IconButton name="trash-outline" onPress={() => onDeletePlan(item)} />
               <Icon name="chevron-forward" size={20} color={theme.colors.textMuted} />
             </View>
           </GlassCard>

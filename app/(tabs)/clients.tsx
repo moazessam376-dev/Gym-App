@@ -37,16 +37,29 @@ export default function ClientsTab() {
             {t('clients.activeCount', { count: clients.length })}
           </Text>
         </View>
-        <Card
-          onPress={() => router.push('/coach/invite')}
-          padded={false}
-          style={{ paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 6 }}
-        >
-          <Icon name="person-add" size={16} color={theme.colors.primary} />
-          <Text variant="bodyStrong" color="primary">
-            {t('clients.invite')}
-          </Text>
-        </Card>
+        {/* Coach day-to-day actions live here (moved out of the Account tab). */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+          <Card
+            onPress={() => router.push('/coach/templates')}
+            padded={false}
+            style={{ paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+          >
+            <Icon name="documents-outline" size={16} color={theme.colors.primary} />
+            <Text variant="bodyStrong" color="primary">
+              {t('account.planTemplates')}
+            </Text>
+          </Card>
+          <Card
+            onPress={() => router.push('/coach/invite')}
+            padded={false}
+            style={{ paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+          >
+            <Icon name="person-add" size={16} color={theme.colors.primary} />
+            <Text variant="bodyStrong" color="primary">
+              {t('clients.invite')}
+            </Text>
+          </Card>
+        </View>
       </View>
       <FlatList
         data={clients}

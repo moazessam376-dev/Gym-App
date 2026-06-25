@@ -135,6 +135,11 @@ export default function ClientHome() {
               {streakQ.isPending ? '—' : streak}
             </Text>
           </View>
+          {/* Ranking surfacing (Phase 20): one-tap to the public leaderboards, which
+              were previously buried under Account → Community. */}
+          <Pressable onPress={() => router.push('/leaderboards')} hitSlop={8}>
+            <Icon name="trophy-outline" size={24} color={theme.colors.text} />
+          </Pressable>
           <NotificationBell />
           <Pressable onPress={() => router.push('/(tabs)/account')}>
             <Avatar name={name ?? 'Athlete'} size={44} />
