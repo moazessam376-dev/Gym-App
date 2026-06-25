@@ -37,9 +37,12 @@ export function isRTLLanguage(lng: string): boolean {
   return RTL_LANGUAGES.has(lng);
 }
 
-// Apply writing direction for a language. RN only fully applies an I18nManager
-// direction change after an app reload, so callers that switch INTO/OUT OF an RTL
-// language must prompt a reload (handled in Phase 16 when Arabic exists).
+// Apply writing direction for a language. I18nManager.forceRTL is a NATIVE setting:
+// on Android it only fully takes effect once the native Activity is recreated. So on an
+// LTR↔RTL switch the LanguageSwitcher does a real native restart (src/lib/restart.ts →
+// react-native-restart; a JS-only reloadAppAsync left the bottom tab bar in the old
+// direction). A cold boot always re-applies the saved direction before first paint
+// (loadSavedLanguage + the boot gate in app/_layout.tsx).
 function applyDirection(lng: string): void {
   const rtl = isRTLLanguage(lng);
   if (I18nManager.isRTL !== rtl) {

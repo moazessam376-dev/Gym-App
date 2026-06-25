@@ -159,6 +159,20 @@ insert into public.media (id, owner_id, kind, status, bucket, path, mime_type, s
    'aaaa0001-0000-0000-0000-000000000001', 'progress_photo', 'ready',
    'media', 'aaaa0001-0000-0000-0000-000000000001/seed-photo.jpg', 'image/jpeg', 12345);
 
+-- Voice note (0043, Phase 18). An `audio` media owned by COACH A, attached to a
+-- message Coach A → Client A1 (empty body). Proves the participant read path: Client
+-- A1 — neither the owner nor the owner's coach — can read the coach's media because
+-- they are a party to a message referencing it; Coach B / Client B1 / Client A2 can't.
+insert into public.media (id, owner_id, kind, status, bucket, path, mime_type, size_bytes) values
+  ('ed000002-0000-0000-0000-000000000002',
+   '11111111-1111-1111-1111-111111111111', 'audio', 'ready',
+   'media', '11111111-1111-1111-1111-111111111111/seed-voice.m4a', 'audio/mp4', 23456);
+
+insert into public.messages (id, sender_id, recipient_id, body, media_id) values
+  ('ab000004-0000-0000-0000-000000000004',
+   '11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', '',
+   'ed000002-0000-0000-0000-000000000002');
+
 -- Completion logging (0016). Client A1 trained on 3 consecutive recent days
 -- (→ a 3-day streak); Client A2 once this week; Client B1 (Coach B's client) once.
 -- Proves cross-tenant denial + the leaderboard tenancy fence. Dates are relative

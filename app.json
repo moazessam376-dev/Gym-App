@@ -34,7 +34,14 @@
         }
       ],
       "expo-localization",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone so you can send voice notes in chat."
+        }
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "router": {},

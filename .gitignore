@@ -16,6 +16,10 @@ expo-env.d.ts
 ios/
 android/
 
+# Firebase Android config (carries a Google API key — fed to the build via an EAS
+# file env var, never committed; see app.config.js + the GOOGLE_SERVICES_JSON env var).
+google-services.json
+
 # MCP — project-scoped server config (no secret, but not committed)
 .mcp.json
 

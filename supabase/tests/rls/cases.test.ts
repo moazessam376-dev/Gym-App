@@ -3016,3 +3016,63 @@ describe('device tokens (0040, Phase 17 Slice 2) — push registry, owner-only, 
     }
   });
 });
+
+describe('voice notes (0043, Phase 18) — audio media readable by chat participants (§2/§7/§8)', () => {
+  const ADMIN: Identity = { sub: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userRole: 'admin' };
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_A2_ID: Identity = { sub: CLIENT_A2, userRole: 'client' };
+  const CLIENT_B1_ID: Identity = { sub: CLIENT_B1, userRole: 'client' };
+  const VOICE_MEDIA = 'ed000002-0000-0000-0000-000000000002'; // Coach A's voice note → A1
+
+  // ── the new participant read path (the crux of coach→client voice notes) ────
+  it('the recipient reads the sender-owned voice media via the message-participant path', async () => {
+    // Client A1 is neither the owner (Coach A) nor the owner's coach nor admin — they
+    // can read it ONLY because they are a party to a message that references it.
+    const recipient = await asUser(CLIENT_A1, (c) =>
+      c.query('select id from public.media where id = $1', [VOICE_MEDIA]),
+    );
+    expect(recipient.rows).toHaveLength(1);
+  });
+
+  it('the owner (sender) and an admin read it too', async () => {
+    const owner = await asUser(COACH_A, (c) =>
+      c.query('select id from public.media where id = $1', [VOICE_MEDIA]),
+    );
+    const admin = await asUser(ADMIN, (c) =>
+      c.query('select id from public.media where id = $1', [VOICE_MEDIA]),
+    );
+    expect(owner.rows).toHaveLength(1);
+    expect(admin.rows).toHaveLength(1);
+  });
+
+  it('non-participants — another tenant AND the same coach’s other client — cannot read it; nor can anon', async () => {
+    const coachB = await asUser(COACH_B, (c) => c.query('select id from public.media where id = $1', [VOICE_MEDIA]));
+    const clientB1 = await asUser(CLIENT_B1_ID, (c) => c.query('select id from public.media where id = $1', [VOICE_MEDIA]));
+    // A2 shares Coach A but is NOT a party to the A↔A1 message → no access.
+    const clientA2 = await asUser(CLIENT_A2_ID, (c) => c.query('select id from public.media where id = $1', [VOICE_MEDIA]));
+    const anon = await asAnon((c) => c.query('select id from public.media where id = $1', [VOICE_MEDIA]));
+    expect(coachB.rows).toHaveLength(0);
+    expect(clientB1.rows).toHaveLength(0);
+    expect(clientA2.rows).toHaveLength(0);
+    expect(anon.rows).toHaveLength(0);
+  });
+
+  // ── body-less (voice-only) message constraint ───────────────────────────────
+  it('a message may have an empty body ONLY when it carries media', async () => {
+    // Empty body + no media → rejected by messages_body_check.
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query('insert into public.messages (recipient_id, body) values ($1, $2)', [CLIENT_A1.sub, '']),
+      ),
+    ).rejects.toThrow();
+    // Empty body + a media id the sender owns → allowed (a voice note).
+    const ok = await asUser(COACH_A, (c) =>
+      c.query('insert into public.messages (recipient_id, body, media_id) values ($1, $2, $3) returning id', [
+        CLIENT_A1.sub,
+        '',
+        VOICE_MEDIA,
+      ]),
+    );
+    expect(ok.rowCount).toBe(1);
+  });
+});

@@ -18,6 +18,11 @@
   Quick check: `npx expo start --no-dev --minify`.
 - [ ] **Boot-splash hold duration.** Confirm the `prefetchHome` hold (`app/_layout.tsx`,
   6s timeout) feels right on a real device + real network, not just the dev machine.
+- [x] **RTL live-switch on Android — FIXED (2026-06-25).** Switching Arabic⇄English left the bottom
+  tab bar in the old direction because `I18nManager.forceRTL` is a NATIVE setting that needs the
+  Android Activity recreated, and the switcher did a JS-only `reloadAppAsync`. Now the LanguageSwitcher
+  does a real native restart (`src/lib/restart.ts` → `react-native-restart`, with a `reloadAppAsync`
+  fallback). **Verify on the native build** that AR⇄EN flips the tab bar.
 
 ## AI / cost (from earlier phases)
 - [ ] **Flip the model to Claude at launch:** set `VISION_PROVIDER=anthropic` (+ `ANTHROPIC_API_KEY`)
@@ -86,16 +91,23 @@
   deferred (founder decision); the appeal flow + legal-escalation copy **shipped** in Slice 3.
 - See `docs/phases/phase-18-chat-safety.md` for the full slice plan.
 
-## Auth — "launch auth" follow-up (Phase 14d deferred; needs external config + device testing)
-- [ ] **Supabase Auth → URL Configuration:** add the password-reset redirect targets to the
-  allowlist — `gymapp://reset-password` (native) and `<web-origin>/reset-password`. Customize the
-  reset email template. Then **device-test** the full native reset: email → deep link → set new
-  password (needs a deep-link handler that extracts the recovery tokens and calls `setSession`;
-  the request email + web completion already work).
-- [ ] **Google + Apple OAuth:** create credentials (Google Cloud OAuth client, Apple Service ID +
-  key), enable the providers in Supabase, add `signInWithOAuth` buttons + native handling
-  (`expo-web-browser`), and device-test. **Apple sign-in is App-Store-required** once any
-  third-party login exists.
+## Auth — "launch auth" follow-up (Phase 14d)
+- [x] **Native password-reset deep link — CODE COMPLETE (2026-06-25).** `auth-context.tsx` now parses
+  the `gymapp://reset-password?code=…` link on native (cold start + warm), exchanges the PKCE code via
+  `exchangeCodeForSession`, and flags recovery so the root guard shows the set-new-password screen. Web
+  already worked via `detectSessionInUrl`.
+- [ ] **Activate reset (your action):** Supabase → **Auth → URL Configuration** → add redirect URLs
+  `gymapp://reset-password` (native) + `<web-origin>/reset-password` (web), and customize the reset email
+  template. Then device-test on a native build: forgot-password → email → tap link → set new password.
+- [x] **Google OAuth — CODE COMPLETE (2026-06-25).** `src/lib/oauth.ts` (`signInWithGoogle`: web full-page
+  redirect; native `expo-web-browser` + PKCE `exchangeCodeForSession`) + a `GoogleSignInButton` on
+  sign-in & sign-up. Dep `expo-web-browser` added.
+- [ ] **Activate Google (your action):** create a **Google Cloud OAuth client** (Web client for Supabase's
+  callback + an Android client for the package `com.mo2adev.gymapp` / SHA-1 from `eas credentials`); in
+  Supabase → **Auth → Providers → Google**, paste the client id/secret + turn it on; add `gymapp://` to the
+  redirect allowlist. Then device-test on a native build.
+- [ ] **Apple OAuth (deferred to iOS):** needs the **Apple Developer account ($99/yr)** (Service ID + key).
+  **App-Store-required once Google ships on iOS** (Guideline 4.8) — so it lands with the iOS build, not now.
 - [ ] **Phone linking (optional):** configure a paid SMS provider (Twilio) in Supabase before
   exposing `updateUser({ phone })` + OTP. Not a pilot blocker.
 - [ ] **Account deactivate:** build the reversible, server-enforced version (account-state flag +

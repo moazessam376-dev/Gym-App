@@ -44,6 +44,18 @@ function easProjectId(): string | undefined {
 export async function registerForPushNotifications(): Promise<void> {
   if (Platform.OS === 'web' || !Device.isDevice) return;
   try {
+    // Android only shows a backgrounded push as a heads-up banner if it targets a
+    // HIGH-importance notification channel. Create the 'default' channel push-send
+    // addresses (channel creation needs no permission). Without this, FCM delivers
+    // but the system shows nothing in the tray.
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'Default',
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: 'default',
+      });
+    }
+
     let { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') {
       status = (await Notifications.requestPermissionsAsync()).status;

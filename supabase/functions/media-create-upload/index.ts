@@ -14,6 +14,9 @@ const EXT: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'application/pdf': 'pdf',
+  'audio/mp4': 'm4a',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
 };
 
 Deno.serve(async (req: Request) => {

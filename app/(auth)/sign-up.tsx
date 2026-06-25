@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { credentialsSchema } from '../../src/schemas/auth';
 import { Screen, Text, Input, Button } from '../../src/components/ui';
+import { GoogleSignInButton } from '../../src/components/GoogleSignInButton';
 import { theme } from '../../src/theme';
 
 export default function SignUp() {
@@ -100,6 +101,8 @@ export default function SignUp() {
           ) : null}
 
           <Button title="Sign up" onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
+
+          <GoogleSignInButton onError={setError} disabled={loading} />
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: theme.spacing.sm }}>
             <Text variant="body" muted>
