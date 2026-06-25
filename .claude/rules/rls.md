@@ -27,6 +27,15 @@ Topic detail for CLAUDE.md §2 ("deny by default"). **This file wins over a prom
   schema-qualify every name in `SECURITY DEFINER` functions.
 - Policies are scoped `to authenticated` (and `to anon` only when truly public).
   `service_role` has `BYPASSRLS` and is the trusted server path.
+- **Exposing a PUBLIC subset of a private table → a field-allowlist `SECURITY DEFINER`
+  RPC, never a broad/`anon` table policy.** RLS is **row-level, not column-level**: a
+  policy that lets others read a "public" row leaks **every** column of it (e.g. an
+  athlete's `birth_date`/`height_cm`/`sex`/`injuries_notes`). Instead, hand-pick the
+  allowed columns in an RPC's `SELECT` (the column list *is* the allowlist), gate on the
+  opt-in flag (`is_public OR user_id = auth.uid()` for owner-preview), and `grant execute`
+  to `authenticated` only — the raw table gets no new read path. See Phase 19's
+  `get_public_coach_profile` / `get_public_athlete_profile` (0044) and the Phase 15
+  coach-fenced RPCs (0031). Aggregate "proof" surfaces return counts only, never ids.
 
 ## Test gate
 - The harness in `supabase/tests/rls/` MUST stay green (CLAUDE.md §11). Any new
