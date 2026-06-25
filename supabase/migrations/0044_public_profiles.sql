@@ -101,6 +101,12 @@ begin
 end
 $$;
 
+-- This is a TRIGGER function — it must never be reachable as a PostgREST RPC. CREATE
+-- FUNCTION grants EXECUTE to PUBLIC by default, so revoke it (the trigger still fires;
+-- triggers don't check EXECUTE). Keeps it off the anon/authenticated API surface (advisor
+-- 0028/0029) — same discipline the other helpers use.
+revoke all on function public.enforce_avatar_ownership() from public, anon, authenticated;
+
 drop trigger if exists profiles_enforce_avatar_ownership on public.profiles;
 create trigger profiles_enforce_avatar_ownership
   before update on public.profiles
