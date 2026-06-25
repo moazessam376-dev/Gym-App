@@ -11,6 +11,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { queryClient } from './query';
@@ -67,6 +69,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
       subscription.unsubscribe();
+    };
+  }, []);
+
+  // Native password-reset deep link. On web, detectSessionInUrl (supabase.ts) handles
+  // the recovery link and fires PASSWORD_RECOVERY automatically; on native it's off, so
+  // we parse the gymapp://reset-password?code=… link ourselves, exchange the PKCE code
+  // for a session, and flag recovery so the root guard shows the set-new-password screen.
+  // (OAuth redirects use a different path and are handled in src/lib/oauth.ts.)
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let active = true;
+    const handle = async (url: string | null) => {
+      if (!url) return;
+      const { path, queryParams } = Linking.parse(url);
+      const isRecovery = (path ?? '').includes('reset-password') || queryParams?.type === 'recovery';
+      if (!isRecovery) return;
+      const code = typeof queryParams?.code === 'string' ? queryParams.code : null;
+      if (!code) return;
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (active && !error) setRecovering(true);
+    };
+    Linking.getInitialURL().then(handle); // cold start (app opened by the link)
+    const sub = Linking.addEventListener('url', (e) => handle(e.url)); // warm
+    return () => {
+      active = false;
+      sub.remove();
     };
   }, []);
 

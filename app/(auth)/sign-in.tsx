@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { credentialsSchema } from '../../src/schemas/auth';
 import { Screen, Text, Input, Button } from '../../src/components/ui';
+import { GoogleSignInButton } from '../../src/components/GoogleSignInButton';
 import { theme } from '../../src/theme';
 
 export default function SignIn() {
@@ -66,6 +67,8 @@ export default function SignIn() {
           />
 
           <Button title="Sign in" onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
+
+          <GoogleSignInButton onError={setError} disabled={loading} />
 
           <Pressable onPress={() => router.push('/(auth)/forgot-password')} style={{ alignSelf: 'center' }}>
             <Text variant="body" color="link">
