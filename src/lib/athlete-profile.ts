@@ -28,13 +28,15 @@ export type AthleteProfile = {
   dietary_tags: DietaryTag[];
   injuries_notes: string | null;
   weight_unit: WeightUnit;
+  is_public: boolean;
+  public_achievements: string[];
   onboarded_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
 const COLS =
-  'user_id, primary_goal, experience_level, sex, birth_date, height_cm, target_weight_grams, activity_level, training_days, dietary_tags, injuries_notes, weight_unit, onboarded_at, created_at, updated_at';
+  'user_id, primary_goal, experience_level, sex, birth_date, height_cm, target_weight_grams, activity_level, training_days, dietary_tags, injuries_notes, weight_unit, is_public, public_achievements, onboarded_at, created_at, updated_at';
 
 /** The signed-in client's own profile (null if not started). */
 export async function getMyAthleteProfile(userId: string): Promise<AthleteProfile | null> {
@@ -78,5 +80,21 @@ export async function setWeightUnit(userId: string, unit: WeightUnit): Promise<v
   const { error } = await supabase
     .from('athlete_profile')
     .upsert({ user_id: userId, weight_unit: v }, { onConflict: 'user_id' });
+  if (error) throw error;
+}
+
+/**
+ * Toggle the athlete's public profile on/off and/or update public achievements
+ * (Phase 19). Focused partial upsert; allowlisted fields only (§4). The PUBLIC read
+ * path never exposes the sensitive profile fields — only name/avatar/goal/these.
+ */
+export async function setAthleteVisibility(
+  userId: string,
+  input: { is_public?: boolean; public_achievements?: string[] },
+): Promise<void> {
+  const v = upsertAthleteProfileSchema.parse(input);
+  const { error } = await supabase
+    .from('athlete_profile')
+    .upsert({ user_id: userId, ...v }, { onConflict: 'user_id' });
   if (error) throw error;
 }

@@ -968,9 +968,15 @@ describe('media (0013) — owner/coach/admin read, writes are service-role-only 
     expect(admin.rows.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('a different tenant (other coach / other client) sees nothing', async () => {
-    const coachB = await asUser(COACH_B, (c) => c.query('select id from public.media'));
-    const clientB1 = await asUser(CLIENT_B1_ID, (c) => c.query('select id from public.media'));
+  it('a different tenant (other coach / other client) sees no PRIVATE media', async () => {
+    // Avatars of PUBLIC profiles are an intentional exception (0044) — readable by any
+    // authenticated user — so scope this tenant-isolation check to private health media.
+    const coachB = await asUser(COACH_B, (c) =>
+      c.query("select id from public.media where kind <> 'avatar'"),
+    );
+    const clientB1 = await asUser(CLIENT_B1_ID, (c) =>
+      c.query("select id from public.media where kind <> 'avatar'"),
+    );
     expect(coachB.rows).toHaveLength(0);
     expect(clientB1.rows).toHaveLength(0);
   });
@@ -3074,5 +3080,186 @@ describe('voice notes (0043, Phase 18) — audio media readable by chat particip
       ]),
     );
     expect(ok.rowCount).toBe(1);
+  });
+});
+
+describe('public profiles (0044, Phase 19) — opt-in portfolio via field-allowlist RPCs (§2)', () => {
+  const ADMIN: Identity = { sub: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userRole: 'admin' };
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_B1_ID: Identity = { sub: CLIENT_B1, userRole: 'client' };
+  const COACH_P: Identity = { sub: 'c0c0c0c0-0000-0000-0000-000000000001', userRole: 'coach' }; // private coach
+  const COACH_A_AVATAR = 'a0a70001-0000-0000-0000-000000000001'; // public Coach A's avatar
+  const A1_AVATAR = 'a0a70002-0000-0000-0000-000000000002'; // public Client A1's avatar
+  const COACH_P_AVATAR = 'a0a70003-0000-0000-0000-000000000003'; // private Coach P's avatar
+
+  // ── The raw tables get NO new read path — the public surface is RPC-only ─────
+  it('a public profile does NOT widen the raw coach_profile/athlete_profile RLS', async () => {
+    // Coach A is public, but an unrelated coach still cannot read the RAW row (the
+    // sensitive columns) — only the allowlisted RPC is reachable. Defense in depth.
+    const rawCoach = await asUser(COACH_B, (c) =>
+      c.query('select user_id from public.coach_profile where user_id = $1', [COACH_A.sub]),
+    );
+    const rawAthlete = await asUser(COACH_B, (c) =>
+      c.query('select user_id from public.athlete_profile where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(rawCoach.rows).toHaveLength(0);
+    expect(rawAthlete.rows).toHaveLength(0);
+  });
+
+  // ── get_public_coach_profile: public → allowlist; private → 0 (owner previews) ──
+  it('any authenticated user reads a PUBLIC coach portfolio (allowlisted columns)', async () => {
+    const r = await asUser(CLIENT_B1_ID, (c) =>
+      c.query('select * from public.get_public_coach_profile($1)', [COACH_A.sub]),
+    );
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0].full_name).toBe('Coach A');
+    expect(r.rows[0].achievements).toContain('NASM-CPT');
+    expect(r.rows[0].avatar_media_id).toBe(COACH_A_AVATAR);
+    // The allowlist is the column set — sensitive/foreign columns simply aren't there.
+    expect(Object.keys(r.rows[0]).sort()).toEqual(
+      ['achievements', 'avatar_media_id', 'bio', 'certifications', 'coach_id', 'full_name', 'specialties', 'years_experience'].sort(),
+    );
+  });
+
+  it('a PRIVATE coach portfolio returns 0 rows to outsiders, but the owner may preview it', async () => {
+    const outsider = await asUser(COACH_A, (c) =>
+      c.query('select coach_id from public.get_public_coach_profile($1)', [COACH_P.sub]),
+    );
+    const owner = await asUser(COACH_P, (c) =>
+      c.query('select coach_id from public.get_public_coach_profile($1)', [COACH_P.sub]),
+    );
+    expect(outsider.rows).toHaveLength(0);
+    expect(owner.rows).toHaveLength(1); // own-preview branch
+  });
+
+  // ── get_public_athlete_profile: MINIMAL allowlist; NEVER sensitive health columns ──
+  it('a PUBLIC athlete profile exposes only the minimal allowlist (no birth_date/height/sex/injuries)', async () => {
+    const r = await asUser(COACH_B, (c) =>
+      c.query('select * from public.get_public_athlete_profile($1)', [CLIENT_A1.sub]),
+    );
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0].full_name).toBe('Client A1');
+    expect(r.rows[0].primary_goal).toBe('build_muscle');
+    expect(r.rows[0].public_achievements).toContain('Down 5kg in 12 weeks');
+    const cols = Object.keys(r.rows[0]);
+    expect(cols.sort()).toEqual(
+      ['athlete_id', 'avatar_media_id', 'full_name', 'primary_goal', 'public_achievements'].sort(),
+    );
+    // Explicitly assert the sensitive columns can never be returned by this RPC.
+    for (const banned of ['birth_date', 'height_cm', 'injuries_notes', 'sex', 'coach_id', 'target_weight_grams']) {
+      expect(cols).not.toContain(banned);
+    }
+  });
+
+  it('a PRIVATE athlete profile returns 0 rows to outsiders', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query('select athlete_id from public.get_public_athlete_profile($1)', [CLIENT_B1]),
+    );
+    expect(r.rows).toHaveLength(0); // B1's athlete profile is_public = false
+  });
+
+  // ── list_public_coaches: includes public coaches, EXCLUDES private ones ───────
+  it('list_public_coaches lists the public coach and never a private one', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query('select coach_id from public.list_public_coaches(null, 50, 0)'),
+    );
+    const ids = r.rows.map((row) => row.coach_id);
+    expect(ids).toContain(COACH_A.sub);
+    expect(ids).not.toContain(COACH_P.sub); // private coach excluded by is_public filter
+  });
+
+  it('list_public_coaches filters by specialty (case-insensitive)', async () => {
+    const hit = await asUser(CLIENT_A1, (c) =>
+      c.query("select coach_id from public.list_public_coaches('HYPERTROPHY', 50, 0)"),
+    );
+    const miss = await asUser(CLIENT_A1, (c) =>
+      c.query("select coach_id from public.list_public_coaches('nonexistent-specialty', 50, 0)"),
+    );
+    expect(hit.rows.map((r) => r.coach_id)).toContain(COACH_A.sub);
+    expect(miss.rows).toHaveLength(0);
+  });
+
+  // ── coach_public_highlights: AGGREGATE proof, never any client identifier ─────
+  it('coach_public_highlights returns aggregate goal stats with NO client ids', async () => {
+    const r = await asUser(CLIENT_B1_ID, (c) =>
+      c.query('select * from public.coach_public_highlights($1)', [COACH_A.sub]),
+    );
+    expect(r.rows.length).toBeGreaterThanOrEqual(1);
+    // The shape is aggregate-only — there is structurally no client identifier column.
+    const cols = Object.keys(r.rows[0]);
+    expect(cols.sort()).toEqual(['client_count', 'improved', 'primary_goal', 'with_progress'].sort());
+    for (const banned of ['client_id', 'user_id', 'full_name', 'id']) {
+      expect(cols).not.toContain(banned);
+    }
+    // Coach A's build_muscle client (A1) has 2 verified readings trending well → improved.
+    const muscle = r.rows.find((row) => row.primary_goal === 'build_muscle');
+    expect(muscle.client_count).toBe(1);
+    expect(muscle.with_progress).toBe(1);
+    expect(muscle.improved).toBe(1);
+  });
+
+  it('coach_public_highlights returns 0 rows for a PRIVATE coach (to an outsider)', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query('select * from public.coach_public_highlights($1)', [COACH_P.sub]),
+    );
+    expect(r.rows).toHaveLength(0);
+  });
+
+  // ── all four RPCs are authenticated-only — anon cannot execute them ───────────
+  it('anon cannot execute any public-profile RPC (no execute grant)', async () => {
+    await expect(
+      asAnon((c) => c.query('select * from public.get_public_coach_profile($1)', [COACH_A.sub])),
+    ).rejects.toThrow();
+    await expect(
+      asAnon((c) => c.query('select * from public.get_public_athlete_profile($1)', [CLIENT_A1.sub])),
+    ).rejects.toThrow();
+    await expect(
+      asAnon((c) => c.query('select * from public.list_public_coaches(null, 50, 0)')),
+    ).rejects.toThrow();
+    await expect(
+      asAnon((c) => c.query('select * from public.coach_public_highlights($1)', [COACH_A.sub])),
+    ).rejects.toThrow();
+  });
+
+  // ── avatar media branch: a PUBLIC owner's avatar is readable by any authed user;
+  //    a PRIVATE owner's avatar is not. Covers both arms of is_public_profile() ──
+  it('a PUBLIC profile’s avatar media is readable by an unrelated authenticated user', async () => {
+    // Coach A (public coach) and Client A1 (public athlete) avatars — read by an
+    // outsider (Client B1), proving both the coach_profile and athlete_profile arms.
+    const coachAvatar = await asUser(CLIENT_B1_ID, (c) =>
+      c.query('select id from public.media where id = $1', [COACH_A_AVATAR]),
+    );
+    const athleteAvatar = await asUser(COACH_B, (c) =>
+      c.query('select id from public.media where id = $1', [A1_AVATAR]),
+    );
+    expect(coachAvatar.rows).toHaveLength(1);
+    expect(athleteAvatar.rows).toHaveLength(1);
+  });
+
+  it('a PRIVATE profile’s avatar media is NOT readable by outsiders (but the owner + admin read it)', async () => {
+    const outsider = await asUser(COACH_A, (c) =>
+      c.query('select id from public.media where id = $1', [COACH_P_AVATAR]),
+    );
+    const anon = await asAnon((c) => c.query('select id from public.media where id = $1', [COACH_P_AVATAR]));
+    const owner = await asUser(COACH_P, (c) =>
+      c.query('select id from public.media where id = $1', [COACH_P_AVATAR]),
+    );
+    const admin = await asUser(ADMIN, (c) =>
+      c.query('select id from public.media where id = $1', [COACH_P_AVATAR]),
+    );
+    expect(outsider.rows).toHaveLength(0);
+    expect(anon.rows).toHaveLength(0);
+    expect(owner.rows).toHaveLength(1);
+    expect(admin.rows).toHaveLength(1);
+  });
+
+  // ── avatar_media_id immutability: you can only point at your OWN avatar media ──
+  it('a user cannot set avatar_media_id to someone else’s media row', async () => {
+    // Client A1 trying to claim Coach A's avatar as their own → ownership trigger rejects.
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query('update public.profiles set avatar_media_id = $1 where id = $2', [COACH_A_AVATAR, CLIENT_A1.sub]),
+      ),
+    ).rejects.toThrow();
   });
 });

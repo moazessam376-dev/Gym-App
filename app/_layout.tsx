@@ -161,6 +161,11 @@ function RootNavigator() {
       {/* Phase 17 notifications. Titles are set in-screen (localized). */}
       <Stack.Screen name="notifications" options={{ headerShown: true, title: 'Notifications' }} />
       <Stack.Screen name="notification-settings" options={{ headerShown: true, title: 'Notifications' }} />
+      {/* Phase 19 public profiles. Titles are set in-screen (localized). */}
+      <Stack.Screen name="public-profile-edit" options={{ headerShown: true, title: 'Public profile' }} />
+      <Stack.Screen name="coach-profile/[id]" options={{ headerShown: true, title: 'Coach profile' }} />
+      <Stack.Screen name="athlete-profile/[id]" options={{ headerShown: true, title: 'Profile' }} />
+      <Stack.Screen name="discover/coaches" options={{ headerShown: true, title: 'Discover coaches' }} />
     </Stack>
     {/* The navigator is mounted underneath (so routing + queries run and the cache
         warms); the splash overlays it until the prefetch settles, then fades to

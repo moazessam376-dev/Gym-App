@@ -322,4 +322,51 @@ insert into public.coach_analytics_insights (coach_id, analysis, provider, model
 update public.plans set ai_generated = true
   where id = '99990001-0000-0000-0000-000000000001';
 
+-- Public/private profiles (0044, Phase 19). A dedicated PRIVATE coach (Coach P, no
+-- clients) lets us prove the is_public gate + the list-exclusion without colliding
+-- with Coach B's coach_profile INSERT positive-control test.
+insert into auth.users (id, email) values
+  ('c0c0c0c0-0000-0000-0000-000000000001', 'coach.p@example.test');
+insert into public.profiles (id, role, coach_id, full_name) values
+  ('c0c0c0c0-0000-0000-0000-000000000001', 'coach', null, 'Coach P');
+
+-- Coach A goes PUBLIC (portfolio); Coach P stays PRIVATE. Client A1's athlete profile
+-- goes PUBLIC; Client B1 gets a PRIVATE athlete profile (B1 never self-inserts one, so
+-- seeding it is safe — only the cross-owner forge attempt targets B1, and that still
+-- fails the WITH CHECK). These exercise both the RPC allowlists and the avatar branch.
+update public.coach_profile
+  set is_public = true,
+      achievements = '{"Coached 3 national-level lifters","NASM-CPT"}'
+  where user_id = '11111111-1111-1111-1111-111111111111';
+
+insert into public.coach_profile (user_id, bio, specialties, years_experience, is_public, onboarded_at) values
+  ('c0c0c0c0-0000-0000-0000-000000000001', 'Private coach', '{conditioning}', 4, false, now());
+
+update public.athlete_profile
+  set is_public = true,
+      public_achievements = '{"Down 5kg in 12 weeks","First powerlifting meet"}'
+  where user_id = 'aaaa0001-0000-0000-0000-000000000001';
+
+insert into public.athlete_profile (user_id, primary_goal, is_public) values
+  ('bbbb0001-0000-0000-0000-000000000001', 'lose_fat', false);
+
+-- Avatars (`avatar` media kind). Public owners' avatars (Coach A, Client A1) are
+-- readable by ANY authenticated user via media's avatar branch; the private owner's
+-- (Coach P) stays owner/admin-only. Insert the media before pointing avatar_media_id
+-- at it (the ownership trigger verifies it belongs to the profile as an avatar).
+insert into public.media (id, owner_id, kind, status, bucket, path, mime_type, size_bytes) values
+  ('a0a70001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'avatar', 'ready',
+   'media', '11111111-1111-1111-1111-111111111111/avatar.jpg', 'image/jpeg', 4096),
+  ('a0a70002-0000-0000-0000-000000000002', 'aaaa0001-0000-0000-0000-000000000001', 'avatar', 'ready',
+   'media', 'aaaa0001-0000-0000-0000-000000000001/avatar.jpg', 'image/jpeg', 4096),
+  ('a0a70003-0000-0000-0000-000000000003', 'c0c0c0c0-0000-0000-0000-000000000001', 'avatar', 'ready',
+   'media', 'c0c0c0c0-0000-0000-0000-000000000001/avatar.jpg', 'image/jpeg', 4096);
+
+update public.profiles set avatar_media_id = 'a0a70001-0000-0000-0000-000000000001'
+  where id = '11111111-1111-1111-1111-111111111111';
+update public.profiles set avatar_media_id = 'a0a70002-0000-0000-0000-000000000002'
+  where id = 'aaaa0001-0000-0000-0000-000000000001';
+update public.profiles set avatar_media_id = 'a0a70003-0000-0000-0000-000000000003'
+  where id = 'c0c0c0c0-0000-0000-0000-000000000001';
+
 alter table auth.users enable trigger on_auth_user_created;

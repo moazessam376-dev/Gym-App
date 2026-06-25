@@ -43,23 +43,31 @@ export type UploadResult =
 export async function captureAndUploadPhoto(args: {
   source: PickSource;
   kind: MediaKind;
+  /**
+   * Open the native crop/zoom editor with a SQUARE (1:1) frame — the WhatsApp-style
+   * "move & scale" UI for avatars. Off for progress photos / InBody (those must keep
+   * their full frame, never get cropped to a square).
+   */
+  squareCrop?: boolean;
 }): Promise<UploadResult> {
-  const { source, kind } = args;
+  const { source, kind, squareCrop = false } = args;
 
   if (!(await ensurePermission(source))) return { denied: true };
 
+  // allowsEditing turns on the platform crop UI; aspect [1,1] makes it a square avatar
+  // frame the user can pan & pinch-zoom within before confirming.
+  const options: ImagePicker.ImagePickerOptions = {
+    mediaTypes: ['images'],
+    quality: 1, // we re-compress below; keep the capture lossless
+    exif: false,
+    allowsEditing: squareCrop,
+    ...(squareCrop ? { aspect: [1, 1] } : null),
+  };
+
   const picked =
     source === 'camera'
-      ? await ImagePicker.launchCameraAsync({
-          mediaTypes: ['images'],
-          quality: 1, // we re-compress below; keep the capture lossless
-          exif: false,
-        })
-      : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          quality: 1,
-          exif: false,
-        });
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
 
   if (picked.canceled || picked.assets.length === 0) return { cancelled: true };
   const asset = picked.assets[0]!;
@@ -82,4 +90,16 @@ export async function captureAndUploadPhoto(args: {
   const res = await uploadMedia({ file: bytes, mimeType: 'image/jpeg', kind });
   if ('dailyLimit' in res) return { limited: 'daily' };
   return { mediaId: res.mediaId };
+}
+
+/**
+ * Pick/capture + upload an `avatar` photo (square-cropped, EXIF-stripped + magic-byte
+ * validated server-side like every other upload). Returns the new media id — but does
+ * NOT link it to the profile. The editor holds the id locally for preview and persists
+ * the link (setMyAvatar) only when the user taps Save, so the photo behaves like the
+ * rest of the form (nothing saves until Save).
+ */
+export async function pickAvatar(source: PickSource): Promise<UploadResult> {
+  // squareCrop: let the user frame (pan + zoom) a 1:1 avatar like WhatsApp.
+  return captureAndUploadPhoto({ source, kind: 'avatar', squareCrop: true });
 }
