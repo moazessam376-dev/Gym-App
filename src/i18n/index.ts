@@ -38,12 +38,11 @@ export function isRTLLanguage(lng: string): boolean {
 }
 
 // Apply writing direction for a language. I18nManager.forceRTL is a NATIVE setting:
-// on Android it only fully takes effect once the native Activity is recreated. A JS
-// bundle reload (reloadAppAsync) applies it on a STANDALONE/production build, but a
-// dev client attached to Metro does a soft reload that leaves the native tab-bar
-// direction unflipped until a full app restart. So the LanguageSwitcher prompts a
-// reload on an LTR↔RTL switch, and a cold boot always re-applies the saved direction
-// before first paint (loadSavedLanguage + the boot gate in app/_layout.tsx).
+// on Android it only fully takes effect once the native Activity is recreated. So on an
+// LTR↔RTL switch the LanguageSwitcher does a real native restart (src/lib/restart.ts →
+// react-native-restart; a JS-only reloadAppAsync left the bottom tab bar in the old
+// direction). A cold boot always re-applies the saved direction before first paint
+// (loadSavedLanguage + the boot gate in app/_layout.tsx).
 function applyDirection(lng: string): void {
   const rtl = isRTLLanguage(lng);
   if (I18nManager.isRTL !== rtl) {

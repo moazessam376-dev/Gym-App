@@ -18,15 +18,11 @@
   Quick check: `npx expo start --no-dev --minify`.
 - [ ] **Boot-splash hold duration.** Confirm the `prefetchHome` hold (`app/_layout.tsx`,
   6s timeout) feels right on a real device + real network, not just the dev machine.
-- [ ] **RTL live-switch on Android (verify on a STANDALONE build).** Switching Arabic⇄English
-  flips the UI via `I18nManager.forceRTL` + `reloadAppAsync()` (LanguageSwitcher → `setLanguage`
-  in `src/i18n/index.ts`). `forceRTL` is a NATIVE setting that only fully applies when the native
-  Activity is recreated: a **dev client attached to Metro** does a soft JS reload that leaves the
-  bottom tab bar in the old direction until a full app restart (reported on-device 2026-06-25). On a
-  **standalone/preview build** the reload is fuller and applies it; a cold boot always re-applies the
-  saved direction (boot gate). **Confirm the live switch flips the tab bar on a preview/release build.**
-  If it still doesn't, add a true native restart (e.g. `react-native-restart`, verify new-arch support)
-  instead of `reloadAppAsync`.
+- [x] **RTL live-switch on Android — FIXED (2026-06-25).** Switching Arabic⇄English left the bottom
+  tab bar in the old direction because `I18nManager.forceRTL` is a NATIVE setting that needs the
+  Android Activity recreated, and the switcher did a JS-only `reloadAppAsync`. Now the LanguageSwitcher
+  does a real native restart (`src/lib/restart.ts` → `react-native-restart`, with a `reloadAppAsync`
+  fallback). **Verify on the native build** that AR⇄EN flips the tab bar.
 
 ## AI / cost (from earlier phases)
 - [ ] **Flip the model to Claude at launch:** set `VISION_PROVIDER=anthropic` (+ `ANTHROPIC_API_KEY`)
