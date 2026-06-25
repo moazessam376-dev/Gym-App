@@ -2,11 +2,14 @@
 // views render statuses identically).
 import type { PlanStatus, TrainingBlock } from '../schemas/plan';
 import type { MealItem } from './plans';
+import { theme } from '../theme';
 
+// Plan-status badge fills — the brand status tokens (amber draft / positive published
+// / muted archived). Single source of truth: theme.colors.status*.
 export const PLAN_STATUS_STYLE: Record<PlanStatus, { backgroundColor: string }> = {
-  draft: { backgroundColor: '#9a6700' },
-  published: { backgroundColor: '#1a7f37' },
-  archived: { backgroundColor: '#6e7781' },
+  draft: { backgroundColor: theme.colors.statusDraft },
+  published: { backgroundColor: theme.colors.statusPublished },
+  archived: { backgroundColor: theme.colors.statusArchived },
 };
 
 // Block display order + labels (groups exercises within a day).
