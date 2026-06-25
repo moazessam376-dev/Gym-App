@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Raptor",
-    "slug": "raptor",
+    "slug": "gym-app",
     "scheme": "raptor",
     "version": "0.0.0",
     "orientation": "portrait",
