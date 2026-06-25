@@ -20,7 +20,7 @@ import {
 import { useMyLeagueStanding } from '@/lib/queries/leaderboards';
 import { TIER_COLORS } from '@/lib/leagues';
 import { remaining } from '@/lib/nutrition';
-import { Icon, Screen, Text, Card, Avatar, Button, ProgressRing, EmptyState } from '@/components/ui';
+import { Icon, Screen, Text, Card, Avatar, Button, ProgressRing, EmptyState, RankCrest, MacroBar } from '@/components/ui';
 import { NotificationBell } from '@/components/NotificationBell';
 import { theme } from '@/theme';
 
@@ -223,25 +223,31 @@ export default function ClientHome() {
         </Text>
         <Card onPress={() => router.push('/(tabs)/nutrition')}>
           {nutTargets ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.lg }}>
-              <ProgressRing progress={nutProgress} size={76} strokeWidth={8}>
-                <Text variant="bodyStrong" style={{ fontSize: 12 }}>
-                  {nutLeft}
-                </Text>
-              </ProgressRing>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text variant="title">{t('home.kcalLeft', { left: nutLeft })}</Text>
-                <Text variant="caption" muted>
-                  {t('home.macroLine', {
-                    consumed: consumedKcal,
-                    target: targetKcal,
-                    p: nutDaily?.protein_total ?? 0,
-                    c: nutDaily?.carbs_total ?? 0,
-                    f: nutDaily?.fat_total ?? 0,
-                  })}
-                </Text>
+            <View style={{ gap: theme.spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.lg }}>
+                <ProgressRing progress={nutProgress} size={76} strokeWidth={8}>
+                  <Text variant="mono" style={{ fontSize: 13 }}>
+                    {nutLeft}
+                  </Text>
+                </ProgressRing>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text variant="title">{t('home.kcalLeft', { left: nutLeft })}</Text>
+                  <Text variant="caption" muted>
+                    {t('home.macroConsumed', { consumed: consumedKcal, target: targetKcal })}
+                  </Text>
+                </View>
+                <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
               </View>
-              <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
+              <MacroBar
+                protein={nutDaily?.protein_total ?? 0}
+                carbs={nutDaily?.carbs_total ?? 0}
+                fat={nutDaily?.fat_total ?? 0}
+                targets={{
+                  protein: nutTargets.protein_g_target ?? 0,
+                  carbs: nutTargets.carbs_g_target ?? 0,
+                  fat: nutTargets.fat_g_target ?? 0,
+                }}
+              />
             </View>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
@@ -290,7 +296,11 @@ export default function ClientHome() {
           </Text>
           <Card onPress={() => router.push('/leaderboards')} style={{ borderColor: leagueAccent }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-              <Icon name="trophy" size={22} color={leagueAccent} />
+              {leagueTier ? (
+                <RankCrest tier={leagueTier} size={40} />
+              ) : (
+                <Icon name="trophy" size={22} color={leagueAccent} />
+              )}
               <View style={{ flex: 1 }}>
                 <Text variant="bodyStrong" style={textStart}>
                   {leagueTitle}

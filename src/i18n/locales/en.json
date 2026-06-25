@@ -56,6 +56,7 @@
     "nutritionToday": "Nutrition today",
     "kcalLeft": "{{left}} kcal left",
     "macroLine": "{{consumed}} / {{target}} kcal · {{p}}P / {{c}}C / {{f}}F",
+    "macroConsumed": "{{consumed}} / {{target}} kcal",
     "trackNutritionTitle": "Track your nutrition",
     "trackNutritionSub": "Set a daily target and log your meals.",
     "yourCoach": "Your coach",

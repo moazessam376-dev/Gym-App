@@ -42,7 +42,8 @@ function mealNameToSlot(name: string): MealSlot {
   if (n.includes('dinner')) return 'dinner';
   return 'snack';
 }
-const MACRO_COLOR = { protein: theme.colors.primary, carbs: '#22D3EE', fat: '#A78BFA' };
+// Brand macro color coding: P = Signal cyan, C = cobalt, F = purple (data-viz only).
+const MACRO_COLOR = { protein: theme.colors.primary, carbs: theme.colors.secondary, fat: '#9B7BF5' };
 
 function MacroBar({ label, consumed, target, color }: { label: string; consumed: number; target: number; color: string }) {
   const { t } = useTranslation();

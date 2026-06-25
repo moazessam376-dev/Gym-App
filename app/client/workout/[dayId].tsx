@@ -753,7 +753,7 @@ function NumField({
         borderRadius: theme.radii.sm,
         paddingVertical: theme.spacing.sm,
         color: theme.colors.text,
-        fontFamily: theme.fontFamily.bodyRegular,
+        fontFamily: theme.fontFamily.monoMedium,
         fontSize: 15,
       }}
     />

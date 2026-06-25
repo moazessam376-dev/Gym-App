@@ -178,6 +178,7 @@
     "nutritionToday": "أكل النهارده",
     "kcalLeft": "فاضل {{left}} سعر",
     "macroLine": "{{consumed}} / {{target}} سعر · بروتين {{p}} · كارب {{c}} · دهون {{f}}",
+    "macroConsumed": "{{consumed}} / {{target}} سعر",
     "trackNutritionTitle": "تابع أكلك",
     "trackNutritionSub": "حدّد هدف يومي وسجّل وجباتك.",
     "yourCoach": "الكوتش بتاعك",
