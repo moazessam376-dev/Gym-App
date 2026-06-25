@@ -64,6 +64,7 @@ const migrationFiles = [
   '0040_device_tokens.sql',
   '0041_push_fanout.sql',
   '0042_push_fanout_harden.sql',
+  '0043_voice_notes.sql',
 ];
 
 const baseUrl =

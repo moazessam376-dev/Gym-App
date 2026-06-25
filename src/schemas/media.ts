@@ -5,8 +5,11 @@
 // never client-supplied (set from the verified JWT server-side).
 import { z } from 'zod';
 
-export const MEDIA_MIME_TYPES = ['image/jpeg', 'image/png', 'application/pdf'] as const;
-export const MEDIA_KINDS = ['progress_photo', 'inbody', 'other'] as const;
+export const MEDIA_MIME_TYPES = [
+  'image/jpeg', 'image/png', 'application/pdf',
+  'audio/mp4', 'audio/mpeg', 'audio/wav', // voice notes (Phase 18)
+] as const;
+export const MEDIA_KINDS = ['progress_photo', 'inbody', 'other', 'audio'] as const;
 export const MEDIA_MAX_BYTES = 10 * 1024 * 1024; // 10 MB (§7)
 
 export const mediaKindSchema = z.enum(MEDIA_KINDS);
@@ -24,7 +27,7 @@ export type CreateUpload = z.infer<typeof createUploadSchema>;
 
 // Step 3: finalize. inbox_path must be `{ownerUuid}/{uuid}.{ext}` (no traversal).
 export const finalizeSchema = z.object({
-  inbox_path: z.string().regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|pdf)$/i),
+  inbox_path: z.string().regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|pdf|m4a|mp3|wav)$/i),
   kind: mediaKindSchema,
   progress_entry_id: z.string().uuid().optional(),
 });
