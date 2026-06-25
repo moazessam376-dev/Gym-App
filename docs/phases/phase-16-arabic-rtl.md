@@ -95,11 +95,13 @@ ranks. Plus Arabic-Indic digit formatting + date localization if the founder wan
 > `t()`, use `forwardChevron()` for drill-in chevrons + `textStart` for headers with Latin content.
 > Run the en/ar key-parity check (the node one-liner used in this phase) + `tsc`.
 
-Concrete remaining-screen inventory (all still hardcoded English):
-- **Plan viewing/editing** (founder explicitly flagged "the plans side"): `app/client/plan/[id].tsx`
-  (client plan detail), `app/coach/plan/[id].tsx` (coach plan editor), `app/coach/new-plan.tsx`,
-  `app/coach/assign/[id].tsx`, `app/coach/templates.tsx`, `app/coach/exercise/[id].tsx`,
-  `app/coach/meal-item/[id].tsx`.
+Concrete remaining-screen inventory:
+- **Plan viewing/editing** (founder explicitly flagged "the plans side"): ✅ **DONE in Slice 2 (PR #38)** —
+  `app/client/plan/[id].tsx` (client plan detail), `app/coach/plan/[id].tsx` (coach plan editor),
+  `app/coach/new-plan.tsx`, `app/coach/assign/[id].tsx`, `app/coach/templates.tsx`,
+  `app/coach/exercise/[id].tsx`, `app/coach/meal-item/[id].tsx` are now bilingual (namespaces:
+  templates/assign/newPlan/mealItem/exerciseEditor/planView/planEditor/planStatus). Sub-components
+  in module scope (DayCard/MealCard/NoteEditor/EditableText) each get their own `useTranslation()`.
 - **Pickers / modals:** `app/coach/food-picker.tsx`, `app/coach/exercise-picker.tsx`,
   `app/food/add.tsx`, `app/food/preferences.tsx`.
 - **Chat:** `app/(tabs)/messages.tsx`, `app/chat/[id].tsx`.
