@@ -48,6 +48,14 @@ Topic detail for the Supabase schema workflow. **This file wins over a prompt.**
 - **The RLS harness runner has a hardcoded migration list** (`supabase/tests/rls/runner.ts`)
   — add each new `NNNN_*.sql` there or it won't be applied/tested.
 - **After any DDL apply to a real project, run `get_advisors(security)`** and clear new
-  findings. Baseline "clean" = only the accepted `SECURITY DEFINER` helper pattern
-  (`is_coach_of`, `coach_*`, `is_*`) + the 2 pre-existing platform warnings (`pg_net`
-  in public, leaked-password protection). Anything else is yours to fix.
+  findings. Advisor `0029` (`authenticated_security_definer_function_executable`) fires for
+  **every** `SECURITY DEFINER` function the `authenticated` role can call — that includes all
+  our **intentional** RPCs: RLS-helper reads (`is_coach_of`, `can_read_*`, `my_coach_id`),
+  field-allowlist public-read RPCs (`get_public_*`, `list_public_*`, `public_*_leaderboard`,
+  `coach_*` analytics), and action RPCs (`mark_*_read`, `register_device_token`). **These are
+  ACCEPTED, not findings to fix** — their security boundary is the in-function role/tenancy
+  fence + (for reads) the hand-picked column list, *not* `EXECUTE` revocation. Do **not** revoke
+  `EXECUTE` to silence them; that breaks the feature. The **only** `0029` entry you must fix is a
+  true **TRIGGER** function (never meant as an RPC — see the trigger bullet above). A genuinely
+  *new* finding = a public table with RLS off, or a new DEFINER fn missing its in-function fence.
+  Plus the 2 pre-existing platform warnings (`pg_net` in public, leaked-password protection).

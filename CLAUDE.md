@@ -160,6 +160,11 @@ they are expensive to change later:
   `_shared/schemas.ts` — changes nothing until you **redeploy every function that imports
   it**. A repo↔deployed drift surfaces as a runtime 400/500, not a build error (e.g.
   adding an `avatar` media kind needed `media-finalize` redeployed before uploads worked).
+- **Deploying to PROD is an outward-facing action that needs the user's *explicit* go-ahead
+  each time.** A general "start phase X" / "continue" does **not** authorize a prod
+  `apply_migration` or `deploy_edge_function` (the harness will block it). Before asking,
+  de-risk the SQL: dry-run it in a `begin … rollback` block + validate every column/helper
+  with read-only MCP. After applying, run `get_advisors(security)` and clear new findings.
 - When unsure about a security-relevant choice, **stop and ask** rather than guessing.
 
 ---
@@ -188,11 +193,15 @@ These are now the defaults — follow them in new work (full detail in
   warmed under the boot splash) — not ad-hoc `useFocusEffect`+`useState`. Add a new screen's
   queries to `prefetchHome` so it's populated before reveal.
 - **i18n:** every user-facing string goes through `t()` (`src/i18n/`, strings in `en.json` **and**
-  `ar.json` — Egyptian colloquial). Build new screens translation-ready; no hardcoded copy. Arabic +
-  RTL is **live** (Phase 16); the bilingual switcher is in Account. RTL helpers in `src/lib/rtl.ts`
-  (`forwardChevron()`, `textStart`). **Phase 16 shipped Slice 1 only** — many screens are still
-  English (plan view/editor, pickers, chat, auth, profile, body-metrics): the remaining-screen
-  inventory + how-to is in `/docs/phases/phase-16-arabic-rtl.md` (Deferred section).
+  `ar.json` — Egyptian colloquial, **full key parity** — run the en/ar parity check before commit).
+  Build new screens translation-ready; no hardcoded copy. Arabic + RTL is **live** (Phase 16); the
+  bilingual switcher is in Account. RTL helpers in `src/lib/rtl.ts` (`forwardChevron()`, `textStart`).
+  A **module-scope component used by a screen** (e.g. a card/row defined outside the screen fn) gets
+  its **own** `useTranslation()` — it can't see the screen's `t` (and watch for a local `const t = …`
+  shadowing the hook). **Done so far:** Slice 1 (switcher + core screens) + Slice 2 (the whole plans
+  cluster). **Still English → Slice 3** (inventory + how-to in `/docs/phases/phase-16-arabic-rtl.md`):
+  pickers, food add/prefs, chat, auth, profile/onboarding, body-metrics, AdminHome, and `src/lib`
+  strings (`BLOCK_LABEL`, `goalProgress()` headlines).
 - **AI cost:** every model call records usage via `recordCost(...)` on success
   (`_shared/rate-limit.ts`); cost is integer micro-USD on `ai_usage_events` (§6 discipline).
 
