@@ -99,6 +99,16 @@ const ICONS: Record<NotificationType, IconName> = {
   pr_achieved: 'trophy',
 };
 
+// Per-type semantic accent (brand notification colors): chat = purple, coach note =
+// cobalt, plan = Signal cyan, PR = positive green. Hex values that aren't theme tokens
+// (chat purple / cobalt) are the brand data-viz hues; callers pass these to <Icon>.
+export const NOTIFICATION_COLORS: Record<NotificationType, string> = {
+  message: '#9B7BF5', // chat purple
+  coach_comment: '#6B8AFF', // cobalt
+  plan_published: '#3FD9C0', // Signal cyan
+  pr_achieved: '#3FD98A', // positive
+};
+
 function str(params: Record<string, unknown>, key: string): string {
   const v = params?.[key];
   return typeof v === 'string' ? v : '';

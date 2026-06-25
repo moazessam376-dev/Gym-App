@@ -15,6 +15,7 @@ import {
   relativeTimeParts,
   markAllRead,
   markRead,
+  NOTIFICATION_COLORS,
   type NotificationRow,
 } from '@/lib/notifications';
 import { Icon, Screen, Text, EmptyState, Button } from '@/components/ui';
@@ -86,6 +87,7 @@ export default function NotificationsScreen() {
         rows.map((row) => {
           const { icon, title, body } = describeNotification(row, t);
           const { key, count } = relativeTimeParts(row.created_at);
+          const accent = NOTIFICATION_COLORS[row.type];
           const isUnread = !row.read_at;
           return (
             <Pressable
@@ -114,7 +116,7 @@ export default function NotificationsScreen() {
                   justifyContent: 'center',
                 }}
               >
-                <Icon name={icon} size={20} color={theme.colors.primary} />
+                <Icon name={icon} size={20} color={accent} />
               </View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text variant="bodyStrong">{title}</Text>
