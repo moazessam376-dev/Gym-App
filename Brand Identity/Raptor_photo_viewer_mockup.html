@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Progress Photo Viewer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; height: 844px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; position: relative; z-index: 2; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+
+  .photo-viewer { position: absolute; top: 42px; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; background: #0A0B0F; }
+
+  .viewer-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 18px; border-bottom: 1px solid #1C1D26; }
+  .close-btn { width: 36px; height: 36px; border-radius: 10px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; }
+  .close-btn svg { width: 16px; height: 16px; }
+  .date-label { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; color: #F5F6F8; }
+  .share-btn { width: 36px; height: 36px; border-radius: 10px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; }
+  .share-btn svg { width: 16px; height: 16px; }
+
+  .photo-area { flex: 1; background: linear-gradient(135deg, #1F2029, #0E0F14); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  .photo-placeholder svg { width: 80px; height: 80px; opacity: 0.15; }
+
+  .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(10,11,15,0.7); border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; }
+  .nav-arrow svg { width: 20px; height: 20px; }
+  .nav-arrow.prev { left: 14px; }
+  .nav-arrow.next { right: 14px; }
+
+  .photo-counter { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #C3C6CE; background: rgba(10,11,15,0.7); border-radius: 7px; padding: 5px 12px; }
+
+  .meta-bar { background: #0E0F14; border-top: 1px solid #2A2B38; padding: 16px 18px; }
+  .meta-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .meta-date { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; color: #F5F6F8; }
+  .meta-weight { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; color: #3FD9C0; }
+
+  .meta-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .ms-card { text-align: center; background: #15161D; border: 1px solid #2A2B38; border-radius: 10px; padding: 10px 6px; }
+  .ms-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; color: #F5F6F8; line-height: 1; }
+  .ms-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.5px; text-transform: uppercase; color: #7E828D; margin-top: 4px; }
+
+  .delta-strip { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 12px; background: rgba(63,217,192,0.06); border: 1px solid rgba(63,217,192,0.2); border-radius: 9px; }
+  .delta-icon { width: 28px; height: 28px; border-radius: 8px; background: rgba(63,217,192,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .delta-icon svg { width: 14px; height: 14px; }
+  .delta-text { font-family: 'Inter', sans-serif; font-size: 12px; color: #9B9CA8; line-height: 1.4; }
+  .delta-text strong { color: #3FD9C0; }
+
+  .thumb-strip { display: flex; gap: 6px; padding: 12px 18px; background: #0E0F14; border-top: 1px solid #2A2B38; overflow-x: auto; }
+  .thumb-strip::-webkit-scrollbar { display: none; }
+  .thumb { flex-shrink: 0; width: 48px; height: 48px; border-radius: 10px; border: 1.5px solid #2A2B38; background: linear-gradient(135deg, #1F2029, #0E0F14); display: flex; align-items: center; justify-content: center; }
+  .thumb.active { border-color: #3FD9C0; border-width: 2px; }
+  .thumb svg { width: 18px; height: 18px; opacity: 0.4; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Progress Photo Viewer · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+
+    <div class="photo-viewer">
+      <div class="viewer-header">
+        <div class="close-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#9B9CA8" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+        <div class="date-label">Jun 24, 2026</div>
+        <div class="share-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></div>
+      </div>
+
+      <div class="photo-area">
+        <div class="photo-counter">3 of 6</div>
+        <div class="photo-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="#5C616E" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+        <div class="nav-arrow prev"><svg viewBox="0 0 24 24" fill="none" stroke="#C3C6CE" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+        <div class="nav-arrow next"><svg viewBox="0 0 24 24" fill="none" stroke="#C3C6CE" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+      </div>
+
+      <div class="meta-bar">
+        <div class="meta-row">
+          <div class="meta-date">Front view</div>
+          <div class="meta-weight">84.2 kg</div>
+        </div>
+        <div class="meta-stats">
+          <div class="ms-card"><div class="ms-num">16.8%</div><div class="ms-lbl">Body Fat</div></div>
+          <div class="ms-card"><div class="ms-num">38.2kg</div><div class="ms-lbl">Lean Mass</div></div>
+          <div class="ms-card"><div class="ms-num">Day 84</div><div class="ms-lbl">Of Plan</div></div>
+        </div>
+        <div class="delta-strip">
+          <div class="delta-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div>
+          <div class="delta-text">vs May 13: <strong>−4.1kg</strong> · body fat <strong>−2.6%</strong> · lean mass <strong>+0.8kg</strong></div>
+        </div>
+      </div>
+
+      <div class="thumb-strip">
+        <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="#5C616E" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+        <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="#5C616E" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+        <div class="thumb active"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+        <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="#5C616E" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+        <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="#5C616E" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+        <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="#5C616E" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

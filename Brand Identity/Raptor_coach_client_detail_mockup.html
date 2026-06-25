@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Coach Client Detail (Remake)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  ::selection { background: rgba(63,217,192,0.3); color: #fff; }
+
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; letter-spacing: -0.5px; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  /* Nav header */
+  .nav-header { display: flex; align-items: center; gap: 14px; padding: 8px 0 18px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; flex-shrink: 0; }
+  .client-identity { display: flex; align-items: center; gap: 12px; flex: 1; }
+  .client-avatar { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #9B7BF5, #5E3FB0); display: flex; align-items: center; justify-content: center; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 18px; color: #0A0B0F; flex-shrink: 0; }
+  .client-name { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.5px; color: #F5F6F8; line-height: 1.1; }
+  .client-role { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; margin-top: 3px; }
+
+  /* This week card */
+  .this-week { background: linear-gradient(165deg, #10202C, #0A0B0F); border: 1px solid #2A2B38; border-radius: 16px; padding: 18px; margin-bottom: 14px; }
+  .tw-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .tw-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; }
+  .tw-delta { display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3FD9C0; background: rgba(63,217,192,0.12); border-radius: 7px; padding: 4px 9px; }
+  .tw-delta .lbl { color: #7E828D; }
+  .tw-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .tw-stat { text-align: center; }
+  .tw-stat-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 24px; color: #F5F6F8; line-height: 1; }
+  .tw-stat-num.accent { color: #3FD9C0; }
+  .tw-stat-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; margin-top: 6px; }
+
+  /* Card base */
+  .card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .card-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin-bottom: 12px; }
+
+  /* Goals chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; border-radius: 7px; padding: 6px 10px; }
+  .chip.primary { color: #3FD9C0; background: rgba(63,217,192,0.16); }
+  .chip.neutral { color: #C3C6CE; background: #1F2029; border: 1px solid #2A2B38; }
+  .chip.warning { color: #FFB323; background: rgba(255,179,35,0.12); }
+  .injuries { font-family: 'Inter', sans-serif; font-style: italic; font-size: 12px; color: #7E828D; margin-top: 10px; line-height: 1.5; }
+
+  /* AI assistant card */
+  .ai-card { background: linear-gradient(165deg, #10202C, #0A0B0F); border: 1px solid rgba(63,217,192,0.25); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .ai-icon { width: 32px; height: 32px; border-radius: 9px; background: rgba(63,217,192,0.15); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .ai-label { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .btn-secondary-full { background: transparent; color: #3FD9C0; border: 1px solid #3FD9C0; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; text-align: center; border-radius: 11px; padding: 12px; width: 100%; display: block; margin-bottom: 10px; }
+  .ai-hint { font-family: 'Inter', sans-serif; font-size: 12px; color: #7E828D; line-height: 1.5; padding-top: 10px; border-top: 1px solid #1C1D26; }
+
+  /* Nutrition mini-stats */
+  .mini-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .ms { text-align: center; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 10px; padding: 12px 8px; }
+  .ms-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px; color: #F5F6F8; line-height: 1; }
+  .ms-num.accent { color: #3FD9C0; }
+  .ms-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.8px; text-transform: uppercase; color: #7E828D; margin-top: 5px; }
+
+  /* Pending InBody (warning) */
+  .pending-card { background: #15161D; border: 1px solid rgba(255,179,35,0.3); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .pending-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .pending-icon { width: 32px; height: 32px; border-radius: 9px; background: rgba(255,179,35,0.15); display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .pending-label { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; flex: 1; }
+  .pending-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #FFB323; background: rgba(255,179,35,0.16); border-radius: 6px; padding: 4px 8px; }
+  .pending-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #1C1D26; }
+  .pending-row-info { flex: 1; }
+  .pending-row-val { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 13px; color: #F5F6F8; }
+  .pending-row-date { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+  .pending-review { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #FFB323; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Progress pillars */
+  .pillar { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid #1C1D26; }
+  .pillar:last-child { border-bottom: none; }
+  .pillar-icon { width: 36px; height: 36px; border-radius: 10px; background: #1F2029; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .pillar-info { flex: 1; }
+  .pillar-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .pillar-hint { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+  .chevron { color: #5C616E; font-size: 18px; flex-shrink: 0; }
+
+  /* Plans */
+  .plan-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #1C1D26; }
+  .plan-row:last-child { border-bottom: none; }
+  .plan-icon { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .plan-icon.training { background: rgba(63,217,192,0.12); color: #3FD9C0; }
+  .plan-icon.nutrition { background: rgba(107,138,255,0.12); color: #6B8AFF; }
+  .plan-info { flex: 1; }
+  .plan-title { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .plan-status { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; border-radius: 5px; padding: 3px 7px; display: inline-block; margin-top: 4px; }
+  .plan-status.published { color: #3FD98A; background: rgba(63,217,138,0.14); }
+  .plan-status.draft { color: #FFB323; background: rgba(255,179,35,0.12); }
+
+  /* CTA button */
+  .btn-primary { background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 14px; text-align: center; border-radius: 11px; padding: 13px; border: none; display: block; width: 100%; margin-bottom: 14px; }
+
+  /* Section label */
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 4px 0 10px; }
+
+  /* Tab bar */
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; }
+  .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; }
+  .tab-label.inactive { color: #7E828D; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Coach → Client Detail · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <span class="brand">Raptor</span>
+      <span class="signal">●●●</span>
+    </div>
+
+    <div class="content">
+      <!-- Nav header -->
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="client-identity">
+          <div class="client-avatar">YA</div>
+          <div>
+            <div class="client-name">Yousef Al-Mutairi</div>
+            <div class="client-role">Client · 14 weeks</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- This week -->
+      <div class="this-week">
+        <div class="tw-header">
+          <div class="tw-label">This Week</div>
+          <div class="tw-delta"><span class="lbl">Lean mass</span> +4.1kg</div>
+        </div>
+        <div class="tw-stats">
+          <div class="tw-stat">
+            <div class="tw-stat-num accent">12</div>
+            <div class="tw-stat-lbl">Day Streak</div>
+          </div>
+          <div class="tw-stat">
+            <div class="tw-stat-num">4</div>
+            <div class="tw-stat-lbl">Workouts</div>
+          </div>
+          <div class="tw-stat">
+            <div class="tw-stat-num">88%</div>
+            <div class="tw-stat-lbl">Adherence</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Goals -->
+      <div class="card">
+        <div class="card-label">Goals &amp; Profile</div>
+        <div class="chips">
+          <span class="chip primary">Build Muscle</span>
+          <span class="chip neutral">Intermediate</span>
+          <span class="chip neutral">4 days/wk</span>
+          <span class="chip neutral">Target 85kg</span>
+          <span class="chip neutral">Halal</span>
+        </div>
+        <div class="injuries">Note: Mild left knee discomfort during heavy squats — prefer leg press.</div>
+      </div>
+
+      <!-- AI Assistant -->
+      <div class="ai-card">
+        <div class="ai-header">
+          <div class="ai-icon">✦</div>
+          <div class="ai-label">AI Assistant</div>
+        </div>
+        <button class="btn-secondary-full">Generate a plan with AI</button>
+        <div class="ai-hint">Private plan-adjustment suggestions are generated from Yousef's progress data. Suggestions never auto-apply — you review and approve every change.</div>
+      </div>
+
+      <!-- Nutrition -->
+      <div class="card">
+        <div class="card-label">Nutrition · Today 2,160 / 3,200 kcal</div>
+        <div class="mini-stats">
+          <div class="ms">
+            <div class="ms-num accent">8</div>
+            <div class="ms-lbl">Log Streak</div>
+          </div>
+          <div class="ms">
+            <div class="ms-num">6/7</div>
+            <div class="ms-lbl">Days Logged</div>
+          </div>
+          <div class="ms">
+            <div class="ms-num">2,840</div>
+            <div class="ms-lbl">Avg Kcal</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pending InBody -->
+      <div class="pending-card">
+        <div class="pending-header">
+          <div class="pending-icon">📋</div>
+          <div class="pending-label">Pending InBody Readings</div>
+          <div class="pending-badge">2 NEW</div>
+        </div>
+        <div class="pending-row">
+          <div class="pending-row-info">
+            <div class="pending-row-val">84.2kg · 16.8% body fat</div>
+            <div class="pending-row-date">Submitted 2h ago</div>
+          </div>
+          <div class="pending-review">Review ›</div>
+        </div>
+        <div class="pending-row">
+          <div class="pending-row-info">
+            <div class="pending-row-val">83.8kg · 16.5% body fat</div>
+            <div class="pending-row-date">Submitted yesterday</div>
+          </div>
+          <div class="pending-review">Review ›</div>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="card">
+        <div class="card-label">Progress</div>
+        <div class="pillar">
+          <div class="pillar-icon">📊</div>
+          <div class="pillar-info">
+            <div class="pillar-name">Body Composition</div>
+            <div class="pillar-hint">84.2kg · 16.8% BF · 38.2kg lean</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-icon">⚖</div>
+          <div class="pillar-info">
+            <div class="pillar-name">Weight History</div>
+            <div class="pillar-hint">8 readings · 88.3kg → 84.2kg</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-icon">📷</div>
+          <div class="pillar-info">
+            <div class="pillar-name">Progress Photos</div>
+            <div class="pillar-hint">6 photos</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-icon">📄</div>
+          <div class="pillar-info">
+            <div class="pillar-name">InBody Scans</div>
+            <div class="pillar-hint">4 scans · 2 pending review</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <button class="btn-primary">Assign from Templates</button>
+
+      <!-- Assigned plans -->
+      <div class="section-label">Assigned Plans</div>
+      <div class="card" style="margin-bottom:0;">
+        <div class="plan-row">
+          <div class="plan-icon training">🏋</div>
+          <div class="plan-info">
+            <div class="plan-title">Push Pull Legs · 4-day split</div>
+            <span class="plan-status published">Published</span>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+        <div class="plan-row">
+          <div class="plan-icon nutrition">🥗</div>
+          <div class="plan-info">
+            <div class="plan-title">High-protein cut · 3,200 kcal</div>
+            <span class="plan-status published">Published</span>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+        <div class="plan-row">
+          <div class="plan-icon training">🏋</div>
+          <div class="plan-info">
+            <div class="plan-title">Deload week · Active recovery</div>
+            <span class="plan-status draft">Draft</span>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">CLIENTS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">ANALYTICS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

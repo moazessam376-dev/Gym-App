@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Admin Reports</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .header { padding: 6px 0 16px; }
+  .header .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #3FD9C0; }
+  .header h1 { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 26px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 3px; }
+
+  .period-toggle { display: flex; gap: 0; background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 4px; margin-bottom: 18px; }
+  .period-chip { flex: 1; text-align: center; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 12px; padding: 8px; border-radius: 8px; color: #7E828D; }
+  .period-chip.active { background: #3FD9C0; color: #0A0B0F; }
+
+  .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .kpi-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 15px; }
+  .kpi-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 26px; line-height: 1; color: #3FD9C0; }
+  .kpi-num.neutral { color: #F5F6F8; }
+  .kpi-num .unit { font-size: 12px; color: #7E828D; }
+  .kpi-lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; margin-top: 6px; }
+  .kpi-delta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #3FD9C0; margin-top: 5px; }
+  .kpi-delta.down { color: #FF6B4A; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 18px 0 12px; }
+
+  .chart-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .chart-title { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; margin-bottom: 14px; }
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 110px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .bar { width: 100%; border-radius: 5px 5px 0 0; opacity: 0.85; }
+  .bar.cyan { background: #3FD9C0; }
+  .bar.cobalt { background: #6B8AFF; }
+  .bar-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #7E828D; }
+
+  .report-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #1C1D26; }
+  .report-row:last-child { border-bottom: none; }
+  .report-icon { width: 36px; height: 36px; border-radius: 10px; background: #1F2029; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .report-icon svg { width: 16px; height: 16px; }
+  .report-info { flex: 1; }
+  .report-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; color: #F5F6F8; }
+  .report-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+  .report-val { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; color: #3FD9C0; flex-shrink: 0; }
+  .report-val.warn { color: #FFB323; }
+  .report-val.danger { color: #FF6B4A; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Admin Reports · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="header">
+        <div class="label">Admin Console</div>
+        <h1>Reports</h1>
+      </div>
+
+      <div class="period-toggle">
+        <div class="period-chip">Day</div>
+        <div class="period-chip active">Week</div>
+        <div class="period-chip">Month</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-num">4,820</div><div class="kpi-lbl">Active Users (DAU)</div><div class="kpi-delta">▲ 8% vs last week</div></div>
+        <div class="kpi-card"><div class="kpi-num neutral">142</div><div class="kpi-lbl">New Signups</div><div class="kpi-delta">▲ 12%</div></div>
+        <div class="kpi-card"><div class="kpi-num neutral">38</div><div class="kpi-lbl">Active Coaches</div><div class="kpi-delta">▲ 2</div></div>
+        <div class="kpi-card"><div class="kpi-num">$1,840</div><div class="kpi-lbl">Revenue (week)</div><div class="kpi-delta">▲ 15%</div></div>
+      </div>
+
+      <div class="section-label">Signups · 7 days</div>
+      <div class="chart-card">
+        <div class="chart-title">New athletes vs new coaches</div>
+        <div class="bar-chart">
+          <div class="bar-col"><div class="bar cyan" style="height:60%;"></div><div class="bar cobalt" style="height:15%;"></div><div class="bar-label">MON</div></div>
+          <div class="bar-col"><div class="bar cyan" style="height:80%;"></div><div class="bar cobalt" style="height:10%;"></div><div class="bar-label">TUE</div></div>
+          <div class="bar-col"><div class="bar cyan" style="height:45%;"></div><div class="bar cobalt" style="height:20%;"></div><div class="bar-label">WED</div></div>
+          <div class="bar-col"><div class="bar cyan" style="height:90%;"></div><div class="bar cobalt" style="height:12%;"></div><div class="bar-label">THU</div></div>
+          <div class="bar-col"><div class="bar cyan" style="height:70%;"></div><div class="bar cobalt" style="height:18%;"></div><div class="bar-label">FRI</div></div>
+          <div class="bar-col"><div class="bar cyan" style="height:55%;"></div><div class="bar cobalt" style="height:8%;"></div><div class="bar-label">SAT</div></div>
+          <div class="bar-col"><div class="bar cyan" style="height:40%;"></div><div class="bar cobalt" style="height:5%;"></div><div class="bar-label">SUN</div></div>
+        </div>
+      </div>
+
+      <div class="section-label">Moderation queue</div>
+      <div class="chart-card">
+        <div class="report-row">
+          <div class="report-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#FF6B4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 2h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></div>
+          <div class="report-info"><div class="report-name">Reported messages</div><div class="report-meta">Awaiting review · 24h SLA</div></div>
+          <div class="report-val danger">7</div>
+        </div>
+        <div class="report-row">
+          <div class="report-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#FFB323" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></div>
+          <div class="report-info"><div class="report-name">Pending InBody reviews</div><div class="report-meta">Across all coaches</div></div>
+          <div class="report-val warn">14</div>
+        </div>
+        <div class="report-row">
+          <div class="report-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></div>
+          <div class="report-info"><div class="report-name">Notifications sent today</div><div class="report-meta">Avg 2.8 per user</div></div>
+          <div class="report-val">13,488</div>
+        </div>
+        <div class="report-row">
+          <div class="report-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD98A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div>
+          <div class="report-info"><div class="report-name">Banned accounts</div><div class="report-meta">This week · anti-abuse</div></div>
+          <div class="report-val">2</div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">APPS</div></div>
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">REPORTS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">ACCOUNT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

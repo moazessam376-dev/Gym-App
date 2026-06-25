@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #0A0B0F; }
+  ::selection { background: rgba(63,217,192,0.3); color: #fff; }
+</style>
+</helmet>
+
+<div style="background:#0A0B0F; color:#F5F6F8; font-family:'Inter',sans-serif; min-height:100vh; padding:0 0 130px 0;">
+
+<!-- HEADER -->
+<div style="max-width:1120px; margin:0 auto; padding:60px 40px 0;">
+  <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#3FD9C0; margin-bottom:20px;">App Redesign · Part 2</div>
+  <h1 style="font-family:'Geist',sans-serif; font-weight:800; font-size:52px; line-height:0.98; letter-spacing:-2.2px; margin:0 0 18px;">Nutrition &amp; Progress.</h1>
+  <p style="font-size:16px; line-height:1.7; color:#9B9CA8; max-width:700px; margin:0;">Two more daily-use screens, recreated from the live code and reskinned. Same pattern — left is what ships, right is Raptor. Watch the calorie ring lose its glow, every number turn mono, and the body-comp row pick up a tag showing it feeds the rank.</p>
+  <div style="height:1px; background:#1C1D26; margin:44px 0 0;"></div>
+</div>
+
+<!-- ===================== NUTRITION ===================== -->
+<div style="max-width:1120px; margin:0 auto; padding:52px 40px 0;">
+  <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#9B9CA8; display:flex; align-items:center; gap:9px; margin-bottom:24px;"><span style="width:6px;height:6px;border-radius:50%;background:#3FD9C0;"></span>Screen 03 · Nutrition diary</div>
+
+  <div style="display:flex; justify-content:center; gap:60px; flex-wrap:wrap;">
+
+    <!-- BEFORE -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+      <span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#7E828D;border:1px solid #2A2B38;border-radius:7px;padding:6px 12px;">Before · Ships today</span>
+      <div style="width:330px; border:9px solid #1A1B22; border-radius:42px; overflow:hidden; box-shadow:0 30px 70px rgba(0,0,0,0.55);">
+        <div style="background:linear-gradient(180deg,#141B3A 0%,#0A0E20 60%,#070A18 100%); min-height:600px;">
+          <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-family:'Space Grotesk';font-size:12px;color:#C9CEDF;"><span>9:41</span><span>●●●</span></div>
+          <div style="padding:6px 18px 22px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <div style="font-family:'Space Grotesk';font-weight:700;font-size:26px;letter-spacing:-0.3px;">Nutrition</div>
+              <div style="display:flex;align-items:center;gap:4px;background:#141A30;border:1px solid #232A45;border-radius:999px;padding:5px 11px;"><span style="font-size:13px;">🔥</span><span style="font-family:'Space Grotesk';font-weight:600;font-size:14px;color:#3D5AFE;">12</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <span style="color:#8B93AD;font-size:18px;">‹</span><span style="font-family:'Space Grotesk';font-weight:600;font-size:15px;">Today</span><span style="color:#8B93AD;font-size:18px;">›</span>
+            </div>
+            <!-- ring card -->
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:22px;padding:22px 18px;text-align:center;box-shadow:0 0 26px rgba(61,90,254,0.2);">
+              <div style="width:150px;height:150px;border-radius:999px;margin:0 auto 16px;background:conic-gradient(#3D5AFE 0% 48%, #232A45 48% 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 0 28px rgba(61,90,254,0.32);">
+                <div style="width:120px;height:120px;border-radius:999px;background:#0C1124;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                  <div style="font-family:'Space Grotesk';font-weight:700;font-size:38px;line-height:1;">1,240</div>
+                  <div style="font-family:'Inter';font-size:11px;color:#8B93AD;">kcal left</div>
+                  <div style="font-family:'Inter';font-size:10px;color:#8B93AD;">1160 / 2400</div>
+                </div>
+              </div>
+              <!-- macro bars -->
+              <div style="display:flex;gap:12px;">
+                <div style="flex:1;text-align:left;"><div style="display:flex;justify-content:space-between;font-family:'Inter';font-weight:700;font-size:10px;color:#8B93AD;margin-bottom:4px;"><span>PROTEIN</span><span style="color:#fff;">120/150</span></div><div style="height:6px;border-radius:3px;background:rgba(255,255,255,0.07);"><div style="width:80%;height:100%;border-radius:3px;background:#3D5AFE;"></div></div></div>
+                <div style="flex:1;text-align:left;"><div style="display:flex;justify-content:space-between;font-family:'Inter';font-weight:700;font-size:10px;color:#8B93AD;margin-bottom:4px;"><span>CARBS</span><span style="color:#fff;">140/220</span></div><div style="height:6px;border-radius:3px;background:rgba(255,255,255,0.07);"><div style="width:64%;height:100%;border-radius:3px;background:#22D3EE;"></div></div></div>
+                <div style="flex:1;text-align:left;"><div style="display:flex;justify-content:space-between;font-family:'Inter';font-weight:700;font-size:10px;color:#8B93AD;margin-bottom:4px;"><span>FAT</span><span style="color:#fff;">45/70</span></div><div style="height:6px;border-radius:3px;background:rgba(255,255,255,0.07);"><div style="width:64%;height:100%;border-radius:3px;background:#A78BFA;"></div></div></div>
+              </div>
+            </div>
+            <!-- meal slot -->
+            <div style="font-family:'Inter';font-weight:700;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8B93AD;margin:16px 0 8px;">Breakfast · 312 kcal</div>
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:16px;padding:13px;display:flex;align-items:center;gap:12px;">
+              <span style="width:26px;height:26px;border-radius:7px;background:#3D5AFE;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;">✓</span>
+              <div style="flex:1;"><div style="font-family:'Space Grotesk';font-weight:600;font-size:14px;">Oats &amp; whey</div><div style="font-family:'Inter';font-size:11px;color:#8B93AD;">80g · 312 kcal · P28 C42 F6</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFTER -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+      <span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#0A0B0F;background:#3FD9C0;border-radius:7px;padding:6px 12px;font-weight:700;">After · Raptor</span>
+      <div style="width:330px; border:9px solid #1A1B22; border-radius:42px; overflow:hidden; box-shadow:0 30px 70px rgba(0,0,0,0.55);">
+        <div style="background:#0A0B0F; min-height:600px;">
+          <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-family:'JetBrains Mono';font-size:12px;color:#C3C6CE;"><span>9:41</span><span style="color:#3FD9C0;">●●●</span></div>
+          <div style="padding:6px 18px 22px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <div style="font-family:'Geist';font-weight:700;font-size:26px;letter-spacing:-0.8px;">Nutrition</div>
+              <div style="display:flex;align-items:center;gap:5px;background:#15161D;border:1px solid #2A2B38;border-radius:999px;padding:6px 11px;"><span style="font-family:'JetBrains Mono';font-weight:700;font-size:13px;color:#3FD9C0;">12</span><span style="font-family:'JetBrains Mono';font-size:9px;letter-spacing:1px;color:#7E828D;">DAY</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <span style="color:#7E828D;font-size:18px;">‹</span><span style="font-family:'JetBrains Mono';font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#C3C6CE;">Today</span><span style="color:#7E828D;font-size:18px;">›</span>
+            </div>
+            <!-- ring card -->
+            <div style="background:#15161D;border:1px solid #2A2B38;border-radius:18px;padding:22px 18px;text-align:center;">
+              <div style="width:150px;height:150px;border-radius:999px;margin:0 auto 16px;background:conic-gradient(#3FD9C0 0% 48%, #20212B 48% 100%);display:flex;align-items:center;justify-content:center;">
+                <div style="width:122px;height:122px;border-radius:999px;background:#0E0F14;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                  <div style="font-family:'JetBrains Mono';font-weight:700;font-size:34px;line-height:1;">1,240</div>
+                  <div style="font-family:'JetBrains Mono';font-size:9px;letter-spacing:1.5px;color:#7E828D;margin-top:3px;">KCAL LEFT</div>
+                  <div style="font-family:'JetBrains Mono';font-size:10px;color:#7E828D;margin-top:2px;">1,160 / 2,400</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:12px;">
+                <div style="flex:1;text-align:left;"><div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono';font-size:9px;letter-spacing:0.5px;color:#7E828D;margin-bottom:5px;"><span>PRO</span><span style="color:#C3C6CE;">120/150</span></div><div style="height:6px;border-radius:3px;background:#20212B;"><div style="width:80%;height:100%;border-radius:3px;background:#3FD9C0;"></div></div></div>
+                <div style="flex:1;text-align:left;"><div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono';font-size:9px;letter-spacing:0.5px;color:#7E828D;margin-bottom:5px;"><span>CARB</span><span style="color:#C3C6CE;">140/220</span></div><div style="height:6px;border-radius:3px;background:#20212B;"><div style="width:64%;height:100%;border-radius:3px;background:#6B8AFF;"></div></div></div>
+                <div style="flex:1;text-align:left;"><div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono';font-size:9px;letter-spacing:0.5px;color:#7E828D;margin-bottom:5px;"><span>FAT</span><span style="color:#C3C6CE;">45/70</span></div><div style="height:6px;border-radius:3px;background:#20212B;"><div style="width:64%;height:100%;border-radius:3px;background:#9B7BF5;"></div></div></div>
+              </div>
+            </div>
+            <div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#7E828D;margin:16px 0 8px;">Breakfast · 312 KCAL</div>
+            <div style="background:#15161D;border:1px solid #2A2B38;border-radius:14px;padding:13px;display:flex;align-items:center;gap:12px;">
+              <span style="width:26px;height:26px;border-radius:7px;background:#3FD9C0;display:flex;align-items:center;justify-content:center;color:#0A0B0F;font-size:15px;font-weight:700;">✓</span>
+              <div style="flex:1;"><div style="font-family:'Geist';font-weight:600;font-size:14px;">Oats &amp; whey</div><div style="font-family:'JetBrains Mono';font-size:10px;color:#7E828D;">80g · 312 kcal · P28 C42 F6</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== PROGRESS ===================== -->
+<div style="max-width:1120px; margin:0 auto; padding:64px 40px 0;">
+  <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#9B9CA8; display:flex; align-items:center; gap:9px; margin-bottom:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#3FD9C0;"></span>Screen 04 · Progress hub</div>
+  <p style="font-size:14.5px; line-height:1.6; color:#9B9CA8; max-width:720px; margin:0 0 24px;">The progress hub is where the rank quietly connects to the data. In the Raptor version, body composition carries a <span style="font-family:'JetBrains Mono';color:#3FD9C0;">RANK INPUT</span> tag — so the athlete sees exactly which numbers move their tier.</p>
+
+  <div style="display:flex; justify-content:center; gap:60px; flex-wrap:wrap;">
+
+    <!-- BEFORE -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+      <span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#7E828D;border:1px solid #2A2B38;border-radius:7px;padding:6px 12px;">Before · Ships today</span>
+      <div style="width:330px; border:9px solid #1A1B22; border-radius:42px; overflow:hidden; box-shadow:0 30px 70px rgba(0,0,0,0.55);">
+        <div style="background:linear-gradient(180deg,#141B3A 0%,#0A0E20 60%,#070A18 100%); min-height:610px;">
+          <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-family:'Space Grotesk';font-size:12px;color:#C9CEDF;"><span>9:41</span><span>●●●</span></div>
+          <div style="padding:6px 18px 22px;">
+            <div style="font-family:'Space Grotesk';font-weight:700;font-size:26px;letter-spacing:-0.3px;margin-bottom:16px;">Progress</div>
+            <!-- stat cards -->
+            <div style="display:flex;gap:12px;margin-bottom:12px;">
+              <div style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:18px;text-align:center;"><div style="font-family:'Space Grotesk';font-weight:700;font-size:34px;color:#3D5AFE;line-height:1;">12</div><div style="font-family:'Inter';font-weight:700;font-size:10px;letter-spacing:1px;color:#8B93AD;margin-top:6px;">DAY STREAK</div></div>
+              <div style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:18px;text-align:center;"><div style="font-family:'Space Grotesk';font-weight:700;font-size:34px;line-height:1;">48</div><div style="font-family:'Inter';font-weight:700;font-size:10px;letter-spacing:1px;color:#8B93AD;margin-top:6px;">WORKOUTS</div></div>
+            </div>
+            <!-- weight trend -->
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:16px;margin-bottom:12px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span style="font-family:'Inter';font-weight:700;font-size:10px;letter-spacing:1px;color:#8B93AD;">WEIGHT</span><span style="font-family:'Space Grotesk';font-weight:600;font-size:15px;color:#3D5AFE;">82.4 kg ›</span></div>
+              <svg width="100%" height="56" viewBox="0 0 260 56" preserveAspectRatio="none"><polyline points="0,20 43,16 86,26 129,22 172,34 215,30 260,40" fill="none" stroke="#3D5AFE" stroke-width="2.5"/></svg>
+            </div>
+            <!-- pillars -->
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:16px;padding:13px;display:flex;align-items:center;gap:12px;margin-bottom:9px;"><span style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;color:#3D5AFE;font-size:17px;">◷</span><div style="flex:1;"><div style="font-family:'Space Grotesk';font-weight:600;font-size:14px;">InBody scans</div><div style="font-family:'Inter';font-size:11px;color:#8B93AD;">3 scans</div></div><span style="color:#8B93AD;">›</span></div>
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:16px;padding:13px;display:flex;align-items:center;gap:12px;"><span style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;color:#3D5AFE;font-size:17px;">◈</span><div style="flex:1;"><div style="font-family:'Space Grotesk';font-weight:600;font-size:14px;">Body composition</div><div style="font-family:'Inter';font-size:11px;color:#8B93AD;">82.4kg · 18.2% fat</div></div><span style="color:#8B93AD;">›</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFTER -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+      <span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#0A0B0F;background:#3FD9C0;border-radius:7px;padding:6px 12px;font-weight:700;">After · Raptor</span>
+      <div style="width:330px; border:9px solid #1A1B22; border-radius:42px; overflow:hidden; box-shadow:0 30px 70px rgba(0,0,0,0.55);">
+        <div style="background:#0A0B0F; min-height:610px;">
+          <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-family:'JetBrains Mono';font-size:12px;color:#C3C6CE;"><span>9:41</span><span style="color:#3FD9C0;">●●●</span></div>
+          <div style="padding:6px 18px 22px;">
+            <div style="font-family:'Geist';font-weight:700;font-size:26px;letter-spacing:-0.8px;margin-bottom:16px;">Progress</div>
+            <div style="display:flex;gap:12px;margin-bottom:12px;">
+              <div style="flex:1;background:#15161D;border:1px solid #2A2B38;border-radius:14px;padding:18px;text-align:center;"><div style="font-family:'JetBrains Mono';font-weight:700;font-size:32px;color:#3FD9C0;line-height:1;">12</div><div style="font-family:'JetBrains Mono';font-size:9px;letter-spacing:1px;color:#7E828D;margin-top:7px;">DAY STREAK</div></div>
+              <div style="flex:1;background:#15161D;border:1px solid #2A2B38;border-radius:14px;padding:18px;text-align:center;"><div style="font-family:'JetBrains Mono';font-weight:700;font-size:32px;line-height:1;">48</div><div style="font-family:'JetBrains Mono';font-size:9px;letter-spacing:1px;color:#7E828D;margin-top:7px;">WORKOUTS</div></div>
+            </div>
+            <div style="background:#15161D;border:1px solid #2A2B38;border-radius:14px;padding:16px;margin-bottom:12px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;color:#7E828D;">WEIGHT</span><span style="font-family:'JetBrains Mono';font-weight:700;font-size:14px;color:#3FD9C0;">82.4 KG →</span></div>
+              <svg width="100%" height="56" viewBox="0 0 260 56" preserveAspectRatio="none"><polyline points="0,20 43,16 86,26 129,22 172,34 215,30 260,40" fill="none" stroke="#3FD9C0" stroke-width="2.5"/></svg>
+            </div>
+            <div style="background:#15161D;border:1px solid #2A2B38;border-radius:14px;padding:13px;display:flex;align-items:center;gap:12px;margin-bottom:9px;"><span style="width:38px;height:38px;border-radius:11px;background:#1F2029;display:flex;align-items:center;justify-content:center;color:#3FD9C0;font-size:17px;">◷</span><div style="flex:1;"><div style="font-family:'Geist';font-weight:600;font-size:14px;">InBody scans</div><div style="font-family:'JetBrains Mono';font-size:10px;color:#7E828D;">3 scans</div></div><span style="color:#7E828D;">→</span></div>
+            <div style="background:#15161D;border:1px solid #2A2B38;border-radius:14px;padding:13px;display:flex;align-items:center;gap:12px;"><span style="width:38px;height:38px;border-radius:11px;background:#1F2029;display:flex;align-items:center;justify-content:center;color:#3FD9C0;font-size:17px;">◈</span><div style="flex:1;"><div style="display:flex;align-items:center;gap:7px;"><span style="font-family:'Geist';font-weight:600;font-size:14px;">Body composition</span><span style="font-family:'JetBrains Mono';font-size:8px;letter-spacing:0.5px;color:#3FD9C0;background:rgba(63,217,192,0.16);border-radius:5px;padding:2px 6px;">RANK INPUT</span></div><div style="font-family:'JetBrains Mono';font-size:10px;color:#7E828D;margin-top:3px;">82.4kg · 18.2% fat · −1.8 vs last</div></div><span style="color:#7E828D;">→</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#5C616E; margin-top:48px;">
+    <span>Raptor · Redesign · Part 2</span>
+    <span>Recreated from the live repo</span>
+  </div>
+</div>
+
+</div>
+</x-dc>
+</body>
+</html>

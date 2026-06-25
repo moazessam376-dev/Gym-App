@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Rank Up Celebration</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: linear-gradient(165deg, #10202C, #0A0B0F 60%); border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 60px 24px 40px; text-align: center; min-height: 720px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+
+  .rank-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: #3FD9C0; margin-bottom: 28px; }
+
+  .crest-wrap { width: 140px; height: 140px; margin: 0 auto 28px; position: relative; }
+  .crest { width: 140px; height: 140px; border-radius: 32px; background: radial-gradient(circle at 50% 32%, #AEC0FF, #6B8AFF 55%, #3A52C4); box-shadow: 0 0 50px rgba(107,138,255,0.55), inset 0 3px 8px rgba(255,255,255,0.35), inset 0 -12px 22px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
+  .crest-inner { width: 52px; height: 52px; transform: rotate(45deg); border-radius: 12px; background: rgba(10,11,15,0.28); box-shadow: inset 0 1px 4px rgba(255,255,255,0.25); }
+  .crest-glow { position: absolute; inset: -30px; border-radius: 50%; background: radial-gradient(circle, rgba(107,138,255,0.2), transparent 70%); z-index: -1; }
+
+  .tier-name { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 44px; letter-spacing: -1.5px; color: #F5F6F8; line-height: 1; margin-bottom: 10px; }
+  .tier-name .accent { color: #6B8AFF; }
+  .tier-sub { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #9B9CA8; margin-bottom: 32px; }
+
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; width: 100%; max-width: 320px; margin-bottom: 32px; }
+  .stat { background: rgba(21,22,29,0.6); border: 1px solid #2A2B38; border-radius: 12px; padding: 14px 8px; }
+  .stat-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 20px; color: #3FD9C0; line-height: 1; }
+  .stat-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.8px; text-transform: uppercase; color: #7E828D; margin-top: 6px; }
+
+  .progress-to-next { width: 100%; max-width: 320px; margin-bottom: 32px; }
+  .ptn-header { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9B9CA8; margin-bottom: 8px; }
+  .ptn-header .next { color: #3FD9C0; }
+  .ptn-bar { height: 8px; background: #15161D; border: 1px solid #2A2B38; border-radius: 5px; overflow: hidden; }
+  .ptn-fill { height: 100%; background: linear-gradient(90deg, #6B8AFF, #3FD9C0); border-radius: 5px; width: 26%; }
+
+  .divider-line { width: 60px; height: 1px; background: #2A2B38; margin: 0 auto 18px; }
+  .voice-note { font-family: 'Inter', sans-serif; font-size: 13px; color: #7E828D; font-style: italic; margin-bottom: 32px; max-width: 280px; }
+
+  .actions { display: flex; gap: 10px; width: 100%; max-width: 320px; }
+  .btn-share { flex: 1; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 14px; text-align: center; border-radius: 13px; padding: 15px; border: none; }
+  .btn-dismiss { flex: 1; background: transparent; color: #F5F6F8; border: 1px solid #2A2B38; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; text-align: center; border-radius: 13px; padding: 14px; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Rank-Up Moment · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="rank-label">Rank Up</div>
+
+      <div class="crest-wrap">
+        <div class="crest-glow"></div>
+        <div class="crest"><div class="crest-inner"></div></div>
+      </div>
+
+      <div class="tier-name">Diamond <span class="accent">II</span></div>
+      <div class="tier-sub">Regional #312 · ▲ 4 this week</div>
+
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-num">7</div><div class="stat-lbl">Goals Hit</div></div>
+        <div class="stat"><div class="stat-num">76<span style="font-size:11px;">%</span></div><div class="stat-lbl">Adherence</div></div>
+        <div class="stat"><div class="stat-num">−4.2<span style="font-size:11px;">kg</span></div><div class="stat-lbl">Verified</div></div>
+      </div>
+
+      <div class="progress-to-next">
+        <div class="ptn-header"><span>Diamond II</span><span class="next">2 goals to Diamond I</span></div>
+        <div class="ptn-bar"><div class="ptn-fill"></div></div>
+      </div>
+
+      <div class="divider-line"></div>
+      <div class="voice-note">No "amazing job". The numbers are the celebration.</div>
+
+      <div class="actions">
+        <button class="btn-share">Share</button>
+        <button class="btn-dismiss">Continue</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

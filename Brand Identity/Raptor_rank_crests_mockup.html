@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — 8-Tier Rank Crests</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; padding: 40px 0; }
+  .container { max-width: 1080px; margin: 0 auto; padding: 0 40px; }
+
+  .doc-header { margin-bottom: 48px; }
+  .doc-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; margin-bottom: 12px; }
+  .doc-title { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 56px; letter-spacing: -2.5px; color: #F5F6F8; line-height: 1; margin-bottom: 12px; }
+  .doc-desc { font-family: 'Inter', sans-serif; font-size: 16px; color: #9B9CA8; max-width: 620px; line-height: 1.5; }
+
+  .section { margin-bottom: 56px; }
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: #7E828D; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .section-label .dot { width: 6px; height: 6px; border-radius: 50%; background: #3FD9C0; }
+  .section-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 28px; letter-spacing: -1px; color: #F5F6F8; margin-bottom: 24px; }
+
+  /* ─── Crest display grid ─── */
+  .crests-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px 20px; }
+  .crest-cell { text-align: center; }
+  .crest-stage { width: 160px; height: 200px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; position: relative; }
+  .crest-glow-bg { position: absolute; inset: 20px; border-radius: 50%; opacity: 0.3; filter: blur(20px); z-index: 0; }
+
+  .crest { width: 120px; height: 120px; position: relative; z-index: 1; }
+  .crest-svg { width: 100%; height: 100%; filter: drop-shadow(0 8px 20px rgba(0,0,0,0.5)); }
+
+  .crest-name { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.3px; color: #F5F6F8; margin-bottom: 4px; }
+  .crest-criteria { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.5px; color: #7E828D; }
+  .crest-color { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #5C616E; margin-top: 4px; }
+
+  /* ─── Detail row ─── */
+  .detail-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 16px; padding: 32px; margin-bottom: 16px; }
+  .detail-row { display: grid; grid-template-columns: 140px 1fr 1fr; gap: 24px; align-items: center; padding: 20px 0; border-bottom: 1px solid #1C1D26; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-crest-cell { text-align: center; }
+  .detail-crest { width: 80px; height: 80px; margin: 0 auto; }
+  .detail-info-cell h4 { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 18px; color: #F5F6F8; margin-bottom: 4px; }
+  .detail-info-cell .meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; line-height: 1.6; }
+  .detail-info-cell .desc { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; line-height: 1.5; margin-top: 6px; }
+  .detail-specs-cell { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9B9CA8; line-height: 1.8; }
+  .detail-specs-cell .lbl { color: #5C616E; }
+  .detail-specs-cell .v { color: #F5F6F8; }
+
+  /* ─── Division pips ─── */
+  .pips-row { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+  .pip { width: 8px; height: 8px; border-radius: 50%; background: #2A2B38; }
+  .pip.filled { background: #3FD9C0; }
+
+  /* ─── Rank-up animation card ─── */
+  .rankup-card { background: linear-gradient(165deg, #10202C, #0A0B0F); border: 1px solid #2A2B38; border-radius: 18px; padding: 40px; text-align: center; }
+  .rankup-stage { width: 200px; height: 200px; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; position: relative; }
+  .rankup-glow { position: absolute; inset: 30px; border-radius: 50%; opacity: 0.4; filter: blur(30px); }
+  .rankup-crest { width: 140px; height: 140px; position: relative; z-index: 1; }
+  .rankup-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: #3FD9C0; margin-bottom: 20px; }
+  .rankup-tier { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 44px; letter-spacing: -1.5px; color: #F5F6F8; line-height: 1; margin-bottom: 10px; }
+  .rankup-stats { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #9B9CA8; line-height: 1.8; }
+
+  .doc-footer { margin-top: 56px; padding-top: 24px; border-top: 1px solid #1C1D26; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #5C616E; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="doc-header">
+    <div class="doc-tag">Rank Crests · v1</div>
+    <h1 class="doc-title">Bronze to <span style="color:#3FD9C0;">Apex</span>.</h1>
+    <p class="doc-desc">Eight ornate crest badges with metal gradients, wings, horns, and glowing center gems. The 2020–2023 competitive-gaming badge aesthetic — rebuilt in Raptor's Onyx + Signal cyan palette. These are the shareable hero assets of the ranking system.</p>
+  </div>
+
+  <!-- ─── ALL 8 CRESTS ─── -->
+  <div class="section">
+    <div class="section-label"><span class="dot"></span>01 · The Eight Tiers</div>
+    <h2 class="section-title">Bronze → Silver → Gold → Platinum → Diamond → Master → Grandmaster → Apex</h2>
+
+    <div class="crests-grid">
+      <!-- Bronze -->
+      <div class="crest-cell">
+        <div class="crest-stage">
+          <div class="crest-glow-bg" style="background:#B07A42;"></div>
+          <div class="crest">
+            <svg class="crest-svg" viewBox="0 0 120 120">
+              <defs>
+                <radialGradient id="bronze-grad" cx="50%" cy="32%" r="60%">
+                  <stop offset="0%" stop-color="#E0A878"/>
+                  <stop offset="52%" stop-color="#B07A42"/>
+                  <stop offset="100%" stop-color="#6E4A22"/>
+                </radialGradient>
+                <linearGradient id="bronze-shield" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#C89060"/>
+                  <stop offset="100%" stop-color="#5C3D1E"/>
+                </linearGradient>
+              </defs>
+              <!-- Shield body -->
+              <path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#bronze-shield)" stroke="#8C5A2B" stroke-width="1.5"/>
+              <!-- Inner shield -->
+              <path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#bronze-grad)" stroke="#6E4A22" stroke-width="1"/>
+              <!-- Top ornament (simple) -->
+              <circle cx="60" cy="20" r="3" fill="#6E4A22"/>
+              <!-- Center gem (off) -->
+              <circle cx="60" cy="58" r="14" fill="#1C1208" stroke="#5C3D1E" stroke-width="1.5"/>
+              <circle cx="60" cy="58" r="8" fill="#2A1A0C"/>
+              <!-- Highlight -->
+              <ellipse cx="55" cy="52" rx="4" ry="2" fill="#E0A878" opacity="0.3"/>
+            </svg>
+          </div>
+        </div>
+        <div class="crest-name">Bronze</div>
+        <div class="crest-criteria">First log</div>
+        <div class="crest-color">#B07A42</div>
+      </div>
+
+      <!-- Silver -->
+      <div class="crest-cell">
+        <div class="crest-stage">
+          <div class="crest-glow-bg" style="background:#9AA3AF;"></div>
+          <div class="crest">
+            <svg class="crest-svg" viewBox="0 0 120 120">
+              <defs>
+                <radialGradient id="silver-grad" cx="50%" cy="32%" r="60%">
+                  <stop offset="0%" stop-color="#D8DEE6"/>
+                  <stop offset="52%" stop-color="#9AA3AF"/>
+                  <stop offset="100%" stop-color="#5C636E"/>
+                </radialGradient>
+                <linearGradient id="silver-shield" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#B8C0CA"/>
+                  <stop offset="100%" stop-color="#4A505A"/>
+                </linearGradient>
+              </defs>
+              <path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#silver-shield)" stroke="#7A828D" stroke-width="1.5"/>
+              <path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#silver-grad)" stroke="#5C636E" stroke-width="1"/>
+              <!-- Wing accents -->
+              <path d="M 28 30 Q 20 34 18 40 Q 24 36 28 36 Z" fill="#D8DEE6" opacity="0.5"/>
+              <path d="M 92 30 Q 100 34 102 40 Q 96 36 92 36 Z" fill="#D8DEE6" opacity="0.5"/>
+              <circle cx="60" cy="20" r="3" fill="#5C636E"/>
+              <!-- Center gem (faint glow) -->
+              <circle cx="60" cy="58" r="14" fill="#2A2E34" stroke="#7A828D" stroke-width="1.5"/>
+              <circle cx="60" cy="58" r="8" fill="#3A3E44"/>
+              <circle cx="60" cy="58" r="3" fill="#9AA3AF" opacity="0.4"/>
+              <ellipse cx="55" cy="52" rx="4" ry="2" fill="#D8DEE6" opacity="0.3"/>
+            </svg>
+          </div>
+        </div>
+        <div class="crest-name">Silver</div>
+        <div class="crest-criteria">3 goals</div>
+        <div class="crest-color">#9AA3AF</div>
+      </div>
+
+      <!-- Gold -->
+      <div class="crest-cell">
+        <div class="crest-stage">
+          <div class="crest-glow-bg" style="background:#E5B83C;"></div>
+          <div class="crest">
+            <svg class="crest-svg" viewBox="0 0 120 120">
+              <defs>
+                <radialGradient id="gold-grad" cx="50%" cy="32%" r="60%">
+                  <stop offset="0%" stop-color="#FFE08A"/>
+                  <stop offset="52%" stop-color="#E5B83C"/>
+                  <stop offset="100%" stop-color="#9A7615"/>
+                </radialGradient>
+                <linearGradient id="gold-shield" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#F5C842"/>
+                  <stop offset="100%" stop-color="#7A5C10"/>
+                </linearGradient>
+                <radialGradient id="gold-gem" cx="50%" cy="40%" r="60%">
+                  <stop offset="0%" stop-color="#9BFFEE" stop-opacity="0.4"/>
+                  <stop offset="100%" stop-color="#3FD9C0" stop-opacity="0.15"/>
+                </radialGradient>
+              </defs>
+              <path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#gold-shield)" stroke="#B8860B" stroke-width="1.5"/>
+              <path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#gold-grad)" stroke="#9A7615" stroke-width="1"/>
+              <!-- Horns (upward) -->
+              <path d="M 44 18 Q 38 8 34 4 Q 40 10 46 14 Z" fill="#FFE08A" stroke="#9A7615" stroke-width="1"/>
+              <path d="M 76 18 Q 82 8 86 4 Q 80 10 74 14 Z" fill="#FFE08A" stroke="#9A7615" stroke-width="1"/>
+              <!-- Center gem (low intensity cyan) -->
+              <circle cx="60" cy="58" r="14" fill="url(#gold-gem)" stroke="#9A7615" stroke-width="1.5"/>
+              <circle cx="60" cy="58" r="8" fill="#1A1410"/>
+              <circle cx="60" cy="58" r="3" fill="#3FD9C0" opacity="0.5"/>
+              <ellipse cx="55" cy="52" rx="4" ry="2" fill="#FFE08A" opacity="0.4"/>
+            </svg>
+          </div>
+        </div>
+        <div class="crest-name">Gold</div>
+        <div class="crest-criteria">7 goals · 75% adh</div>
+        <div class="crest-color">#E5B83C</div>
+      </div>
+
+      <!-- Platinum -->
+      <div class="crest-cell">
+        <div class="crest-stage">
+          <div class="crest-glow-bg" style="background:#CFE6F0;"></div>
+          <div class="crest">
+            <svg class="crest-svg" viewBox="0 0 120 120">
+              <defs>
+                <radialGradient id="plat-grad" cx="50%" cy="32%" r="60%">
+                  <stop offset="0%" stop-color="#FFFFFF"/>
+                  <stop offset="52%" stop-color="#CFE6F0"/>
+                  <stop offset="100%" stop-color="#8FB4C4"/>
+                </radialGradient>
+                <linearGradient id="plat-shield" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#E0F0F8"/>
+                  <stop offset="100%" stop-color="#6E9CB0"/>
+                </linearGradient>
+                <radialGradient id="plat-gem" cx="50%" cy="40%" r="60%">
+                  <stop offset="0%" stop-color="#9BFFEE" stop-opacity="0.6"/>
+                  <stop offset="100%" stop-color="#3FD9C0" stop-opacity="0.25"/>
+                </radialGradient>
+              </defs>
+              <path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#plat-shield)" stroke="#A0C4D4" stroke-width="1.5"/>
+              <path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#plat-grad)" stroke="#8FB4C4" stroke-width="1"/>
+              <!-- Full wings -->
+              <path d="M 26 28 Q 12 32 6 42 Q 14 36 24 34 Q 20 38 16 44 Q 24 38 28 38 Z" fill="#FFFFFF" opacity="0.6"/>
+              <path d="M 94 28 Q 108 32 114 42 Q 106 36 96 34 Q 100 38 104 44 Q 96 38 92 38 Z" fill="#FFFFFF" opacity="0.6"/>
+              <circle cx="60" cy="20" r="3" fill="#8FB4C4"/>
+              <!-- Center gem (medium) -->
+              <circle cx="60" cy="58" r="14" fill="url(#plat-gem)" stroke="#8FB4C4" stroke-width="1.5"/>
+              <circle cx="60" cy="58" r="8" fill="#1A2228"/>
+              <circle cx="60" cy="58" r="4" fill="#3FD9C0" opacity="0.6"/>
+              <ellipse cx="55" cy="52" rx="4" ry="2" fill="#FFFFFF" opacity="0.5"/>
+            </svg>
+          </div>
+        </div>
+        <div class="crest-name">Platinum</div>
+        <div class="crest-criteria">12 goals · 80% adh</div>
+        <div class="crest-color">#CFE6F0</div>
+      </div>
+
+      <!-- Diamond -->
+      <div class="crest-cell">
+        <div class="crest-stage">
+          <div class="crest-glow-bg" style="background:#6B8AFF;"></div>
+          <div class="crest">
+            <svg class="crest-svg" viewBox="0 0 120 120">
+              <defs>
+                <radialGradient id="dia-grad" cx="50%" cy="32%" r="60%">
+                  <stop offset="0%" stop-color="#AEC0FF"/>
+                  <stop offset="52%" stop-color="#6B8AFF"/>
+                  <stop offset="100%" stop-color="#3A52C4"/>
+                </radialGradient>
+                <linearGradient id="dia-shield" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#8FA0FF"/>
+                  <stop offset="100%" stop-color="#2A3CA0"/>
+                </linearGradient>
+                <radialGradient id="dia-gem" cx="50%" cy="40%" r="60%">
+                  <stop offset="0%" stop-color="#9BFFEE"/>
+                  <stop offset="100%" stop-color="#3FD9C0" stop-opacity="0.5"/>
+                </radialGradient>
+              </defs>
+              <!-- Faceted angular crest (not shield) -->
+              <path d="M 60 6 L 104 24 L 112 60 L 96 102 L 60 116 L 24 102 L 8 60 L 16 24 Z" fill="url(#dia-shield)" stroke="#4A60D0" stroke-width="1.5"/>
+              <path d="M 60 14 L 96 28 L 102 58 L 88 94 L 60 106 L 32 94 L 18 58 L 24 28 Z" fill="url(#dia-grad)" stroke="#3A52C4" stroke-width="1"/>
+              <!-- Facet lines -->
+              <line x1="60" y1="14" x2="60" y2="58" stroke="#3A52C4" stroke-width="1" opacity="0.5"/>
+              <line x1="24" y1="28" x2="60" y2="58" stroke="#3A52C4" stroke-width="1" opacity="0.5"/>
+              <line x1="96" y1="28" x2="60" y2="58" stroke="#3A52C4" stroke-width="1" opacity="0.5"/>
+              <line x1="18" y1="58" x2="60" y2="58" stroke="#3A52C4" stroke-width="1" opacity="0.3"/>
+              <line x1="102" y1="58" x2="60" y2="58" stroke="#3A52C4" stroke-width="1" opacity="0.3"/>
+              <!-- Center gem (high intensity) -->
+              <rect x="46" y="44" width="28" height="28" rx="4" transform="rotate(45 60 58)" fill="url(#dia-gem)" stroke="#3A52C4" stroke-width="1.5"/>
+              <rect x="50" y="48" width="20" height="20" rx="3" transform="rotate(45 60 58)" fill="#0E1428"/>
+              <rect x="53" y="51" width="14" height="14" rx="2" transform="rotate(45 60 58)" fill="#3FD9C0" opacity="0.7"/>
+              <ellipse cx="55" cy="52" rx="3" ry="2" fill="#FFFFFF" opacity="0.5"/>
+            </svg>
+          </div>
+        </div>
+        <div class="crest-name">Diamond</div>
+        <div class="crest-criteria">20 goals · 85% adh</div>
+        <div class="crest-color">#6B8AFF</div>
+      </div>
+
+      <!-- Master -->
+      <div class="crest-cell">
+        <div class="crest-stage">
+          <div class="crest-glow-bg" style="background:#9B7BF5;"></div>
+          <div class="crest">
+            <svg class="crest-svg" viewBox="0 0 120 120">
+              <defs>
+                <radialGradient id="master-grad" cx="50%" cy="32%" r="60%">
+                  <stop offset="0%" stop-color="#CBB8FF"/>
+                  <stop offset="52%" stop-color="#9B7BF5"/>
+                  <stop offset="100%" stop-color="#5E3FB0"/>
+                </radialGradient>
+                <linearGradient id="master-shield" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#B0A0FF"/>
+                  <stop offset="100%" stop-color="#4A2E90"/>
+                </linearGradient>
+                <radialGradient id="master-gem" cx="50%" cy="40%" r="60%">
+                  <stop offset="0%" stop-color="#9BFFEE"/>
+                  <stop offset="100%" stop-color="#3FD9C0" stop-opacity="0.6"/>
+                </radialGradient>
+              </defs>
+              <path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#master-shield)" stroke="#7A5BD0" stroke-width="1.5"/>
+              <path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#master-grad)" stroke="#5E3FB0" stroke-width="1"/>
+              <!-- Horns + wings + pedestal -->
+              <path d="M 42 16 Q 34 4 28 0 Q 36 8 44 12 Z" fill="#CBB8FF" stroke="#5E3FB0" stroke-width="1"/>
+              <path d="M 78 16 Q 86 4 92 0 Q 84 8 76 12 Z" fill="#CBB8FF" stroke="#5E3FB0" stroke-width="1"/>
+              <path d="M 26 30 Q 10 34 4 46 Q 14 38 24 36 Q 18 42 14 50 Q 24 40 28 40 Z" fill="#CBB8FF" opacity="0.5"/>
+              <path d="M 94 30 Q 110 34 116 46 Q 106 38 96 36 Q 102 42 106 50 Q 96 40 92 40 Z" fill="#CBB8FF" opacity="0.5"/>
+              <rect x="48" y="88" width="24" height="4" rx="2" fill="#5E3FB0"/>
+              <circle cx="60" cy="58" r="14" fill="url(#master-gem)" stroke="#5E3FB0" stroke-width="1.5"/>
+              <circle cx="60" cy="58" r="8" fill="#1A1430"/>
+              <circle cx="60" cy="58" r="5" fill="#3FD9C0" opacity="0.8"/>
+              <circle cx="60" cy="58" r="2" fill="#9BFFEE"/>
+              <ellipse cx="55" cy="52" rx="4" ry="2" fill="#CBB8FF" opacity="0.4"/>
+            </svg>
+          </div>
+        </div>
+        <div class="crest-name">Master</div>
+        <div class="crest-criteria">30 goals · 90% adh</div>
+        <div class="crest-color">#9B7BF5</div>
+      </div>
+
+      <!-- Grandmaster -->
+      <div class="crest-cell">
+        <div class="crest-stage">
+          <div class="crest-glow-bg" style="background:#E0556B;"></div>
+          <div class="crest">
+            <svg class="crest-svg" viewBox="0 0 120 120">
+              <defs>
+                <radialGradient id="gm-grad" cx="50%" cy="32%" r="60%">
+                  <stop offset="0%" stop-color="#FF96A6"/>
+                  <stop offset="52%" stop-color="#E0556B"/>
+                  <stop offset="100%" stop-color="#9C2435"/>
+                </radialGradient>
+                <linearGradient id="gm-shield" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#F0708A"/>
+                  <stop offset="100%" stop-color="#7A1A28"/>
+                </linearGradient>
+                <radialGradient id="gm-gem" cx="50%" cy="40%" r="60%">
+                  <stop offset="0%" stop-color="#9BFFEE"/>
+                  <stop offset="100%" stop-color="#3FD9C0"/>
+                </radialGradient>
+              </defs>
+              <path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#gm-shield)" stroke="#C04050" stroke-width="1.5"/>
+              <path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#gm-grad)" stroke="#9C2435" stroke-width="1"/>
+              <!-- Extended wings + dual horns + ornate base -->
+              <path d="M 40 14 Q 30 0 22 -4 Q 32 6 42 10 Z" fill="#FF96A6" stroke="#9C2435" stroke-width="1"/>
+              <path d="M 80 14 Q 90 0 98 -4 Q 88 6 78 10 Z" fill="#FF96A6" stroke="#9C2435" stroke-width="1"/>
+              <path d="M 24 28 Q 4 32 -4 46 Q 8 36 22 34 Q 14 42 8 52 Q 22 38 28 38 Z" fill="#FF96A6" opacity="0.55"/>
+              <path d="M 96 28 Q 116 32 124 46 Q 112 36 98 34 Q 106 42 112 52 Q 98 38 92 38 Z" fill="#FF96A6" opacity="0.55"/>
+              <rect x="42" y="90" width="36" height="5" rx="2.5" fill="#9C2435"/>
+              <rect x="46" y="86" width="28" height="3" rx="1.5" fill="#C04050"/>
+              <circle cx="60" cy="58" r="14" fill="url(#gm-gem)" stroke="#9C2435" stroke-width="1.5"/>
+              <circle cx="60" cy="58" r="8" fill="#1A0A10"/>
+              <circle cx="60" cy="58" r="6" fill="#3FD9C0"/>
+              <circle cx="60" cy="58" r="3" fill="#9BFFEE"/>
+              <ellipse cx="55" cy="52" rx="4" ry="2" fill="#FFFFFF" opacity="0.4"/>
+            </svg>
+          </div>
+        </div>
+        <div class="crest-name">Grandmaster</div>
+        <div class="crest-criteria">Top 500 regional</div>
+        <div class="crest-color">#E0556B</div>
+      </div>
+
+      <!-- Apex -->
+      <div class="crest-cell">
+        <div class="crest-stage">
+          <div class="crest-glow-bg" style="background:#3FD9C0;"></div>
+          <div class="crest">
+            <svg class="crest-svg" viewBox="0 0 120 120">
+              <defs>
+                <radialGradient id="apex-grad" cx="50%" cy="32%" r="60%">
+                  <stop offset="0%" stop-color="#9BFFEE"/>
+                  <stop offset="52%" stop-color="#3FD9C0"/>
+                  <stop offset="100%" stop-color="#1A8A78"/>
+                </radialGradient>
+                <linearGradient id="apex-shield" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#5FE8D0"/>
+                  <stop offset="100%" stop-color="#0E6A5C"/>
+                </linearGradient>
+                <radialGradient id="apex-gem" cx="50%" cy="40%" r="60%">
+                  <stop offset="0%" stop-color="#FFFFFF"/>
+                  <stop offset="40%" stop-color="#9BFFEE"/>
+                  <stop offset="100%" stop-color="#3FD9C0"/>
+                </radialGradient>
+                <filter id="apex-glow">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+              <path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#apex-shield)" stroke="#2BA897" stroke-width="1.5"/>
+              <path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#apex-grad)" stroke="#1A8A78" stroke-width="1"/>
+              <!-- Full wing span + triple horns + ornate pedestal -->
+              <path d="M 38 14 Q 26 -2 16 -6 Q 28 6 40 10 Z" fill="#9BFFEE" stroke="#1A8A78" stroke-width="1"/>
+              <path d="M 60 10 Q 58 -4 60 -8 Q 62 -4 60 10 Z" fill="#9BFFEE" stroke="#1A8A78" stroke-width="1"/>
+              <path d="M 82 14 Q 94 -2 104 -6 Q 92 6 80 10 Z" fill="#9BFFEE" stroke="#1A8A78" stroke-width="1"/>
+              <path d="M 22 28 Q -2 32 -12 48 Q 4 36 20 34 Q 10 42 2 54 Q 20 36 28 38 Z" fill="#9BFFEE" opacity="0.6"/>
+              <path d="M 98 28 Q 122 32 132 48 Q 116 36 100 34 Q 110 42 118 54 Q 100 36 92 38 Z" fill="#9BFFEE" opacity="0.6"/>
+              <rect x="38" y="92" width="44" height="6" rx="3" fill="#1A8A78"/>
+              <rect x="42" y="86" width="36" height="4" rx="2" fill="#2BA897"/>
+              <rect x="48" y="82" width="24" height="3" rx="1.5" fill="#3FD9C0"/>
+              <!-- Center gem (maximum glow) -->
+              <circle cx="60" cy="58" r="16" fill="url(#apex-gem)" stroke="#1A8A78" stroke-width="1.5" filter="url(#apex-glow)"/>
+              <circle cx="60" cy="58" r="10" fill="#0A0B0F"/>
+              <circle cx="60" cy="58" r="7" fill="#3FD9C0"/>
+              <circle cx="60" cy="58" r="4" fill="#9BFFEE"/>
+              <circle cx="58" cy="56" r="2" fill="#FFFFFF"/>
+              <ellipse cx="55" cy="52" rx="4" ry="2" fill="#FFFFFF" opacity="0.6"/>
+            </svg>
+          </div>
+        </div>
+        <div class="crest-name" style="color:#3FD9C0;">Apex</div>
+        <div class="crest-criteria">Top 100 regional</div>
+        <div class="crest-color">#3FD9C0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── DETAIL SPECS ─── -->
+  <div class="section">
+    <div class="section-label"><span class="dot"></span>02 · Design Details</div>
+    <h2 class="section-title">Per-tier anatomy.</h2>
+
+    <div class="detail-card">
+      <div class="detail-row">
+        <div class="detail-crest-cell"><div class="detail-crest" id="crest-bronze-detail"></div></div>
+        <div class="detail-info-cell">
+          <h4>Bronze</h4>
+          <div class="meta">First log · Entry tier</div>
+          <div class="desc">Simple shield, no ornaments, no wings. Brushed bronze gradient. Recessed center with no gem — feels heavy, entry-level. Every athlete starts here.</div>
+        </div>
+        <div class="detail-specs-cell">
+          <div><span class="lbl">Gradient:</span> <span class="v">#E0A878 → #B07A42 → #6E4A22</span></div>
+          <div><span class="lbl">Gem:</span> <span class="v">Off (dark recess)</span></div>
+          <div><span class="lbl">Wings:</span> <span class="v">None</span></div>
+          <div><span class="lbl">Horns:</span> <span class="v">None</span></div>
+          <div><span class="lbl">Glow:</span> <span class="v">0%</span></div>
+        </div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-crest-cell"><div class="detail-crest" id="crest-silver-detail"></div></div>
+        <div class="detail-info-cell">
+          <h4>Silver</h4>
+          <div class="meta">3 goals · 50% adherence</div>
+          <div class="desc">Shield with slight wing accents at top. Polished silver gradient. Faint center glow in Mist gray — the first hint of a gem forming.</div>
+        </div>
+        <div class="detail-specs-cell">
+          <div><span class="lbl">Gradient:</span> <span class="v">#D8DEE6 → #9AA3AF → #5C636E</span></div>
+          <div><span class="lbl">Gem:</span> <span class="v">Faint gray glow</span></div>
+          <div><span class="lbl">Wings:</span> <span class="v">Accents only</span></div>
+          <div><span class="lbl">Horns:</span> <span class="v">None</span></div>
+          <div><span class="lbl">Glow:</span> <span class="v">10%</span></div>
+        </div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-crest-cell"><div class="detail-crest" id="crest-gold-detail"></div></div>
+        <div class="detail-info-cell">
+          <h4>Gold</h4>
+          <div class="meta">7 goals · 75% adherence</div>
+          <div class="desc">Shield with upward-pointing horns. Warm gold gradient. Center gem activates in Signal cyan at low intensity. The first tier that feels "earned".</div>
+        </div>
+        <div class="detail-specs-cell">
+          <div><span class="lbl">Gradient:</span> <span class="v">#FFE08A → #E5B83C → #9A7615</span></div>
+          <div><span class="lbl">Gem:</span> <span class="v">Signal cyan · 50%</span></div>
+          <div><span class="lbl">Wings:</span> <span class="v">Accents</span></div>
+          <div><span class="lbl">Horns:</span> <span class="v">Upward, short</span></div>
+          <div><span class="lbl">Glow:</span> <span class="v">25%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-card">
+      <div class="detail-row">
+        <div class="detail-crest-cell"><div class="detail-crest" id="crest-plat-detail"></div></div>
+        <div class="detail-info-cell">
+          <h4>Platinum</h4>
+          <div class="meta">12 goals · 80% adherence</div>
+          <div class="desc">Shield with full wings spreading outward. Cool platinum gradient. Center gem at medium intensity. The "ascending" tier — wings signal momentum.</div>
+        </div>
+        <div class="detail-specs-cell">
+          <div><span class="lbl">Gradient:</span> <span class="v">#FFFFFF → #CFE6F0 → #8FB4C4</span></div>
+          <div><span class="lbl">Gem:</span> <span class="v">Signal cyan · 60%</span></div>
+          <div><span class="lbl">Wings:</span> <span class="v">Full spread</span></div>
+          <div><span class="lbl">Horns:</span> <span class="v">None</span></div>
+          <div><span class="lbl">Glow:</span> <span class="v">35%</span></div>
+        </div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-crest-cell"><div class="detail-crest" id="crest-dia-detail"></div></div>
+        <div class="detail-info-cell">
+          <h4>Diamond</h4>
+          <div class="meta">20 goals · 85% adherence</div>
+          <div class="desc">Faceted geometric crest — not shield, angular. Cobalt gradient with visible internal facet lines. Center gem in full cobalt at high intensity. The "crystalline" tier.</div>
+        </div>
+        <div class="detail-specs-cell">
+          <div><span class="lbl">Gradient:</span> <span class="v">#AEC0FF → #6B8AFF → #3A52C4</span></div>
+          <div><span class="lbl">Gem:</span> <span class="v">Signal cyan · 70%</span></div>
+          <div><span class="lbl">Wings:</span> <span class="v">None (faceted)</span></div>
+          <div><span class="lbl">Horns:</span> <span class="v">None (angular)</span></div>
+          <div><span class="lbl">Glow:</span> <span class="v">45%</span></div>
+        </div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-crest-cell"><div class="detail-crest" id="crest-master-detail"></div></div>
+        <div class="detail-info-cell">
+          <h4>Master</h4>
+          <div class="meta">30 goals · 90% adherence</div>
+          <div class="desc">Ornate crest with horns + wings + base pedestal. Deep purple gradient. Center gem pulses with Signal cyan glow. The "rare" tier — fewer than 5% of athletes reach it.</div>
+        </div>
+        <div class="detail-specs-cell">
+          <div><span class="lbl">Gradient:</span> <span class="v">#CBB8FF → #9B7BF5 → #5E3FB0</span></div>
+          <div><span class="lbl">Gem:</span> <span class="v">Signal cyan · 80%</span></div>
+          <div><span class="lbl">Wings:</span> <span class="v">Full</span></div>
+          <div><span class="lbl">Horns:</span> <span class="v">Dual</span></div>
+          <div><span class="lbl">Glow:</span> <span class="v">55%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-card">
+      <div class="detail-row">
+        <div class="detail-crest-cell"><div class="detail-crest" id="crest-gm-detail"></div></div>
+        <div class="detail-info-cell">
+          <h4>Grandmaster</h4>
+          <div class="meta">Top 500 regional</div>
+          <div class="desc">Highly ornate — extended wings, dual horns, ornate base pedestal. Warm gold-purple gradient. Center gem in full Signal cyan with strong glow. The "this is rare" tier.</div>
+        </div>
+        <div class="detail-specs-cell">
+          <div><span class="lbl">Gradient:</span> <span class="v">#FF96A6 → #E0556B → #9C2435</span></div>
+          <div><span class="lbl">Gem:</span> <span class="v">Signal cyan · 90%</span></div>
+          <div><span class="lbl">Wings:</span> <span class="v">Extended</span></div>
+          <div><span class="lbl">Horns:</span> <span class="v">Dual, large</span></div>
+          <div><span class="lbl">Glow:</span> <span class="v">70%</span></div>
+        </div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-crest-cell"><div class="detail-crest" id="crest-apex-detail"></div></div>
+        <div class="detail-info-cell">
+          <h4>Apex</h4>
+          <div class="meta">Top 100 regional</div>
+          <div class="desc">The most ornate crest. Full wing span, triple horns, pedestal with tier name engraved. Onyx metal base with Signal cyan gem at maximum glow. The gem appears to emit light. Only 100 athletes in the region hold this at any time.</div>
+        </div>
+        <div class="detail-specs-cell">
+          <div><span class="lbl">Gradient:</span> <span class="v">#9BFFEE → #3FD9C0 → #1A8A78</span></div>
+          <div><span class="lbl">Gem:</span> <span class="v">Signal cyan · 100% (glowing)</span></div>
+          <div><span class="lbl">Wings:</span> <span class="v">Full span</span></div>
+          <div><span class="lbl">Horns:</span> <span class="v">Triple</span></div>
+          <div><span class="lbl">Glow:</span> <span class="v">100%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── RANK-UP MOMENT ─── -->
+  <div class="section">
+    <div class="section-label"><span class="dot"></span>03 · The Rank-Up Moment</div>
+    <h2 class="section-title">The shareable celebration.</h2>
+
+    <div class="rankup-card">
+      <div class="rankup-stage">
+        <div class="rankup-glow" style="background:#6B8AFF;"></div>
+        <div class="rankup-crest">
+          <svg viewBox="0 0 140 140" style="width:100%;height:100%;filter:drop-shadow(0 0 30px rgba(107,138,255,0.6));">
+            <defs>
+              <radialGradient id="rk-dia" cx="50%" cy="32%" r="60%">
+                <stop offset="0%" stop-color="#AEC0FF"/>
+                <stop offset="52%" stop-color="#6B8AFF"/>
+                <stop offset="100%" stop-color="#3A52C4"/>
+              </radialGradient>
+              <linearGradient id="rk-dia-s" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#8FA0FF"/>
+                <stop offset="100%" stop-color="#2A3CA0"/>
+              </linearGradient>
+              <radialGradient id="rk-gem" cx="50%" cy="40%" r="60%">
+                <stop offset="0%" stop-color="#9BFFEE"/>
+                <stop offset="100%" stop-color="#3FD9C0" stop-opacity="0.5"/>
+              </radialGradient>
+            </defs>
+            <path d="M 70 7 L 121 28 L 131 70 L 112 119 L 70 135 L 28 119 L 9 70 L 19 28 Z" fill="url(#rk-dia-s)" stroke="#4A60D0" stroke-width="1.5"/>
+            <path d="M 70 16 L 112 32 L 120 67 L 103 109 L 70 123 L 37 109 L 20 67 L 28 32 Z" fill="url(#rk-dia)" stroke="#3A52C4" stroke-width="1"/>
+            <line x1="70" y1="16" x2="70" y2="67" stroke="#3A52C4" stroke-width="1" opacity="0.5"/>
+            <line x1="28" y1="32" x2="70" y2="67" stroke="#3A52C4" stroke-width="1" opacity="0.5"/>
+            <line x1="112" y1="32" x2="70" y2="67" stroke="#3A52C4" stroke-width="1" opacity="0.5"/>
+            <rect x="54" y="51" width="32" height="32" rx="5" transform="rotate(45 70 67)" fill="url(#rk-gem)" stroke="#3A52C4" stroke-width="1.5"/>
+            <rect x="59" y="56" width="22" height="22" rx="4" transform="rotate(45 70 67)" fill="#0E1428"/>
+            <rect x="62" y="59" width="16" height="16" rx="3" transform="rotate(45 70 67)" fill="#3FD9C0" opacity="0.7"/>
+            <ellipse cx="64" cy="60" rx="4" ry="2" fill="#FFFFFF" opacity="0.5"/>
+          </svg>
+        </div>
+      </div>
+      <div class="rankup-label">Rank Up</div>
+      <div class="rankup-tier">Diamond <span style="color:#6B8AFF;">II</span></div>
+      <div class="rankup-stats">7 goals hit · 76% adherence<br>−4.2kg verified by InBody</div>
+    </div>
+  </div>
+
+  <!-- ─── DIVISION PIPS ─── -->
+  <div class="section">
+    <div class="section-label"><span class="dot"></span>04 · Division Pips</div>
+    <h2 class="section-title">I · II · III within each tier.</h2>
+    <p style="font-family:'Inter',sans-serif; font-size:14px; color:#9B9CA8; max-width:620px; margin-bottom:24px; line-height:1.6;">Each tier has three internal divisions. Shown as small pips at the base of the crest, not as separate badges. A Diamond III athlete has 1 filled pip; Diamond I has 3 filled pips. This gives 24 total rank positions before Apex.</p>
+
+    <div style="display:flex; gap:32px; justify-content:center; flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div style="width:80px;height:80px;margin:0 auto 10px;" id="pip-diamond-3"></div>
+        <div style="font-family:'Geist';font-weight:700;font-size:14px;color:#F5F6F8;">Diamond III</div>
+        <div class="pips-row"><div class="pip filled"></div><div class="pip"></div><div class="pip"></div></div>
+      </div>
+      <div style="text-align:center;">
+        <div style="width:80px;height:80px;margin:0 auto 10px;" id="pip-diamond-2"></div>
+        <div style="font-family:'Geist';font-weight:700;font-size:14px;color:#F5F6F8;">Diamond II</div>
+        <div class="pips-row"><div class="pip filled"></div><div class="pip filled"></div><div class="pip"></div></div>
+      </div>
+      <div style="text-align:center;">
+        <div style="width:80px;height:80px;margin:0 auto 10px;" id="pip-diamond-1"></div>
+        <div style="font-family:'Geist';font-weight:700;font-size:14px;color:#F5F6F8;">Diamond I</div>
+        <div class="pips-row"><div class="pip filled"></div><div class="pip filled"></div><div class="pip filled"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-footer">
+    <span>Raptor · Rank Crests · v1</span>
+    <span>8 tiers · Bronze to Apex · End</span>
+  </div>
+
+</div>
+
+<!-- Hidden SVG source for detail rows (re-rendered via JS to avoid duplication) -->
+<script>
+// Reuse the crest SVGs at smaller size in detail rows
+const crests = {
+  'bronze': `<svg viewBox="0 0 120 120" style="width:100%;height:100%;"><defs><radialGradient id="d-bronze" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#E0A878"/><stop offset="52%" stop-color="#B07A42"/><stop offset="100%" stop-color="#6E4A22"/></radialGradient><linearGradient id="d-bronze-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C89060"/><stop offset="100%" stop-color="#5C3D1E"/></linearGradient></defs><path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#d-bronze-s)" stroke="#8C5A2B" stroke-width="1.5"/><path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#d-bronze)" stroke="#6E4A22" stroke-width="1"/><circle cx="60" cy="58" r="14" fill="#1C1208" stroke="#5C3D1E" stroke-width="1.5"/><circle cx="60" cy="58" r="8" fill="#2A1A0C"/></svg>`,
+  'silver': `<svg viewBox="0 0 120 120" style="width:100%;height:100%;"><defs><radialGradient id="d-silver" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#D8DEE6"/><stop offset="52%" stop-color="#9AA3AF"/><stop offset="100%" stop-color="#5C636E"/></radialGradient><linearGradient id="d-silver-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#B8C0CA"/><stop offset="100%" stop-color="#4A505A"/></linearGradient></defs><path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#d-silver-s)" stroke="#7A828D" stroke-width="1.5"/><path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#d-silver)" stroke="#5C636E" stroke-width="1"/><path d="M 28 30 Q 20 34 18 40 Q 24 36 28 36 Z" fill="#D8DEE6" opacity="0.5"/><path d="M 92 30 Q 100 34 102 40 Q 96 36 92 36 Z" fill="#D8DEE6" opacity="0.5"/><circle cx="60" cy="58" r="14" fill="#2A2E34" stroke="#7A828D" stroke-width="1.5"/><circle cx="60" cy="58" r="8" fill="#3A3E44"/><circle cx="60" cy="58" r="3" fill="#9AA3AF" opacity="0.4"/></svg>`,
+  'gold': `<svg viewBox="0 0 120 120" style="width:100%;height:100%;"><defs><radialGradient id="d-gold" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#FFE08A"/><stop offset="52%" stop-color="#E5B83C"/><stop offset="100%" stop-color="#9A7615"/></radialGradient><linearGradient id="d-gold-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F5C842"/><stop offset="100%" stop-color="#7A5C10"/></linearGradient><radialGradient id="d-gold-gem" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#9BFFEE" stop-opacity="0.4"/><stop offset="100%" stop-color="#3FD9C0" stop-opacity="0.15"/></radialGradient></defs><path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#d-gold-s)" stroke="#B8860B" stroke-width="1.5"/><path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#d-gold)" stroke="#9A7615" stroke-width="1"/><path d="M 44 18 Q 38 8 34 4 Q 40 10 46 14 Z" fill="#FFE08A" stroke="#9A7615" stroke-width="1"/><path d="M 76 18 Q 82 8 86 4 Q 80 10 74 14 Z" fill="#FFE08A" stroke="#9A7615" stroke-width="1"/><circle cx="60" cy="58" r="14" fill="url(#d-gold-gem)" stroke="#9A7615" stroke-width="1.5"/><circle cx="60" cy="58" r="8" fill="#1A1410"/><circle cx="60" cy="58" r="3" fill="#3FD9C0" opacity="0.5"/></svg>`,
+  'plat': `<svg viewBox="0 0 120 120" style="width:100%;height:100%;"><defs><radialGradient id="d-plat" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="52%" stop-color="#CFE6F0"/><stop offset="100%" stop-color="#8FB4C4"/></radialGradient><linearGradient id="d-plat-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E0F0F8"/><stop offset="100%" stop-color="#6E9CB0"/></linearGradient><radialGradient id="d-plat-gem" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#9BFFEE" stop-opacity="0.6"/><stop offset="100%" stop-color="#3FD9C0" stop-opacity="0.25"/></radialGradient></defs><path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#d-plat-s)" stroke="#A0C4D4" stroke-width="1.5"/><path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#d-plat)" stroke="#8FB4C4" stroke-width="1"/><path d="M 26 28 Q 12 32 6 42 Q 14 36 24 34 Q 20 38 16 44 Q 24 38 28 38 Z" fill="#FFFFFF" opacity="0.6"/><path d="M 94 28 Q 108 32 114 42 Q 106 36 96 34 Q 100 38 104 44 Q 96 38 92 38 Z" fill="#FFFFFF" opacity="0.6"/><circle cx="60" cy="58" r="14" fill="url(#d-plat-gem)" stroke="#8FB4C4" stroke-width="1.5"/><circle cx="60" cy="58" r="8" fill="#1A2228"/><circle cx="60" cy="58" r="4" fill="#3FD9C0" opacity="0.6"/></svg>`,
+  'dia': `<svg viewBox="0 0 120 120" style="width:100%;height:100%;"><defs><radialGradient id="d-dia" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#AEC0FF"/><stop offset="52%" stop-color="#6B8AFF"/><stop offset="100%" stop-color="#3A52C4"/></radialGradient><linearGradient id="d-dia-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8FA0FF"/><stop offset="100%" stop-color="#2A3CA0"/></linearGradient><radialGradient id="d-dia-gem" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#9BFFEE"/><stop offset="100%" stop-color="#3FD9C0" stop-opacity="0.5"/></radialGradient></defs><path d="M 60 6 L 104 24 L 112 60 L 96 102 L 60 116 L 24 102 L 8 60 L 16 24 Z" fill="url(#d-dia-s)" stroke="#4A60D0" stroke-width="1.5"/><path d="M 60 14 L 96 28 L 102 58 L 88 94 L 60 106 L 32 94 L 18 58 L 24 28 Z" fill="url(#d-dia)" stroke="#3A52C4" stroke-width="1"/><line x1="60" y1="14" x2="60" y2="58" stroke="#3A52C4" stroke-width="1" opacity="0.5"/><line x1="24" y1="28" x2="60" y2="58" stroke="#3A52C4" stroke-width="1" opacity="0.5"/><line x1="96" y1="28" x2="60" y2="58" stroke="#3A52C4" stroke-width="1" opacity="0.5"/><rect x="46" y="44" width="28" height="28" rx="4" transform="rotate(45 60 58)" fill="url(#d-dia-gem)" stroke="#3A52C4" stroke-width="1.5"/><rect x="50" y="48" width="20" height="20" rx="3" transform="rotate(45 60 58)" fill="#0E1428"/><rect x="53" y="51" width="14" height="14" rx="2" transform="rotate(45 60 58)" fill="#3FD9C0" opacity="0.7"/></svg>`,
+  'master': `<svg viewBox="0 0 120 120" style="width:100%;height:100%;"><defs><radialGradient id="d-master" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#CBB8FF"/><stop offset="52%" stop-color="#9B7BF5"/><stop offset="100%" stop-color="#5E3FB0"/></radialGradient><linearGradient id="d-master-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#B0A0FF"/><stop offset="100%" stop-color="#4A2E90"/></linearGradient><radialGradient id="d-master-gem" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#9BFFEE"/><stop offset="100%" stop-color="#3FD9C0" stop-opacity="0.6"/></radialGradient></defs><path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#d-master-s)" stroke="#7A5BD0" stroke-width="1.5"/><path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#d-master)" stroke="#5E3FB0" stroke-width="1"/><path d="M 42 16 Q 34 4 28 0 Q 36 8 44 12 Z" fill="#CBB8FF" stroke="#5E3FB0" stroke-width="1"/><path d="M 78 16 Q 86 4 92 0 Q 84 8 76 12 Z" fill="#CBB8FF" stroke="#5E3FB0" stroke-width="1"/><path d="M 26 30 Q 10 34 4 46 Q 14 38 24 36 Q 18 42 14 50 Q 24 40 28 40 Z" fill="#CBB8FF" opacity="0.5"/><path d="M 94 30 Q 110 34 116 46 Q 106 38 96 36 Q 102 42 106 50 Q 96 40 92 40 Z" fill="#CBB8FF" opacity="0.5"/><rect x="48" y="88" width="24" height="4" rx="2" fill="#5E3FB0"/><circle cx="60" cy="58" r="14" fill="url(#d-master-gem)" stroke="#5E3FB0" stroke-width="1.5"/><circle cx="60" cy="58" r="8" fill="#1A1430"/><circle cx="60" cy="58" r="5" fill="#3FD9C0" opacity="0.8"/><circle cx="60" cy="58" r="2" fill="#9BFFEE"/></svg>`,
+  'gm': `<svg viewBox="0 0 120 120" style="width:100%;height:100%;"><defs><radialGradient id="d-gm" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#FF96A6"/><stop offset="52%" stop-color="#E0556B"/><stop offset="100%" stop-color="#9C2435"/></radialGradient><linearGradient id="d-gm-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F0708A"/><stop offset="100%" stop-color="#7A1A28"/></linearGradient><radialGradient id="d-gm-gem" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#9BFFEE"/><stop offset="100%" stop-color="#3FD9C0"/></radialGradient></defs><path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#d-gm-s)" stroke="#C04050" stroke-width="1.5"/><path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#d-gm)" stroke="#9C2435" stroke-width="1"/><path d="M 40 14 Q 30 0 22 -4 Q 32 6 42 10 Z" fill="#FF96A6" stroke="#9C2435" stroke-width="1"/><path d="M 80 14 Q 90 0 98 -4 Q 88 6 78 10 Z" fill="#FF96A6" stroke="#9C2435" stroke-width="1"/><path d="M 24 28 Q 4 32 -4 46 Q 8 36 22 34 Q 14 42 8 52 Q 22 38 28 38 Z" fill="#FF96A6" opacity="0.55"/><path d="M 96 28 Q 116 32 124 46 Q 112 36 98 34 Q 106 42 112 52 Q 98 38 92 38 Z" fill="#FF96A6" opacity="0.55"/><rect x="42" y="90" width="36" height="5" rx="2.5" fill="#9C2435"/><rect x="46" y="86" width="28" height="3" rx="1.5" fill="#C04050"/><circle cx="60" cy="58" r="14" fill="url(#d-gm-gem)" stroke="#9C2435" stroke-width="1.5"/><circle cx="60" cy="58" r="8" fill="#1A0A10"/><circle cx="60" cy="58" r="6" fill="#3FD9C0"/><circle cx="60" cy="58" r="3" fill="#9BFFEE"/></svg>`,
+  'apex': `<svg viewBox="0 0 120 120" style="width:100%;height:100%;"><defs><radialGradient id="d-apex" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#9BFFEE"/><stop offset="52%" stop-color="#3FD9C0"/><stop offset="100%" stop-color="#1A8A78"/></radialGradient><linearGradient id="d-apex-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#5FE8D0"/><stop offset="100%" stop-color="#0E6A5C"/></linearGradient><radialGradient id="d-apex-gem" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="40%" stop-color="#9BFFEE"/><stop offset="100%" stop-color="#3FD9C0"/></radialGradient></defs><path d="M 60 8 L 104 22 L 104 62 Q 104 95 60 114 Q 16 95 16 62 L 16 22 Z" fill="url(#d-apex-s)" stroke="#2BA897" stroke-width="1.5"/><path d="M 60 16 L 96 27 L 96 60 Q 96 88 60 104 Q 24 88 24 60 L 24 27 Z" fill="url(#d-apex)" stroke="#1A8A78" stroke-width="1"/><path d="M 38 14 Q 26 -2 16 -6 Q 28 6 40 10 Z" fill="#9BFFEE" stroke="#1A8A78" stroke-width="1"/><path d="M 60 10 Q 58 -4 60 -8 Q 62 -4 60 10 Z" fill="#9BFFEE" stroke="#1A8A78" stroke-width="1"/><path d="M 82 14 Q 94 -2 104 -6 Q 92 6 80 10 Z" fill="#9BFFEE" stroke="#1A8A78" stroke-width="1"/><path d="M 22 28 Q -2 32 -12 48 Q 4 36 20 34 Q 10 42 2 54 Q 20 36 28 38 Z" fill="#9BFFEE" opacity="0.6"/><path d="M 98 28 Q 122 32 132 48 Q 116 36 100 34 Q 110 42 118 54 Q 100 36 92 38 Z" fill="#9BFFEE" opacity="0.6"/><rect x="38" y="92" width="44" height="6" rx="3" fill="#1A8A78"/><rect x="42" y="86" width="36" height="4" rx="2" fill="#2BA897"/><rect x="48" y="82" width="24" height="3" rx="1.5" fill="#3FD9C0"/><circle cx="60" cy="58" r="16" fill="url(#d-apex-gem)" stroke="#1A8A78" stroke-width="1.5"/><circle cx="60" cy="58" r="10" fill="#0A0B0F"/><circle cx="60" cy="58" r="7" fill="#3FD9C0"/><circle cx="60" cy="58" r="4" fill="#9BFFEE"/><circle cx="58" cy="56" r="2" fill="#FFFFFF"/></svg>`,
+};
+
+// Inject into detail cells
+const ids = { 'bronze':'bronze', 'silver':'silver', 'gold':'gold', 'plat':'plat', 'dia':'dia', 'master':'master', 'gm':'gm', 'apex':'apex' };
+for (const [key, val] of Object.entries(ids)) {
+  const el = document.getElementById(`crest-${key}-detail`);
+  if (el) el.innerHTML = crests[val];
+}
+
+// Inject pip variants (Diamond at 3 sizes, same crest)
+for (const id of ['pip-diamond-3','pip-diamond-2','pip-diamond-1']) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = crests['dia'];
+}
+</script>
+</body>
+</html>

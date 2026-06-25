@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Call Booking</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+
+  /* Fixed-height phone so the absolute overlay + sheet have a frame to sit in */
+  .phone { width: 390px; height: 844px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; position: relative; z-index: 1; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+
+  /* Background screen (dimmed) — flows behind the modal */
+  .bg-screen { padding: 0 18px; opacity: 0.4; filter: blur(1px); pointer-events: none; }
+  .bg-header { padding: 6px 0 16px; }
+  .bg-header h1 { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -1px; color: #F5F6F8; }
+  .bg-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .bg-card-title { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .bg-card-text { font-family: 'Inter', sans-serif; font-size: 12px; color: #7E828D; margin-top: 6px; line-height: 1.5; }
+
+  /* Overlay covers full phone */
+  .overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(5,6,9,0.72); z-index: 10; }
+
+  /* Bottom sheet anchored to bottom of phone */
+  .sheet { position: absolute; bottom: 0; left: 0; right: 0; background: #15161D; border: 1px solid #2A2B38; border-bottom: none; border-radius: 22px 22px 0 0; padding: 20px 22px 30px; z-index: 20; max-height: 85%; overflow-y: auto; }
+  .sheet-handle { width: 40px; height: 4px; background: #2A2B38; border-radius: 2px; margin: 0 auto 18px; }
+
+  .sheet-header { display: flex; align-items: center; gap: 13px; margin-bottom: 20px; }
+  .sheet-avatar { width: 46px; height: 46px; border-radius: 13px; background: linear-gradient(135deg,#3FD9C0,#1A8A78); display: flex; align-items: center; justify-content: center; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; color: #0A0B0F; flex-shrink: 0; }
+  .sheet-info { flex: 1; }
+  .sheet-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 17px; color: #F5F6F8; }
+  .sheet-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; margin-top: 2px; }
+  .sheet-close { width: 32px; height: 32px; border-radius: 10px; background: #1F2029; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #9B9CA8; }
+
+  .form-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #9B9CA8; margin-bottom: 8px; display: block; }
+
+  .purpose-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .purpose-chip { font-family: 'Inter', sans-serif; font-size: 12px; color: #C3C6CE; background: #1F2029; border: 1px solid #2A2B38; border-radius: 999px; padding: 8px 13px; }
+  .purpose-chip.active { color: #0A0B0F; background: #3FD9C0; border-color: #3FD9C0; font-weight: 600; }
+
+  .duration-row { display: flex; gap: 0; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 11px; padding: 4px; margin-bottom: 18px; }
+  .duration-chip { flex: 1; text-align: center; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 12px; padding: 9px; border-radius: 8px; color: #7E828D; }
+  .duration-chip.active { background: #3FD9C0; color: #0A0B0F; }
+
+  .date-strip { display: flex; gap: 7px; overflow-x: auto; margin-bottom: 18px; padding-bottom: 4px; }
+  .date-strip::-webkit-scrollbar { display: none; }
+  .date-card { flex-shrink: 0; text-align: center; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 11px; padding: 10px 14px; min-width: 56px; }
+  .date-card.active { background: #3FD9C0; border-color: #3FD9C0; }
+  .date-day { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; color: #7E828D; }
+  .date-card.active .date-day { color: #0A0B0F; }
+  .date-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 17px; color: #F5F6F8; margin-top: 2px; }
+  .date-card.active .date-num { color: #0A0B0F; }
+
+  .time-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+  .time-slot { text-align: center; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 10px; padding: 12px 4px; font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 12px; color: #F5F6F8; }
+  .time-slot.active { background: #3FD9C0; color: #0A0B0F; border-color: #3FD9C0; }
+  .time-slot.disabled { color: #5C616E; opacity: 0.4; text-decoration: line-through; }
+
+  .note-hint { font-family: 'Inter', sans-serif; font-size: 11px; color: #7E828D; line-height: 1.5; margin-bottom: 18px; padding: 10px 12px; background: #0E0F14; border: 1px solid #1C1D26; border-radius: 9px; }
+
+  .btn-primary { width: 100%; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; text-align: center; border-radius: 13px; padding: 16px; border: none; display: block; margin-bottom: 8px; }
+  .btn-ghost { width: 100%; background: transparent; color: #9B9CA8; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; text-align: center; border-radius: 13px; padding: 14px; border: none; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Call Booking · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+
+    <!-- Dimmed background -->
+    <div class="bg-screen">
+      <div class="bg-header"><h1>Coach Profile</h1></div>
+      <div class="bg-card">
+        <div class="bg-card-title">Ahmed Al-Harbi</div>
+        <div class="bg-card-text">Helping men in Riyadh build muscle and lose fat — with data, not guesswork.</div>
+      </div>
+      <div class="bg-card">
+        <div class="bg-card-title">Book a call</div>
+        <div class="bg-card-text">Tap to schedule a 1-on-1 with your coach.</div>
+      </div>
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay"></div>
+
+    <!-- Bottom sheet -->
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div class="sheet-avatar">AH</div>
+        <div class="sheet-info">
+          <div class="sheet-title">Book a call with Ahmed</div>
+          <div class="sheet-sub">Requires coach approval · Within 24h</div>
+        </div>
+        <div class="sheet-close">✕</div>
+      </div>
+
+      <label class="form-label">Purpose</label>
+      <div class="purpose-row">
+        <span class="purpose-chip active">Month-2 review</span>
+        <span class="purpose-chip">Plan adjustment</span>
+        <span class="purpose-chip">Form check</span>
+      </div>
+
+      <label class="form-label">Duration</label>
+      <div class="duration-row">
+        <div class="duration-chip">15 min</div>
+        <div class="duration-chip active">30 min</div>
+        <div class="duration-chip">45 min</div>
+      </div>
+
+      <label class="form-label">Date · Jun 25</label>
+      <div class="date-strip">
+        <div class="date-card"><div class="date-day">Thu</div><div class="date-num">26</div></div>
+        <div class="date-card active"><div class="date-day">Fri</div><div class="date-num">27</div></div>
+        <div class="date-card"><div class="date-day">Sat</div><div class="date-num">28</div></div>
+        <div class="date-card"><div class="date-day">Sun</div><div class="date-num">29</div></div>
+        <div class="date-card"><div class="date-day">Mon</div><div class="date-num">30</div></div>
+      </div>
+
+      <label class="form-label">Available times · Friday Jun 27</label>
+      <div class="time-grid">
+        <div class="time-slot disabled">10:00</div>
+        <div class="time-slot">11:30</div>
+        <div class="time-slot">13:00</div>
+        <div class="time-slot">14:30</div>
+        <div class="time-slot active">16:00</div>
+        <div class="time-slot">18:30</div>
+      </div>
+
+      <div class="note-hint">Ahmed typically responds within 18 minutes. You'll get a notification when the call is approved.</div>
+
+      <button class="btn-primary">Request Call · Fri 16:00</button>
+      <button class="btn-ghost">Cancel</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

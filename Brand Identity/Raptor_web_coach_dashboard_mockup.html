@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Web Coach Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+
+  /* Desktop frame */
+  .desktop { width: 1440px; margin: 40px auto; background: #0A0B0F; border: 1px solid #1A1B22; border-radius: 12px; overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,0.6); }
+
+  /* Top browser bar */
+  .browser-bar { height: 40px; background: #0E0F14; border-bottom: 1px solid #1C1D26; display: flex; align-items: center; padding: 0 16px; gap: 8px; }
+  .bb-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .bb-dot.r { background: #FF6B4A; } .bb-dot.y { background: #FFB323; } .bb-dot.g { background: #3FD98A; }
+  .url-bar { flex: 1; height: 24px; background: #15161D; border: 1px solid #2A2B38; border-radius: 6px; margin-left: 16px; display: flex; align-items: center; padding: 0 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; }
+  .url-bar .secure { color: #3FD98A; margin-right: 6px; }
+
+  /* App layout */
+  .app { display: flex; min-height: 900px; }
+
+  /* Sidebar */
+  .sidebar { width: 220px; background: #0E0F14; border-right: 1px solid #1C1D26; padding: 24px 0; flex-shrink: 0; }
+  .sb-logo { padding: 0 24px 28px; font-family: 'Geist', sans-serif; font-weight: 900; font-size: 24px; letter-spacing: -1px; color: #F5F6F8; }
+  .sb-logo .accent { color: #3FD9C0; }
+  .sb-section { padding: 0 16px; margin-bottom: 24px; }
+  .sb-section-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #5C616E; padding: 0 12px 8px; }
+  .sb-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; font-family: 'Geist', sans-serif; font-weight: 500; font-size: 14px; color: #9B9CA8; cursor: pointer; }
+  .sb-item:hover { background: #15161D; color: #F5F6F8; }
+  .sb-item.active { background: rgba(63,217,192,0.1); color: #3FD9C0; }
+  .sb-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .sb-badge { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #FF6B4A; background: rgba(255,107,74,0.12); border-radius: 5px; padding: 2px 6px; }
+
+  /* Main content */
+  .main { flex: 1; padding: 32px 40px; overflow-y: auto; }
+  .main-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
+  .mh-left .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #3FD9C0; margin-bottom: 6px; }
+  .mh-left h1 { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 36px; letter-spacing: -1.2px; color: #F5F6F8; line-height: 1; }
+  .mh-right { display: flex; align-items: center; gap: 16px; }
+  .period-toggle { display: flex; gap: 0; background: #15161D; border: 1px solid #2A2B38; border-radius: 10px; padding: 4px; }
+  .period-chip { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; padding: 8px 16px; border-radius: 7px; color: #7E828D; cursor: pointer; }
+  .period-chip.active { background: #3FD9C0; color: #0A0B0F; }
+  .avatar { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #3FD9C0, #1A8A78); display: flex; align-items: center; justify-content: center; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; color: #0A0B0F; }
+
+  /* KPI row */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .kpi-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 20px; }
+  .kpi-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 32px; line-height: 1; color: #3FD9C0; }
+  .kpi-num.neutral { color: #F5F6F8; }
+  .kpi-num.warn { color: #FFB323; }
+  .kpi-num .unit { font-size: 14px; color: #7E828D; }
+  .kpi-lbl { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; margin-top: 8px; }
+  .kpi-delta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3FD9C0; margin-top: 8px; }
+  .kpi-delta.down { color: #FF6B4A; }
+
+  /* Two-column row */
+  .two-col { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 24px; }
+  .card-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; color: #F5F6F8; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+  .card-title .link { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3FD9C0; font-weight: 500; }
+
+  /* Bar chart */
+  .bar-chart { display: flex; align-items: flex-end; gap: 12px; height: 200px; padding-top: 20px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .bar { width: 100%; border-radius: 6px 6px 0 0; }
+  .bar.cyan { background: #3FD9C0; } .bar.cobalt { background: #6B8AFF; }
+  .bar-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; }
+  .bar-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #F5F6F8; }
+
+  /* Client table */
+  .table { width: 100%; }
+  .table-header { display: grid; grid-template-columns: 40px 1.5fr 1fr 1fr 1fr 80px; gap: 12px; padding: 0 0 12px; border-bottom: 1px solid #1C1D26; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #5C616E; }
+  .table-row { display: grid; grid-template-columns: 40px 1.5fr 1fr 1fr 1fr 80px; gap: 12px; padding: 14px 0; border-bottom: 1px solid #1C1D26; align-items: center; }
+  .table-row:last-child { border-bottom: none; }
+  .tr-rank { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; color: #7E828D; }
+  .tr-rank.top { color: #3FD9C0; }
+  .tr-name { display: flex; align-items: center; gap: 10px; }
+  .tr-avatar { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 12px; color: #0A0B0F; flex-shrink: 0; }
+  .tr-name-text { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 13px; color: #F5F6F8; }
+  .tr-stat { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9B9CA8; }
+  .tr-stat.accent { color: #3FD9C0; }
+  .tr-tier { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-radius: 5px; padding: 4px 7px; text-align: center; }
+
+  /* Plan performance */
+  .plan-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #1C1D26; }
+  .plan-row:last-child { border-bottom: none; }
+  .plan-rank { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; color: #7E828D; width: 24px; }
+  .plan-rank.top { color: #3FD9C0; }
+  .plan-info { flex: 1; }
+  .plan-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .plan-stat { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; margin-top: 2px; }
+  .plan-bar { width: 80px; height: 6px; background: #1F2029; border-radius: 3px; overflow: hidden; }
+  .plan-bar-fill { height: 100%; background: #3FD9C0; border-radius: 3px; }
+  .plan-bar-fill.warn { background: #FFB323; }
+  .plan-pct { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #3FD9C0; width: 40px; text-align: right; }
+  .plan-pct.warn { color: #FFB323; }
+
+  /* Needs attention */
+  .attn-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #1C1D26; }
+  .attn-row:last-child { border-bottom: none; }
+  .attn-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .attn-icon svg { width: 16px; height: 16px; }
+  .attn-info { flex: 1; }
+  .attn-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; color: #F5F6F8; }
+  .attn-desc { font-family: 'Inter', sans-serif; font-size: 12px; color: #7E828D; margin-top: 2px; }
+  .attn-action { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #3FD9C0; }
+
+  /* Doc footer */
+  .doc-footer { padding: 24px 40px; border-top: 1px solid #1C1D26; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #5C616E; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<div class="desktop">
+  <!-- Browser bar -->
+  <div class="browser-bar">
+    <div class="bb-dot r"></div><div class="bb-dot y"></div><div class="bb-dot g"></div>
+    <div class="url-bar"><span class="secure">🔒</span> app.raptor.coach/dashboard</div>
+  </div>
+
+  <div class="app">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sb-logo">Raptor<span class="accent">.</span></div>
+
+      <div class="sb-section">
+        <div class="sb-section-label">Coaching</div>
+        <div class="sb-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg>Dashboard</div>
+        <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Clients<span class="sb-badge">3</span></div>
+        <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/></svg>Leaderboard</div>
+        <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-8M14 8h6v6"/></svg>Analytics</div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-section-label">Plans</div>
+        <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>Templates</div>
+        <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>New Plan</div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-section-label">Communication</div>
+        <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages<span class="sb-badge">3</span></div>
+        <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z"/></svg>Calls</div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-section-label">Account</div>
+        <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</div>
+        <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>Settings</div>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="main">
+      <div class="main-header">
+        <div class="mh-left">
+          <div class="label">Performance Hub · Season 02 · Week 8</div>
+          <h1>Welcome, Ahmed</h1>
+        </div>
+        <div class="mh-right">
+          <div class="period-toggle">
+            <div class="period-chip">Day</div>
+            <div class="period-chip active">Week</div>
+            <div class="period-chip">Month</div>
+            <div class="period-chip">Season</div>
+          </div>
+          <div class="avatar">AH</div>
+        </div>
+      </div>
+
+      <!-- KPI row -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-num">38</div>
+          <div class="kpi-lbl">Active Clients</div>
+          <div class="kpi-delta">▲ 2 this week</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num">78<span class="unit">%</span></div>
+          <div class="kpi-lbl">Goal Achievement</div>
+          <div class="kpi-delta">▲ 4% vs last month</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num neutral">91<span class="unit">%</span></div>
+          <div class="kpi-lbl">Avg Adherence</div>
+          <div class="kpi-delta">▲ 2%</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num warn">2</div>
+          <div class="kpi-lbl">At-Risk Clients</div>
+          <div class="kpi-delta down">▼ adherence &lt; 70%</div>
+        </div>
+      </div>
+
+      <!-- Two column: sessions chart + needs attention -->
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Sessions This Week <span class="link">View details ›</span></div>
+          <div class="bar-chart">
+            <div class="bar-col"><div class="bar-val">21</div><div class="bar cyan" style="height:55%;"></div><div class="bar-label">MON</div></div>
+            <div class="bar-col"><div class="bar-val">32</div><div class="bar cyan" style="height:80%;"></div><div class="bar-label">TUE</div></div>
+            <div class="bar-col"><div class="bar-val">18</div><div class="bar cyan" style="height:45%;"></div><div class="bar-label">WED</div></div>
+            <div class="bar-col"><div class="bar-val">36</div><div class="bar cyan" style="height:90%;"></div><div class="bar-label">THU</div></div>
+            <div class="bar-col"><div class="bar-val">28</div><div class="bar cyan" style="height:70%;"></div><div class="bar-label">FRI</div></div>
+            <div class="bar-col"><div class="bar-val">14</div><div class="bar cyan" style="height:35%;"></div><div class="bar-label">SAT</div></div>
+            <div class="bar-col"><div class="bar-val">8</div><div class="bar cyan" style="height:20%;"></div><div class="bar-label">SUN</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Needs Attention <span class="link">View all ›</span></div>
+          <div class="attn-row">
+            <div class="attn-icon" style="background:rgba(255,179,35,0.12);"><svg viewBox="0 0 24 24" fill="none" stroke="#FFB323" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 2h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></div>
+            <div class="attn-info"><div class="attn-name">Ahmed Saleh · 2 logs overdue</div><div class="attn-desc">Adherence dropped to 65% this week</div></div>
+            <div class="attn-action">Nudge</div>
+          </div>
+          <div class="attn-row">
+            <div class="attn-icon" style="background:rgba(255,107,74,0.12);"><svg viewBox="0 0 24 24" fill="none" stroke="#FF6B4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/></svg></div>
+            <div class="attn-info"><div class="attn-name">Layla Mansour · InBody pending</div><div class="attn-desc">Submitted 2h ago · awaiting review</div></div>
+            <div class="attn-action">Review</div>
+          </div>
+          <div class="attn-row">
+            <div class="attn-icon" style="background:rgba(255,179,35,0.12);"><svg viewBox="0 0 24 24" fill="none" stroke="#FFB323" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+            <div class="attn-info"><div class="attn-name">Nora Salem · 3 sessions missed</div><div class="attn-desc">Hasn't trained in 6 days</div></div>
+            <div class="attn-action">Message</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two column: top clients table + plan performance -->
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Top Performing Clients <span class="link">View all 38 ›</span></div>
+          <div class="table">
+            <div class="table-header">
+              <div>#</div><div>Client</div><div>Progress</div><div>Adherence</div><div>Goals</div><div>Tier</div>
+            </div>
+            <div class="table-row">
+              <div class="tr-rank top">1</div>
+              <div class="tr-name"><div class="tr-avatar" style="background:linear-gradient(135deg,#9B7BF5,#5E3FB0);">YA</div><div class="tr-name-text">Yousef Al-Mutairi</div></div>
+              <div class="tr-stat accent">+4.1kg muscle</div>
+              <div class="tr-stat">88%</div>
+              <div class="tr-stat">7</div>
+              <div class="tr-tier" style="color:#9B7BF5;background:rgba(155,123,245,0.16);">Master</div>
+            </div>
+            <div class="table-row">
+              <div class="tr-rank top">2</div>
+              <div class="tr-name"><div class="tr-avatar" style="background:linear-gradient(135deg,#3FD9C0,#1A8A78);">KO</div><div class="tr-name-text">Khalid Al-Otaibi</div></div>
+              <div class="tr-stat accent">−9.2kg</div>
+              <div class="tr-stat">94%</div>
+              <div class="tr-stat">9</div>
+              <div class="tr-tier" style="color:#3FD9C0;background:rgba(63,217,192,0.16);">Apex</div>
+            </div>
+            <div class="table-row">
+              <div class="tr-rank top">3</div>
+              <div class="tr-name"><div class="tr-avatar" style="background:linear-gradient(135deg,#E0556B,#9C2435);">OS</div><div class="tr-name-text">Omar El-Sayed</div></div>
+              <div class="tr-stat accent">−7.8kg</div>
+              <div class="tr-stat">85%</div>
+              <div class="tr-stat">8</div>
+              <div class="tr-tier" style="color:#E0556B;background:rgba(224,85,107,0.16);">Grandmaster</div>
+            </div>
+            <div class="table-row">
+              <div class="tr-rank">4</div>
+              <div class="tr-name"><div class="tr-avatar" style="background:linear-gradient(135deg,#6B8AFF,#3A52C4);">TH</div><div class="tr-name-text">Tariq Hassan</div></div>
+              <div class="tr-stat">−6.4kg</div>
+              <div class="tr-stat">82%</div>
+              <div class="tr-stat">6</div>
+              <div class="tr-tier" style="color:#6B8AFF;background:rgba(107,138,255,0.16);">Diamond</div>
+            </div>
+            <div class="table-row">
+              <div class="tr-rank">5</div>
+              <div class="tr-name"><div class="tr-avatar" style="background:linear-gradient(135deg,#CFE6F0,#8FB4C4);">FD</div><div class="tr-name-text">Faisal Al-Dossari</div></div>
+              <div class="tr-stat">−5.9kg</div>
+              <div class="tr-stat">80%</div>
+              <div class="tr-stat">5</div>
+              <div class="tr-tier" style="color:#CFE6F0;background:rgba(207,230,240,0.12);">Platinum</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Top Performing Plans <span class="link">View all ›</span></div>
+          <div class="plan-row">
+            <div class="plan-rank top">1</div>
+            <div class="plan-info"><div class="plan-name">Cut-12-Week</div><div class="plan-stat">6 clients · 92% adherence</div></div>
+            <div class="plan-bar"><div class="plan-bar-fill" style="width:92%;"></div></div>
+            <div class="plan-pct">92%</div>
+          </div>
+          <div class="plan-row">
+            <div class="plan-rank">2</div>
+            <div class="plan-info"><div class="plan-name">PPL 4-day split</div><div class="plan-stat">8 clients · 84% adherence</div></div>
+            <div class="plan-bar"><div class="plan-bar-fill" style="width:84%;"></div></div>
+            <div class="plan-pct">84%</div>
+          </div>
+          <div class="plan-row">
+            <div class="plan-rank">3</div>
+            <div class="plan-info"><div class="plan-name">Upper Lower 4-day</div><div class="plan-stat">5 clients · 79% adherence</div></div>
+            <div class="plan-bar"><div class="plan-bar-fill" style="width:79%;"></div></div>
+            <div class="plan-pct">79%</div>
+          </div>
+          <div class="plan-row">
+            <div class="plan-rank">4</div>
+            <div class="plan-info"><div class="plan-name">Full Body 3-day</div><div class="plan-stat">3 clients · 75% adherence</div></div>
+            <div class="plan-bar"><div class="plan-bar-fill" style="width:75%;"></div></div>
+            <div class="plan-pct">75%</div>
+          </div>
+          <div class="plan-row">
+            <div class="plan-rank">5</div>
+            <div class="plan-info"><div class="plan-name">Mass-gain 5-day</div><div class="plan-stat">4 clients · 64% adherence</div></div>
+            <div class="plan-bar"><div class="plan-bar-fill warn" style="width:64%;"></div></div>
+            <div class="plan-pct warn">64%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-footer">
+    <span>Raptor · Web Coach Dashboard · v1</span>
+    <span>Desktop 1440px · Enhanced web for coaches &amp; gyms</span>
+  </div>
+</div>
+
+</body>
+</html>

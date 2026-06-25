@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Templates List</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 18px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.5px; color: #F5F6F8; flex: 1; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 14px 0 10px; }
+
+  .template-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 10px; }
+  .tc-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .tc-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .tc-icon.training { background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); }
+  .tc-icon.nutrition { background: rgba(107,138,255,0.12); border: 1px solid rgba(107,138,255,0.25); }
+  .tc-icon svg { width: 20px; height: 20px; }
+  .tc-info { flex: 1; }
+  .tc-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; color: #F5F6F8; letter-spacing: -0.2px; }
+  .tc-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 3px; }
+  .tc-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #3FD98A; background: rgba(63,217,138,0.14); border-radius: 5px; padding: 4px 7px; flex-shrink: 0; }
+
+  .tc-stats { display: flex; gap: 14px; padding-top: 10px; border-top: 1px solid #1C1D26; }
+  .tc-stat { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; }
+  .tc-stat .v { color: #F5F6F8; font-weight: 700; font-size: 12px; display: block; }
+
+  .tc-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .tc-btn { flex: 1; text-align: center; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 12px; border-radius: 9px; padding: 10px; }
+  .tc-btn.primary { background: #3FD9C0; color: #0A0B0F; }
+  .tc-btn.ghost { background: transparent; color: #9B9CA8; border: 1px solid #2A2B38; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Templates List · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Templates</div>
+      </div>
+
+      <div class="section-label">Training · 4 templates</div>
+
+      <div class="template-card">
+        <div class="tc-top">
+          <div class="tc-icon training"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg></div>
+          <div class="tc-info"><div class="tc-title">Push Pull Legs · 4-day</div><div class="tc-meta">12 weeks · 6 exercises/day avg</div></div>
+          <div class="tc-badge">Used 8×</div>
+        </div>
+        <div class="tc-stats">
+          <div class="tc-stat"><span class="v">92%</span>Adherence</div>
+          <div class="tc-stat"><span class="v">6</span>Active clients</div>
+          <div class="tc-stat"><span class="v">84%</span>Goal hit</div>
+        </div>
+        <div class="tc-actions">
+          <div class="tc-btn ghost">Preview</div>
+          <div class="tc-btn primary">Assign</div>
+        </div>
+      </div>
+
+      <div class="template-card">
+        <div class="tc-top">
+          <div class="tc-icon training"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg></div>
+          <div class="tc-info"><div class="tc-title">Upper Lower · 4-day</div><div class="tc-meta">10 weeks · 5 exercises/day avg</div></div>
+          <div class="tc-badge">Used 3×</div>
+        </div>
+        <div class="tc-stats">
+          <div class="tc-stat"><span class="v">87%</span>Adherence</div>
+          <div class="tc-stat"><span class="v">3</span>Active clients</div>
+          <div class="tc-stat"><span class="v">79%</span>Goal hit</div>
+        </div>
+        <div class="tc-actions">
+          <div class="tc-btn ghost">Preview</div>
+          <div class="tc-btn primary">Assign</div>
+        </div>
+      </div>
+
+      <div class="template-card">
+        <div class="tc-top">
+          <div class="tc-icon training"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg></div>
+          <div class="tc-info"><div class="tc-title">Full Body · 3-day beginner</div><div class="tc-meta">8 weeks · 4 exercises/day avg</div></div>
+          <div class="tc-badge">Used 5×</div>
+        </div>
+        <div class="tc-stats">
+          <div class="tc-stat"><span class="v">91%</span>Adherence</div>
+          <div class="tc-stat"><span class="v">2</span>Active clients</div>
+          <div class="tc-stat"><span class="v">88%</span>Goal hit</div>
+        </div>
+        <div class="tc-actions">
+          <div class="tc-btn ghost">Preview</div>
+          <div class="tc-btn primary">Assign</div>
+        </div>
+      </div>
+
+      <div class="section-label">Nutrition · 2 templates</div>
+
+      <div class="template-card">
+        <div class="tc-top">
+          <div class="tc-icon nutrition"><svg viewBox="0 0 24 24" fill="none" stroke="#6B8AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 3 2 5 2 7h10c0-2 2-4 2-7a7 7 0 0 0-7-7zM9 21h6"/></svg></div>
+          <div class="tc-info"><div class="tc-title">High-protein cut · 3,200 kcal</div><div class="tc-meta">P 180g · C 340g · F 90g</div></div>
+          <div class="tc-badge">Used 6×</div>
+        </div>
+        <div class="tc-actions">
+          <div class="tc-btn ghost">Preview</div>
+          <div class="tc-btn primary">Assign</div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CLIENTS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">ANALYTICS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

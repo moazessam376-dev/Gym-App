@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Profile Setup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 24px 40px; }
+
+  .progress-bar { display: flex; gap: 6px; padding: 12px 0 28px; }
+  .pb-seg { flex: 1; height: 3px; background: #2A2B38; border-radius: 2px; }
+  .pb-seg.done, .pb-seg.active { background: #3FD9C0; }
+
+  .step-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #3FD9C0; margin-bottom: 8px; }
+  .step-title { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 26px; letter-spacing: -1px; color: #F5F6F8; line-height: 1.1; margin-bottom: 6px; }
+  .step-desc { font-family: 'Inter', sans-serif; font-size: 14px; color: #9B9CA8; line-height: 1.55; margin-bottom: 24px; }
+
+  .avatar-upload { width: 100px; height: 100px; border-radius: 28px; background: #15161D; border: 1px dashed #2A2B38; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; position: relative; }
+  .avatar-upload svg { width: 28px; height: 28px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #9B9CA8; margin-bottom: 7px; display: block; }
+  .form-input { width: 100%; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 11px; padding: 14px; font-family: 'Inter', sans-serif; font-size: 15px; color: #F5F6F8; }
+  .form-input::placeholder { color: #5C616E; }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .sex-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sex-chip { background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 14px; text-align: center; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #9B9CA8; }
+  .sex-chip.active { background: rgba(63,217,192,0.1); border-color: #3FD9C0; color: #3FD9C0; }
+
+  .activity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .activity-chip { background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 12px; font-family: 'Inter', sans-serif; font-size: 13px; color: #C3C6CE; text-align: center; }
+  .activity-chip.active { background: #3FD9C0; color: #0A0B0F; border-color: #3FD9C0; font-weight: 600; }
+
+  .btn-primary { width: 100%; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; text-align: center; border-radius: 13px; padding: 16px; border: none; display: block; margin-top: 20px; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Profile Setup · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="progress-bar">
+        <div class="pb-seg done"></div><div class="pb-seg done"></div><div class="pb-seg done"></div><div class="pb-seg active"></div><div class="pb-seg"></div>
+      </div>
+
+      <div class="step-label">Step 4 of 5 · About you</div>
+      <div class="step-title">Your physical profile</div>
+      <div class="step-desc">Used for TDEE calculation and ranking tiers. Verified by InBody scans.</div>
+
+      <div class="avatar-upload">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#5C616E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Display name</label>
+        <input class="form-input" type="text" value="Yousef Al-Mutairi">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Sex · for TDEE</label>
+        <div class="sex-toggle">
+          <div class="sex-chip active">Male</div>
+          <div class="sex-chip">Female</div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="form-group">
+          <label class="form-label">Height (cm)</label>
+          <input class="form-input" type="number" value="178">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Birth date</label>
+          <input class="form-input" type="text" value="1996-03-14">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Target weight (kg)</label>
+        <input class="form-input" type="number" value="82">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Activity level</label>
+        <div class="activity-grid">
+          <div class="activity-chip">Sedentary</div>
+          <div class="activity-chip">Light</div>
+          <div class="activity-chip active">Moderate</div>
+          <div class="activity-chip">Very active</div>
+        </div>
+      </div>
+
+      <button class="btn-primary">Continue</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

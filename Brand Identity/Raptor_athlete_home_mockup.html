@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Athlete Home (Remake)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  ::selection { background: rgba(63,217,192,0.3); color: #fff; }
+
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; letter-spacing: -0.5px; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  /* Top bar */
+  .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 0 18px; }
+  .greeting-block .greeting { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; }
+  .greeting-block .name { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -0.8px; color: #F5F6F8; line-height: 1.1; margin-top: 3px; }
+  .top-right { display: flex; align-items: center; gap: 12px; }
+  .streak-pill { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #3FD9C0; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); border-radius: 999px; padding: 7px 13px; }
+  .bell { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #9B9CA8; }
+  .avatar-sm { width: 38px; height: 38px; border-radius: 11px; background: linear-gradient(135deg, #3FD9C0, #1A8A78); display: flex; align-items: center; justify-content: center; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 14px; color: #0A0B0F; }
+
+  /* Hero ring card */
+  .hero-card { background: linear-gradient(165deg, #10202C, #0A0B0F); border: 1px solid #2A2B38; border-radius: 18px; padding: 24px 20px; text-align: center; margin-bottom: 16px; }
+  .hero-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin-bottom: 16px; }
+  .ring-wrap { width: 200px; height: 200px; margin: 0 auto 16px; position: relative; }
+  .ring-svg { transform: rotate(-90deg); }
+  .ring-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+  .ring-pct { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 48px; color: #3FD9C0; line-height: 1; letter-spacing: -1px; }
+  .ring-caption { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; margin-top: 6px; letter-spacing: 0.5px; }
+  .hero-day { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.5px; color: #F5F6F8; margin-bottom: 14px; }
+  .btn-primary { background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; text-align: center; border-radius: 13px; padding: 15px; border: none; display: block; width: 100%; }
+
+  /* Section label */
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 18px 0 10px; }
+
+  /* Nutrition card */
+  .nutrition-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; display: flex; align-items: center; gap: 16px; }
+  .mini-ring { width: 64px; height: 64px; position: relative; flex-shrink: 0; }
+  .mini-ring-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; color: #3FD9C0; text-align: center; line-height: 1.1; }
+  .mini-ring-center .unit { font-size: 8px; color: #7E828D; font-weight: 500; }
+  .nutrition-info { flex: 1; }
+  .nutrition-title { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 15px; color: #F5F6F8; }
+  .nutrition-macros { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; margin-top: 4px; }
+  .nutrition-macros .p { color: #3FD9C0; } .nutrition-macros .c { color: #6B8AFF; } .nutrition-macros .f { color: #9B7BF5; }
+  .chevron { color: #5C616E; font-size: 18px; flex-shrink: 0; }
+
+  /* Coach card */
+  .coach-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 13px; }
+  .coach-avatar-sm { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #6B8AFF, #3A52C4); display: flex; align-items: center; justify-content: center; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; color: #0A0B0F; flex-shrink: 0; }
+  .coach-card-info { flex: 1; }
+  .coach-card-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; }
+  .coach-card-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 15px; color: #F5F6F8; margin-top: 2px; }
+  .chat-icon { width: 38px; height: 38px; border-radius: 11px; background: #1F2029; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #3FD9C0; }
+
+  /* Rank card (small, below hero) */
+  .rank-strip { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; }
+  .rank-crest { width: 44px; height: 44px; border-radius: 12px; background: radial-gradient(circle at 50% 32%, #AEC0FF, #6B8AFF 55%, #3A52C4); box-shadow: 0 0 16px rgba(107,138,255,0.4), inset 0 2px 5px rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .rank-crest-inner { width: 18px; height: 18px; transform: rotate(45deg); border-radius: 5px; background: rgba(10,11,15,0.28); }
+  .rank-info { flex: 1; }
+  .rank-tier { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; color: #F5F6F8; }
+  .rank-meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9B9CA8; margin-top: 2px; }
+  .rank-meta .up { color: #3FD9C0; }
+
+  /* Tab bar */
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; }
+  .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; }
+  .tab-label.inactive { color: #7E828D; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Athlete Home · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <span class="brand">Raptor</span>
+      <span class="signal">●●●</span>
+    </div>
+
+    <div class="content">
+      <!-- Top bar -->
+      <div class="top-bar">
+        <div class="greeting-block">
+          <div class="greeting">Good morning</div>
+          <div class="name">Yousef</div>
+        </div>
+        <div class="top-right">
+          <div class="streak-pill">▲ 12</div>
+          <div class="bell">🔔</div>
+          <div class="avatar-sm">YA</div>
+        </div>
+      </div>
+
+      <!-- Hero ring card -->
+      <div class="hero-card">
+        <div class="hero-label">Today's Workout</div>
+        <div class="hero-day">Push Day · Chest &amp; Triceps</div>
+        <div class="ring-wrap">
+          <svg class="ring-svg" width="200" height="200" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="88" fill="none" stroke="#1F2029" stroke-width="14"/>
+            <circle cx="100" cy="100" r="88" fill="none" stroke="#3FD9C0" stroke-width="14" stroke-linecap="round" stroke-dasharray="552" stroke-dashoffset="182"/>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-pct">67<span style="font-size:24px;color:#7E828D;">%</span></div>
+            <div class="ring-caption">8 / 12 sets</div>
+          </div>
+        </div>
+        <button class="btn-primary">Continue Workout</button>
+      </div>
+
+      <!-- Rank strip -->
+      <div class="rank-strip">
+        <div class="rank-crest"><div class="rank-crest-inner"></div></div>
+        <div class="rank-info">
+          <div class="rank-tier">Diamond II</div>
+          <div class="rank-meta">Regional #312 · <span class="up">▲ 4 this week</span></div>
+        </div>
+        <div class="chevron">›</div>
+      </div>
+
+      <!-- Nutrition today -->
+      <div class="section-label">Nutrition Today</div>
+      <div class="nutrition-card">
+        <div class="mini-ring">
+          <svg width="64" height="64" viewBox="0 0 64 64" style="transform:rotate(-90deg);">
+            <circle cx="32" cy="32" r="27" fill="none" stroke="#1F2029" stroke-width="6"/>
+            <circle cx="32" cy="32" r="27" fill="none" stroke="#3FD9C0" stroke-width="6" stroke-linecap="round" stroke-dasharray="170" stroke-dashoffset="68"/>
+          </svg>
+          <div class="mini-ring-center">1,840<span class="unit"><br>kcal left</span></div>
+        </div>
+        <div class="nutrition-info">
+          <div class="nutrition-title">2,160 / 4,000 kcal</div>
+          <div class="nutrition-macros">
+            <span class="p">P 142/180g</span> · <span class="c">C 198/340g</span> · <span class="f">F 62/90g</span>
+          </div>
+        </div>
+        <div class="chevron">›</div>
+      </div>
+
+      <!-- Your coach -->
+      <div class="section-label">Your Coach</div>
+      <div class="coach-card">
+        <div class="coach-avatar-sm">AH</div>
+        <div class="coach-card-info">
+          <div class="coach-card-label">Coach</div>
+          <div class="coach-card-name">Ahmed Al-Harbi</div>
+        </div>
+        <div class="chat-icon">💬</div>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">PLAN</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">NUTRITION</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

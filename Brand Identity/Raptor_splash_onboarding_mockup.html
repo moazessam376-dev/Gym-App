@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Splash & Onboarding Slides</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; padding: 40px 0; display: flex; justify-content: center; }
+  .container { display: flex; flex-direction: column; align-items: center; gap: 32px; }
+
+  .doc-header { text-align: center; margin-bottom: 16px; max-width: 600px; }
+  .doc-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; margin-bottom: 12px; }
+  .doc-title { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 40px; letter-spacing: -1.8px; color: #F5F6F8; line-height: 1; margin-bottom: 12px; }
+  .doc-desc { font-family: 'Inter', sans-serif; font-size: 15px; color: #9B9CA8; line-height: 1.5; }
+
+  .screen-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin-bottom: 10px; text-align: center; }
+
+  /* Phone frame */
+  .phone { width: 390px; height: 844px; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; flex-shrink: 0; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+
+  /* ─── Splash screen ─── */
+  .splash { width: 390px; height: 844px; background: radial-gradient(circle at 50% 35%, #10202C 0%, #0A0B0F 60%); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+  .splash-crest { width: 140px; height: 140px; position: relative; margin-bottom: 40px; }
+  .splash-crest-glow { position: absolute; inset: -30px; border-radius: 50%; background: radial-gradient(circle, rgba(63,217,192,0.2), transparent 70%); z-index: 0; }
+  .splash-wordmark { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 56px; letter-spacing: -2.5px; color: #F5F6F8; line-height: 1; margin-bottom: 10px; position: relative; z-index: 1; }
+  .splash-wordmark .accent { color: #3FD9C0; }
+  .splash-tagline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; color: #3FD9C0; position: relative; z-index: 1; }
+  .splash-loader { position: absolute; bottom: 80px; display: flex; gap: 6px; }
+  .splash-dot { width: 7px; height: 7px; border-radius: 50%; background: #2A2B38; }
+  .splash-dot.active { background: #3FD9C0; }
+
+  /* ─── Onboarding slide ─── */
+  .onboard { width: 390px; height: 844px; background: #0A0B0F; display: flex; flex-direction: column; padding: 0; }
+  .ob-skip { position: absolute; top: 56px; right: 24px; font-family: 'Inter', sans-serif; font-size: 14px; color: #7E828D; z-index: 2; }
+  .ob-visual { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+  .ob-visual-bg { position: absolute; inset: 0; }
+  .ob-content { padding: 40px 32px 60px; text-align: center; }
+  .ob-headline { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: -1px; color: #F5F6F8; line-height: 1.15; margin-bottom: 14px; }
+  .ob-headline .accent { color: #3FD9C0; }
+  .ob-desc { font-family: 'Inter', sans-serif; font-size: 15px; color: #9B9CA8; line-height: 1.55; max-width: 300px; margin: 0 auto 32px; }
+  .ob-pager { display: flex; gap: 7px; justify-content: center; margin-bottom: 28px; }
+  .ob-page-dot { width: 7px; height: 7px; border-radius: 50%; background: #2A2B38; }
+  .ob-page-dot.active { background: #3FD9C0; width: 20px; border-radius: 4px; }
+  .ob-btn { width: 100%; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; text-align: center; border-radius: 13px; padding: 16px; border: none; }
+
+  /* ─── Skeleton loader ─── */
+  .skeleton-screen { width: 390px; height: 844px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); }
+  .sk-status { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #5C616E; }
+  .sk-content { padding: 18px; }
+  .sk-greeting { height: 28px; width: 140px; background: #15161D; border-radius: 7px; margin-bottom: 20px; }
+  .sk-card { background: #15161D; border: 1px solid #1C1D26; border-radius: 14px; padding: 20px; margin-bottom: 14px; }
+  .sk-ring { width: 180px; height: 180px; border-radius: 50%; background: #1F2029; margin: 0 auto 16px; }
+  .sk-btn { height: 48px; background: #1F2029; border-radius: 13px; }
+  .sk-row { display: flex; gap: 12px; margin-bottom: 10px; }
+  .sk-tile { flex: 1; height: 70px; background: #15161D; border: 1px solid #1C1D26; border-radius: 12px; }
+  .sk-line { height: 14px; background: #1F2029; border-radius: 4px; margin-bottom: 8px; }
+  .sk-line.short { width: 60%; }
+
+  /* Crest SVG for splash */
+  .crest-icon { width: 100%; height: 100%; position: relative; z-index: 1; }
+
+  /* Feature illustrations */
+  .feature-illustration { width: 200px; height: 200px; position: relative; z-index: 1; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="doc-header">
+    <div class="doc-tag">Splash & Onboarding · v1</div>
+    <h1 class="doc-title">First impressions.</h1>
+    <p class="doc-desc">Loading splash with pulsing crest, skeleton loader pattern, and 3 onboarding value-prop slides before sign-up.</p>
+  </div>
+
+  <!-- ─── SPLASH ─── -->
+  <div>
+    <div class="screen-label">01 · Loading splash · 1.5s</div>
+    <div class="phone">
+      <div class="splash">
+        <div class="status-bar" style="background:transparent;"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <div class="splash-crest">
+            <div class="splash-crest-glow"></div>
+            <svg class="crest-icon" viewBox="0 0 140 140">
+              <defs>
+                <radialGradient id="sp-crest" cx="50%" cy="32%" r="60%">
+                  <stop offset="0%" stop-color="#9BFFEE"/>
+                  <stop offset="52%" stop-color="#3FD9C0"/>
+                  <stop offset="100%" stop-color="#1A8A78"/>
+                </radialGradient>
+                <linearGradient id="sp-crest-s" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#5FE8D0"/>
+                  <stop offset="100%" stop-color="#0E6A5C"/>
+                </linearGradient>
+              </defs>
+              <path d="M 70 8 L 122 24 L 122 72 Q 122 110 70 130 Q 18 110 18 72 L 18 24 Z" fill="url(#sp-crest-s)" stroke="#2BA897" stroke-width="1.5"/>
+              <path d="M 70 18 L 112 30 L 112 70 Q 112 102 70 118 Q 28 102 28 70 L 28 30 Z" fill="url(#sp-crest)" stroke="#1A8A78" stroke-width="1"/>
+              <path d="M 44 18 Q 32 4 22 0 Q 34 10 46 14 Z" fill="#9BFFEE" stroke="#1A8A78" stroke-width="1"/>
+              <path d="M 96 18 Q 108 4 118 0 Q 106 10 94 14 Z" fill="#9BFFEE" stroke="#1A8A78" stroke-width="1"/>
+              <path d="M 26 32 Q 6 36 -4 52 Q 8 40 24 38 Q 14 46 6 58 Q 24 38 30 40 Z" fill="#9BFFEE" opacity="0.6"/>
+              <path d="M 114 32 Q 134 36 144 52 Q 122 40 106 38 Q 126 46 134 58 Q 116 38 110 40 Z" fill="#9BFFEE" opacity="0.6"/>
+              <rect x="46" y="106" width="48" height="6" rx="3" fill="#1A8A78"/>
+              <circle cx="70" cy="68" r="18" fill="#3FD9C0" stroke="#1A8A78" stroke-width="1.5" opacity="0.9"/>
+              <circle cx="70" cy="68" r="12" fill="#0A0B0F"/>
+              <circle cx="70" cy="68" r="8" fill="#3FD9C0"/>
+              <circle cx="70" cy="68" r="4" fill="#9BFFEE"/>
+              <circle cx="67" cy="65" r="2" fill="#FFFFFF"/>
+            </svg>
+          </div>
+          <div class="splash-wordmark">Raptor<span class="accent">.</span></div>
+          <div class="splash-tagline">Earned, not given</div>
+        </div>
+        <div class="splash-loader">
+          <div class="splash-dot active"></div>
+          <div class="splash-dot"></div>
+          <div class="splash-dot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SKELETON LOADER ─── -->
+  <div>
+    <div class="screen-label">02 · Skeleton loader · while data fetches</div>
+    <div class="skeleton-screen">
+      <div class="sk-status"><span>9:41</span><span style="font-family:'Geist';font-weight:700;color:#F5F6F8;">Raptor</span><span style="color:#3FD9C0;">●●●</span></div>
+      <div class="sk-content">
+        <div class="sk-greeting"></div>
+        <div class="sk-card" style="text-align:center;">
+          <div class="sk-ring"></div>
+          <div class="sk-btn"></div>
+        </div>
+        <div class="sk-row">
+          <div class="sk-tile"></div>
+          <div class="sk-tile"></div>
+        </div>
+        <div class="sk-card">
+          <div class="sk-line"></div>
+          <div class="sk-line short"></div>
+        </div>
+        <div class="sk-card">
+          <div class="sk-line"></div>
+          <div class="sk-line short"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ONBOARDING SLIDE 1 ─── -->
+  <div>
+    <div class="screen-label">03 · Onboarding slide 1 of 3 · Data-driven coaching</div>
+    <div class="phone">
+      <div class="onboard">
+        <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+        <div class="ob-skip">Skip</div>
+        <div class="ob-visual">
+          <div class="ob-visual-bg" style="background:radial-gradient(circle at 50% 40%, rgba(63,217,192,0.08), transparent 60%);"></div>
+          <div class="feature-illustration">
+            <svg viewBox="0 0 200 200" style="width:100%;height:100%;">
+              <defs>
+                <linearGradient id="ob1-ring" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#3FD9C0"/>
+                  <stop offset="100%" stop-color="#1A8A78"/>
+                </linearGradient>
+              </defs>
+              <!-- Progress ring -->
+              <circle cx="100" cy="100" r="80" fill="none" stroke="#1F2029" stroke-width="10"/>
+              <circle cx="100" cy="100" r="80" fill="none" stroke="url(#ob1-ring)" stroke-width="10" stroke-linecap="round" stroke-dasharray="502" stroke-dashoffset="166" transform="rotate(-90 100 100)"/>
+              <!-- Center KPI -->
+              <text x="100" y="95" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="32" fill="#3FD9C0">78%</text>
+              <text x="100" y="115" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7E828D" letter-spacing="1">GOAL HIT</text>
+              <!-- Floating stat cards -->
+              <rect x="20" y="30" width="60" height="36" rx="8" fill="#15161D" stroke="#2A2B38" stroke-width="1"/>
+              <text x="50" y="48" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="14" fill="#F5F6F8">−4.2kg</text>
+              <text x="50" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#7E828D">12 WEEKS</text>
+              <rect x="120" y="140" width="60" height="36" rx="8" fill="#15161D" stroke="#2A2B38" stroke-width="1"/>
+              <text x="150" y="158" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="14" fill="#3FD9C0">91%</text>
+              <text x="150" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#7E828D">ADHERENCE</text>
+            </svg>
+          </div>
+        </div>
+        <div class="ob-content">
+          <div class="ob-headline">Data-driven <span class="accent">coaching.</span></div>
+          <div class="ob-desc">Plans, KPIs, and measurable results. Your coach sees which plans work — and proves it with numbers, not vibes.</div>
+          <div class="ob-pager">
+            <div class="ob-page-dot active"></div>
+            <div class="ob-page-dot"></div>
+            <div class="ob-page-dot"></div>
+          </div>
+          <button class="ob-btn">Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ONBOARDING SLIDE 2 ─── -->
+  <div>
+    <div class="screen-label">04 · Onboarding slide 2 of 3 · 8-tier ranking</div>
+    <div class="phone">
+      <div class="onboard">
+        <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+        <div class="ob-skip">Skip</div>
+        <div class="ob-visual">
+          <div class="ob-visual-bg" style="background:radial-gradient(circle at 50% 40%, rgba(107,138,255,0.08), transparent 60%);"></div>
+          <div class="feature-illustration">
+            <svg viewBox="0 0 200 200" style="width:100%;height:100%;">
+              <!-- Tier ladder: Bronze → Apex -->
+              <g transform="translate(100, 100)">
+                <!-- Apex (top) -->
+                <circle cx="0" cy="-70" r="20" fill="url(#ob2-apex)" stroke="#1A8A78" stroke-width="1.5"/>
+                <circle cx="0" cy="-70" r="8" fill="#3FD9C0"/>
+                <text x="0" y="-40" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#3FD9C0" letter-spacing="1">APEX</text>
+                <!-- Diamond -->
+                <circle cx="-35" cy="-30" r="16" fill="#6B8AFF" stroke="#3A52C4" stroke-width="1.5"/>
+                <text x="-35" y="-5" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#6B8AFF">DIAMOND</text>
+                <!-- Gold -->
+                <circle cx="35" cy="-30" r="16" fill="#E5B83C" stroke="#9A7615" stroke-width="1.5"/>
+                <text x="35" y="-5" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#E5B83C">GOLD</text>
+                <!-- Silver -->
+                <circle cx="-45" cy="20" r="13" fill="#9AA3AF" stroke="#5C636E" stroke-width="1.5"/>
+                <text x="-45" y="42" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#9AA3AF">SILVER</text>
+                <!-- Bronze (bottom) -->
+                <circle cx="0" cy="70" r="16" fill="#B07A42" stroke="#6E4A22" stroke-width="1.5"/>
+                <text x="0" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#B07A42">BRONZE</text>
+                <!-- Connector lines -->
+                <line x1="0" y1="54" x2="0" y2="-50" stroke="#2A2B38" stroke-width="1" stroke-dasharray="2 3"/>
+                <line x1="-10" y1="62" x2="-30" y2="10" stroke="#2A2B38" stroke-width="1" stroke-dasharray="2 3"/>
+                <line x1="10" y1="62" x2="25" y2="-14" stroke="#2A2B38" stroke-width="1" stroke-dasharray="2 3"/>
+                <line x1="-25" y1="-16" x2="-10" y2="-54" stroke="#2A2B38" stroke-width="1" stroke-dasharray="2 3"/>
+                <line x1="25" y1="-16" x2="10" y2="-54" stroke="#2A2B38" stroke-width="1" stroke-dasharray="2 3"/>
+              </g>
+              <defs>
+                <radialGradient id="ob2-apex" cx="50%" cy="32%" r="60%">
+                  <stop offset="0%" stop-color="#9BFFEE"/>
+                  <stop offset="52%" stop-color="#3FD9C0"/>
+                  <stop offset="100%" stop-color="#1A8A78"/>
+                </radialGradient>
+              </defs>
+            </svg>
+          </div>
+        </div>
+        <div class="ob-content">
+          <div class="ob-headline">8-tier <span class="accent">ranking.</span></div>
+          <div class="ob-desc">Bronze to Apex. Climb by logging InBody scans and hitting goals — not by vanity lifts. Earned, not given.</div>
+          <div class="ob-pager">
+            <div class="ob-page-dot"></div>
+            <div class="ob-page-dot active"></div>
+            <div class="ob-page-dot"></div>
+          </div>
+          <button class="ob-btn">Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ONBOARDING SLIDE 3 ─── -->
+  <div>
+    <div class="screen-label">05 · Onboarding slide 3 of 3 · In-app calls & chat</div>
+    <div class="phone">
+      <div class="onboard">
+        <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+        <div class="ob-skip">Skip</div>
+        <div class="ob-visual">
+          <div class="ob-visual-bg" style="background:radial-gradient(circle at 50% 40%, rgba(155,123,245,0.08), transparent 60%);"></div>
+          <div class="feature-illustration">
+            <svg viewBox="0 0 200 200" style="width:100%;height:100%;">
+              <!-- Chat bubbles -->
+              <rect x="30" y="40" width="100" height="36" rx="12" fill="#15161D" stroke="#2A2B38" stroke-width="1"/>
+              <text x="44" y="58" font-family="Inter" font-size="10" fill="#F5F6F8">Adjust protein to</text>
+              <text x="44" y="70" font-family="Inter" font-size="10" fill="#F5F6F8">180g.</text>
+              <rect x="80" y="84" width="90" height="36" rx="12" fill="#3FD9C0"/>
+              <text x="94" y="102" font-family="Inter" font-size="10" fill="#0A0B0F" font-weight="600">Got it. +2.5kg</text>
+              <text x="94" y="114" font-family="Inter" font-size="10" fill="#0A0B0F" font-weight="600">next session?</text>
+              <!-- Voice note -->
+              <rect x="40" y="132" width="120" height="32" rx="16" fill="#15161D" stroke="#2A2B38" stroke-width="1"/>
+              <circle cx="56" cy="148" r="9" fill="#3FD9C0"/>
+              <path d="M 53 144 L 53 152 L 58 148 Z" fill="#0A0B0F"/>
+              <rect x="72" y="145" width="2" height="6" fill="#9B9CA8" rx="1"/>
+              <rect x="76" y="143" width="2" height="10" fill="#9B9CA8" rx="1"/>
+              <rect x="80" y="141" width="2" height="14" fill="#9B9CA8" rx="1"/>
+              <rect x="84" y="145" width="2" height="6" fill="#9B9CA8" rx="1"/>
+              <rect x="88" y="143" width="2" height="10" fill="#9B9CA8" rx="1"/>
+              <rect x="92" y="145" width="2" height="6" fill="#9B9CA8" rx="1"/>
+              <rect x="96" y="141" width="2" height="14" fill="#9B9CA8" rx="1"/>
+              <rect x="100" y="145" width="2" height="6" fill="#9B9CA8" rx="1"/>
+              <rect x="104" y="143" width="2" height="10" fill="#9B9CA8" rx="1"/>
+              <text x="130" y="152" font-family="JetBrains Mono" font-size="9" fill="#3FD9C0" font-weight="600">0:42</text>
+            </svg>
+          </div>
+        </div>
+        <div class="ob-content">
+          <div class="ob-headline">Calls &amp; <span class="accent">chat.</span></div>
+          <div class="ob-desc">Voice notes, message reactions, booked calls. Everything in one place — no more WhatsApp + Calendly + Excel.</div>
+          <div class="ob-pager">
+            <div class="ob-page-dot"></div>
+            <div class="ob-page-dot"></div>
+            <div class="ob-page-dot active"></div>
+          </div>
+          <button class="ob-btn">Get Started</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

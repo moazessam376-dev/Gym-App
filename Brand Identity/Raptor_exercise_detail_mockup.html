@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Exercise Detail (Coach)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 40px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 18px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 17px; color: #F5F6F8; flex: 1; }
+  .save-btn { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 13px; color: #3FD9C0; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); border-radius: 9px; padding: 8px 14px; }
+
+  .ex-hero { background: linear-gradient(165deg, #10202C, #0A0B0F); border: 1px solid #2A2B38; border-radius: 16px; padding: 20px; margin-bottom: 18px; }
+  .ex-name { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.6px; color: #F5F6F8; margin-bottom: 8px; }
+  .ex-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ex-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; border-radius: 6px; padding: 5px 8px; }
+  .ex-tag.compound { color: #3FD9C0; background: rgba(63,217,192,0.12); }
+  .ex-tag.barbell { color: #6B8AFF; background: rgba(107,138,255,0.12); }
+  .ex-tag.chest { color: #9B7BF5; background: rgba(155,123,245,0.12); }
+
+  .video-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; overflow: hidden; margin-bottom: 18px; }
+  .video-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #1F2029, #0E0F14); display: flex; align-items: center; justify-content: center; position: relative; }
+  .play-btn { width: 56px; height: 56px; border-radius: 50%; background: rgba(63,217,192,0.9); display: flex; align-items: center; justify-content: center; }
+  .play-btn svg { width: 24px; height: 24px; margin-left: 2px; }
+  .video-label { position: absolute; bottom: 10px; left: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #C3C6CE; background: rgba(10,11,15,0.7); border-radius: 5px; padding: 4px 8px; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 16px 0 10px; }
+
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #9B9CA8; margin-bottom: 7px; display: block; }
+  .form-input { width: 100%; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 11px; padding: 14px; font-family: 'Inter', sans-serif; font-size: 15px; color: #F5F6F8; }
+  .form-input::placeholder { color: #5C616E; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .field-row .form-group { margin-bottom: 0; }
+  .field-row .form-input { text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+  .block-toggle { display: flex; gap: 6px; margin-bottom: 14px; }
+  .block-chip { flex: 1; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 10px; border-radius: 8px; color: #7E828D; background: #15161D; border: 1px solid #2A2B38; }
+  .block-chip.active { color: #0A0B0F; background: #3FD9C0; border-color: #3FD9C0; }
+
+  .note-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .note-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; margin-bottom: 8px; }
+  .note-text { font-family: 'Inter', sans-serif; font-size: 13px; color: #C3C6CE; line-height: 1.55; font-style: italic; }
+
+  .btn-primary { width: 100%; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; text-align: center; border-radius: 13px; padding: 16px; border: none; display: block; margin-top: 10px; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Exercise Detail (Coach) · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Exercise</div>
+        <div class="save-btn">Save</div>
+      </div>
+
+      <div class="ex-hero">
+        <div class="ex-name">Barbell Bench Press</div>
+        <div class="ex-tags">
+          <span class="ex-tag compound">Compound</span>
+          <span class="ex-tag barbell">Barbell</span>
+          <span class="ex-tag chest">Chest</span>
+          <span class="ex-tag chest">Triceps</span>
+        </div>
+      </div>
+
+      <div class="video-card">
+        <div class="video-thumb">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="#0A0B0F"><path d="M5 3l14 9-14 9V3z"/></svg></div>
+          <div class="video-label">Form guide · 0:42</div>
+        </div>
+      </div>
+
+      <div class="section-label">Prescription</div>
+      <div class="field-row">
+        <div class="form-group">
+          <label class="form-label">Sets</label>
+          <input class="form-input" type="number" value="4">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reps</label>
+          <input class="form-input" type="text" value="6-8">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Rest (s)</label>
+          <input class="form-input" type="number" value="90">
+        </div>
+      </div>
+
+      <div class="section-label">Block</div>
+      <div class="block-toggle">
+        <div class="block-chip active">Compound</div>
+        <div class="block-chip">Accessory</div>
+        <div class="block-chip">Isolation</div>
+      </div>
+
+      <div class="section-label">Coach's note</div>
+      <div class="note-card">
+        <div class="note-label">Visible to client</div>
+        <div class="note-text">Keep shoulder blades retracted. Pause 1s at chest. Don't bounce. RPE 8 — leave 2 reps in reserve.</div>
+      </div>
+
+      <button class="btn-primary">Save Exercise</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

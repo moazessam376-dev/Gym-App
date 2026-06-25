@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Become Coach</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 40px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 18px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 17px; color: #F5F6F8; flex: 1; }
+
+  .progress-bar { display: flex; gap: 6px; margin-bottom: 24px; }
+  .pb-seg { flex: 1; height: 3px; background: #2A2B38; border-radius: 2px; }
+  .pb-seg.done, .pb-seg.active { background: #3FD9C0; }
+
+  .step-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #3FD9C0; margin-bottom: 8px; }
+  .step-title { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: -0.8px; color: #F5F6F8; line-height: 1.15; margin-bottom: 8px; }
+  .step-desc { font-family: 'Inter', sans-serif; font-size: 14px; color: #9B9CA8; line-height: 1.55; margin-bottom: 24px; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 16px 0 10px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #9B9CA8; margin-bottom: 7px; display: block; }
+  .form-input { width: 100%; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 11px; padding: 14px; font-family: 'Inter', sans-serif; font-size: 15px; color: #F5F6F8; }
+  .form-input::placeholder { color: #5C616E; }
+  textarea.form-input { min-height: 90px; resize: none; font-family: 'Inter', sans-serif; }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .specialties-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .spec-chip { background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 12px; display: flex; align-items: center; gap: 9px; }
+  .spec-chip.active { background: rgba(63,217,192,0.08); border-color: #3FD9C0; }
+  .spec-check { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid #3A3D4C; flex-shrink: 0; }
+  .spec-chip.active .spec-check { background: #3FD9C0; border-color: #3FD9C0; position: relative; }
+  .spec-chip.active .spec-check::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 12px; color: #0A0B0F; font-weight: 700; }
+  .spec-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 12px; color: #9B9CA8; }
+  .spec-chip.active .spec-name { color: #3FD9C0; }
+
+  .cert-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+  .cert-icon { width: 40px; height: 40px; border-radius: 11px; background: rgba(63,217,192,0.1); border: 1px solid rgba(63,217,192,0.25); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .cert-icon svg { width: 18px; height: 18px; }
+  .cert-info { flex: 1; }
+  .cert-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; color: #F5F6F8; }
+  .cert-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+  .cert-status { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #3FD98A; background: rgba(63,217,138,0.14); border-radius: 5px; padding: 4px 7px; }
+
+  .btn-primary { width: 100%; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; text-align: center; border-radius: 13px; padding: 16px; border: none; display: block; margin-top: 20px; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Become Coach · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Become a Coach</div>
+      </div>
+
+      <div class="progress-bar">
+        <div class="pb-seg done"></div><div class="pb-seg done"></div><div class="pb-seg active"></div><div class="pb-seg"></div>
+      </div>
+
+      <div class="step-label">Step 3 of 4 · Credentials</div>
+      <div class="step-title">Your coaching credentials</div>
+      <div class="step-desc">Raptor reviews every coach application. Approval typically takes 24–48 hours.</div>
+
+      <div class="section-label">Specialties · pick all that apply</div>
+      <div class="specialties-grid">
+        <div class="spec-chip active"><div class="spec-check"></div><div class="spec-name">Hypertrophy</div></div>
+        <div class="spec-chip active"><div class="spec-check"></div><div class="spec-name">Weight loss</div></div>
+        <div class="spec-chip"><div class="spec-check"></div><div class="spec-name">Powerlifting</div></div>
+        <div class="spec-chip active"><div class="spec-check"></div><div class="spec-name">Nutrition</div></div>
+        <div class="spec-chip"><div class="spec-check"></div><div class="spec-name">Strength</div></div>
+        <div class="spec-chip"><div class="spec-check"></div><div class="spec-name">Mobility</div></div>
+      </div>
+
+      <div class="field-row">
+        <div class="form-group">
+          <label class="form-label">Years experience</label>
+          <input class="form-input" type="number" value="8">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Clients coached</label>
+          <input class="form-input" type="number" value="200">
+        </div>
+      </div>
+
+      <div class="section-label">Certifications</div>
+      <div class="cert-card">
+        <div class="cert-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+        <div class="cert-info"><div class="cert-name">NASM Certified Personal Trainer</div><div class="cert-meta">Issued 2017 · Verified</div></div>
+        <div class="cert-status">Verified</div>
+      </div>
+      <div class="cert-card">
+        <div class="cert-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+        <div class="cert-info"><div class="cert-name">Precision Nutrition Level 1</div><div class="cert-meta">Issued 2019 · Verified</div></div>
+        <div class="cert-status">Verified</div>
+      </div>
+      <div class="cert-card" style="border-style:dashed;">
+        <div class="cert-icon" style="background:#1F2029;border-color:#2A2B38;"><svg viewBox="0 0 24 24" fill="none" stroke="#9B9CA8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="cert-info"><div class="cert-name" style="color:#7E828D;">Add certification</div><div class="cert-meta">Upload certificate · auto-verified</div></div>
+      </div>
+
+      <div class="section-label">Bio · visible on your public profile</div>
+      <div class="form-group">
+        <textarea class="form-input" placeholder="Helping men in Riyadh build muscle and lose fat — with data, not guesswork. 8 years coaching, 200+ clients trained.">Helping men in Riyadh build muscle and lose fat — with data, not guesswork. 8 years coaching, 200+ clients trained.</textarea>
+      </div>
+
+      <button class="btn-primary">Submit Application</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

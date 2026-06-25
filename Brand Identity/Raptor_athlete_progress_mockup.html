@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Athlete Progress (Remake)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  ::selection { background: rgba(63,217,192,0.3); color: #fff; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; letter-spacing: -0.5px; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .header { padding: 6px 0 18px; }
+  .header h1 { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -1px; color: #F5F6F8; }
+
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .stat-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; }
+  .stat-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 32px; line-height: 1; color: #3FD9C0; }
+  .stat-num.neutral { color: #F5F6F8; }
+  .stat-lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; margin-top: 8px; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 18px 0 10px; }
+
+  .weight-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .weight-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .weight-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; }
+  .weight-val { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px; color: #3FD9C0; }
+  .weight-val .unit { font-size: 12px; color: #7E828D; }
+  .chevron { color: #5C616E; font-size: 18px; }
+  .chart { width: 100%; height: 100px; }
+
+  .pillar-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; overflow: hidden; margin-bottom: 14px; }
+  .pillar { display: flex; align-items: center; gap: 12px; padding: 13px 15px; border-bottom: 1px solid #1C1D26; }
+  .pillar:last-child { border-bottom: none; }
+  .pillar-icon { width: 36px; height: 36px; border-radius: 10px; background: #1F2029; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .pillar-info { flex: 1; }
+  .pillar-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .pillar-hint { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+
+  .workout-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 14px 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+  .workout-status { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .workout-status.done { background: rgba(63,217,138,0.14); color: #3FD98A; }
+  .workout-status.progress { background: rgba(63,217,192,0.14); color: #3FD9C0; }
+  .workout-info { flex: 1; }
+  .workout-date { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .workout-note { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+  .workout-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; border-radius: 6px; padding: 4px 8px; flex-shrink: 0; }
+  .workout-badge.done { color: #3FD98A; background: rgba(63,217,138,0.14); }
+  .workout-badge.progress { color: #3FD9C0; background: rgba(63,217,192,0.14); }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; }
+  .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; }
+  .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Athlete Progress · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="header"><h1>Progress</h1></div>
+
+      <div class="stat-row">
+        <div class="stat-card"><div class="stat-num">12</div><div class="stat-lbl">Day Streak</div></div>
+        <div class="stat-card"><div class="stat-num neutral">47</div><div class="stat-lbl">Workouts Done</div></div>
+      </div>
+
+      <div class="weight-card">
+        <div class="weight-header">
+          <div class="weight-label">Weight Trend</div>
+          <div class="weight-val">84.2<span class="unit"> kg</span> <span style="color:#3FD9C0;font-size:12px;">↓ 4.1</span></div>
+          <div class="chevron">›</div>
+        </div>
+        <svg class="chart" viewBox="0 0 320 100" preserveAspectRatio="none">
+          <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3FD9C0" stop-opacity="0.3"/><stop offset="100%" stop-color="#3FD9C0" stop-opacity="0"/></linearGradient></defs>
+          <path d="M 0 20 L 46 28 L 92 35 L 138 30 L 184 48 L 230 55 L 276 62 L 320 70 L 320 100 L 0 100 Z" fill="url(#wg)"/>
+          <path d="M 0 20 L 46 28 L 92 35 L 138 30 L 184 48 L 230 55 L 276 62 L 320 70" fill="none" stroke="#3FD9C0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="320" cy="70" r="4" fill="#3FD9C0"/>
+          <circle cx="320" cy="70" r="8" fill="#3FD9C0" opacity="0.2"/>
+        </svg>
+      </div>
+
+      <div class="pillar-card">
+        <div class="pillar">
+          <div class="pillar-icon">📷</div>
+          <div class="pillar-info"><div class="pillar-name">Progress Photos</div><div class="pillar-hint">6 photos · last 3 days ago</div></div>
+          <div class="chevron">›</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-icon">📄</div>
+          <div class="pillar-info"><div class="pillar-name">InBody Scans</div><div class="pillar-hint">4 scans · 2 pending review</div></div>
+          <div class="chevron">›</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-icon">📊</div>
+          <div class="pillar-info"><div class="pillar-name">Body Composition</div><div class="pillar-hint">84.2kg · 16.8% BF · 38.2kg lean</div></div>
+          <div class="chevron">›</div>
+        </div>
+      </div>
+
+      <div class="section-label">Recent Workouts</div>
+
+      <div class="workout-card">
+        <div class="workout-status done">✓</div>
+        <div class="workout-info"><div class="workout-date">Tuesday · Jun 24</div><div class="workout-note">Push Day · 12/12 sets</div></div>
+        <div class="workout-badge done">Done</div>
+      </div>
+      <div class="workout-card">
+        <div class="workout-status done">✓</div>
+        <div class="workout-info"><div class="workout-date">Sunday · Jun 22</div><div class="workout-note">Leg Day · 10/10 sets</div></div>
+        <div class="workout-badge done">Done</div>
+      </div>
+      <div class="workout-card">
+        <div class="workout-status progress">◐</div>
+        <div class="workout-info"><div class="workout-date">Friday · Jun 20</div><div class="workout-note">Pull Day · 6/9 sets</div></div>
+        <div class="workout-badge progress">In Progress</div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">PLAN</div></div>
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">PROGRESS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

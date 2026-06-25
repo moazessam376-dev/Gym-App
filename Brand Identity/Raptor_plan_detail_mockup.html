@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Plan Detail (Client)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 18px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 18px; color: #F5F6F8; flex: 1; }
+
+  .plan-hero { background: linear-gradient(165deg, #10202C, #0A0B0F); border: 1px solid #2A2B38; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .plan-icon-lg { width: 52px; height: 52px; border-radius: 14px; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+  .plan-icon-lg svg { width: 24px; height: 24px; }
+  .plan-title-lg { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.6px; color: #F5F6F8; }
+  .plan-meta-lg { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; margin-top: 5px; }
+  .plan-progress-row { display: flex; gap: 16px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #1C1D26; }
+  .ppr-item { flex: 1; }
+  .ppr-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 20px; color: #3FD9C0; line-height: 1; }
+  .ppr-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.8px; text-transform: uppercase; color: #7E828D; margin-top: 5px; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 18px 0 12px; }
+
+  .day-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 15px; margin-bottom: 10px; }
+  .day-card.today { border-color: #3FD9C0; background: linear-gradient(165deg, #10202C, #0A0B0F); }
+  .day-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .day-name { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; color: #F5F6F8; }
+  .day-card.today .day-name { color: #3FD9C0; }
+  .day-status { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; border-radius: 5px; padding: 4px 8px; }
+  .day-status.done { color: #3FD98A; background: rgba(63,217,138,0.14); }
+  .day-status.today { color: #0A0B0F; background: #3FD9C0; }
+  .day-status.rest { color: #7E828D; background: #1F2029; border: 1px solid #2A2B38; }
+  .day-exercises { font-family: 'Inter', sans-serif; font-size: 12px; color: #9B9CA8; line-height: 1.6; }
+  .day-exercises .ex { display: inline; }
+  .day-exercises .sep { color: #3A3D4C; margin: 0 4px; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Plan Detail (Client) · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Training Plan</div>
+      </div>
+
+      <div class="plan-hero">
+        <div class="plan-icon-lg"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg></div>
+        <div class="plan-title-lg">Push Pull Legs · 4-day split</div>
+        <div class="plan-meta-lg">12 weeks · Started Jun 12 · Coach Ahmed</div>
+        <div class="plan-progress-row">
+          <div class="ppr-item"><div class="ppr-num">28</div><div class="ppr-lbl">Days In</div></div>
+          <div class="ppr-item"><div class="ppr-num">47</div><div class="ppr-lbl">Workouts Done</div></div>
+          <div class="ppr-item"><div class="ppr-num">88<span style="font-size:11px;">%</span></div><div class="ppr-lbl">Adherence</div></div>
+        </div>
+      </div>
+
+      <div class="section-label">This Week</div>
+
+      <div class="day-card">
+        <div class="day-header">
+          <div class="day-name">Monday · Push</div>
+          <div class="day-status done">Done</div>
+        </div>
+        <div class="day-exercises">Bench Press<span class="sep">·</span>Incline DB Press<span class="sep">·</span>Triceps Pushdown</div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-header">
+          <div class="day-name">Tuesday · Pull</div>
+          <div class="day-status done">Done</div>
+        </div>
+        <div class="day-exercises">Deadlift<span class="sep">·</span>Barbell Row<span class="sep">·</span>Pull-ups<span class="sep">·</span>Biceps Curl</div>
+      </div>
+
+      <div class="day-card today">
+        <div class="day-header">
+          <div class="day-name">Wednesday · Legs</div>
+          <div class="day-status today">Today</div>
+        </div>
+        <div class="day-exercises">Squat<span class="sep">·</span>Leg Press<span class="sep">·</span>RDL<span class="sep">·</span>Calves</div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-header">
+          <div class="day-name">Thursday</div>
+          <div class="day-status rest">Rest</div>
+        </div>
+        <div class="day-exercises" style="color:#5C616E;">Active recovery · walk 30min</div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-header">
+          <div class="day-name">Friday · Push</div>
+          <div class="day-status rest">Upcoming</div>
+        </div>
+        <div class="day-exercises">OHP<span class="sep">·</span>Flat DB Press<span class="sep">·</span>Lateral Raise<span class="sep">·</span>Dips</div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-header">
+          <div class="day-name">Saturday · Pull</div>
+          <div class="day-status rest">Upcoming</div>
+        </div>
+        <div class="day-exercises">Pendlay Row<span class="sep">·</span>Lat Pulldown<span class="sep">·</span>Face Pulls<span class="sep">·</span>Hammer Curl</div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">PLAN</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">PROGRESS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

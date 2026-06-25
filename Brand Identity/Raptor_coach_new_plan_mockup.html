@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Coach New Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 18px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 18px; color: #F5F6F8; flex: 1; }
+
+  .client-strip { background: #15161D; border: 1px solid #2A2B38; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 11px; margin-bottom: 18px; }
+  .cs-avatar { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #9B7BF5, #5E3FB0); display: flex; align-items: center; justify-content: center; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 13px; color: #0A0B0F; flex-shrink: 0; }
+  .cs-info { flex: 1; }
+  .cs-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; color: #F5F6F8; }
+  .cs-goal { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 1px; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 16px 0 10px; }
+
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #9B9CA8; margin-bottom: 7px; display: block; }
+  .form-input { width: 100%; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 11px; padding: 14px; font-family: 'Inter', sans-serif; font-size: 15px; color: #F5F6F8; }
+  .form-input::placeholder { color: #5C616E; }
+
+  .type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .type-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 12px; padding: 14px; text-align: center; }
+  .type-card.active { background: rgba(63,217,192,0.08); border-color: #3FD9C0; }
+  .type-icon { width: 36px; height: 36px; border-radius: 10px; background: #1F2029; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; }
+  .type-card.active .type-icon { background: rgba(63,217,192,0.12); border-color: rgba(63,217,192,0.25); }
+  .type-icon svg { width: 18px; height: 18px; }
+  .type-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; color: #F5F6F8; }
+  .type-card.active .type-name { color: #3FD9C0; }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .ai-card { background: linear-gradient(165deg, #10202C, #0A0B0F); border: 1px solid rgba(63,217,192,0.25); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  .ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .ai-icon { width: 32px; height: 32px; border-radius: 9px; background: rgba(63,217,192,0.15); display: flex; align-items: center; justify-content: center; }
+  .ai-icon svg { width: 16px; height: 16px; }
+  .ai-label { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .ai-hint { font-family: 'Inter', sans-serif; font-size: 12px; color: #7E828D; line-height: 1.5; margin-bottom: 12px; }
+  .ai-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .ai-chip { font-family: 'Inter', sans-serif; font-size: 11px; color: #3FD9C0; background: rgba(63,217,192,0.1); border: 1px solid rgba(63,217,192,0.25); border-radius: 7px; padding: 6px 10px; }
+
+  .status-row { display: flex; align-items: center; justify-content: space-between; background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 13px 15px; margin-bottom: 16px; }
+  .status-label { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; color: #F5F6F8; }
+  .status-toggle { display: flex; gap: 0; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 8px; padding: 3px; }
+  .status-chip { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; padding: 6px 10px; border-radius: 6px; color: #7E828D; }
+  .status-chip.active { background: #FFB323; color: #0A0B0F; }
+
+  .btn-primary { width: 100%; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; text-align: center; border-radius: 13px; padding: 16px; border: none; display: block; margin-bottom: 10px; }
+  .btn-secondary { width: 100%; background: transparent; color: #3FD9C0; border: 1px solid #3FD9C0; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; text-align: center; border-radius: 13px; padding: 14px; display: block; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Coach New Plan · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">New Plan</div>
+      </div>
+
+      <div class="client-strip">
+        <div class="cs-avatar">YA</div>
+        <div class="cs-info"><div class="cs-name">Yousef Al-Mutairi</div><div class="cs-goal">Build muscle · Intermediate · 4 days/wk</div></div>
+      </div>
+
+      <div class="section-label">Plan Type</div>
+      <div class="type-toggle">
+        <div class="type-card active">
+          <div class="type-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg></div>
+          <div class="type-name">Training</div>
+        </div>
+        <div class="type-card">
+          <div class="type-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#9B9CA8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 3 2 5 2 7h10c0-2 2-4 2-7a7 7 0 0 0-7-7zM9 21h6"/></svg></div>
+          <div class="type-name">Nutrition</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Plan title</label>
+        <input class="form-input" type="text" placeholder="Push Pull Legs · 4-day split">
+      </div>
+
+      <div class="field-row">
+        <div class="form-group">
+          <label class="form-label">Duration (weeks)</label>
+          <input class="form-input" type="number" value="12">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Days per week</label>
+          <input class="form-input" type="number" value="4">
+        </div>
+      </div>
+
+      <div class="section-label">AI Assistant</div>
+      <div class="ai-card">
+        <div class="ai-header">
+          <div class="ai-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10l-5.5 4 2 6L12 16l-4.5 4 2-6L4 10l6.1-1.2z"/></svg></div>
+          <div class="ai-label">Generate with AI</div>
+        </div>
+        <div class="ai-hint">Describe the plan you want. Raptor AI drafts exercises, sets, and rest periods from Yousef's profile data. You review and edit before publishing.</div>
+        <div class="ai-chips">
+          <span class="ai-chip">Push/Pull/Legs split</span>
+          <span class="ai-chip">Upper/Lower split</span>
+          <span class="ai-chip">Full body</span>
+          <span class="ai-chip">Knee-friendly</span>
+          <span class="ai-chip">Minimal equipment</span>
+          <span class="ai-chip">Progressive overload</span>
+        </div>
+      </div>
+
+      <div class="section-label">Status</div>
+      <div class="status-row">
+        <div class="status-label">Save as</div>
+        <div class="status-toggle">
+          <div class="status-chip active">Draft</div>
+          <div class="status-chip">Published</div>
+        </div>
+      </div>
+
+      <button class="btn-primary">Create Plan</button>
+      <button class="btn-secondary">Generate with AI Instead</button>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CLIENTS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">ANALYTICS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

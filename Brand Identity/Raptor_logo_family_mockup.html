@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Logo Family</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; padding: 40px 0; }
+  .container { max-width: 1080px; margin: 0 auto; padding: 0 40px; }
+
+  .doc-header { margin-bottom: 48px; }
+  .doc-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; margin-bottom: 12px; }
+  .doc-title { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 56px; letter-spacing: -2.5px; color: #F5F6F8; line-height: 1; margin-bottom: 12px; }
+  .doc-title .accent { color: #3FD9C0; }
+  .doc-desc { font-family: 'Inter', sans-serif; font-size: 16px; color: #9B9CA8; max-width: 580px; line-height: 1.5; }
+
+  .section { margin-bottom: 56px; }
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: #7E828D; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .section-label .dot { width: 6px; height: 6px; border-radius: 50%; background: #3FD9C0; }
+  .section-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 28px; letter-spacing: -1px; color: #F5F6F8; margin-bottom: 24px; }
+
+  /* ─── Primary wordmark ─── */
+  .logo-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 16px; padding: 48px 40px; margin-bottom: 16px; text-align: center; }
+  .logo-card.dark-bg { background: #0A0B0F; border-color: #2A2B38; }
+  .logo-card.light-bg { background: #F8F9FB; border-color: #E2E3EA; }
+
+  .wordmark { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 88px; letter-spacing: -3.5px; color: #F5F6F8; line-height: 1; }
+  .wordmark .accent { color: #3FD9C0; }
+  .wordmark.on-light { color: #0F1117; }
+  .wordmark.on-light .accent { color: #65A30D; }
+
+  .wordmark-medium { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 48px; letter-spacing: -2px; color: #F5F6F8; line-height: 1; }
+  .wordmark-medium .accent { color: #3FD9C0; }
+
+  .wordmark-small { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; color: #F5F6F8; }
+  .wordmark-small .accent { color: #3FD9C0; }
+
+  .lockup-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .lockup-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; margin-top: 12px; }
+
+  /* ─── Monogram / App icon ─── */
+  .icon-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .icon-cell { text-align: center; }
+  .icon-frame { aspect-ratio: 1; border-radius: 22%; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; border: 1px solid #2A2B38; position: relative; overflow: hidden; }
+  .icon-frame.app-icon { border-radius: 22%; }
+  .icon-frame.favicon { border-radius: 30%; }
+  .icon-frame.notif { border-radius: 12px; }
+
+  .icon-bg-dark { background: #0A0B0F; }
+  .icon-bg-slate { background: #15161D; }
+  .icon-bg-signal { background: #3FD9C0; }
+  .icon-bg-light { background: #F8F9FB; }
+
+  .monogram { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 64px; letter-spacing: -2px; color: #F5F6F8; }
+  .monogram .accent { color: #3FD9C0; }
+  .monogram.on-signal { color: #0A0B0F; }
+  .monogram.on-signal .accent { color: #0A0B0F; opacity: 0.6; }
+  .monogram.on-light { color: #0F1117; }
+  .monogram.on-light .accent { color: #65A30D; }
+  .monogram-sm { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 32px; letter-spacing: -1px; color: #F5F6F8; }
+  .monogram-sm .accent { color: #3FD9C0; }
+  .monogram-xs { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 18px; letter-spacing: -0.5px; color: #0A0B0F; }
+
+  .icon-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; }
+
+  /* ─── Crest monogram (rank-bar variant) ─── */
+  .crest-mono { width: 80px; height: 80px; border-radius: 20px; background: radial-gradient(circle at 50% 32%, rgba(63,217,192,0.15), transparent 70%), #0A0B0F; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; position: relative; }
+  .crest-mono .r { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 40px; color: #F5F6F8; letter-spacing: -1px; }
+  .crest-mono .r .accent { color: #3FD9C0; }
+  .crest-mono .bars { position: absolute; bottom: 14px; display: flex; gap: 3px; align-items: flex-end; }
+  .crest-mono .bar { width: 4px; background: #3FD9C0; border-radius: 1px; }
+  .crest-mono .bar:nth-child(1) { height: 5px; opacity: 0.4; }
+  .crest-mono .bar:nth-child(2) { height: 7px; opacity: 0.7; }
+  .crest-mono .bar:nth-child(3) { height: 9px; opacity: 1; }
+
+  /* ─── Clear space & minimum size ─── */
+  .specs-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 16px; padding: 32px; margin-bottom: 16px; }
+  .specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .spec-item { }
+  .spec-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; margin-bottom: 6px; }
+  .spec-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #F5F6F8; font-weight: 500; }
+  .spec-desc { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; line-height: 1.5; }
+
+  /* ─── Do / Don't ─── */
+  .dd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .dd-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 24px; text-align: center; }
+  .dd-card.do { border-color: rgba(63,217,192,0.3); }
+  .dd-card.dont { border-color: rgba(255,107,74,0.3); }
+  .dd-tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px; }
+  .dd-tag.do { color: #3FD9C0; }
+  .dd-tag.dont { color: #FF6B4A; }
+  .dd-preview { background: #0A0B0F; border: 1px solid #2A2B38; border-radius: 10px; padding: 20px; margin-bottom: 10px; min-height: 70px; display: flex; align-items: center; justify-content: center; }
+  .dd-text { font-family: 'Inter', sans-serif; font-size: 12px; color: #9B9CA8; line-height: 1.5; }
+
+  .doc-footer { margin-top: 56px; padding-top: 24px; border-top: 1px solid #1C1D26; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #5C616E; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="doc-header">
+    <div class="doc-tag">Logo Family · v1</div>
+    <h1 class="doc-title">Raptor<span class="accent">.</span></h1>
+    <p class="doc-desc">The complete logo system — primary wordmark, monogram app icon, favicon, notification badge, and usage rules. One source of truth for every surface.</p>
+  </div>
+
+  <!-- ─── PRIMARY WORDMARK ─── -->
+  <div class="section">
+    <div class="section-label"><span class="dot"></span>01 · Primary Wordmark</div>
+    <h2 class="section-title">The word as mark.</h2>
+
+    <div class="logo-card dark-bg">
+      <div class="wordmark">Raptor<span class="accent">.</span></div>
+      <div class="lockup-tag">Primary · Dark background · 88px</div>
+    </div>
+
+    <div class="logo-card light-bg">
+      <div class="wordmark on-light">Raptor<span class="accent">.</span></div>
+      <div class="lockup-tag" style="color:#7E828D;">Light background · Accent shifts to #65A30D for contrast</div>
+    </div>
+
+    <div class="lockup-row" style="margin-top:16px;">
+      <div class="logo-card" style="flex:1; min-width:280px; padding:32px;">
+        <div class="wordmark-medium">Raptor<span class="accent">.</span></div>
+        <div class="lockup-tag">Medium · 48px · App header, nav bar</div>
+      </div>
+      <div class="logo-card" style="flex:1; min-width:280px; padding:32px;">
+        <div class="wordmark-small">Raptor<span class="accent">.</span></div>
+        <div class="lockup-tag">Small · 22px · Footer, compact spaces</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MONOGRAM / APP ICON ─── -->
+  <div class="section">
+    <div class="section-label"><span class="dot"></span>02 · Monogram &amp; App Icon</div>
+    <h2 class="section-title">The "R" mark.</h2>
+
+    <div class="icon-grid">
+      <div class="icon-cell">
+        <div class="icon-frame app-icon icon-bg-dark">
+          <div class="monogram">R<span class="accent">a</span></div>
+        </div>
+        <div class="icon-label">App Icon · iOS</div>
+      </div>
+      <div class="icon-cell">
+        <div class="icon-frame app-icon icon-bg-slate">
+          <div class="monogram">R<span class="accent">a</span></div>
+        </div>
+        <div class="icon-label">App Icon · Slate</div>
+      </div>
+      <div class="icon-cell">
+        <div class="icon-frame app-icon icon-bg-signal">
+          <div class="monogram on-signal">R<span class="accent">a</span></div>
+        </div>
+        <div class="icon-label">App Icon · Signal</div>
+      </div>
+      <div class="icon-cell">
+        <div class="icon-frame app-icon icon-bg-light">
+          <div class="monogram on-light">R<span class="accent">a</span></div>
+        </div>
+        <div class="icon-label">App Icon · Light</div>
+      </div>
+    </div>
+
+    <div class="icon-grid" style="margin-top:16px;">
+      <div class="icon-cell">
+        <div class="icon-frame favicon icon-bg-dark">
+          <div class="monogram-sm">R<span class="accent">a</span></div>
+        </div>
+        <div class="icon-label">Favicon · 32px</div>
+      </div>
+      <div class="icon-cell">
+        <div class="icon-frame favicon icon-bg-signal">
+          <div class="monogram-xs">Ra</div>
+        </div>
+        <div class="icon-label">Favicon · Signal</div>
+      </div>
+      <div class="icon-cell">
+        <div class="icon-frame notif icon-bg-signal">
+          <div class="monogram-xs">Ra</div>
+        </div>
+        <div class="icon-label">Notification badge</div>
+      </div>
+      <div class="icon-cell">
+        <div class="icon-frame notif icon-bg-dark" style="border-color:#3FD9C0;">
+          <div class="crest-mono" style="width:100%;height:100%;border-radius:12px;">
+            <div class="r">R<span class="accent">a</span></div>
+          </div>
+        </div>
+        <div class="icon-label">Loading splash</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── CREST MONOGRAM (Rank-bar variant) ─── -->
+  <div class="section">
+    <div class="section-label"><span class="dot"></span>03 · Crest Monogram · Rank-Bar Variant</div>
+    <h2 class="section-title">"R" + ascending rank bars.</h2>
+    <p style="font-family:'Inter',sans-serif; font-size:14px; color:#9B9CA8; max-width:620px; margin-bottom:24px; line-height:1.6;">The monogram doubles as a rank indicator. Three ascending Signal-cyan bars at the base hint at the Bronze→Apex progression. Used as the app icon, loading splash, and coach-profile badge.</p>
+
+    <div class="logo-card dark-bg" style="display:flex; justify-content:center; gap:40px; flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div class="crest-mono"><div class="r">R<span class="accent">a</span></div><div class="bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div></div>
+        <div class="lockup-tag">120px · App icon</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="crest-mono" style="width:60px;height:60px;border-radius:14px;"><div class="r" style="font-size:28px;">R<span class="accent">a</span></div><div class="bars" style="bottom:10px;"><div class="bar" style="width:3px;height:4px;"></div><div class="bar" style="width:3px;height:5px;"></div><div class="bar" style="width:3px;height:6px;"></div></div></div>
+        <div class="lockup-tag">60px · Favicon</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="crest-mono" style="width:40px;height:40px;border-radius:10px;"><div class="r" style="font-size:18px;">R</div></div>
+        <div class="lockup-tag">40px · Notification</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SPECS ─── -->
+  <div class="section">
+    <div class="section-label"><span class="dot"></span>04 · Specs &amp; Rules</div>
+    <h2 class="section-title">Clear space, minimum size, color rules.</h2>
+
+    <div class="specs-card">
+      <div class="specs-grid">
+        <div class="spec-item">
+          <div class="spec-label">Clear space</div>
+          <div class="spec-value">≥ 1× cap height</div>
+          <div class="spec-desc">No element may enter the bounding box defined by the height of the capital "R" on any side.</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Minimum size · wordmark</div>
+          <div class="spec-value">22px</div>
+          <div class="spec-desc">Below 22px the dot accent loses visibility. Use monogram instead.</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Minimum size · monogram</div>
+          <div class="spec-value">24px</div>
+          <div class="spec-desc">Below 24px the rank bars disappear. Use plain "R" without bars.</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Accent color rule</div>
+          <div class="spec-value">Signal #3FD9C0 on dark · #65A30D on light</div>
+          <div class="spec-desc">The accent dot/letter adapts to background. Never use #3FD9C0 on white — fails WCAG.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── DO / DON'T ─── -->
+  <div class="section">
+    <div class="section-label"><span class="dot"></span>05 · Do &amp; Don't</div>
+    <h2 class="section-title">Usage rules.</h2>
+
+    <div class="dd-grid">
+      <div class="dd-card do">
+        <div class="dd-tag do">Do</div>
+        <div class="dd-preview"><div class="wordmark-medium">Raptor<span class="accent">.</span></div></div>
+        <div class="dd-text">Use the full wordmark with Signal cyan accent dot on dark backgrounds.</div>
+      </div>
+      <div class="dd-card dont">
+        <div class="dd-tag dont">Don't</div>
+        <div class="dd-preview"><div class="wordmark-medium" style="color:#9B9CA8;">Raptor<span style="color:#FF6B4A;">.</span></div></div>
+        <div class="dd-text">Don't change the accent color. Only Signal cyan (or lime on light) is allowed.</div>
+      </div>
+      <div class="dd-card do">
+        <div class="dd-tag do">Do</div>
+        <div class="dd-preview"><div class="monogram">R<span class="accent">a</span></div></div>
+        <div class="dd-text">Use the "Ra" monogram when space is tight (favicons, app icon, notification badge).</div>
+      </div>
+      <div class="dd-card dont">
+        <div class="dd-tag dont">Don't</div>
+        <div class="dd-preview"><div class="wordmark-medium" style="font-style:italic; font-weight:400;">Raptor<span class="accent">.</span></div></div>
+        <div class="dd-text">Don't italicize, condense, stretch, or change the weight. Geist 900 only.</div>
+      </div>
+      <div class="dd-card do">
+        <div class="dd-tag do">Do</div>
+        <div class="dd-preview" style="background:#F8F9FB;"><div class="wordmark-medium on-light">Raptor<span class="accent">.</span></div></div>
+        <div class="dd-text">Switch accent to #65A30D lime on light backgrounds for WCAG contrast.</div>
+      </div>
+      <div class="dd-card dont">
+        <div class="dd-tag dont">Don't</div>
+        <div class="dd-preview"><div class="wordmark-medium" style="background:linear-gradient(135deg,#3FD9C0,#6B8AFF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Raptor.</div></div>
+        <div class="dd-text">Don't gradient-fill the wordmark. The accent is a single solid color, always.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-footer">
+    <span>Raptor · Logo Family · v1</span>
+    <span>Dark canonical · End of document</span>
+  </div>
+
+</div>
+</body>
+</html>

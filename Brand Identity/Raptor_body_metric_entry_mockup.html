@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Body Metric Entry (Coach)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 40px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 18px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 17px; color: #F5F6F8; flex: 1; }
+  .save-btn { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 13px; color: #3FD9C0; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); border-radius: 9px; padding: 8px 14px; }
+
+  .client-strip { background: #15161D; border: 1px solid #2A2B38; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 11px; margin-bottom: 18px; }
+  .cs-avatar { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #9B7BF5, #5E3FB0); display: flex; align-items: center; justify-content: center; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 13px; color: #0A0B0F; flex-shrink: 0; }
+  .cs-info { flex: 1; }
+  .cs-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; color: #F5F6F8; }
+  .cs-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 1px; }
+
+  .scan-thumb { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; overflow: hidden; margin-bottom: 18px; }
+  .scan-img { width: 100%; height: 130px; background: linear-gradient(135deg, #1F2029, #0E0F14); display: flex; align-items: center; justify-content: center; }
+  .scan-img svg { width: 40px; height: 40px; opacity: 0.3; }
+  .scan-footer { padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; }
+  .scan-label { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; color: #F5F6F8; }
+  .scan-date { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+  .ai-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #3FD9C0; background: rgba(63,217,192,0.12); border-radius: 5px; padding: 4px 7px; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 16px 0 12px; }
+
+  .field-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 12px; padding: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 13px; }
+  .fc-label { flex: 1; }
+  .fc-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .fc-prev { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+  .fc-input { width: 90px; background: #0E0F14; border: 1px solid #3FD9C0; border-radius: 9px; padding: 10px; text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 16px; color: #F5F6F8; }
+  .fc-unit { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; width: 28px; }
+
+  .field-card.empty .fc-input { border-color: #2A2B38; color: #5C616E; }
+
+  .verify-card { background: rgba(63,217,138,0.06); border: 1px solid rgba(63,217,138,0.25); border-radius: 12px; padding: 14px; margin: 18px 0; display: flex; align-items: center; gap: 11px; }
+  .verify-icon { width: 32px; height: 32px; border-radius: 9px; background: rgba(63,217,138,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .verify-icon svg { width: 16px; height: 16px; }
+  .verify-text { flex: 1; font-family: 'Inter', sans-serif; font-size: 12px; color: #C3C6CE; line-height: 1.45; }
+  .verify-text strong { color: #3FD98A; }
+
+  .btn-primary { width: 100%; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; text-align: center; border-radius: 13px; padding: 16px; border: none; display: block; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Body Metric Entry (Coach) · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Review InBody</div>
+        <div class="save-btn">Approve</div>
+      </div>
+
+      <div class="client-strip">
+        <div class="cs-avatar">YA</div>
+        <div class="cs-info"><div class="cs-name">Yousef Al-Mutairi</div><div class="cs-meta">Submitted 2h ago · Diamond II</div></div>
+      </div>
+
+      <div class="scan-thumb">
+        <div class="scan-img"><svg viewBox="0 0 24 24" fill="none" stroke="#5C616E" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+        <div class="scan-footer">
+          <div><div class="scan-label">InBody scan</div><div class="scan-date">Jun 24, 2026 · 09:14</div></div>
+          <div class="ai-badge">AI Read</div>
+        </div>
+      </div>
+
+      <div class="section-label">Readings · verify &amp; edit</div>
+
+      <div class="field-card">
+        <div class="fc-label"><div class="fc-name">Weight</div><div class="fc-prev">Previous: 84.6 kg</div></div>
+        <input class="fc-input" type="text" value="84.2">
+        <div class="fc-unit">kg</div>
+      </div>
+
+      <div class="field-card">
+        <div class="fc-label"><div class="fc-name">Body fat %</div><div class="fc-prev">Previous: 17.2%</div></div>
+        <input class="fc-input" type="text" value="16.8">
+        <div class="fc-unit">%</div>
+      </div>
+
+      <div class="field-card">
+        <div class="fc-label"><div class="fc-name">Skeletal muscle</div><div class="fc-prev">Previous: 37.8 kg</div></div>
+        <input class="fc-input" type="text" value="38.2">
+        <div class="fc-unit">kg</div>
+      </div>
+
+      <div class="field-card empty">
+        <div class="fc-label"><div class="fc-name">BMI</div><div class="fc-prev">Auto-calculated</div></div>
+        <input class="fc-input" type="text" value="26.6" readonly>
+        <div class="fc-unit">—</div>
+      </div>
+
+      <div class="field-card empty">
+        <div class="fc-label"><div class="fc-name">Basal metabolic rate</div><div class="fc-prev">Auto-calculated</div></div>
+        <input class="fc-input" type="text" value="1,942" readonly>
+        <div class="fc-unit">kcal</div>
+      </div>
+
+      <div class="verify-card">
+        <div class="verify-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD98A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div>
+        <div class="verify-text"><strong>Approving updates:</strong> Yousef's tier recalculates automatically. Lean mass +0.4kg may trigger rank-up.</div>
+      </div>
+
+      <button class="btn-primary">Approve &amp; Update Client</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

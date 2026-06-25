@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Coach Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .header { padding: 6px 0 16px; }
+  .header .period { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #3FD9C0; }
+  .header h1 { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -1px; color: #F5F6F8; margin-top: 3px; }
+
+  .period-toggle { display: flex; gap: 0; background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 4px; margin-bottom: 18px; }
+  .period-chip { flex: 1; text-align: center; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 12px; padding: 8px; border-radius: 8px; color: #7E828D; }
+  .period-chip.active { background: #3FD9C0; color: #0A0B0F; }
+
+  .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .kpi-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 15px; }
+  .kpi-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 26px; line-height: 1; color: #3FD9C0; }
+  .kpi-num.neutral { color: #F5F6F8; }
+  .kpi-num.warn { color: #FFB323; }
+  .kpi-lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; margin-top: 6px; }
+  .kpi-delta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #3FD9C0; margin-top: 6px; }
+  .kpi-delta.down { color: #FF6B4A; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 18px 0 12px; }
+
+  .chart-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .chart-title { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; margin-bottom: 14px; }
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .bar { width: 100%; background: #3FD9C0; border-radius: 5px 5px 0 0; opacity: 0.85; }
+  .bar-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #7E828D; letter-spacing: 0.5px; }
+
+  .plan-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #1C1D26; }
+  .plan-row:last-child { border-bottom: none; }
+  .plan-rank { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; color: #7E828D; width: 20px; flex-shrink: 0; }
+  .plan-rank.top { color: #3FD9C0; }
+  .plan-info { flex: 1; }
+  .plan-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; color: #F5F6F8; }
+  .plan-stat { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+  .plan-bar { width: 60px; height: 5px; background: #1F2029; border-radius: 3px; overflow: hidden; }
+  .plan-bar-fill { height: 100%; background: #3FD9C0; border-radius: 3px; }
+
+  .goal-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #1C1D26; }
+  .goal-row:last-child { border-bottom: none; }
+  .goal-name { flex: 1; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 13px; color: #F5F6F8; }
+  .goal-stat { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3FD9C0; }
+  .goal-stat.warn { color: #FFB323; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Coach Analytics · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="header">
+        <div class="period">Season 02 · Week 8</div>
+        <h1>Analytics</h1>
+      </div>
+
+      <div class="period-toggle">
+        <div class="period-chip">Week</div>
+        <div class="period-chip active">Month</div>
+        <div class="period-chip">Season</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-num">78<span style="font-size:14px;color:#7E828D;">%</span></div><div class="kpi-lbl">Goal Achievement</div><div class="kpi-delta">▲ 4% vs last month</div></div>
+        <div class="kpi-card"><div class="kpi-num neutral">91<span style="font-size:14px;color:#7E828D;">%</span></div><div class="kpi-lbl">Avg Adherence</div><div class="kpi-delta">▲ 2%</div></div>
+        <div class="kpi-card"><div class="kpi-num neutral">18<span style="font-size:14px;color:#7E828D;">m</span></div><div class="kpi-lbl">Avg Response</div><div class="kpi-delta">▼ 3m faster</div></div>
+        <div class="kpi-card"><div class="kpi-num warn">2</div><div class="kpi-lbl">At-risk clients</div><div class="kpi-delta down">▼ adherence &lt;70%</div></div>
+      </div>
+
+      <div class="section-label">Sessions This Week</div>
+      <div class="chart-card">
+        <div class="chart-title">Workouts logged by clients</div>
+        <div class="bar-chart">
+          <div class="bar-col"><div class="bar" style="height:55%;"></div><div class="bar-label">MON</div></div>
+          <div class="bar-col"><div class="bar" style="height:80%;"></div><div class="bar-label">TUE</div></div>
+          <div class="bar-col"><div class="bar" style="height:45%;"></div><div class="bar-label">WED</div></div>
+          <div class="bar-col"><div class="bar" style="height:90%;"></div><div class="bar-label">THU</div></div>
+          <div class="bar-col"><div class="bar" style="height:70%;"></div><div class="bar-label">FRI</div></div>
+          <div class="bar-col"><div class="bar" style="height:35%;"></div><div class="bar-label">SAT</div></div>
+          <div class="bar-col"><div class="bar" style="height:20%;"></div><div class="bar-label">SUN</div></div>
+        </div>
+      </div>
+
+      <div class="section-label">Top Performing Plans</div>
+      <div class="chart-card">
+        <div class="plan-row">
+          <div class="plan-rank top">1</div>
+          <div class="plan-info"><div class="plan-name">Cut-12-Week</div><div class="plan-stat">6 clients · 92% adherence</div></div>
+          <div class="plan-bar"><div class="plan-bar-fill" style="width:92%;"></div></div>
+        </div>
+        <div class="plan-row">
+          <div class="plan-rank">2</div>
+          <div class="plan-info"><div class="plan-name">PPL 4-day split</div><div class="plan-stat">8 clients · 84% adherence</div></div>
+          <div class="plan-bar"><div class="plan-bar-fill" style="width:84%;"></div></div>
+        </div>
+        <div class="plan-row">
+          <div class="plan-rank">3</div>
+          <div class="plan-info"><div class="plan-name">Mass-gain 5-day</div><div class="plan-stat">4 clients · 64% adherence</div></div>
+          <div class="plan-bar"><div class="plan-bar-fill" style="width:64%;background:#FFB323;"></div></div>
+        </div>
+      </div>
+
+      <div class="section-label">Goals You Deliver Best</div>
+      <div class="chart-card">
+        <div class="goal-row"><div class="goal-name">Weight loss</div><div class="goal-stat">84% hit rate</div></div>
+        <div class="goal-row"><div class="goal-name">Strength</div><div class="goal-stat">79% hit rate</div></div>
+        <div class="goal-row"><div class="goal-name">Muscle gain</div><div class="goal-stat warn">71% hit rate</div></div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CLIENTS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">ANALYTICS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

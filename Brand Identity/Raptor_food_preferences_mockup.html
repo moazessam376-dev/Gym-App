@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Food Preferences</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 40px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 18px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.5px; color: #F5F6F8; flex: 1; }
+  .save-btn { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 13px; color: #3FD9C0; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); border-radius: 9px; padding: 8px 14px; }
+
+  .hero { background: linear-gradient(165deg, #10202C, #0A0B0F); border: 1px solid #2A2B38; border-radius: 14px; padding: 18px; margin-bottom: 20px; }
+  .hero-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 18px; color: #F5F6F8; margin-bottom: 6px; }
+  .hero-desc { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; line-height: 1.55; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 18px 0 12px; }
+
+  .prefs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .pref-chip { background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 13px; display: flex; align-items: center; gap: 10px; }
+  .pref-chip.active { background: rgba(63,217,192,0.08); border-color: #3FD9C0; }
+  .pref-icon { width: 32px; height: 32px; border-radius: 9px; background: #1F2029; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pref-chip.active .pref-icon { background: rgba(63,217,192,0.12); border-color: rgba(63,217,192,0.25); }
+  .pref-icon svg { width: 16px; height: 16px; }
+  .pref-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; color: #9B9CA8; }
+  .pref-chip.active .pref-name { color: #3FD9C0; }
+
+  .allergen-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  .allergen-title { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; margin-bottom: 10px; }
+  .allergen-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1C1D26; }
+  .allergen-row:last-child { border-bottom: none; }
+  .allergen-name { font-family: 'Inter', sans-serif; font-size: 13px; color: #C3C6CE; }
+  .toggle { width: 40px; height: 24px; border-radius: 12px; background: #2A2B38; position: relative; flex-shrink: 0; }
+  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #9B9CA8; border-radius: 50%; }
+  .toggle.on { background: #FF6B4A; }
+  .toggle.on::after { right: 3px; left: auto; background: #0A0B0F; }
+
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #9B9CA8; margin-bottom: 7px; display: block; }
+  .form-input { width: 100%; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 11px; padding: 14px; font-family: 'Inter', sans-serif; font-size: 14px; color: #F5F6F8; }
+  .form-input::placeholder { color: #5C616E; }
+
+  .btn-primary { width: 100%; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; text-align: center; border-radius: 13px; padding: 16px; border: none; display: block; margin-top: 10px; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Food Preferences · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Food Preferences</div>
+        <div class="save-btn">Save</div>
+      </div>
+
+      <div class="hero">
+        <div class="hero-title">Your diet shapes your plan.</div>
+        <div class="hero-desc">Your coach uses these to build meal plans. The food picker filters out anything that doesn't match.</div>
+      </div>
+
+      <div class="section-label">Dietary preferences</div>
+      <div class="prefs-grid">
+        <div class="pref-chip active"><div class="pref-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div><div class="pref-name">Halal</div></div>
+        <div class="pref-chip"><div class="pref-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#9B9CA8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg></div><div class="pref-name">Vegetarian</div></div>
+        <div class="pref-chip"><div class="pref-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#9B9CA8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg></div><div class="pref-name">Vegan</div></div>
+        <div class="pref-chip"><div class="pref-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#9B9CA8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg></div><div class="pref-name">Pescatarian</div></div>
+        <div class="pref-chip"><div class="pref-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#9B9CA8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg></div><div class="pref-name">Kosher</div></div>
+        <div class="pref-chip"><div class="pref-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#9B9CA8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg></div><div class="pref-name">Low carb</div></div>
+      </div>
+
+      <div class="section-label">Allergies &amp; intolerances</div>
+      <div class="allergen-card">
+        <div class="allergen-row"><div class="allergen-name">Dairy / lactose</div><div class="toggle"></div></div>
+        <div class="allergen-row"><div class="allergen-name">Gluten</div><div class="toggle"></div></div>
+        <div class="allergen-row"><div class="allergen-name">Nuts</div><div class="toggle on"></div></div>
+        <div class="allergen-row"><div class="allergen-name">Shellfish</div><div class="toggle"></div></div>
+        <div class="allergen-row"><div class="allergen-name">Eggs</div><div class="toggle"></div></div>
+        <div class="allergen-row"><div class="allergen-name">Soy</div><div class="toggle"></div></div>
+      </div>
+
+      <div class="section-label">Disliked foods</div>
+      <div class="form-group">
+        <label class="form-label">Foods to exclude from plans</label>
+        <input class="form-input" type="text" value="Liver, olives, canned tuna, cottage cheese">
+      </div>
+
+      <button class="btn-primary">Save Preferences</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

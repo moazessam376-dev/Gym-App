@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Meal Item Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 40px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 18px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 17px; color: #F5F6F8; flex: 1; }
+  .save-btn { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 13px; color: #3FD9C0; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); border-radius: 9px; padding: 8px 14px; }
+
+  .food-header { background: linear-gradient(165deg, #10202C, #0A0B0F); border: 1px solid #2A2B38; border-radius: 16px; padding: 20px; margin-bottom: 18px; }
+  .food-name { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.5px; color: #F5F6F8; margin-bottom: 5px; }
+  .food-brand { font-family: 'Inter', sans-serif; font-size: 12px; color: #7E828D; }
+  .food-tags { display: flex; gap: 6px; margin-top: 10px; }
+  .food-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #3FD9C0; background: rgba(63,217,192,0.12); border-radius: 5px; padding: 4px 7px; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 16px 0 10px; }
+
+  .serving-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 18px; margin-bottom: 14px; text-align: center; }
+  .serving-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; margin-bottom: 12px; }
+  .serving-row { display: flex; align-items: center; justify-content: center; gap: 16px; }
+  .step-btn { width: 44px; height: 44px; border-radius: 12px; background: #1F2029; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #9B9CA8; }
+  .serving-value { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 36px; color: #3FD9C0; line-height: 1; min-width: 100px; }
+  .serving-unit { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; margin-top: 6px; }
+
+  .macro-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .macro-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 12px 8px; text-align: center; }
+  .macro-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px; color: #F5F6F8; line-height: 1; }
+  .macro-num.kcal { color: #3FD9C0; font-size: 22px; }
+  .macro-num .unit { font-size: 10px; color: #7E828D; }
+  .macro-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.8px; text-transform: uppercase; color: #7E828D; margin-top: 5px; }
+
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #9B9CA8; margin-bottom: 7px; display: block; }
+  .form-input { width: 100%; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 11px; padding: 14px; font-family: 'Inter', sans-serif; font-size: 15px; color: #F5F6F8; }
+
+  .slot-toggle { display: flex; gap: 6px; margin-bottom: 16px; }
+  .slot-chip { flex: 1; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 10px; border-radius: 8px; color: #7E828D; background: #15161D; border: 1px solid #2A2B38; }
+  .slot-chip.active { color: #0A0B0F; background: #3FD9C0; border-color: #3FD9C0; }
+
+  .btn-primary { width: 100%; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; text-align: center; border-radius: 13px; padding: 16px; border: none; display: block; margin-top: 10px; }
+  .btn-danger { width: 100%; background: transparent; color: #FF6B4A; border: 1px solid rgba(255,107,74,0.3); font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; text-align: center; border-radius: 13px; padding: 14px; display: block; margin-top: 8px; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Meal Item Editor · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Edit Item</div>
+        <div class="save-btn">Save</div>
+      </div>
+
+      <div class="food-header">
+        <div class="food-name">Grilled chicken breast</div>
+        <div class="food-brand">Generic · per 100g raw</div>
+        <div class="food-tags"><span class="food-tag">High protein</span><span class="food-tag">Halal</span></div>
+      </div>
+
+      <div class="section-label">Serving size</div>
+      <div class="serving-card">
+        <div class="serving-label">Grams</div>
+        <div class="serving-row">
+          <div class="step-btn">−</div>
+          <div>
+            <div class="serving-value">200</div>
+            <div class="serving-unit">grams</div>
+          </div>
+          <div class="step-btn">+</div>
+        </div>
+      </div>
+
+      <div class="section-label">Macros · at 200g</div>
+      <div class="macro-grid">
+        <div class="macro-card"><div class="macro-num kcal">330</div><div class="macro-lbl">Kcal</div></div>
+        <div class="macro-card"><div class="macro-num">62<span class="unit">g</span></div><div class="macro-lbl">Protein</div></div>
+        <div class="macro-card"><div class="macro-num">0<span class="unit">g</span></div><div class="macro-lbl">Carbs</div></div>
+        <div class="macro-card"><div class="macro-num">7.2<span class="unit">g</span></div><div class="macro-lbl">Fat</div></div>
+      </div>
+
+      <div class="section-label">Assign to meal</div>
+      <div class="slot-toggle">
+        <div class="slot-chip">Breakfast</div>
+        <div class="slot-chip active">Lunch</div>
+        <div class="slot-chip">Dinner</div>
+        <div class="slot-chip">Snack</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Note for client (optional)</label>
+        <input class="form-input" type="text" placeholder="e.g. Weigh before cooking">
+      </div>
+
+      <button class="btn-primary">Update Item</button>
+      <button class="btn-danger">Remove from Plan</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

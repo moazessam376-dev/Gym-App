@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Coach Profile (Remake)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #0A0B0F;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  ::selection { background: rgba(63,217,192,0.3); color: #fff; }
+
+  /* ─── Phone frame ─── */
+  .phone {
+    width: 390px;
+    background: #0A0B0F;
+    border: 10px solid #1A1B22;
+    border-radius: 44px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+    position: relative;
+  }
+
+  /* ─── Status bar ─── */
+  .status-bar {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 26px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #C3C6CE;
+  }
+  .status-bar .brand {
+    font-family: 'Geist', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #F5F6F8;
+  }
+  .status-bar .signal { color: #3FD9C0; }
+
+  /* ─── Scrollable content ─── */
+  .content {
+    padding: 0 18px 100px;
+  }
+
+  /* ─── Coach header ─── */
+  .coach-header {
+    background: linear-gradient(165deg, #10202C, #0A0B0F);
+    border: 1px solid #2A2B38;
+    border-radius: 18px;
+    padding: 24px 20px 20px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .coach-avatar {
+    width: 88px;
+    height: 88px;
+    border-radius: 22px;
+    margin: 0 auto 14px;
+    background: linear-gradient(135deg, #3FD9C0, #2BA897);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Geist', sans-serif;
+    font-weight: 900;
+    font-size: 34px;
+    color: #0A0B0F;
+    letter-spacing: -1px;
+    box-shadow: 0 0 24px rgba(63,217,192,0.35), inset 0 2px 5px rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.4);
+  }
+  .coach-name {
+    font-family: 'Geist', sans-serif;
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -0.8px;
+    color: #F5F6F8;
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .coach-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #9B9CA8;
+    letter-spacing: 0.5px;
+  }
+  .coach-meta .dot { color: #5C616E; margin: 0 6px; }
+
+  /* ─── Tier badge ─── */
+  .tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(63,217,192,0.12);
+    border: 1px solid rgba(63,217,192,0.3);
+    border-radius: 999px;
+    padding: 6px 14px;
+    margin-top: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #3FD9C0;
+  }
+  .tier-badge .crest {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: radial-gradient(circle at 50% 32%, #9BFFEE, #3FD9C0 55%, #1A8A78);
+    box-shadow: 0 0 8px rgba(63,217,192,0.5);
+  }
+
+  /* ─── Specialties ─── */
+  .specialties {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    justify-content: center;
+    margin-top: 14px;
+  }
+  .chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #C3C6CE;
+    background: #1F2029;
+    border: 1px solid #2A2B38;
+    border-radius: 7px;
+    padding: 5px 10px;
+  }
+
+  /* ─── KPI grid ─── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .kpi-card {
+    background: #15161D;
+    border: 1px solid #2A2B38;
+    border-radius: 14px;
+    padding: 15px;
+  }
+  .kpi-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 28px;
+    line-height: 1;
+    color: #3FD9C0;
+  }
+  .kpi-num.neutral { color: #F5F6F8; }
+  .kpi-num .unit { font-size: 13px; color: #7E828D; }
+  .kpi-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #7E828D;
+    margin-top: 7px;
+  }
+
+  /* ─── Section label ─── */
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #7E828D;
+    margin: 18px 0 10px;
+  }
+
+  /* ─── Bio card ─── */
+  .bio-card {
+    background: #15161D;
+    border: 1px solid #2A2B38;
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .bio-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #C3C6CE;
+  }
+  .bio-text strong { color: #F5F6F8; font-weight: 600; }
+
+  /* ─── Top clients ─── */
+  .clients-card {
+    background: #15161D;
+    border: 1px solid #2A2B38;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .client-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 15px;
+    border-bottom: 1px solid #1C1D26;
+  }
+  .client-row:last-child { border-bottom: none; }
+  .client-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Geist', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #0A0B0F;
+  }
+  .client-info { flex: 1; min-width: 0; }
+  .client-name {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: #F5F6F8;
+  }
+  .client-stat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #7E828D;
+    margin-top: 2px;
+  }
+  .client-tier {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 6px;
+    padding: 4px 8px;
+    flex-shrink: 0;
+  }
+
+  /* ─── Goal types ─── */
+  .goals-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .goal-card {
+    background: #15161D;
+    border: 1px solid #2A2B38;
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .goal-type {
+    font-family: 'Geist', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: #F5F6F8;
+    margin-bottom: 4px;
+  }
+  .goal-stat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #3FD9C0;
+  }
+  .goal-stat .muted { color: #7E828D; }
+
+  /* ─── Certifications ─── */
+  .cert-card {
+    background: #15161D;
+    border: 1px solid #2A2B38;
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .cert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #1C1D26;
+  }
+  .cert-item:last-child { border-bottom: none; }
+  .cert-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3FD9C0;
+    margin-top: 7px;
+    flex-shrink: 0;
+  }
+  .cert-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #C3C6CE;
+  }
+  .cert-year {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #7E828D;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* ─── CTA bar ─── */
+  .cta-bar {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .btn-primary {
+    flex: 1;
+    background: #3FD9C0;
+    color: #0A0B0F;
+    font-family: 'Geist', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    text-align: center;
+    border-radius: 13px;
+    padding: 15px;
+    border: none;
+  }
+  .btn-secondary {
+    background: transparent;
+    color: #F5F6F8;
+    border: 1px solid #2A2B38;
+    font-family: 'Geist', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    text-align: center;
+    border-radius: 13px;
+    padding: 15px 24px;
+  }
+
+  /* ─── Tab bar ─── */
+  .tab-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #0E0F14;
+    border-top: 1px solid #2A2B38;
+    padding: 10px 8px 22px;
+    display: flex;
+    justify-content: space-around;
+  }
+  .tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+  .tab-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+  }
+  .tab-icon.active { background: #3FD9C0; }
+  .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .tab-label.active { color: #3FD9C0; }
+  .tab-label.inactive { color: #7E828D; }
+
+  /* ─── Page label (for the PDF context) ─── */
+  .page-context {
+    width: 390px;
+    padding: 30px 0 16px;
+    text-align: center;
+  }
+  .page-context .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #3FD9C0;
+  }
+  .page-context .title {
+    font-family: 'Geist', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.8px;
+    color: #F5F6F8;
+    margin-top: 6px;
+  }
+  .page-context .sub {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: #9B9CA8;
+    margin-top: 4px;
+  }
+
+  .wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- Context label -->
+  <div class="page-context">
+    <div class="tag">Coach Profile · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+
+  <!-- ═══════════════ PHONE ═══════════════ -->
+  <div class="phone">
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <span class="brand">Raptor</span>
+      <span class="signal">●●●</span>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ─── Coach header ─── -->
+      <div class="coach-header">
+        <div class="coach-avatar">AH</div>
+        <div class="coach-name">Ahmed Al-Harbi</div>
+        <div class="coach-meta">
+          <span>Coach</span><span class="dot">·</span><span>8 yrs</span><span class="dot">·</span><span>Riyadh</span>
+        </div>
+        <div class="tier-badge">
+          <span class="crest"></span>
+          <span>Diamond Coach</span>
+        </div>
+        <div class="specialties">
+          <span class="chip">Hypertrophy</span>
+          <span class="chip">Weight Loss</span>
+          <span class="chip">Nutrition</span>
+          <span class="chip">Strength</span>
+        </div>
+      </div>
+
+      <!-- ─── KPI grid ─── -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-num">14</div>
+          <div class="kpi-label">Active Clients</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num">78<span class="unit">%</span></div>
+          <div class="kpi-label">Goal Achievement</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num neutral">91<span class="unit">%</span></div>
+          <div class="kpi-label">Adherence</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num neutral">18<span class="unit">m</span></div>
+          <div class="kpi-label">Avg Response</div>
+        </div>
+      </div>
+
+      <!-- ─── Bio ─── -->
+      <div class="section-label">About</div>
+      <div class="bio-card">
+        <div class="bio-text">
+          <strong>Helping men in Riyadh build muscle and lose fat — with data, not guesswork.</strong> Eight years of coaching, 200+ clients trained. My plans are built on measured body-composition data and adjusted weekly. No generic templates, no WhatsApp-only check-ins. Every client gets a structured plan, tracked progress, and a coach who responds the same day.
+        </div>
+      </div>
+
+      <!-- ─── Top performing clients ─── -->
+      <div class="section-label">Top Performing Clients</div>
+      <div class="clients-card">
+
+        <div class="client-row">
+          <div class="client-avatar" style="background: linear-gradient(135deg, #3FD9C0, #1A8A78);">YA</div>
+          <div class="client-info">
+            <div class="client-name">Yousef Al-Mutairi</div>
+            <div class="client-stat">+4.1kg muscle · 14 weeks</div>
+          </div>
+          <div class="client-tier" style="color: #9B7BF5; background: rgba(155,123,245,0.16);">Master</div>
+        </div>
+
+        <div class="client-row">
+          <div class="client-avatar" style="background: linear-gradient(135deg, #6B8AFF, #3A52C4);">KO</div>
+          <div class="client-info">
+            <div class="client-name">Khalid Al-Otaibi</div>
+            <div class="client-stat">−9.2kg · 12 weeks</div>
+          </div>
+          <div class="client-tier" style="color: #3FD9C0; background: rgba(63,217,192,0.16);">Apex</div>
+        </div>
+
+        <div class="client-row">
+          <div class="client-avatar" style="background: linear-gradient(135deg, #E5B83C, #9A7615);">OS</div>
+          <div class="client-info">
+            <div class="client-name">Omar El-Sayed</div>
+            <div class="client-stat">−7.8kg · 10 weeks</div>
+          </div>
+          <div class="client-tier" style="color: #E0556B; background: rgba(224,85,107,0.16);">Grandmaster</div>
+        </div>
+
+        <div class="client-row">
+          <div class="client-avatar" style="background: linear-gradient(135deg, #9B7BF5, #5E3FB0);">TH</div>
+          <div class="client-info">
+            <div class="client-name">Tariq Hassan</div>
+            <div class="client-stat">−6.4kg · 11 weeks</div>
+          </div>
+          <div class="client-tier" style="color: #6B8AFF; background: rgba(107,138,255,0.16);">Diamond</div>
+        </div>
+
+      </div>
+
+      <!-- ─── Goal types delivered ─── -->
+      <div class="section-label">Goals Delivered</div>
+      <div class="goals-grid">
+        <div class="goal-card">
+          <div class="goal-type">Weight Loss</div>
+          <div class="goal-stat">42 clients <span class="muted">· 84% hit rate</span></div>
+        </div>
+        <div class="goal-card">
+          <div class="goal-type">Muscle Gain</div>
+          <div class="goal-stat">28 clients <span class="muted">· 71% hit rate</span></div>
+        </div>
+        <div class="goal-card">
+          <div class="goal-type">Strength</div>
+          <div class="goal-stat">19 clients <span class="muted">· 79% hit rate</span></div>
+        </div>
+        <div class="goal-card">
+          <div class="goal-type">Body Recomp</div>
+          <div class="goal-stat">15 clients <span class="muted">· 67% hit rate</span></div>
+        </div>
+      </div>
+
+      <!-- ─── Certifications ─── -->
+      <div class="section-label">Certifications</div>
+      <div class="cert-card">
+        <div class="cert-item">
+          <div class="cert-dot"></div>
+          <div class="cert-text">NASM Certified Personal Trainer (CPT)</div>
+          <div class="cert-year">2017</div>
+        </div>
+        <div class="cert-item">
+          <div class="cert-dot"></div>
+          <div class="cert-text">Precision Nutrition Level 1 Coach (PN1)</div>
+          <div class="cert-year">2019</div>
+        </div>
+        <div class="cert-item">
+          <div class="cert-dot"></div>
+          <div class="cert-text">ISSA Specialist in Sports Nutrition</div>
+          <div class="cert-year">2020</div>
+        </div>
+      </div>
+
+      <!-- ─── CTA ─── -->
+      <div class="cta-bar">
+        <button class="btn-primary">Book a Call</button>
+        <button class="btn-secondary">Message</button>
+      </div>
+
+    </div><!-- /content -->
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <div class="tab-item">
+        <div class="tab-icon inactive"></div>
+        <div class="tab-label inactive">HOME</div>
+      </div>
+      <div class="tab-item">
+        <div class="tab-icon inactive"></div>
+        <div class="tab-label inactive">RANK</div>
+      </div>
+      <div class="tab-item">
+        <div class="tab-icon inactive"></div>
+        <div class="tab-label inactive">PLAN</div>
+      </div>
+      <div class="tab-item">
+        <div class="tab-icon inactive"></div>
+        <div class="tab-label inactive">CHAT</div>
+      </div>
+      <div class="tab-item">
+        <div class="tab-icon active"></div>
+        <div class="tab-label active">PROFILE</div>
+      </div>
+    </div>
+
+  </div><!-- /phone -->
+
+</div><!-- /wrapper -->
+
+</body>
+</html>

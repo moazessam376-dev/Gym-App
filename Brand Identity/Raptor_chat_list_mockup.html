@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Chat List</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .header { padding: 6px 0 16px; }
+  .header h1 { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -1px; color: #F5F6F8; }
+
+  .search-bar { background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .search-icon { font-size: 14px; color: #5C616E; }
+  .search-input { font-family: 'Inter', sans-serif; font-size: 14px; color: #5C616E; }
+
+  .chat-row { display: flex; align-items: center; gap: 13px; padding: 13px 0; border-bottom: 1px solid #1C1D26; }
+  .chat-row:last-child { border-bottom: none; }
+  .chat-avatar { width: 46px; height: 46px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; color: #0A0B0F; flex-shrink: 0; position: relative; }
+  .chat-avatar .online { position: absolute; bottom: -1px; right: -1px; width: 12px; height: 12px; background: #3FD98A; border-radius: 50%; border: 2px solid #0A0B0F; }
+  .chat-info { flex: 1; min-width: 0; }
+  .chat-top { display: flex; justify-content: space-between; align-items: center; }
+  .chat-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 15px; color: #F5F6F8; }
+  .chat-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; flex-shrink: 0; margin-left: 8px; }
+  .chat-preview { font-family: 'Inter', sans-serif; font-size: 13px; color: #7E828D; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat-preview .you { color: #5C616E; }
+  .unread-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #0A0B0F; background: #3FD9C0; border-radius: 10px; min-width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; padding: 0 6px; flex-shrink: 0; }
+  .voice-icon { color: #3FD9C0; font-size: 14px; flex-shrink: 0; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 10px 0 4px; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Chat List · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="header"><h1>Messages</h1></div>
+      <div class="search-bar"><span class="search-icon">🔍</span><span class="search-input">Search conversations</span></div>
+
+      <div class="section-label">Coach</div>
+      <div class="chat-row">
+        <div class="chat-avatar" style="background:linear-gradient(135deg,#3FD9C0,#1A8A78);">AH<div class="online"></div></div>
+        <div class="chat-info">
+          <div class="chat-top"><span class="chat-name">Ahmed Al-Harbi</span><span class="chat-time">2m</span></div>
+          <div class="chat-preview">Adjust your protein to 180g. Also add 1L water.</div>
+        </div>
+        <div class="unread-badge">3</div>
+      </div>
+
+      <div class="section-label" style="margin-top:14px;">Clients</div>
+      <div class="chat-row">
+        <div class="chat-avatar" style="background:linear-gradient(135deg,#9B7BF5,#5E3FB0);">YA</div>
+        <div class="chat-info">
+          <div class="chat-top"><span class="chat-name">Yousef Al-Mutairi</span><span class="chat-time">1h</span></div>
+          <div class="chat-preview"><span class="voice-icon">🎙</span> Voice message · 0:42</div>
+        </div>
+      </div>
+      <div class="chat-row">
+        <div class="chat-avatar" style="background:linear-gradient(135deg,#3FD9C0,#1A8A78);">KO</div>
+        <div class="chat-info">
+          <div class="chat-top"><span class="chat-name">Khalid Al-Otaibi</span><span class="chat-time">3h</span></div>
+          <div class="chat-preview"><span class="you">You: </span>Looks good. Keep the intensity at RPE 8.</div>
+        </div>
+      </div>
+      <div class="chat-row">
+        <div class="chat-avatar" style="background:linear-gradient(135deg,#6B8AFF,#3A52C4);">OS</div>
+        <div class="chat-info">
+          <div class="chat-top"><span class="chat-name">Omar El-Sayed</span><span class="chat-time">Yest</span></div>
+          <div class="chat-preview">Coach, my knee felt tight on squats today.</div>
+        </div>
+        <div class="unread-badge">1</div>
+      </div>
+      <div class="chat-row">
+        <div class="chat-avatar" style="background:linear-gradient(135deg,#E5B83C,#9A7615);">TH</div>
+        <div class="chat-info">
+          <div class="chat-top"><span class="chat-name">Tariq Hassan</span><span class="chat-time">Mon</span></div>
+          <div class="chat-preview">InBody uploaded. Ready for review.</div>
+        </div>
+      </div>
+      <div class="chat-row">
+        <div class="chat-avatar" style="background:linear-gradient(135deg,#9AA3AF,#5C636E);">RI</div>
+        <div class="chat-info">
+          <div class="chat-top"><span class="chat-name">Rami Ibrahim</span><span class="chat-time">Sun</span></div>
+          <div class="chat-preview"><span class="you">You: </span>Great progress. +2.5kg next session.</div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CLIENTS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">ANALYTICS</div></div>
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
