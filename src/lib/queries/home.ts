@@ -17,6 +17,7 @@ import {
 import type { Role } from '@/schemas/profile';
 import { getMyName } from '@/lib/profile';
 import { getMyAthleteProfile } from '@/lib/athlete-profile';
+import { getMyLeagueStanding } from '@/lib/leagues';
 import { getMyCoach, listMyClients, listMyInvitations } from '@/lib/invitations';
 import { listPlansForClient, listWeeks, listDays, listExerciseRows } from '@/lib/plans';
 import {
@@ -358,6 +359,7 @@ export async function prefetchHome(userId: string, role: Role): Promise<void> {
     warm(['plans-for-client', userId], () => listPlansForClient(userId));
     warm(['nutrition-day', userId, today], () => fetchNutritionDay(userId, today));
     warm(['progress-data', userId], () => fetchProgressData(userId));
+    warm(['my-league-standing', userId], () => getMyLeagueStanding(userId)); // Home league CTA
   } else if (role === 'coach') {
     warm(['my-name', userId], () => getMyName(userId));
     warm(['my-clients'], () => listMyClients());

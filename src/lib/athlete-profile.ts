@@ -30,13 +30,14 @@ export type AthleteProfile = {
   weight_unit: WeightUnit;
   is_public: boolean;
   public_achievements: string[];
+  leaderboard_opt_in: boolean;
   onboarded_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
 const COLS =
-  'user_id, primary_goal, experience_level, sex, birth_date, height_cm, target_weight_grams, activity_level, training_days, dietary_tags, injuries_notes, weight_unit, is_public, public_achievements, onboarded_at, created_at, updated_at';
+  'user_id, primary_goal, experience_level, sex, birth_date, height_cm, target_weight_grams, activity_level, training_days, dietary_tags, injuries_notes, weight_unit, is_public, public_achievements, leaderboard_opt_in, onboarded_at, created_at, updated_at';
 
 /** The signed-in client's own profile (null if not started). */
 export async function getMyAthleteProfile(userId: string): Promise<AthleteProfile | null> {
@@ -84,13 +85,14 @@ export async function setWeightUnit(userId: string, unit: WeightUnit): Promise<v
 }
 
 /**
- * Toggle the athlete's public profile on/off and/or update public achievements
- * (Phase 19). Focused partial upsert; allowlisted fields only (§4). The PUBLIC read
- * path never exposes the sensitive profile fields — only name/avatar/goal/these.
+ * Toggle the athlete's public profile on/off, the leaderboard opt-in (Phase 20),
+ * and/or update public achievements (Phase 19). Focused partial upsert; allowlisted
+ * fields only (§4). The PUBLIC read path never exposes the sensitive profile fields —
+ * only name/avatar/goal/these (and a derived FFMI index on the board, never its inputs).
  */
 export async function setAthleteVisibility(
   userId: string,
-  input: { is_public?: boolean; public_achievements?: string[] },
+  input: { is_public?: boolean; public_achievements?: string[]; leaderboard_opt_in?: boolean },
 ): Promise<void> {
   const v = upsertAthleteProfileSchema.parse(input);
   const { error } = await supabase

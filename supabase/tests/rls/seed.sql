@@ -369,4 +369,70 @@ update public.profiles set avatar_media_id = 'a0a70002-0000-0000-0000-0000000000
 update public.profiles set avatar_media_id = 'a0a70003-0000-0000-0000-000000000003'
   where id = 'c0c0c0c0-0000-0000-0000-000000000001';
 
+-- ── Public leaderboards (0045, Phase 20) ─────────────────────────────────────
+-- A dedicated, isolated league cohort so the board fixtures never perturb the
+-- existing Coach A/B streak/adherence/board assertions. One opted-in PUBLIC coach
+-- (Coach L) with three improved, opted-in clients (→ meets the coach board's >=3
+-- floor and seeds the men's/women's athlete boards), plus three negative-control
+-- athletes that must each be EXCLUDED for a distinct reason:
+--   L1 male / L3 male  → men's athlete board (opted-in, public, verified InBody + height)
+--   L2 female          → women's athlete board
+--   L4 male            → EXCLUDED: leaderboard_opt_in = false (public profile, but not opted in)
+--   L5 female          → EXCLUDED: is_public = false (opted in, but private)
+--   L6 male            → EXCLUDED: banned_at is set
+-- Coach L → top coaches board (3 tracked, 3 improved). Coach A is public (Phase 19)
+-- but never opts into the board (leaderboard_opt_in defaults false) → a clean
+-- "public coach, not opted in → excluded" control. body_metrics are seeded
+-- coach_entered so the 0026 trigger stamps verified_at (verified_by null in seed).
+insert into auth.users (id, email) values
+  ('1ea00000-0000-0000-0000-0000000000c1', 'coach.l@example.test'),
+  ('1ea00000-0000-0000-0000-000000000001', 'lead1@example.test'),
+  ('1ea00000-0000-0000-0000-000000000002', 'lead2@example.test'),
+  ('1ea00000-0000-0000-0000-000000000003', 'lead3@example.test'),
+  ('1ea00000-0000-0000-0000-000000000004', 'lead4@example.test'),
+  ('1ea00000-0000-0000-0000-000000000005', 'lead5@example.test'),
+  ('1ea00000-0000-0000-0000-000000000006', 'lead6@example.test');
+
+-- L1..L3 are Coach L's clients (feed the coach board); L4..L6 are coachless
+-- (athlete-board negatives only). L6 is inserted already-banned (the profiles
+-- immutability trigger is BEFORE UPDATE only, so banned_at on INSERT is allowed).
+insert into public.profiles (id, role, coach_id, full_name, banned_at) values
+  ('1ea00000-0000-0000-0000-0000000000c1', 'coach',  null,                                   'Coach L',  null),
+  ('1ea00000-0000-0000-0000-000000000001', 'client', '1ea00000-0000-0000-0000-0000000000c1', 'Lead One', null),
+  ('1ea00000-0000-0000-0000-000000000002', 'client', '1ea00000-0000-0000-0000-0000000000c1', 'Lead Two', null),
+  ('1ea00000-0000-0000-0000-000000000003', 'client', '1ea00000-0000-0000-0000-0000000000c1', 'Lead Three', null),
+  ('1ea00000-0000-0000-0000-000000000004', 'client', null, 'Lead Four', null),
+  ('1ea00000-0000-0000-0000-000000000005', 'client', null, 'Lead Five', null),
+  ('1ea00000-0000-0000-0000-000000000006', 'client', null, 'Lead Six',  now());
+
+insert into public.coach_profile (user_id, bio, specialties, years_experience, is_public, leaderboard_opt_in, onboarded_at) values
+  ('1ea00000-0000-0000-0000-0000000000c1', 'League coach', '{bodybuilding}', 8, true, true, now());
+
+insert into public.athlete_profile (user_id, primary_goal, sex, height_cm, is_public, leaderboard_opt_in, onboarded_at) values
+  ('1ea00000-0000-0000-0000-000000000001', 'build_muscle', 'male',   180, true,  true,  now()),
+  ('1ea00000-0000-0000-0000-000000000002', 'lose_fat',     'female', 165, true,  true,  now()),
+  ('1ea00000-0000-0000-0000-000000000003', 'build_muscle', 'male',   175, true,  true,  now()),
+  ('1ea00000-0000-0000-0000-000000000004', 'build_muscle', 'male',   176, true,  false, now()), -- not opted in
+  ('1ea00000-0000-0000-0000-000000000005', 'lose_fat',     'female', 168, false, true,  now()), -- private
+  ('1ea00000-0000-0000-0000-000000000006', 'build_muscle', 'male',   177, true,  true,  now()); -- banned
+
+-- Verified InBody readings. L1/L2/L3 get a baseline + an improved latest (body fat
+-- down or skeletal muscle up) → counted as tracked + improved for Coach L. L4/L5/L6
+-- get a single verified reading (enough for the athlete board's latest-reading rule).
+insert into public.body_metrics
+  (id, user_id, measured_at, weight_grams, body_fat_bp, skeletal_muscle_mass_grams, source) values
+  -- L1 male h180 → latest FFMI ≈ 21.5
+  ('1ea0b001-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000001', now() - interval '40 days', 85000, 2000, 38000, 'coach_entered'),
+  ('1ea0b001-0000-0000-0000-000000000002', '1ea00000-0000-0000-0000-000000000001', now() - interval '5 days',  84000, 1700, 39000, 'coach_entered'),
+  -- L2 female h165 → latest FFMI ≈ 16.5
+  ('1ea0b002-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000002', now() - interval '40 days', 62000, 2800, 24000, 'coach_entered'),
+  ('1ea0b002-0000-0000-0000-000000000002', '1ea00000-0000-0000-0000-000000000002', now() - interval '5 days',  60000, 2500, 24500, 'coach_entered'),
+  -- L3 male h175 → latest FFMI ≈ 21.7
+  ('1ea0b003-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000003', now() - interval '40 days', 78000, 1800, 35000, 'coach_entered'),
+  ('1ea0b003-0000-0000-0000-000000000002', '1ea00000-0000-0000-0000-000000000003', now() - interval '5 days',  79000, 1600, 36500, 'coach_entered'),
+  -- L4/L5/L6 — single verified reading each (excluded by opt-in / privacy / ban, not by data)
+  ('1ea0b004-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000004', now() - interval '5 days',  82000, 1500, 37000, 'coach_entered'),
+  ('1ea0b005-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000005', now() - interval '5 days',  58000, 2400, 23000, 'coach_entered'),
+  ('1ea0b006-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000006', now() - interval '5 days',  80000, 1400, 38500, 'coach_entered');
+
 alter table auth.users enable trigger on_auth_user_created;

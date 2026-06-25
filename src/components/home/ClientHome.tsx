@@ -18,6 +18,8 @@ import {
   useTodayWorkout,
   useRefreshOnFocus,
 } from '@/lib/queries/home';
+import { useMyLeagueStanding } from '@/lib/queries/leaderboards';
+import { TIER_COLORS } from '@/lib/leagues';
 import { remaining } from '@/lib/nutrition';
 import { Screen, Text, Card, Avatar, Button, ProgressRing, EmptyState } from '@/components/ui';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -39,6 +41,7 @@ export default function ClientHome() {
   const targetsQ = useTargets(userId);
   const nutritionQ = useDailyNutrition(userId);
   const workoutQ = useTodayWorkout(userId);
+  const leagueQ = useMyLeagueStanding(userId);
 
   // Refetch in the background when the tab regains focus (fresh data after logging
   // elsewhere) without flashing — cached values stay on screen during the refetch.
@@ -50,6 +53,7 @@ export default function ClientHome() {
     targetsQ.refetch();
     nutritionQ.refetch();
     workoutQ.refetch();
+    leagueQ.refetch();
   });
 
   const name = nameQ.data ?? null;
@@ -59,6 +63,24 @@ export default function ClientHome() {
   const needsOnboarding = athleteQ.isSuccess && athleteQ.data?.onboarded_at == null;
   const nutTargets = targetsQ.data ?? null;
   const nutDaily = nutritionQ.data ?? null;
+
+  // League standing CTA (Phase 20). Four states: ranked & opted-in, ranked but not opted
+  // in, has a verified reading but no placement (missing sex/height), or no reading yet.
+  const league = leagueQ.data ?? null;
+  const leagueTier = league?.tier ?? null;
+  const leagueAccent = leagueTier ? TIER_COLORS[leagueTier] : theme.colors.primary;
+  const leagueTitle = leagueTier
+    ? t('home.leagueTitle', { tier: t(`leaderboards.tier.${leagueTier}`) })
+    : t('home.leagueJoinTitle');
+  const leagueSub = !league
+    ? ''
+    : !league.hasVerifiedReading
+      ? t('home.leagueNoReading')
+      : leagueTier == null
+        ? t('home.leagueNeedsProfile')
+        : league.optedIn
+          ? t('home.leagueRanked')
+          : t('home.leagueOptIn');
 
   const today = workoutQ.data?.today ?? null;
   const plannedSets = workoutQ.data?.plannedSets ?? 0;
@@ -256,6 +278,30 @@ export default function ClientHome() {
                 {coachName}
               </Text>
               <Ionicons name="chatbubble-ellipses" size={22} color={theme.colors.primary} />
+            </View>
+          </Card>
+        </View>
+      ) : null}
+
+      {/* League standing — the leaderboard hook (Phase 20). Shown even before opting in. */}
+      {league ? (
+        <View style={{ gap: theme.spacing.sm }}>
+          <Text variant="label" muted style={textStart}>
+            {t('home.league')}
+          </Text>
+          <Card onPress={() => router.push('/leaderboards')} style={{ borderColor: leagueAccent }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+              <Ionicons name="trophy" size={22} color={leagueAccent} />
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyStrong" style={textStart}>
+                  {leagueTitle}
+                  {leagueTier && league.ffmi != null ? `  ·  ${league.ffmi.toFixed(1)} ${t('leaderboards.ffmi')}` : ''}
+                </Text>
+                <Text variant="caption" muted style={textStart}>
+                  {leagueSub}
+                </Text>
+              </View>
+              <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
             </View>
           </Card>
         </View>

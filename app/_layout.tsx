@@ -166,6 +166,7 @@ function RootNavigator() {
       <Stack.Screen name="coach-profile/[id]" options={{ headerShown: true, title: 'Coach profile' }} />
       <Stack.Screen name="athlete-profile/[id]" options={{ headerShown: true, title: 'Profile' }} />
       <Stack.Screen name="discover/coaches" options={{ headerShown: true, title: 'Discover coaches' }} />
+      <Stack.Screen name="leaderboards/index" options={{ headerShown: true, title: 'Leaderboards' }} />
     </Stack>
     {/* The navigator is mounted underneath (so routing + queries run and the cache
         warms); the splash overlays it until the prefetch settles, then fades to
