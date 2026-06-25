@@ -4,12 +4,11 @@
 // grouped by day and served via short-lived signed URLs. Read-only for a coach (?clientId=).
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
 import { listMediaFor, type Media } from '../../../src/lib/media';
 import { captureAndUploadPhoto, type PickSource } from '../../../src/lib/upload';
-import { Screen, Text, Button, GlassCard, SignedImage, EmptyState } from '../../../src/components/ui';
+import { Icon, Screen, Text, Button, GlassCard, SignedImage, EmptyState } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 const COLS = 3;
@@ -112,7 +111,7 @@ export default function ProgressPhotos() {
                     style={{ flex: 1 }}
                     disabled={uploading}
                     onPress={() => add('camera')}
-                    left={<Ionicons name="camera" size={18} color={theme.colors.text} />}
+                    left={<Icon name="camera" size={18} color={theme.colors.text} />}
                   />
                   <Button
                     title="Library"
@@ -120,7 +119,7 @@ export default function ProgressPhotos() {
                     style={{ flex: 1 }}
                     disabled={uploading}
                     onPress={() => add('library')}
-                    left={<Ionicons name="images" size={18} color={theme.colors.text} />}
+                    left={<Icon name="images" size={18} color={theme.colors.text} />}
                   />
                 </View>
                 {uploading ? (

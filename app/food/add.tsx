@@ -4,13 +4,12 @@
 // live macro preview → save. The owner is forced server-side; macros are snapshot.
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { listFoods, type Food } from '../../src/lib/library';
 import { addFoodLog, entryMacros, recentFoods, todayLocalDate, type FoodLogEntry } from '../../src/lib/nutrition';
 import { mealSlotSchema, type MealSlot } from '../../src/schemas/nutrition';
-import { Screen, Text, Input, Button, GlassCard, Segmented, Chip } from '../../src/components/ui';
+import { Icon, Screen, Text, Input, Button, GlassCard, Segmented, Chip } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 function label(s: string): string {
@@ -206,7 +205,7 @@ export default function AddFood() {
                     title={showCustom ? 'Cancel' : 'Quick-add (off-plan)'}
                     variant="ghost"
                     onPress={() => setShowCustom((s) => !s)}
-                    left={<Ionicons name="add-circle-outline" size={18} color={theme.colors.primary} />}
+                    left={<Icon name="add-circle-outline" size={18} color={theme.colors.primary} />}
                   />
                   {showCustom ? (
                     <GlassCard style={{ gap: theme.spacing.md }}>
@@ -273,7 +272,7 @@ export default function AddFood() {
                       {item.coach_id ? ' · custom' : ''}
                     </Text>
                   </View>
-                  <Ionicons name="add-circle" size={24} color={theme.colors.primary} />
+                  <Icon name="add-circle" size={24} color={theme.colors.primary} />
                 </View>
               </GlassCard>
             )

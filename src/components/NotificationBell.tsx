@@ -2,11 +2,10 @@
 // notification feed. The count comes from the cached/realtime ['notifications-unread']
 // query, so it updates live (Phase 17). Used in the Client + Coach home headers.
 import { Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth-context';
 import { useUnreadNotificationCount } from '@/lib/queries/home';
-import { Text } from '@/components/ui';
+import { Icon, Text } from '@/components/ui';
 import { theme } from '@/theme';
 
 export function NotificationBell({ size = 24 }: { size?: number }) {
@@ -18,7 +17,7 @@ export function NotificationBell({ size = 24 }: { size?: number }) {
 
   return (
     <Pressable onPress={() => router.push('/notifications')} hitSlop={8}>
-      <Ionicons
+      <Icon
         name={hasUnread ? 'notifications' : 'notifications-outline'}
         size={size}
         color={theme.colors.text}

@@ -3,7 +3,6 @@
 // to them). Linked from Account. Future slices add channel (push/email) + quiet-hours.
 import { useEffect, useState } from 'react';
 import { Switch, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -15,10 +14,9 @@ import {
   type NotificationPrefs,
   type NotificationType,
 } from '@/lib/notifications';
-import { Screen, Text, Card } from '@/components/ui';
+import { Icon, type IconName, Screen, Text, Card } from '@/components/ui';
 import { theme } from '@/theme';
 
-type IconName = keyof typeof Ionicons.glyphMap;
 
 const ROWS: { key: NotificationType; icon: IconName; labelKey: string }[] = [
   { key: 'message', icon: 'chatbubble-ellipses-outline', labelKey: 'notifications.prefs.message' },
@@ -78,7 +76,7 @@ export default function NotificationSettingsScreen() {
               borderTopColor: theme.colors.border,
             }}
           >
-            <Ionicons name={row.icon} size={20} color={theme.colors.primary} />
+            <Icon name={row.icon} size={20} color={theme.colors.primary} />
             <Text variant="bodyStrong" style={{ flex: 1 }}>
               {t(row.labelKey)}
             </Text>

@@ -5,7 +5,6 @@
 // and the lean-mass delta from verified InBody readings (0026).
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
 import { listPlansForClient, type Plan } from '../../../src/lib/plans';
@@ -26,7 +25,7 @@ import {
 } from '../../../src/lib/nutrition';
 import { getStreak, listSessions, type WorkoutSession } from '../../../src/lib/sessions';
 import { readCache, writeCache } from '../../../src/lib/screen-cache';
-import { Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented } from '../../../src/components/ui';
+import { Icon, Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 // Warm-cache snapshot so re-opening a client renders instantly (then refetches).
@@ -67,7 +66,7 @@ function appendChip(prev: string, phrase: string): string {
 function MiniStat({ value, label }: { value: string; label: string }) {
   return (
     <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-      <Text variant="h2">{value}</Text>
+      <Text style={{ fontFamily: theme.fontFamily.monoBold, fontSize: 22, color: theme.colors.text }}>{value}</Text>
       <Text variant="label" muted style={{ fontSize: 9 }}>
         {label}
       </Text>
@@ -262,7 +261,7 @@ export default function ClientDetail() {
                 ) : null}
               </View>
               <View style={{ flexDirection: 'row' }}>
-                <MiniStat value={`${streak}🔥`} label="DAY STREAK" />
+                <MiniStat value={String(streak)} label="DAY STREAK" />
                 <MiniStat value={String(workoutsThisWeek)} label="WORKOUTS" />
                 <MiniStat value={adherencePct == null ? '—' : `${adherencePct}%`} label="ADHERENCE" />
               </View>
@@ -295,7 +294,7 @@ export default function ClientDetail() {
                 plan the coach edits + publishes; nudges are private decision-support. */}
             <GlassCard glowColor={theme.colors.primary}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
-                <Ionicons name="sparkles" size={16} color={theme.colors.primary} />
+                <Icon name="sparkles" size={16} color={theme.colors.primary} />
                 <Text variant="label" muted style={{ flex: 1 }}>
                   AI assistant
                 </Text>
@@ -303,7 +302,7 @@ export default function ClientDetail() {
               <Button
                 title="Generate a plan with AI"
                 variant="secondary"
-                left={<Ionicons name="sparkles" size={16} color={theme.colors.text} />}
+                left={<Icon name="sparkles" size={16} color={theme.colors.text} />}
                 onPress={() => setAiOpen(true)}
               />
               <View style={{ height: 1, backgroundColor: theme.colors.glassBorder, marginVertical: theme.spacing.md }} />
@@ -344,7 +343,7 @@ export default function ClientDetail() {
               </View>
               {nutWeek && (nutWeek.daysLogged > 0 || nutTargets) ? (
                 <View style={{ flexDirection: 'row' }}>
-                  <MiniStat value={`${nutStreak}🔥`} label="LOG STREAK" />
+                  <MiniStat value={String(nutStreak)} label="LOG STREAK" />
                   <MiniStat value={`${nutWeek.daysLogged}/7`} label="DAYS LOGGED" />
                   <MiniStat value={String(nutWeek.average.kcal)} label="AVG KCAL" />
                 </View>
@@ -360,7 +359,7 @@ export default function ClientDetail() {
             {pendingOcr.length > 0 ? (
               <GlassCard glowColor={theme.colors.warning}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
-                  <Ionicons name="sparkles" size={16} color={theme.colors.warning} />
+                  <Icon name="sparkles" size={16} color={theme.colors.warning} />
                   <Text variant="label" muted style={{ flex: 1 }}>
                     Pending InBody readings
                   </Text>
@@ -384,7 +383,7 @@ export default function ClientDetail() {
                         opacity: pressed ? 0.6 : 1,
                       })}
                     >
-                      <Ionicons name="document-text" size={18} color={theme.colors.primary} />
+                      <Icon name="document-text" size={18} color={theme.colors.primary} />
                       <View style={{ flex: 1 }}>
                         <Text variant="body">
                           {Math.round(m.weight_grams / 100) / 10} kg
@@ -397,7 +396,7 @@ export default function ClientDetail() {
                       <Text variant="caption" color="warning">
                         Review
                       </Text>
-                      <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                      <Icon name="chevron-forward" size={18} color={theme.colors.textMuted} />
                     </Pressable>
                   ))}
                 </View>
@@ -427,11 +426,11 @@ export default function ClientDetail() {
                       opacity: pressed ? 0.6 : 1,
                     })}
                   >
-                    <Ionicons name={row.icon} size={18} color={theme.colors.primary} />
+                    <Icon name={row.icon} size={18} color={theme.colors.primary} />
                     <Text variant="body" style={{ flex: 1 }}>
                       {row.label}
                     </Text>
-                    <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                    <Icon name="chevron-forward" size={18} color={theme.colors.textMuted} />
                   </Pressable>
                 ))}
               </View>
@@ -439,7 +438,7 @@ export default function ClientDetail() {
                 title="Add InBody reading"
                 variant="secondary"
                 style={{ marginTop: theme.spacing.md }}
-                left={<Ionicons name="add" size={18} color={theme.colors.text} />}
+                left={<Icon name="add" size={18} color={theme.colors.text} />}
                 onPress={() =>
                   router.push({ pathname: '/coach/body-metric', params: { clientId: id, clientName: name ?? '' } })
                 }
@@ -475,7 +474,7 @@ export default function ClientDetail() {
 
             <Button
               title="Assign from templates"
-              left={<Ionicons name="add" size={18} color={theme.colors.onPrimary} />}
+              left={<Icon name="add" size={18} color={theme.colors.onPrimary} />}
               onPress={() => router.push('/coach/templates')}
             />
 
@@ -502,13 +501,13 @@ export default function ClientDetail() {
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name={item.type === 'training' ? 'barbell' : 'restaurant'} size={20} color={theme.colors.primary} />
+                <Icon name={item.type === 'training' ? 'barbell' : 'restaurant'} size={20} color={theme.colors.primary} />
               </View>
               <View style={{ flex: 1, gap: 4 }}>
                 <Text variant="bodyStrong">{item.title}</Text>
                 <Badge label={item.status} tone={STATUS_TONE[item.status]} />
               </View>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+              <Icon name="chevron-forward" size={20} color={theme.colors.textMuted} />
             </View>
           </GlassCard>
         )}
@@ -532,12 +531,12 @@ export default function ClientDetail() {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-              <Ionicons name="sparkles" size={20} color={theme.colors.primary} />
+              <Icon name="sparkles" size={20} color={theme.colors.primary} />
               <Text variant="title" style={{ flex: 1 }}>
                 Generate a plan
               </Text>
               <Pressable onPress={() => !aiBusy && setAiOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={24} color={theme.colors.textMuted} />
+                <Icon name="close" size={24} color={theme.colors.textMuted} />
               </Pressable>
             </View>
             <Text variant="caption" muted>

@@ -1,11 +1,11 @@
-import { Ionicons } from '@expo/vector-icons';
 import { View } from 'react-native';
 import { theme } from '@/theme';
 import { Text } from './Text';
 import { Button } from './Button';
+import { Icon, type IconName } from './Icon';
 
 export type EmptyStateProps = {
-  icon?: keyof typeof Ionicons.glyphMap;
+  icon?: IconName;
   title: string;
   subtitle?: string;
   actionLabel?: string;
@@ -28,7 +28,7 @@ export function EmptyState({ icon = 'sparkles-outline', title, subtitle, actionL
           justifyContent: 'center',
         }}
       >
-        <Ionicons name={icon} size={28} color={theme.colors.textMuted} />
+        <Icon name={icon} size={28} color={theme.colors.textMuted} />
       </View>
       <Text variant="title" align="center">
         {title}

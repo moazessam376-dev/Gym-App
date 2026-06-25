@@ -4,14 +4,13 @@
 // filter. Tapping a card opens the public coach portfolio. Authenticated members only.
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { forwardChevron, textStart } from '../../src/lib/rtl';
 import { usePublicCoaches } from '../../src/lib/queries/profiles';
 import type { PublicCoachListItem } from '../../src/lib/public-profiles';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
-import { Screen, Text, Input, GlassCard, Chip, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, Input, GlassCard, Chip, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 function label(s: string): string {
@@ -34,7 +33,7 @@ function CoachCard({ coach, onPress }: { coach: PublicCoachListItem; onPress: ()
             </Text>
           ) : null}
         </View>
-        <Ionicons name={forwardChevron()} size={18} color={theme.colors.textMuted} />
+        <Icon name={forwardChevron()} size={18} color={theme.colors.textMuted} />
       </View>
       {coach.specialties.length > 0 ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>

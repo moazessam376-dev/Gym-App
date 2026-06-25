@@ -1,3 +1,5 @@
+export { Icon } from './Icon';
+export type { IconName } from './Icon';
 export { Text } from './Text';
 export type { TextProps } from './Text';
 export { Screen } from './Screen';
@@ -33,3 +35,11 @@ export { LineChart } from './LineChart';
 export type { LineChartProps, LineChartPoint } from './LineChart';
 export { SignedImage } from './SignedImage';
 export type { SignedImageProps } from './SignedImage';
+export { RankCrest } from './RankCrest';
+export type { RankCrestProps } from './RankCrest';
+export { TierChip } from './TierChip';
+export type { TierChipProps } from './TierChip';
+export { MacroBar } from './MacroBar';
+export type { MacroBarProps } from './MacroBar';
+export { KpiTile } from './KpiTile';
+export type { KpiTileProps, KpiTone } from './KpiTile';

@@ -7,8 +7,6 @@ import { useCoachLeaderboard, useRefreshOnFocus } from '../../src/lib/queries/ho
 import { Screen, Text, Card, Avatar, Badge, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
-const MEDALS = ['#FFD43B', '#C0C7D0', '#E8985E']; // gold / silver / bronze
-
 export default function LeaderboardTab() {
   const { t } = useTranslation();
   // Cached + warmed on app open; ranking (sort + rank index) happens in the query.
@@ -44,31 +42,29 @@ export default function LeaderboardTab() {
           )
         }
         renderItem={({ item }) => {
-          const medal = item.rank <= 3 ? MEDALS[item.rank - 1] : null;
+          const topThree = item.rank <= 3;
           return (
-            <Card elevated={item.rank <= 3}>
+            <Card
+              elevated={topThree}
+              style={item.rank === 1 ? { borderColor: theme.colors.primary } : undefined}
+            >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
                 <View style={{ width: 28, alignItems: 'center' }}>
-                  <Text variant="title" color={medal ?? theme.colors.textMuted}>
+                  <Text
+                    color={topThree ? theme.colors.primary : theme.colors.textMuted}
+                    style={{ fontFamily: theme.fontFamily.monoBold, fontSize: 16 }}
+                  >
                     {item.rank}
                   </Text>
                 </View>
-                <View
-                  style={
-                    medal
-                      ? { borderWidth: 2, borderColor: medal, borderRadius: theme.radii.full, padding: 2 }
-                      : undefined
-                  }
-                >
-                  <Avatar name={item.full_name ?? 'Client'} size={40} />
-                </View>
+                <Avatar name={item.full_name ?? 'Client'} size={40} />
                 <View style={{ flex: 1 }}>
                   <Text variant="title">{item.full_name ?? t('home.client')}</Text>
                   <Text variant="caption" muted>
                     {t('ranks.setsLogged', { count: item.sets_done })}
                   </Text>
                 </View>
-                <Badge label={`${item.sessions_done} 🔥`} tone="primary" solid={item.rank === 1} />
+                <Badge label={String(item.sessions_done)} tone="primary" solid={item.rank === 1} />
               </View>
             </Card>
           );

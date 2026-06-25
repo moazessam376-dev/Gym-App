@@ -9,7 +9,7 @@
 //     SecureStore when the flow started, so the exchange happens on-device.
 //
 // To enable: create a Google Cloud OAuth client, turn the Google provider on in
-// Supabase, and add the app's redirect (gymapp:// …) to Auth → URL Configuration.
+// Supabase, and add the app's redirect (raptor:// …) to Auth → URL Configuration.
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { createURL, parse } from 'expo-linking';

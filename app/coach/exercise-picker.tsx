@@ -2,13 +2,12 @@
 // own customs, filter by muscle group, or create a custom one inline.
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { createExercise, listExercises, type Exercise } from '../../src/lib/library';
 import { createExerciseRow, listExerciseRows } from '../../src/lib/plans';
 import { createExerciseSchema, muscleGroupSchema, type MuscleGroup } from '../../src/schemas/library';
-import { Screen, Text, Input, Button, GlassCard, Chip } from '../../src/components/ui';
+import { Icon, Screen, Text, Input, Button, GlassCard, Chip } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 const GROUPS = muscleGroupSchema.options;
@@ -162,7 +161,7 @@ export default function ExercisePicker() {
                       {added ? ' · in day' : ''}
                     </Text>
                   </View>
-                  <Ionicons
+                  <Icon
                     name={added ? 'checkmark-circle' : 'add-circle'}
                     size={24}
                     color={added ? theme.colors.textMuted : theme.colors.primary}

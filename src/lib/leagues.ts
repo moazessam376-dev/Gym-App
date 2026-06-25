@@ -7,6 +7,7 @@
 // NOT a security boundary (the anti-cheat boundary is verified-only metrics in 0045).
 import { getMyAthleteProfile } from './athlete-profile';
 import { listBodyMetrics } from './body-metrics';
+import { tier } from '../theme';
 import type { Sex } from '../schemas/athlete-profile';
 
 // Bronze (entry) → Apex (top). Order matters: index = relative rank of the tier.
@@ -48,17 +49,9 @@ const FFMI_BANDS: Record<Sex, { tier: TierId; min: number }[]> = {
   ],
 };
 
-// Accent color per tier — used by the tier badge (neon-dark friendly).
-export const TIER_COLORS: Record<TierId, string> = {
-  bronze: '#CD7F32',
-  silver: '#C0C7D0',
-  gold: '#FFD43B',
-  platinum: '#5FE0C0',
-  diamond: '#6E8BFF',
-  master: '#B57BFF',
-  grandmaster: '#FF7BD5',
-  apex: '#FF5E5E',
-};
+// Accent color per tier — the single source of truth is the brand `theme.tier`
+// ramp (Bronze → Apex). Never hardcode a tier hex (brand rule).
+export const TIER_COLORS: Record<TierId, string> = tier;
 
 /**
  * FFMI from verified body-comp + height — mirrors the SQL in migration 0045 exactly

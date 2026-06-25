@@ -1,5 +1,5 @@
 {
-  "name": "gym-app",
+  "name": "raptor",
   "version": "0.0.0",
   "private": true,
   "main": "expo-router/entry",
@@ -20,6 +20,7 @@
     "prepare": "bash scripts/install-hooks.sh || true"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/pg": "^8.20.0",
     "@types/react": "~19.1.10",
     "babel-preset-expo": "~54.0.0",
@@ -30,9 +31,9 @@
     "vitest": "^4.1.9"
   },
   "dependencies": {
+    "@expo-google-fonts/geist": "^0.4.2",
     "@expo-google-fonts/inter": "^0.4.2",
-    "@expo-google-fonts/space-grotesk": "^0.4.1",
-    "@expo/vector-icons": "^15.0.3",
+    "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@supabase/supabase-js": "^2.108.2",
     "@tanstack/react-query": "^5.101.1",
     "@types/react": "~19.1.10",
@@ -52,6 +53,7 @@
     "expo-secure-store": "~15.0.8",
     "expo-web-browser": "~15.0.11",
     "i18next": "^26.3.1",
+    "lucide-react-native": "^1.21.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-i18next": "^17.0.8",

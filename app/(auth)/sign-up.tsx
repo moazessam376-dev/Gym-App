@@ -5,6 +5,7 @@ import { supabase } from '../../src/lib/supabase';
 import { credentialsSchema } from '../../src/schemas/auth';
 import { Screen, Text, Input, Button } from '../../src/components/ui';
 import { GoogleSignInButton } from '../../src/components/GoogleSignInButton';
+import { Wordmark } from '../../src/components/brand';
 import { theme } from '../../src/theme';
 
 export default function SignUp() {
@@ -56,10 +57,10 @@ export default function SignUp() {
     <Screen gradient padded={false}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1, justifyContent: 'center', padding: theme.spacing.xl, gap: theme.spacing.lg }}>
-          <View style={{ gap: theme.spacing.xs, marginBottom: theme.spacing.sm }}>
-            <Text variant="h1">Create your account</Text>
-            <Text variant="body" muted>
-              Start your Gym-App journey
+          <View style={{ alignItems: 'center', gap: theme.spacing.xs, marginBottom: theme.spacing.md }}>
+            <Wordmark size={44} />
+            <Text variant="label" muted style={{ letterSpacing: 2 }}>
+              Create your account
             </Text>
           </View>
 

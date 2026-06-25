@@ -8,8 +8,8 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { TFunction } from 'i18next';
 import type { Href } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { supabase } from './supabase';
+import type { IconName } from '../components/ui/Icon';
 import { notificationPrefsSchema } from '../schemas/notification';
 
 export type NotificationType = 'message' | 'coach_comment' | 'plan_published' | 'pr_achieved';
@@ -25,9 +25,7 @@ export type NotificationRow = {
   created_at: string;
 };
 
-type IconName = keyof typeof Ionicons.glyphMap;
-
-const COLS = 'id, type, actor_id, params, entity_type, entity_id, read_at, created_at';
+const COLS ='id, type, actor_id, params, entity_type, entity_id, read_at, created_at';
 
 /** Newest-first page of the signed-in user's feed (RLS scopes it to them). */
 export async function listNotifications(limit = 50): Promise<NotificationRow[]> {
@@ -99,6 +97,16 @@ const ICONS: Record<NotificationType, IconName> = {
   coach_comment: 'chatbox-ellipses',
   plan_published: 'document-text',
   pr_achieved: 'trophy',
+};
+
+// Per-type semantic accent (brand notification colors): chat = purple, coach note =
+// cobalt, plan = Signal cyan, PR = positive green. Hex values that aren't theme tokens
+// (chat purple / cobalt) are the brand data-viz hues; callers pass these to <Icon>.
+export const NOTIFICATION_COLORS: Record<NotificationType, string> = {
+  message: '#9B7BF5', // chat purple
+  coach_comment: '#6B8AFF', // cobalt
+  plan_published: '#3FD9C0', // Signal cyan
+  pr_achieved: '#3FD98A', // positive
 };
 
 function str(params: Record<string, unknown>, key: string): string {

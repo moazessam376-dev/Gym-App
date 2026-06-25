@@ -3,14 +3,13 @@
 // Each pillar card taps through to its dedicated screen.
 import { useMemo } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { forwardChevron } from '../../src/lib/rtl';
 import { useStreak, useProgressData, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { gramsToDisplay, formatWeight } from '../../src/lib/units';
-import { Screen, Text, Card, GlassCard, Badge, EmptyState, LineChart } from '../../src/components/ui';
+import { Icon, type IconName, Screen, Text, Card, GlassCard, Badge, EmptyState, LineChart } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 function formatDate(d: string): string {
@@ -34,7 +33,7 @@ function PillarRow({
   hint,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   label: string;
   hint: string;
   onPress: () => void;
@@ -52,7 +51,7 @@ function PillarRow({
             justifyContent: 'center',
           }}
         >
-          <Ionicons name={icon} size={20} color={theme.colors.primary} />
+          <Icon name={icon} size={20} color={theme.colors.primary} />
         </View>
         <View style={{ flex: 1 }}>
           <Text variant="bodyStrong">{label}</Text>
@@ -60,7 +59,7 @@ function PillarRow({
             {hint}
           </Text>
         </View>
-        <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
+        <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
       </View>
     </GlassCard>
   );
@@ -144,7 +143,7 @@ export default function ProgressTab() {
                   <Text variant="bodyStrong" color="primary">
                     {latestWeight ? formatWeight(latestWeight.weight_grams, unit) : t('progress.logWeight')}
                   </Text>
-                  <Ionicons name={forwardChevron()} size={18} color={theme.colors.textMuted} />
+                  <Icon name={forwardChevron()} size={18} color={theme.colors.textMuted} />
                 </View>
               </View>
               {chartData.length >= 2 ? (
@@ -209,7 +208,7 @@ export default function ProgressTab() {
           return (
             <Card onPress={open}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-                <Ionicons
+                <Icon
                   name={item.status === 'completed' ? 'checkmark-circle' : 'ellipse-outline'}
                   size={26}
                   color={item.status === 'completed' ? theme.colors.success : theme.colors.textMuted}

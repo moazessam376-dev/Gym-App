@@ -8,7 +8,6 @@
 // anchor (foundations §4) is unchanged: only coach-confirmed numbers feed ranks/progress.
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
 import { countInbodyToday, listMediaFor, type Media } from '../../../src/lib/media';
@@ -20,7 +19,7 @@ import {
 } from '../../../src/lib/body-metrics';
 import { requestInBodyOcr, type OcrStatus } from '../../../src/lib/inbody-ocr';
 import { captureAndUploadPhoto, type PickSource } from '../../../src/lib/upload';
-import { Screen, Text, Button, GlassCard, SignedImage, EmptyState } from '../../../src/components/ui';
+import { Icon, Screen, Text, Button, GlassCard, SignedImage, EmptyState } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 function longDate(iso: string): string {
@@ -46,7 +45,7 @@ function CommentList({ comments }: { comments: MetricComment[] }) {
     <View style={{ gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
       {comments.map((c) => (
         <View key={c.id} style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-          <Ionicons name="chatbubble-ellipses" size={16} color={theme.colors.primary} style={{ marginTop: 2 }} />
+          <Icon name="chatbubble-ellipses" size={16} color={theme.colors.primary} style={{ marginTop: 2 }} />
           <View style={{ flex: 1 }}>
             <Text variant="body">{c.body}</Text>
             <Text variant="label" muted style={{ fontSize: 10, marginTop: 2 }}>
@@ -172,7 +171,7 @@ export default function InBodyScans() {
               <GlassCard style={{ gap: theme.spacing.sm }}>
                 {submittedToday ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.success} />
+                    <Icon name="checkmark-circle" size={18} color={theme.colors.success} />
                     <Text variant="caption" muted style={{ flex: 1 }}>
                       You’ve submitted today’s InBody — your coach will review it. Come back tomorrow for your next one.
                     </Text>
@@ -189,7 +188,7 @@ export default function InBodyScans() {
                         style={{ flex: 1 }}
                         disabled={uploading}
                         onPress={() => add('camera')}
-                        left={<Ionicons name="camera" size={18} color={theme.colors.text} />}
+                        left={<Icon name="camera" size={18} color={theme.colors.text} />}
                       />
                       <Button
                         title="Library"
@@ -197,7 +196,7 @@ export default function InBodyScans() {
                         style={{ flex: 1 }}
                         disabled={uploading}
                         onPress={() => add('library')}
-                        left={<Ionicons name="images" size={18} color={theme.colors.text} />}
+                        left={<Icon name="images" size={18} color={theme.colors.text} />}
                       />
                     </View>
                     {uploading ? (
@@ -238,11 +237,11 @@ export default function InBodyScans() {
               <Pressable onPress={() => router.push({ pathname: '/client/progress/view', params: { mediaId: item.id } })}>
                 <SignedImage mediaId={item.id} style={{ width: '100%', height: 200 }} resizeMode="cover" />
                 <View style={{ padding: theme.spacing.md, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <Ionicons name="document-text" size={18} color={theme.colors.primary} />
+                  <Icon name="document-text" size={18} color={theme.colors.primary} />
                   <Text variant="bodyStrong" style={{ flex: 1 }}>
                     {longDate(item.created_at)}
                   </Text>
-                  <Ionicons name="expand-outline" size={18} color={theme.colors.textMuted} />
+                  <Icon name="expand-outline" size={18} color={theme.colors.textMuted} />
                 </View>
               </Pressable>
 
@@ -262,14 +261,14 @@ export default function InBodyScans() {
                       variant="secondary"
                       fullWidth={false}
                       onPress={() => openConfirm(link.metric_id)}
-                      left={<Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />}
+                      left={<Icon name="checkmark-circle" size={16} color={theme.colors.success} />}
                     />
                   ) : link ? (
                     <Button
                       title="Review reading"
                       fullWidth={false}
                       onPress={() => openConfirm(link.metric_id)}
-                      left={<Ionicons name="reader" size={16} color={theme.colors.onPrimary} />}
+                      left={<Icon name="reader" size={16} color={theme.colors.onPrimary} />}
                     />
                   ) : (
                     <Button
@@ -279,19 +278,19 @@ export default function InBodyScans() {
                       loading={ocrBusyId === item.id}
                       disabled={ocrBusyId != null}
                       onPress={() => readWithAi(item.id)}
-                      left={<Ionicons name="sparkles" size={16} color={theme.colors.text} />}
+                      left={<Icon name="sparkles" size={16} color={theme.colors.text} />}
                     />
                   )
                 ) : link?.verified ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.success} />
+                    <Icon name="checkmark-circle" size={18} color={theme.colors.success} />
                     <Text variant="caption" color="success">
                       Reviewed by your coach
                     </Text>
                   </View>
                 ) : (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <Ionicons name="hourglass-outline" size={18} color={theme.colors.warning} />
+                    <Icon name="hourglass-outline" size={18} color={theme.colors.warning} />
                     <Text variant="caption" muted>
                       Submitted — awaiting coach review
                     </Text>

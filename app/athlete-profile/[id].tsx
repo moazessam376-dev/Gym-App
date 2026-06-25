@@ -3,13 +3,12 @@
 // height, sex, injuries, coach) are never selected by the RPC, so they cannot appear here
 // regardless of the client. A private/missing profile renders the not-available state.
 import { ActivityIndicator, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { textStart } from '../../src/lib/rtl';
 import { usePublicAthleteProfile } from '../../src/lib/queries/profiles';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
-import { Screen, Text, GlassCard, Badge, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, GlassCard, Badge, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function AthleteProfileScreen() {
@@ -62,7 +61,7 @@ export default function AthleteProfileScreen() {
           <GlassCard style={{ gap: theme.spacing.md }}>
             {p.public_achievements.map((a, i) => (
               <View key={i} style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                <Ionicons name="trophy-outline" size={18} color={theme.colors.primary} />
+                <Icon name="trophy-outline" size={18} color={theme.colors.primary} />
                 <Text variant="body" style={[{ flex: 1 }, textStart]}>
                   {a}
                 </Text>

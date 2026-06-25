@@ -3,7 +3,6 @@
 // block-grouped exercises with the coach's cues. Nutrition: meals → foods + macros.
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
@@ -23,7 +22,7 @@ import {
   type Week,
 } from '../../../src/lib/plans';
 import { addMacros, BLOCK_LABEL, BLOCK_ORDER, EMPTY_MACROS, sumMacros, type Macros } from '../../../src/lib/plan-ui';
-import { Screen, Text, Card, GlassCard, Badge, Button } from '../../../src/components/ui';
+import { Icon, Screen, Text, Card, GlassCard, Badge, Button } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 function CoachNote({ text }: { text: string }) {
@@ -32,13 +31,13 @@ function CoachNote({ text }: { text: string }) {
       style={{
         flexDirection: 'row',
         gap: theme.spacing.sm,
-        backgroundColor: 'rgba(61,90,254,0.12)',
+        backgroundColor: theme.colors.primarySoft,
         borderRadius: theme.radii.sm,
         padding: theme.spacing.md,
         marginTop: theme.spacing.sm,
       }}
     >
-      <Ionicons name="chatbubble-ellipses" size={15} color={theme.colors.primary} />
+      <Icon name="chatbubble-ellipses" size={15} color={theme.colors.primary} />
       <Text variant="caption" color="link" style={{ flex: 1, fontStyle: 'italic' }}>
         {text}
       </Text>
@@ -231,7 +230,7 @@ export default function ClientPlanView() {
                   {ex.length > 0 ? (
                     <Button
                       title={t('planView.logWorkout')}
-                      left={<Ionicons name="barbell" size={18} color={theme.colors.onPrimary} />}
+                      left={<Icon name="barbell" size={18} color={theme.colors.onPrimary} />}
                       style={{ marginTop: theme.spacing.md }}
                       onPress={() =>
                         router.push({

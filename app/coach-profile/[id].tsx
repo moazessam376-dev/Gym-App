@@ -4,14 +4,13 @@
 // coach helps achieve" highlights (counts only, never a client identity). Authenticated
 // members only in V1.
 import { ActivityIndicator, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { textStart } from '../../src/lib/rtl';
 import { usePublicCoachProfile, useCoachPublicHighlights } from '../../src/lib/queries/profiles';
 import type { CoachHighlight } from '../../src/lib/public-profiles';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
-import { Screen, Text, GlassCard, Chip, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, GlassCard, Chip, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 function label(s: string): string {
@@ -129,7 +128,7 @@ export default function CoachProfileScreen() {
           <GlassCard style={{ gap: theme.spacing.md }}>
             {p.achievements.map((a, i) => (
               <View key={i} style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                <Ionicons name="trophy-outline" size={18} color={theme.colors.primary} />
+                <Icon name="trophy-outline" size={18} color={theme.colors.primary} />
                 <Text variant="body" style={[{ flex: 1 }, textStart]}>
                   {a}
                 </Text>

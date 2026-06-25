@@ -56,6 +56,7 @@ import {
   type Macros,
 } from '../../../src/lib/plan-ui';
 import { adjustPlan, getPlanInsight } from '../../../src/lib/coach-ai';
+import { Icon } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 export default function PlanEditor() {
@@ -515,7 +516,7 @@ export default function PlanEditor() {
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={styles.sheetTitle}>{t('planEditor.adjustWithAi')}</Text>
                 <Pressable onPress={() => !adjustBusy && setAdjustOpen(false)} hitSlop={8}>
-                  <Text style={{ color: theme.colors.textMuted, fontSize: 22 }}>✕</Text>
+                  <Icon name="x" size={22} color={theme.colors.textMuted} />
                 </Pressable>
               </View>
               <Text style={styles.sheetHint}>
@@ -532,7 +533,7 @@ export default function PlanEditor() {
               />
               <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
                 <Pressable onPress={() => !adjustBusy && setAdjustOpen(false)} style={{ paddingVertical: 13, paddingHorizontal: 16 }}>
-                  <Text style={{ color: theme.colors.link, fontSize: 15, fontWeight: '600' }}>{t('common.cancel')}</Text>
+                  <Text style={{ color: theme.colors.link, fontSize: 15, fontFamily: theme.fontFamily.bodySemiBold }}>{t('common.cancel')}</Text>
                 </Pressable>
                 <Pressable style={[styles.adjustSend, adjustBusy && { opacity: 0.6 }]} onPress={onAdjust} disabled={adjustBusy}>
                   {adjustBusy ? (
@@ -595,7 +596,7 @@ function EditableText({
         }}
       >
         <Text style={textStyle}>{value}</Text>
-        <Text style={styles.pencil}>✎</Text>
+        <Icon name="pencil" size={14} color={theme.colors.textMuted} />
       </Pressable>
     );
   }
@@ -657,7 +658,7 @@ function NoteEditor({
           setEditing(true);
         }}
       >
-        <Text style={styles.noteIcon}>💬</Text>
+        <Icon name="message-square" size={14} color={theme.colors.textMuted} />
         {value ? <Text style={styles.noteText}>{value}</Text> : <Text style={styles.notePrompt}>{addPrompt}</Text>}
       </Pressable>
     );
@@ -719,13 +720,13 @@ function DayCard({
           <EditableText value={day.name} onSave={onSaveName} textStyle={styles.cardTitle} placeholder={t('planEditor.dayNamePlaceholder')} />
         </View>
         <Pressable hitSlop={8} onPress={onMoveUp} disabled={!canMoveUp}>
-          <Text style={[styles.move, !canMoveUp && styles.moveOff]}>▲</Text>
+          <Icon name="chevron-up" size={18} color={canMoveUp ? theme.colors.primary : theme.colors.borderStrong} />
         </Pressable>
         <Pressable hitSlop={8} onPress={onMoveDown} disabled={!canMoveDown}>
-          <Text style={[styles.move, !canMoveDown && styles.moveOff]}>▼</Text>
+          <Icon name="chevron-down" size={18} color={canMoveDown ? theme.colors.primary : theme.colors.borderStrong} />
         </Pressable>
         <Pressable hitSlop={8} onPress={onDelete}>
-          <Text style={styles.remove}>✕</Text>
+          <Icon name="x" size={18} color={theme.colors.danger} />
         </Pressable>
       </View>
       <NoteEditor addPrompt={t('planEditor.addDayNote')} value={day.note} placeholder={t('planEditor.dayNotePlaceholder')} onSave={onSaveNote} />
@@ -777,7 +778,7 @@ function MealCard({
       <View style={styles.cardHead}>
         <Text style={styles.cardTitle}>{meal.name}</Text>
         <Pressable hitSlop={10} onPress={onDelete}>
-          <Text style={styles.remove}>✕</Text>
+          <Icon name="x" size={17} color={theme.colors.danger} />
         </Pressable>
       </View>
       {items.length > 0 ? (
@@ -799,27 +800,28 @@ function MealCard({
 }
 
 const c = theme.colors;
+const f = theme.fontFamily;
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg },
   wrap: { padding: 16, paddingBottom: 160, gap: 10 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  title: { fontSize: 24, fontWeight: '800', color: c.text },
-  type: { fontSize: 14, color: c.textMuted, textTransform: 'capitalize' },
+  title: { fontSize: 24, fontFamily: f.displayBold, color: c.text },
+  type: { fontSize: 14, fontFamily: f.bodyRegular, color: c.textMuted, textTransform: 'capitalize' },
   status: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   template: { backgroundColor: c.secondary },
-  statusText: { color: c.white, fontSize: 12, fontWeight: '700', textTransform: 'capitalize' },
+  statusText: { color: c.onPrimary, fontSize: 12, fontFamily: f.bodyBold, textTransform: 'capitalize' },
   headerBtn: { borderRadius: 10, paddingVertical: 13, alignItems: 'center', marginTop: 6 },
   assign: { backgroundColor: c.secondary },
   publish: { backgroundColor: c.success },
   unpublish: { backgroundColor: c.warning },
   adjust: { backgroundColor: c.glass, borderWidth: 1, borderColor: c.glassBorder },
-  headerBtnText: { color: c.white, fontSize: 15, fontWeight: '600' },
+  headerBtnText: { color: c.white, fontSize: 15, fontFamily: f.bodySemiBold },
   sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: c.overlay },
   sheet: { backgroundColor: c.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20, paddingBottom: 28, gap: 12 },
-  sheetTitle: { color: c.text, fontSize: 18, fontWeight: '700', flex: 1 },
-  sheetHint: { color: c.textMuted, fontSize: 13 },
+  sheetTitle: { color: c.text, fontSize: 18, fontFamily: f.displaySemiBold, flex: 1 },
+  sheetHint: { color: c.textMuted, fontSize: 13, fontFamily: f.bodyRegular },
   adjustInput: {
     backgroundColor: c.bg,
     borderWidth: 1,
@@ -828,46 +830,44 @@ const styles = StyleSheet.create({
     padding: 12,
     color: c.text,
     fontSize: 15,
+    fontFamily: f.bodyRegular,
     minHeight: 90,
     textAlignVertical: 'top',
   },
   adjustSend: { backgroundColor: c.primary, borderRadius: 10, paddingVertical: 13, alignItems: 'center', flex: 1 },
-  adjustSendText: { color: c.onPrimary, fontSize: 15, fontWeight: '700' },
+  adjustSendText: { color: c.onPrimary, fontSize: 15, fontFamily: f.bodyBold },
   totalCard: { backgroundColor: c.glass, borderWidth: 1, borderColor: c.glassBorder, borderRadius: 12, padding: 12, marginTop: 4 },
-  totalLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: c.primary },
-  totalMacros: { fontSize: 15, fontWeight: '700', color: c.text, marginTop: 2 },
+  totalLabel: { fontSize: 11, fontFamily: f.bodyBold, letterSpacing: 1, color: c.primary },
+  totalMacros: { fontSize: 15, fontFamily: f.monoBold, color: c.text, marginTop: 2 },
   weekBar: { marginTop: 6, gap: 8 },
   weekPills: { gap: 8, paddingVertical: 2 },
   weekPill: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: c.glass, borderWidth: 1, borderColor: c.glassBorder },
   weekPillActive: { backgroundColor: c.primary, borderColor: c.primary },
-  weekPillText: { fontSize: 13, fontWeight: '700', color: c.textMuted },
+  weekPillText: { fontSize: 13, fontFamily: f.bodyBold, color: c.textMuted },
   weekPillTextActive: { color: c.onPrimary },
   weekAdd: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: c.glassStrong, borderWidth: 1, borderColor: c.glassBorder },
-  weekAddText: { fontSize: 13, fontWeight: '700', color: c.primary },
+  weekAddText: { fontSize: 13, fontFamily: f.bodyBold, color: c.primary },
   weekActions: { flexDirection: 'row', gap: 16 },
-  weekActionText: { fontSize: 13, fontWeight: '600', color: c.primary },
+  weekActionText: { fontSize: 13, fontFamily: f.bodySemiBold, color: c.primary },
   weekDelete: { color: c.danger },
   card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 14, padding: 14, gap: 4, marginTop: 6 },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: c.text },
-  move: { fontSize: 15, color: c.primary, fontWeight: '700' },
-  moveOff: { color: c.borderStrong },
-  remove: { fontSize: 17, color: c.danger, fontWeight: '700' },
+  cardTitle: { fontSize: 17, fontFamily: f.displaySemiBold, color: c.text },
   blockLabel: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: f.bodyBold,
     letterSpacing: 0.5,
     color: c.textMuted,
     marginTop: 8,
     textTransform: 'uppercase',
   },
-  mealMacros: { fontSize: 13, color: c.primary, fontWeight: '600', marginBottom: 2 },
+  mealMacros: { fontSize: 13, color: c.primary, fontFamily: f.monoMedium, marginBottom: 2 },
   exRow: { backgroundColor: c.glass, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginTop: 6 },
-  exName: { fontSize: 15, fontWeight: '600', color: c.text },
-  exMeta: { fontSize: 13, color: c.textMuted, marginTop: 1 },
-  exNote: { fontSize: 13, color: c.primary, fontStyle: 'italic', marginTop: 3 },
+  exName: { fontSize: 15, fontFamily: f.bodySemiBold, color: c.text },
+  exMeta: { fontSize: 13, fontFamily: f.bodyRegular, color: c.textMuted, marginTop: 1 },
+  exNote: { fontSize: 13, fontFamily: f.bodyRegular, color: c.primary, fontStyle: 'italic', marginTop: 3 },
   addInline: { paddingVertical: 10, marginTop: 4 },
-  addInlineText: { color: c.primary, fontWeight: '600', fontSize: 15 },
+  addInlineText: { color: c.primary, fontFamily: f.bodySemiBold, fontSize: 15 },
   addBox: { gap: 8, marginTop: 12 },
   input: {
     borderWidth: 1,
@@ -876,15 +876,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
+    fontFamily: f.bodyRegular,
     color: c.text,
     backgroundColor: c.surface,
   },
   addBtn: { backgroundColor: c.primary, borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
-  addBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: '600' },
-  empty: { fontSize: 15, color: c.textMuted },
+  addBtnText: { color: c.onPrimary, fontSize: 16, fontFamily: f.bodySemiBold },
+  empty: { fontSize: 15, fontFamily: f.bodyRegular, color: c.textMuted },
   // Editable single-line text
   editableRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  pencil: { fontSize: 14, color: c.textMuted },
   editableEdit: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   editableInput: {
     flex: 1,
@@ -894,14 +894,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 16,
+    fontFamily: f.bodyRegular,
     color: c.text,
     backgroundColor: c.surface,
   },
   // Note editor
   noteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingVertical: 6 },
-  noteIcon: { fontSize: 14 },
-  noteText: { flex: 1, fontSize: 14, color: c.primary, fontStyle: 'italic' },
-  notePrompt: { flex: 1, fontSize: 14, color: c.textMuted },
+  noteText: { flex: 1, fontSize: 14, fontFamily: f.bodyRegular, color: c.primary, fontStyle: 'italic' },
+  notePrompt: { flex: 1, fontSize: 14, fontFamily: f.bodyRegular, color: c.textMuted },
   noteEdit: { gap: 8, paddingVertical: 6 },
   noteInput: {
     borderWidth: 1,
@@ -910,6 +910,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
+    fontFamily: f.bodyRegular,
     color: c.text,
     backgroundColor: c.surface,
     minHeight: 60,
@@ -917,6 +918,6 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   noteBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 18 },
-  noteCancel: { fontSize: 14, fontWeight: '600', color: c.textMuted },
-  noteSave: { fontSize: 14, fontWeight: '700', color: c.primary },
+  noteCancel: { fontSize: 14, fontFamily: f.bodySemiBold, color: c.textMuted },
+  noteSave: { fontSize: 14, fontFamily: f.bodyBold, color: c.primary },
 });

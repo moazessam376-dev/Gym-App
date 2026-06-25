@@ -37,12 +37,12 @@ function Stat({ label, value, delta, lowerIsBetter }: { label: string; value: st
   }
   return (
     <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-      <Text variant="title">{value}</Text>
+      <Text style={{ fontFamily: theme.fontFamily.monoBold, fontSize: 19, color: theme.colors.text }}>{value}</Text>
       <Text variant="label" muted style={{ fontSize: 9 }}>
         {label.toUpperCase()}
       </Text>
       {delta != null ? (
-        <Text variant="caption" style={{ color, fontSize: 11 }}>
+        <Text style={{ color, fontSize: 11, fontFamily: theme.fontFamily.monoMedium }}>
           {delta > 0 ? '+' : ''}
           {delta}
         </Text>

@@ -8,7 +8,6 @@
 //     comments the client will read. Confirm flips it verified; Discard deletes it.
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import {
@@ -25,7 +24,7 @@ import {
   type Segment,
 } from '../../src/lib/body-metrics';
 import { requestInBodyInsights } from '../../src/lib/inbody-ocr';
-import { Screen, Text, Input, Button, GlassCard, SignedImage } from '../../src/components/ui';
+import { Icon, Screen, Text, Input, Button, GlassCard, SignedImage } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 function todayISODate(): string {
@@ -340,7 +339,7 @@ export default function BodyMetricScreen() {
               <GlassCard padded={false} style={{ overflow: 'hidden' }}>
                 <SignedImage mediaId={scanMediaId} style={{ width: '100%', height: 260 }} resizeMode="contain" />
                 <View style={{ padding: theme.spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: theme.spacing.xs }}>
-                  <Ionicons name="expand-outline" size={14} color={theme.colors.textMuted} />
+                  <Icon name="expand-outline" size={14} color={theme.colors.textMuted} />
                   <Text variant="label" muted style={{ fontSize: 10 }}>
                     TAP TO ZOOM
                   </Text>
@@ -377,7 +376,7 @@ export default function BodyMetricScreen() {
           {confirmMode ? (
             <GlassCard style={{ gap: theme.spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                <Ionicons name="sparkles" size={16} color={theme.colors.primary} />
+                <Icon name="sparkles" size={16} color={theme.colors.primary} />
                 <Text variant="label" muted style={{ flex: 1 }}>
                   AI analysis (coach only)
                 </Text>
@@ -427,7 +426,7 @@ export default function BodyMetricScreen() {
                     </View>
                     {c.author_id === selfId ? (
                       <Pressable onPress={() => removeComment(c.id)} hitSlop={8}>
-                        <Ionicons name="trash-outline" size={16} color={theme.colors.textMuted} />
+                        <Icon name="trash-outline" size={16} color={theme.colors.textMuted} />
                       </Pressable>
                     ) : null}
                   </View>

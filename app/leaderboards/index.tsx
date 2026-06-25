@@ -13,14 +13,12 @@ import { useAuth } from '../../src/lib/auth-context';
 import { textStart } from '../../src/lib/rtl';
 import { useTopAthletes, useTopCoaches, useMyLeagueStanding } from '../../src/lib/queries/leaderboards';
 import { useRefreshOnFocus } from '../../src/lib/queries/home';
-import { ffmiTier, TIER_COLORS, type TierId } from '../../src/lib/leagues';
+import { ffmiTier, type TierId } from '../../src/lib/leagues';
 import type { AthleteBoardRow, CoachBoardRow } from '../../src/lib/leaderboards';
 import type { Sex } from '../../src/schemas/athlete-profile';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
-import { Screen, Text, GlassCard, Segmented, EmptyState } from '../../src/components/ui';
+import { Screen, Text, GlassCard, Segmented, EmptyState, TierChip } from '../../src/components/ui';
 import { theme } from '../../src/theme';
-
-const MEDALS = ['#FFD43B', '#C0C7D0', '#E8985E']; // gold / silver / bronze
 
 type Board = 'athletes' | 'coaches';
 
@@ -28,33 +26,20 @@ function goalLabel(s: string): string {
   return s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-/** Small league-tier pill (Bronze…Apex) in the tier's accent color. */
+/** Tier pill (Bronze…Apex) — tier-colored mono on a tier-soft fill (brand chip). */
 function TierBadge({ tier }: { tier: TierId }) {
   const { t } = useTranslation();
-  const c = TIER_COLORS[tier];
-  return (
-    <View
-      style={{
-        alignSelf: 'flex-start',
-        borderColor: c,
-        borderWidth: 1,
-        borderRadius: theme.radii.full,
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: 3,
-      }}
-    >
-      <Text variant="label" color={c}>
-        {t(`leaderboards.tier.${tier}`)}
-      </Text>
-    </View>
-  );
+  return <TierChip tier={tier} label={t(`leaderboards.tier.${tier}`)} />;
 }
 
+/** Mono rank — cyan for the top three, muted otherwise (brand rule: numbers are mono). */
 function RankNumber({ rank }: { rank: number }) {
-  const medal = rank <= 3 ? MEDALS[rank - 1] : null;
   return (
     <View style={{ width: 28, alignItems: 'center' }}>
-      <Text variant="title" color={medal ?? theme.colors.textMuted}>
+      <Text
+        color={rank <= 3 ? theme.colors.primary : theme.colors.textMuted}
+        style={{ fontFamily: theme.fontFamily.monoBold, fontSize: 16 }}
+      >
         {rank}
       </Text>
     </View>
@@ -64,20 +49,11 @@ function RankNumber({ rank }: { rank: number }) {
 function AthleteRow({ row, rank, sex, onPress }: { row: AthleteBoardRow; rank: number; sex: Sex; onPress: () => void }) {
   const { t } = useTranslation();
   const tier = ffmiTier(row.ffmi, sex);
-  const medal = rank <= 3 ? MEDALS[rank - 1] : null;
   return (
-    <GlassCard onPress={onPress}>
+    <GlassCard onPress={onPress} style={rank === 1 ? { borderColor: theme.colors.primary } : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
         <RankNumber rank={rank} />
-        <View
-          style={
-            medal
-              ? { borderWidth: 2, borderColor: medal, borderRadius: theme.radii.full, padding: 2 }
-              : undefined
-          }
-        >
-          <ProfileAvatar name={row.full_name} avatarMediaId={row.avatar_media_id} size={44} />
-        </View>
+        <ProfileAvatar name={row.full_name} avatarMediaId={row.avatar_media_id} size={44} />
         <View style={{ flex: 1, gap: 4 }}>
           <Text variant="title" style={textStart}>
             {row.full_name ?? ''}
@@ -92,7 +68,7 @@ function AthleteRow({ row, rank, sex, onPress }: { row: AthleteBoardRow; rank: n
           </View>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <Text variant="title" color={theme.colors.primary}>
+          <Text variant="display" color={theme.colors.primary} style={{ fontSize: 22, lineHeight: 26 }}>
             {row.ffmi.toFixed(1)}
           </Text>
           <Text variant="label" muted>
@@ -106,21 +82,12 @@ function AthleteRow({ row, rank, sex, onPress }: { row: AthleteBoardRow; rank: n
 
 function CoachRow({ row, rank, onPress }: { row: CoachBoardRow; rank: number; onPress: () => void }) {
   const { t } = useTranslation();
-  const medal = rank <= 3 ? MEDALS[rank - 1] : null;
   const rate = row.tracked_clients > 0 ? Math.round((row.improved_clients / row.tracked_clients) * 100) : 0;
   return (
-    <GlassCard onPress={onPress}>
+    <GlassCard onPress={onPress} style={rank === 1 ? { borderColor: theme.colors.primary } : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
         <RankNumber rank={rank} />
-        <View
-          style={
-            medal
-              ? { borderWidth: 2, borderColor: medal, borderRadius: theme.radii.full, padding: 2 }
-              : undefined
-          }
-        >
-          <ProfileAvatar name={row.full_name} avatarMediaId={row.avatar_media_id} size={44} />
-        </View>
+        <ProfileAvatar name={row.full_name} avatarMediaId={row.avatar_media_id} size={44} />
         <View style={{ flex: 1, gap: 4 }}>
           <Text variant="title" style={textStart}>
             {row.full_name ?? ''}
@@ -133,7 +100,7 @@ function CoachRow({ row, rank, onPress }: { row: CoachBoardRow; rank: number; on
           </Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <Text variant="title" color={theme.colors.success}>
+          <Text variant="display" color={theme.colors.success} style={{ fontSize: 22, lineHeight: 26 }}>
             {rate}%
           </Text>
           <Text variant="label" muted>

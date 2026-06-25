@@ -3,11 +3,10 @@
 // backend (migration 0012) is live, so this works end-to-end. There's no
 // last-message/unread aggregation yet (deferred) — rows are the pairing only.
 import { FlatList, RefreshControl, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { useMyClients, useMyCoach, useRefreshOnFocus } from '../../src/lib/queries/home';
-import { Screen, Text, Avatar, GlassCard, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, Avatar, GlassCard, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 type Conversation = { id: string; name: string };
@@ -62,7 +61,7 @@ export default function MessagesTab() {
               <Text variant="title" style={{ flex: 1 }}>
                 {item.name}
               </Text>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+              <Icon name="chevron-forward" size={20} color={theme.colors.textMuted} />
             </View>
           </GlassCard>
         )}

@@ -1,0 +1,195 @@
+// Raptor icon system — a single line-icon set (lucide-react-native: 2px stroke,
+// rounded caps, inherits the surrounding color token). This is the ONLY icon
+// surface in the app; emoji are never used as icons (brand rule).
+//
+// The map is keyed by BOTH the legacy Ionicons names (so the migration off
+// @expo/vector-icons is mechanical) AND clean brand-semantic aliases (use these
+// in new/rebuilt screens: `dumbbell`, `scale`, `bar-chart`, `file-text`, ...).
+// `IconName` is the union of supported names, so tsc flags any unmapped name at
+// the call site.
+import { ComponentProps } from 'react';
+import {
+  Activity, ArrowDown, ArrowUp, Award, Ban, Bell, BookOpen, Calculator, Calendar,
+  Camera, ChartColumn, Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight,
+  ChevronUp, Circle, CircleCheck, CircleDot, CirclePause, CirclePlay, CircleX,
+  ClipboardList, Clock, CloudOff, Compass, Copy, Dumbbell, Eye, FileText, Flag,
+  EyeOff, Flame, Globe, Heart, Home, Hourglass, Image as ImageIcon, Images, Info,
+  Languages, Lock, LogOut, type LucideIcon, Mail, Maximize2, MessageSquare, Mic,
+  MoreHorizontal, Pencil, Phone, Plus, PlusCircle, RefreshCw, Ruler, Salad, Scale,
+  Search, Send, Settings, Shield, ShieldCheck, Smile, Sparkles, Star, Ticket, Trash2,
+  TrendingUp, TriangleAlert, Trophy, User, UserPlus, Users, Utensils, Undo2, X, Zap,
+} from 'lucide-react-native';
+import { theme } from '../../theme';
+
+// Note: lucide v1 renamed several composites — BarChart3→ChartColumn,
+// PlayCircle→CirclePlay, PauseCircle→CirclePause, XCircle→CircleX,
+// AlertTriangle→TriangleAlert. We map our names to the current exports.
+const ICONS = {
+  // --- clean brand-semantic aliases (prefer these in rebuilt screens) ---
+  'dumbbell': Dumbbell,
+  'scale': Scale,
+  'bar-chart': ChartColumn,
+  'file-text': FileText,
+  'clipboard': ClipboardList,
+  'salad': Salad,
+  'utensils': Utensils,
+  'home': Home,
+  'bell': Bell,
+  'message-square': MessageSquare,
+  'phone': Phone,
+  'mic': Mic,
+  'search': Search,
+  'image': ImageIcon,
+  'images': Images,
+  'clock': Clock,
+  'maximize': Maximize2,
+  'lock': Lock,
+  'flame': Flame,
+  'trophy': Trophy,
+  'pencil': Pencil,
+  'check': Check,
+  'check-circle': CircleCheck,
+  'x': X,
+  'x-circle': CircleX,
+  'plus': Plus,
+  'plus-circle': PlusCircle,
+  'heart': Heart,
+  'camera': Camera,
+  'eye': Eye,
+  'eye-off': EyeOff,
+  'mail': Mail,
+  'more': MoreHorizontal,
+  'flag': Flag,
+  'globe': Globe,
+  'languages': Languages,
+  'settings': Settings,
+  'log-out': LogOut,
+  'star': Star,
+  'calendar': Calendar,
+  'send': Send,
+  'sparkles': Sparkles,
+  'trash': Trash2,
+  'shield': Shield,
+  'shield-check': ShieldCheck,
+  'user': User,
+  'users': Users,
+  'user-plus': UserPlus,
+  'award': Award,
+  'ribbon': Award,
+  'refresh': RefreshCw,
+  'undo': Undo2,
+  'copy': Copy,
+  'compass': Compass,
+  'book': BookOpen,
+  'ticket': Ticket,
+  'cloud-off': CloudOff,
+  'calculator': Calculator,
+  'ruler': Ruler,
+  'activity': Activity,
+  'trending-up': TrendingUp,
+  'trending-down': TrendingUp,
+  'info': Info,
+  'warning': TriangleAlert,
+  'smile': Smile,
+  'hourglass': Hourglass,
+  'ban': Ban,
+  'circle': Circle,
+  'circle-dot': CircleDot,
+  'chevron-left': ChevronLeft,
+  'chevron-right': ChevronRight,
+  'chevron-down': ChevronDown,
+  'chevron-up': ChevronUp,
+  'arrow-up': ArrowUp,
+  'arrow-down': ArrowDown,
+  'play': CirclePlay,
+  'pause': CirclePause,
+  'zap': Zap,
+
+  // --- legacy Ionicons names (filled + outline collapse to one line icon) ---
+  'add': Plus,
+  'add-circle': PlusCircle,
+  'add-circle-outline': PlusCircle,
+  'arrow-undo': Undo2,
+  'arrow-undo-outline': Undo2,
+  'ban-outline': Ban,
+  'barbell': Dumbbell,
+  'barbell-outline': Dumbbell,
+  'body': ChartColumn,
+  'body-outline': ChartColumn,
+  'book-outline': BookOpen,
+  'camera-outline': Camera,
+  'chatbox-ellipses': MessageSquare,
+  'chatbox-ellipses-outline': MessageSquare,
+  'chatbubble-ellipses': MessageSquare,
+  'chatbubble-ellipses-outline': MessageSquare,
+  'chatbubbles-outline': MessageSquare,
+  'checkmark': Check,
+  'checkmark-circle': CheckCircle,
+  'chevron-back': ChevronLeft,
+  'chevron-forward': ChevronRight,
+  'clipboard-outline': ClipboardList,
+  'close': X,
+  'close-circle': CircleX,
+  'cloud-offline-outline': CloudOff,
+  'compass-outline': Compass,
+  'copy-outline': Copy,
+  'create-outline': Pencil,
+  'document-text': FileText,
+  'document-text-outline': FileText,
+  'documents-outline': FileText,
+  'ellipse-outline': Circle,
+  'expand-outline': Maximize2,
+  'eye-outline': Eye,
+  'flag-outline': Flag,
+  'flash': Zap,
+  'globe-outline': Globe,
+  'happy-outline': Smile,
+  'heart-outline': Heart,
+  'hourglass-outline': Hourglass,
+  'image-outline': ImageIcon,
+  'language': Languages,
+  'notifications': Bell,
+  'notifications-outline': Bell,
+  'nutrition': Salad,
+  'pause-circle': CirclePause,
+  'people': Users,
+  'people-outline': Users,
+  'person-add': UserPlus,
+  'person-add-outline': UserPlus,
+  'person-outline': User,
+  'play-circle': CirclePlay,
+  'radio-button-off': Circle,
+  'radio-button-on': CircleDot,
+  'reader': FileText,
+  'refresh-outline': RefreshCw,
+  'restaurant': Salad,
+  'ribbon-outline': Award,
+  'search-outline': Search,
+  'shield-checkmark-outline': ShieldCheck,
+  'shield-outline': Shield,
+  'sparkles-outline': Sparkles,
+  'ticket-outline': Ticket,
+  'time-outline': Clock,
+  'trash-outline': Trash2,
+  'trending-up-outline': TrendingUp,
+  'trophy-outline': Trophy,
+} satisfies Record<string, LucideIcon>;
+
+export type IconName = keyof typeof ICONS;
+
+type IconProps = {
+  name: IconName;
+  size?: number;
+  color?: string;
+  /** lucide stroke weight; brand default is 2px. */
+  strokeWidth?: number;
+} & Omit<ComponentProps<LucideIcon>, 'color' | 'size'>;
+
+/**
+ * Brand line icon. Defaults to the primary text token so an icon inherits the
+ * surrounding color unless a token is passed explicitly (never hardcode a hex).
+ */
+export function Icon({ name, size = 22, color = theme.colors.text, strokeWidth = 2, ...rest }: IconProps) {
+  const Glyph = ICONS[name];
+  return <Glyph size={size} color={color} strokeWidth={strokeWidth} {...rest} />;
+}

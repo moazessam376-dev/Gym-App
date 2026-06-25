@@ -6,7 +6,6 @@
 // the toggle + achievements persist on Save.
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../src/lib/auth-context';
@@ -16,7 +15,7 @@ import { getMyCoachProfile, setCoachVisibility } from '../src/lib/coach-profile'
 import { getMyAthleteProfile, setAthleteVisibility } from '../src/lib/athlete-profile';
 import { pickAvatar, type PickSource } from '../src/lib/upload';
 import { ProfileAvatar } from '../src/components/ProfileAvatar';
-import { Screen, Text, Input, Button, GlassCard } from '../src/components/ui';
+import { Icon, Screen, Text, Input, Button, GlassCard } from '../src/components/ui';
 import { theme } from '../src/theme';
 
 const MAX_ACHIEVEMENTS = 20;
@@ -169,7 +168,7 @@ export default function PublicProfileEdit() {
                 fullWidth={false}
                 disabled={uploading}
                 onPress={() => changePhoto('camera')}
-                left={<Ionicons name="camera" size={16} color={theme.colors.text} />}
+                left={<Icon name="camera" size={16} color={theme.colors.text} />}
               />
               <Button
                 title={t('publicProfile.chooseFromLibrary')}
@@ -177,7 +176,7 @@ export default function PublicProfileEdit() {
                 fullWidth={false}
                 disabled={uploading}
                 onPress={() => changePhoto('library')}
-                left={<Ionicons name="images" size={16} color={theme.colors.text} />}
+                left={<Icon name="images" size={16} color={theme.colors.text} />}
               />
             </View>
             {uploading ? <ActivityIndicator color={theme.colors.primary} /> : null}
@@ -249,7 +248,7 @@ export default function PublicProfileEdit() {
                   style={{ flex: 1 }}
                 />
                 <Pressable onPress={() => removeAchievement(i)} hitSlop={8}>
-                  <Ionicons name="close-circle" size={22} color={theme.colors.textMuted} />
+                  <Icon name="close-circle" size={22} color={theme.colors.textMuted} />
                 </Pressable>
               </View>
             ))}
@@ -263,7 +262,7 @@ export default function PublicProfileEdit() {
                   paddingVertical: theme.spacing.sm,
                 }}
               >
-                <Ionicons name="add-circle-outline" size={20} color={theme.colors.primary} />
+                <Icon name="add-circle-outline" size={20} color={theme.colors.primary} />
                 <Text variant="bodyStrong" color={theme.colors.primary}>
                   {t('publicProfile.addAchievement')}
                 </Text>
@@ -285,11 +284,11 @@ export default function PublicProfileEdit() {
               borderColor: theme.colors.glassBorder,
             }}
           >
-            <Ionicons name="eye-outline" size={20} color={theme.colors.primary} />
+            <Icon name="eye-outline" size={20} color={theme.colors.primary} />
             <Text variant="bodyStrong" style={{ flex: 1 }}>
               {t('publicProfile.viewPublic')}
             </Text>
-            <Ionicons name={forwardChevron()} size={18} color={theme.colors.textMuted} />
+            <Icon name={forwardChevron()} size={18} color={theme.colors.textMuted} />
           </Pressable>
 
           {error ? (

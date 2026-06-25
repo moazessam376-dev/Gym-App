@@ -4,7 +4,6 @@
 // (add, copy a previous day). All data is real (migration 0019); nothing is faked.
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Redirect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -24,7 +23,7 @@ import {
 import type { MealItem } from '../../src/lib/plans';
 import type { UpsertTargets } from '../../src/schemas/nutrition';
 import { mealSlotSchema, type MealSlot } from '../../src/schemas/nutrition';
-import { Screen, Text, Card, GlassCard, Button, ProgressRing, IconButton, Badge } from '../../src/components/ui';
+import { Icon, Screen, Text, Card, GlassCard, Button, ProgressRing, IconButton, Badge } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 // i18n keys for each diary slot (resolved via t() at render).
@@ -43,7 +42,8 @@ function mealNameToSlot(name: string): MealSlot {
   if (n.includes('dinner')) return 'dinner';
   return 'snack';
 }
-const MACRO_COLOR = { protein: theme.colors.primary, carbs: '#22D3EE', fat: '#A78BFA' };
+// Brand macro color coding: P = Signal cyan, C = cobalt, F = purple (data-viz only).
+const MACRO_COLOR = { protein: theme.colors.primary, carbs: theme.colors.secondary, fat: '#9B7BF5' };
 
 function MacroBar({ label, consumed, target, color }: { label: string; consumed: number; target: number; color: string }) {
   const { t } = useTranslation();
@@ -211,8 +211,8 @@ export default function Nutrition() {
             paddingVertical: 6,
           }}
         >
-          <Text variant="bodyStrong">🔥</Text>
-          <Text variant="bodyStrong" color="primary">
+          <Icon name="flame" size={16} color={theme.colors.primary} />
+          <Text variant="mono" color="primary">
             {streak}
           </Text>
         </View>
@@ -236,7 +236,7 @@ export default function Nutrition() {
               title={t('nutrition.usePlanTargets', { kcal: planTargets.kcal_target })}
               onPress={() => applyTarget(planTargets)}
               loading={busy}
-              left={<Ionicons name="clipboard" size={18} color={theme.colors.onPrimary} />}
+              left={<Icon name="clipboard" size={18} color={theme.colors.onPrimary} />}
             />
           ) : null}
           {estimate ? (
@@ -245,7 +245,7 @@ export default function Nutrition() {
               variant={planTargets ? 'secondary' : 'primary'}
               onPress={() => applyTarget(estimate)}
               loading={busy}
-              left={<Ionicons name="calculator" size={18} color={planTargets ? theme.colors.primary : theme.colors.onPrimary} />}
+              left={<Icon name="calculator" size={18} color={planTargets ? theme.colors.primary : theme.colors.onPrimary} />}
             />
           ) : null}
           {!estimate && !planTargets ? (
@@ -333,7 +333,7 @@ export default function Nutrition() {
                         borderColor: logged ? theme.colors.primary : theme.colors.border,
                       }}
                     >
-                      {logged ? <Ionicons name="checkmark" size={18} color={theme.colors.onPrimary} /> : null}
+                      {logged ? <Icon name="checkmark" size={18} color={theme.colors.onPrimary} /> : null}
                     </Pressable>
                     <View style={{ flex: 1, gap: 2 }}>
                       <Text variant="bodyStrong">{it.food_name}</Text>
@@ -385,7 +385,7 @@ export default function Nutrition() {
           variant="ghost"
           onPress={onCopyYesterday}
           loading={busy}
-          left={<Ionicons name="copy-outline" size={18} color={theme.colors.primary} />}
+          left={<Icon name="copy-outline" size={18} color={theme.colors.primary} />}
         />
       ) : null}
     </Screen>

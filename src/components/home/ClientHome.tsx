@@ -2,7 +2,6 @@
 // workout, a streak chip, and a one-tap "log workout" CTA. Everything here is
 // fed by real completion-logging data (migration 0016); nothing is faked.
 import { Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +20,7 @@ import {
 import { useMyLeagueStanding } from '@/lib/queries/leaderboards';
 import { TIER_COLORS } from '@/lib/leagues';
 import { remaining } from '@/lib/nutrition';
-import { Screen, Text, Card, Avatar, Button, ProgressRing, EmptyState } from '@/components/ui';
+import { Icon, Screen, Text, Card, Avatar, Button, ProgressRing, EmptyState, RankCrest, MacroBar } from '@/components/ui';
 import { NotificationBell } from '@/components/NotificationBell';
 import { theme } from '@/theme';
 
@@ -131,8 +130,8 @@ export default function ClientHome() {
               paddingVertical: 6,
             }}
           >
-            <Text variant="bodyStrong">🔥</Text>
-            <Text variant="bodyStrong" color="primary">
+            <Icon name="flame" size={16} color={theme.colors.primary} />
+            <Text variant="mono" color="primary">
               {streakQ.isPending ? '—' : streak}
             </Text>
           </View>
@@ -147,14 +146,14 @@ export default function ClientHome() {
       {needsOnboarding ? (
         <Card onPress={() => router.push('/profile-setup')} style={{ borderColor: theme.colors.primary }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-            <Ionicons name="flag" size={22} color={theme.colors.primary} />
+            <Icon name="flag" size={22} color={theme.colors.primary} />
             <View style={{ flex: 1 }}>
               <Text variant="bodyStrong">{t('home.setGoalsTitle')}</Text>
               <Text variant="caption" muted>
                 {t('home.setGoalsSub')}
               </Text>
             </View>
-            <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
+            <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
           </View>
         </Card>
       ) : null}
@@ -186,7 +185,7 @@ export default function ClientHome() {
               entering={ZoomIn.springify().damping(12)}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
             >
-              <Ionicons name="checkmark-circle" size={22} color={theme.colors.success} />
+              <Icon name="checkmark-circle" size={22} color={theme.colors.success} />
               <Text variant="title" color="success">
                 {t('home.workoutCrushed')}
               </Text>
@@ -196,7 +195,7 @@ export default function ClientHome() {
               title={status === 'in_progress' ? t('home.continueWorkout') : t('home.startWorkout')}
               size="lg"
               onPress={openWorkout}
-              left={<Ionicons name="flash" size={18} color={theme.colors.onPrimary} />}
+              left={<Icon name="flash" size={18} color={theme.colors.onPrimary} />}
             />
           )}
           {isDone ? (
@@ -224,36 +223,42 @@ export default function ClientHome() {
         </Text>
         <Card onPress={() => router.push('/(tabs)/nutrition')}>
           {nutTargets ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.lg }}>
-              <ProgressRing progress={nutProgress} size={76} strokeWidth={8}>
-                <Text variant="bodyStrong" style={{ fontSize: 12 }}>
-                  {nutLeft}
-                </Text>
-              </ProgressRing>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text variant="title">{t('home.kcalLeft', { left: nutLeft })}</Text>
-                <Text variant="caption" muted>
-                  {t('home.macroLine', {
-                    consumed: consumedKcal,
-                    target: targetKcal,
-                    p: nutDaily?.protein_total ?? 0,
-                    c: nutDaily?.carbs_total ?? 0,
-                    f: nutDaily?.fat_total ?? 0,
-                  })}
-                </Text>
+            <View style={{ gap: theme.spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.lg }}>
+                <ProgressRing progress={nutProgress} size={76} strokeWidth={8}>
+                  <Text variant="mono" style={{ fontSize: 13 }}>
+                    {nutLeft}
+                  </Text>
+                </ProgressRing>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text variant="title">{t('home.kcalLeft', { left: nutLeft })}</Text>
+                  <Text variant="caption" muted>
+                    {t('home.macroConsumed', { consumed: consumedKcal, target: targetKcal })}
+                  </Text>
+                </View>
+                <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
               </View>
-              <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
+              <MacroBar
+                protein={nutDaily?.protein_total ?? 0}
+                carbs={nutDaily?.carbs_total ?? 0}
+                fat={nutDaily?.fat_total ?? 0}
+                targets={{
+                  protein: nutTargets.protein_g_target ?? 0,
+                  carbs: nutTargets.carbs_g_target ?? 0,
+                  fat: nutTargets.fat_g_target ?? 0,
+                }}
+              />
             </View>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-              <Ionicons name="restaurant" size={22} color={theme.colors.primary} />
+              <Icon name="restaurant" size={22} color={theme.colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text variant="bodyStrong">{t('home.trackNutritionTitle')}</Text>
                 <Text variant="caption" muted>
                   {t('home.trackNutritionSub')}
                 </Text>
               </View>
-              <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
+              <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
             </View>
           )}
         </Card>
@@ -277,7 +282,7 @@ export default function ClientHome() {
               <Text variant="title" style={{ flex: 1 }}>
                 {coachName}
               </Text>
-              <Ionicons name="chatbubble-ellipses" size={22} color={theme.colors.primary} />
+              <Icon name="chatbubble-ellipses" size={22} color={theme.colors.primary} />
             </View>
           </Card>
         </View>
@@ -291,7 +296,11 @@ export default function ClientHome() {
           </Text>
           <Card onPress={() => router.push('/leaderboards')} style={{ borderColor: leagueAccent }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-              <Ionicons name="trophy" size={22} color={leagueAccent} />
+              {leagueTier ? (
+                <RankCrest tier={leagueTier} size={40} />
+              ) : (
+                <Icon name="trophy" size={22} color={leagueAccent} />
+              )}
               <View style={{ flex: 1 }}>
                 <Text variant="bodyStrong" style={textStart}>
                   {leagueTitle}
@@ -301,7 +310,7 @@ export default function ClientHome() {
                   {leagueSub}
                 </Text>
               </View>
-              <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
+              <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
             </View>
           </Card>
         </View>

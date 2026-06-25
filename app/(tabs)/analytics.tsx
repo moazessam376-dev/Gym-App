@@ -6,8 +6,6 @@
 // grid on wide screens (coaches will live in this on web). Coach-only; others redirect.
 import { useState } from 'react';
 import { View, useWindowDimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
@@ -31,7 +29,7 @@ import {
   type GoalDelivered,
 } from '../../src/lib/analytics';
 import type { AthleteGoal } from '../../src/schemas/athlete-profile';
-import { Screen, Text, GlassCard, StatBlock, DeltaChip, Avatar, Badge, Button, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, GlassCard, KpiTile, DeltaChip, Avatar, Badge, Button, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -140,47 +138,21 @@ export default function AnalyticsTab() {
           <>
             {/* Hero stats */}
             <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-              <LinearGradient
-                colors={theme.gradients.hero}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  flex: 1,
-                  borderRadius: theme.radii.lg,
-                  borderWidth: 1,
-                  borderColor: theme.colors.glassBorder,
-                  padding: theme.spacing.lg,
-                }}
-              >
-                <StatBlock value={pad2(clientCount)} label={t('analytics.clients')} valueColor={theme.colors.primary} />
-              </LinearGradient>
-              <View
-                style={{
-                  flex: 1,
-                  backgroundColor: theme.colors.glass,
-                  borderRadius: theme.radii.lg,
-                  borderWidth: 1,
-                  borderColor: theme.colors.glassBorder,
-                  padding: theme.spacing.lg,
-                }}
-              >
-                <StatBlock
-                  value={avgAdherence == null ? '—' : `${avgAdherence}%`}
-                  label={t('analytics.avgAdherence')}
-                  valueColor={
-                    avgAdherence == null
-                      ? theme.colors.textMuted
-                      : avgAdherence >= 70
-                        ? theme.colors.success
-                        : avgAdherence >= 40
-                          ? theme.colors.warning
-                          : theme.colors.danger
-                  }
-                />
-                <Text variant="caption" muted style={{ marginTop: 4 }}>
-                  {t('analytics.windowNote', { days: ADHERENCE_WINDOW_DAYS })}
-                </Text>
-              </View>
+              <KpiTile value={pad2(clientCount)} label={t('analytics.clients')} tone="primary" icon="users" />
+              <KpiTile
+                value={avgAdherence == null ? '—' : `${avgAdherence}%`}
+                label={t('analytics.avgAdherence')}
+                note={t('analytics.windowNote', { days: ADHERENCE_WINDOW_DAYS })}
+                valueColor={
+                  avgAdherence == null
+                    ? theme.colors.textMuted
+                    : avgAdherence >= 70
+                      ? theme.colors.success
+                      : avgAdherence >= 40
+                        ? theme.colors.warning
+                        : theme.colors.danger
+                }
+              />
             </View>
 
             {/* 2-up grid on wide screens, stacked on phone */}
@@ -207,7 +179,10 @@ export default function AnalyticsTab() {
                       }
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-                        <Text variant="title" color={i === 0 ? theme.colors.primary : theme.colors.textMuted} style={{ width: 18 }}>
+                        <Text
+                          color={i === 0 ? theme.colors.primary : theme.colors.textMuted}
+                          style={{ width: 20, fontFamily: theme.fontFamily.monoBold, fontSize: 15 }}
+                        >
                           {i + 1}
                         </Text>
                         <Avatar name={r.full_name ?? 'Client'} size={40} />
@@ -217,7 +192,7 @@ export default function AnalyticsTab() {
                             {r.progress.headline}
                           </Text>
                         </View>
-                        <Ionicons name={forwardChevron()} size={18} color={theme.colors.textMuted} />
+                        <Icon name={forwardChevron()} size={18} color={theme.colors.textMuted} />
                       </View>
                     </GlassCard>
                   ))
@@ -307,7 +282,7 @@ export default function AnalyticsTab() {
                       </>
                     ) : (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                        <Ionicons name="sparkles-outline" size={18} color={theme.colors.primary} />
+                        <Icon name="sparkles-outline" size={18} color={theme.colors.primary} />
                         <Text variant="body" muted style={{ flex: 1 }}>
                           {t('analytics.aiSummarySub')}
                         </Text>

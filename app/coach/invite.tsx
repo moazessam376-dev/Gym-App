@@ -11,7 +11,7 @@ import { createInvitation, listMyInvitations, DUPLICATE_PENDING_INVITE, type Inv
 import { Screen, Text, Input, Button, Card, GlassCard, Badge, type BadgeTone } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
-const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
+const MONO = theme.fontFamily.monoBold; // JetBrains Mono — brand mono for codes
 const STATUS_TONE: Record<Invitation['status'], BadgeTone> = {
   pending: 'warning',
   accepted: 'success',

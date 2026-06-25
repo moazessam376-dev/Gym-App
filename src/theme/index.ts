@@ -1,5 +1,5 @@
 // Single import surface for the design system: `import { theme } from '@/theme'`.
-import { darkColors } from './colors';
+import { darkColors, tier } from './colors';
 import { spacing } from './spacing';
 import { radii } from './radii';
 import { fontFamily, textVariants } from './typography';
@@ -7,6 +7,7 @@ import { gradients, glow } from './effects';
 
 export const theme = {
   colors: darkColors,
+  tier,
   spacing,
   radii,
   fontFamily,
@@ -17,8 +18,8 @@ export const theme = {
 
 export type Theme = typeof theme;
 
-export { darkColors, palette, gradientFor, avatarGradients } from './colors';
-export type { AppColors } from './colors';
+export { darkColors, palette, tier, gradientFor, avatarGradients } from './colors';
+export type { AppColors, Tier } from './colors';
 export { spacing } from './spacing';
 export { radii } from './radii';
 export { fontFamily, textVariants } from './typography';

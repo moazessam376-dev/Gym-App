@@ -4,16 +4,15 @@
 import { Modal, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
 import { REPORT_REASONS, type ReportReason } from '../schemas/moderation';
-import { Text } from './ui';
+import { Icon, type IconName, Text } from './ui';
 import { theme } from '../theme';
 
-const REASON_ICON: Record<ReportReason, keyof typeof Ionicons.glyphMap> = {
-  harassment: 'warning-outline',
-  spam: 'mail-unread-outline',
-  inappropriate: 'eye-off-outline',
-  other: 'ellipsis-horizontal-circle-outline',
+const REASON_ICON: Record<ReportReason, IconName> = {
+  harassment: 'warning',
+  spam: 'mail',
+  inappropriate: 'eye-off',
+  other: 'more',
 };
 
 export function ReportMessageSheet({
@@ -84,7 +83,7 @@ export function ReportMessageSheet({
                 opacity: pressed || busy ? 0.7 : 1,
               })}
             >
-              <Ionicons name={REASON_ICON[reason]} size={20} color={theme.colors.primary} />
+              <Icon name={REASON_ICON[reason]} size={20} color={theme.colors.primary} />
               <Text variant="bodyStrong" style={{ flex: 1 }}>
                 {t(`report.reasons.${reason}`)}
               </Text>
