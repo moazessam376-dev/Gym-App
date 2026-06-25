@@ -303,7 +303,8 @@
       "nutrition": "أكل"
     },
     "archived": "مؤرشف",
-    "active": "نشطة"
+    "active": "نشطة",
+    "makeActive": "خليها النشطة"
   },
   "templates": {
     "newPlan": "خطة جديدة (قالب أو فاضية)",

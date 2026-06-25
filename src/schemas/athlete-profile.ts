@@ -66,3 +66,8 @@ export const upsertAthleteProfileSchema = z.object({
   leaderboard_opt_in: z.boolean().optional(),
 });
 export type UpsertAthleteProfile = z.infer<typeof upsertAthleteProfileSchema>;
+
+// The client's chosen active training plan (drives the Home "today" ring), or null
+// to fall back to the newest plan. A uuid or null — validated before the focused
+// upsert in setActiveTrainingPlan. Ownership/tenancy is enforced by RLS, not here.
+export const activeTrainingPlanIdSchema = z.string().uuid().nullable();

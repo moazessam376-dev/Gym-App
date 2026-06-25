@@ -125,14 +125,29 @@ export type TodayWorkout = {
   status: SessionStatus | 'none';
 };
 
+/** The training plan that should drive the Home ring: the client's chosen one if it
+ *  is still a valid (non-archived) training plan of theirs, else the newest one. The
+ *  preferred id is honored only when it resolves within the caller's own plans, so a
+ *  stale or forged preference degrades to "newest", never a cross-tenant pick. */
+export function pickActiveTrainingPlan<T extends { id: string; type: string; status: string }>(
+  plans: T[],
+  preferredId: string | null,
+): T | null {
+  const training = plans.filter((p) => p.type === 'training' && p.status !== 'archived');
+  return training.find((p) => p.id === preferredId) ?? training[0] ?? null;
+}
+
 // The active training day + today's adherence. Same plan→week→day→session walk the
 // dashboard did inline, moved into one cached query so the hero ring is instant on
 // revisit (and the slow chain doesn't block name/streak — those are separate queries).
 async function fetchTodayWorkout(userId: string): Promise<TodayWorkout> {
   const today = todayLocalDate();
   const empty: TodayWorkout = { today: null, plannedSets: 0, setsDone: 0, status: 'none' };
-  const plans = await listPlansForClient(userId);
-  const plan = plans.find((p) => p.type === 'training' && p.status !== 'archived');
+  const [plans, profile] = await Promise.all([
+    listPlansForClient(userId),
+    getMyAthleteProfile(userId),
+  ]);
+  const plan = pickActiveTrainingPlan(plans, profile?.active_training_plan_id ?? null);
   if (!plan) return empty;
   const weeks = await listWeeks(plan.id);
   const week = weeks[0];
@@ -159,6 +174,17 @@ export function useTodayWorkout(userId?: string) {
   return useQuery({
     queryKey: ['today-workout', userId],
     queryFn: () => fetchTodayWorkout(userId!),
+    enabled: !!userId,
+  });
+}
+
+// The client's chosen active training plan id (drives the Home ring + the "Active"
+// badge / switcher on the Plans tab). Separate small query so flipping it can
+// invalidate just this + ['today-workout'] without refetching the whole profile.
+export function useActiveTrainingPlanId(userId?: string) {
+  return useQuery({
+    queryKey: ['active-training-plan', userId],
+    queryFn: async () => (await getMyAthleteProfile(userId!))?.active_training_plan_id ?? null,
     enabled: !!userId,
   });
 }

@@ -4,6 +4,7 @@
 // pillars (macro targets, progress, ranks) go through getAthleteProfileFor.
 import { supabase } from './supabase';
 import {
+  activeTrainingPlanIdSchema,
   upsertAthleteProfileSchema,
   weightUnitSchema,
   type ActivityLevel,
@@ -31,13 +32,14 @@ export type AthleteProfile = {
   is_public: boolean;
   public_achievements: string[];
   leaderboard_opt_in: boolean;
+  active_training_plan_id: string | null;
   onboarded_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
 const COLS =
-  'user_id, primary_goal, experience_level, sex, birth_date, height_cm, target_weight_grams, activity_level, training_days, dietary_tags, injuries_notes, weight_unit, is_public, public_achievements, leaderboard_opt_in, onboarded_at, created_at, updated_at';
+  'user_id, primary_goal, experience_level, sex, birth_date, height_cm, target_weight_grams, activity_level, training_days, dietary_tags, injuries_notes, weight_unit, is_public, public_achievements, leaderboard_opt_in, active_training_plan_id, onboarded_at, created_at, updated_at';
 
 /** The signed-in client's own profile (null if not started). */
 export async function getMyAthleteProfile(userId: string): Promise<AthleteProfile | null> {
@@ -81,6 +83,20 @@ export async function setWeightUnit(userId: string, unit: WeightUnit): Promise<v
   const { error } = await supabase
     .from('athlete_profile')
     .upsert({ user_id: userId, weight_unit: v }, { onConflict: 'user_id' });
+  if (error) throw error;
+}
+
+/**
+ * Choose which assigned training plan drives the Home "today" ring (or null to fall
+ * back to the newest plan). Focused partial upsert — only this column is written, so
+ * it works before the questionnaire has created a profile row. RLS forces it to the
+ * caller's own row; the app only ever passes a plan the client actually has.
+ */
+export async function setActiveTrainingPlan(userId: string, planId: string | null): Promise<void> {
+  const v = activeTrainingPlanIdSchema.parse(planId);
+  const { error } = await supabase
+    .from('athlete_profile')
+    .upsert({ user_id: userId, active_training_plan_id: v }, { onConflict: 'user_id' });
   if (error) throw error;
 }
 

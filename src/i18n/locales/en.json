@@ -161,7 +161,8 @@
       "nutrition": "nutrition"
     },
     "archived": "archived",
-    "active": "Active"
+    "active": "Active",
+    "makeActive": "Set as active"
   },
   "templates": {
     "newPlan": "New plan (template or blank)",

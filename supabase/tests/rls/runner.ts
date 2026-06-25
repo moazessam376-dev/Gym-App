@@ -67,6 +67,7 @@ const migrationFiles = [
   '0043_voice_notes.sql',
   '0044_public_profiles.sql',
   '0045_public_leaderboards.sql',
+  '0046_active_training_plan.sql',
 ];
 
 const baseUrl =

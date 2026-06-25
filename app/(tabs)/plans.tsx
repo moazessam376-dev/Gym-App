@@ -1,10 +1,17 @@
 // Client → my plans tab. RLS returns only this client's NON-draft plans.
-import { FlatList, RefreshControl, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../src/lib/auth-context';
 import { forwardChevron } from '../../src/lib/rtl';
-import { usePlansForClient, useRefreshOnFocus } from '../../src/lib/queries/home';
+import {
+  pickActiveTrainingPlan,
+  useActiveTrainingPlanId,
+  usePlansForClient,
+  useRefreshOnFocus,
+} from '../../src/lib/queries/home';
+import { setActiveTrainingPlan } from '../../src/lib/athlete-profile';
 import { Icon, Screen, Text, Card, Badge, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
@@ -12,21 +19,37 @@ export default function PlansTab() {
   const { t } = useTranslation();
   const { session } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const userId = session?.user?.id;
 
   // Cached + warmed on app open, so the plan list is ready on first visit.
   const plansQ = usePlansForClient(userId);
+  const activeQ = useActiveTrainingPlanId(userId);
   useRefreshOnFocus(plansQ.refetch);
 
   const plans = plansQ.data ?? [];
   const loading = plansQ.isPending;
   const load = () => plansQ.refetch();
 
-  // The training plan that drives the Home "today" ring is the newest non-archived
-  // one (same pick as fetchTodayWorkout). Flag it so a client with several plans can
-  // tell which one is live instead of guessing.
-  const activeTrainingId =
-    plans.find((p) => p.type === 'training' && p.status !== 'archived')?.id ?? null;
+  // The training plan that actually drives the Home "today" ring: the client's saved
+  // choice if it's still valid, else the newest non-archived one — same resolution as
+  // fetchTodayWorkout, so the "Active" badge can never disagree with the ring.
+  const activeTrainingId = pickActiveTrainingPlan(plans, activeQ.data ?? null)?.id ?? null;
+
+  // Pick which assigned training plan is the active one. Optimistic: invalidate the
+  // preference + the Home ring so both re-resolve to the new choice.
+  async function makeActive(planId: string) {
+    if (!userId || planId === activeTrainingId) return;
+    try {
+      await setActiveTrainingPlan(userId, planId);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['active-training-plan', userId] }),
+        queryClient.invalidateQueries({ queryKey: ['today-workout', userId] }),
+      ]);
+    } catch {
+      // Best-effort; the badge stays on the previous choice on failure.
+    }
+  }
 
   return (
     <Screen padded={false} gradient>
@@ -73,10 +96,30 @@ export default function PlansTab() {
               </View>
               <View style={{ flex: 1, gap: 4 }}>
                 <Text variant="title">{item.title}</Text>
-                <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                   <Badge label={t(`plans.type.${item.type}`)} tone="secondary" />
                   {item.id === activeTrainingId ? <Badge label={t('plans.active')} tone="primary" /> : null}
                   {item.status === 'archived' ? <Badge label={t('plans.archived')} tone="neutral" /> : null}
+                  {/* Multi-plan switching: choose which training plan drives the Home
+                      ring. Shown only on the non-active, non-archived training plans. */}
+                  {item.type === 'training' && item.status !== 'archived' && item.id !== activeTrainingId ? (
+                    <Pressable
+                      onPress={() => makeActive(item.id)}
+                      hitSlop={6}
+                      style={({ pressed }) => ({
+                        paddingHorizontal: theme.spacing.sm,
+                        paddingVertical: 3,
+                        borderRadius: theme.radii.full,
+                        borderWidth: 1,
+                        borderColor: theme.colors.primary,
+                        opacity: pressed ? 0.6 : 1,
+                      })}
+                    >
+                      <Text variant="caption" color="primary">
+                        {t('plans.makeActive')}
+                      </Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               </View>
               <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
