@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Workout Session (Remake)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  ::selection { background: rgba(63,217,192,0.3); color: #fff; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; letter-spacing: -0.5px; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 110px; }
+
+  .progress-header { display: flex; align-items: center; gap: 14px; padding: 10px 0 16px; border-bottom: 1px solid #2A2B38; margin-bottom: 16px; }
+  .ring-mini { width: 56px; height: 56px; position: relative; flex-shrink: 0; }
+  .ring-mini-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; color: #3FD9C0; }
+  .ph-info { flex: 1; }
+  .ph-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.5px; color: #F5F6F8; }
+  .ph-cap { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; margin-top: 3px; }
+
+  .exercise-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .ex-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .ex-name { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; color: #F5F6F8; letter-spacing: -0.3px; }
+  .ex-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 3px; }
+  .ex-note-btn { width: 32px; height: 32px; border-radius: 9px; background: #1F2029; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #9B9CA8; flex-shrink: 0; }
+
+  .coach-note { background: #1F2029; border: 1px solid #2A2B38; border-radius: 9px; padding: 10px 12px; margin-bottom: 12px; display: flex; gap: 8px; align-items: flex-start; }
+  .coach-note-icon { font-size: 13px; color: #3FD9C0; flex-shrink: 0; margin-top: 1px; }
+  .coach-note-text { font-family: 'Inter', sans-serif; font-size: 12px; color: #9B9CA8; line-height: 1.5; font-style: italic; }
+
+  .ex-meta-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .ex-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #6B8AFF; background: rgba(107,138,255,0.12); border-radius: 6px; padding: 4px 8px; }
+  .unit-toggle { display: flex; gap: 0; margin-left: auto; border: 1px solid #2A2B38; border-radius: 7px; overflow: hidden; }
+  .unit-chip { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; padding: 5px 10px; color: #7E828D; }
+  .unit-chip.active { background: #3FD9C0; color: #0A0B0F; }
+
+  .set-header { display: grid; grid-template-columns: 44px 1fr 1fr 50px; gap: 8px; padding: 0 0 8px; }
+  .set-header-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #5C616E; text-align: center; }
+  .set-header-label.left { text-align: left; }
+
+  .set-row { display: grid; grid-template-columns: 44px 1fr 1fr 50px; gap: 8px; align-items: center; padding: 6px 0; }
+  .set-check { width: 44px; height: 44px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; }
+  .set-check.done { background: #3FD9C0; color: #0A0B0F; }
+  .set-check.undone { background: #1F2029; border: 1px solid #2A2B38; color: #7E828D; }
+  .num-field { height: 44px; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 15px; color: #F5F6F8; }
+  .num-field.empty { color: #5C616E; }
+  .num-field.invalid { border-color: #FF6B4A; color: #FF6B4A; }
+  .pr-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #3FD9C0; background: rgba(63,217,192,0.16); border-radius: 5px; padding: 4px 6px; text-align: center; }
+  .pr-badge.empty { visibility: hidden; }
+
+  .finish-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 12px 18px 26px; }
+  .btn-finish { background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; text-align: center; border-radius: 13px; padding: 16px; border: none; display: block; width: 100%; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Workout Session · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="progress-header">
+        <div class="ring-mini">
+          <svg width="56" height="56" viewBox="0 0 56 56" style="transform:rotate(-90deg);">
+            <circle cx="28" cy="28" r="24" fill="none" stroke="#1F2029" stroke-width="5"/>
+            <circle cx="28" cy="28" r="24" fill="none" stroke="#3FD9C0" stroke-width="5" stroke-linecap="round" stroke-dasharray="151" stroke-dashoffset="50"/>
+          </svg>
+          <div class="ring-mini-center">67%</div>
+        </div>
+        <div class="ph-info">
+          <div class="ph-title">Push Day</div>
+          <div class="ph-cap">8 / 12 sets complete</div>
+        </div>
+      </div>
+
+      <!-- Exercise 1: Bench Press -->
+      <div class="exercise-card">
+        <div class="ex-header">
+          <div>
+            <div class="ex-name">Barbell Bench Press</div>
+            <div class="ex-meta">4 × 8 · 90s rest · best 100kg</div>
+          </div>
+          <div class="ex-note-btn">💬</div>
+        </div>
+        <div class="coach-note">
+          <div class="coach-note-icon">💬</div>
+          <div class="coach-note-text">Keep shoulder blades retracted. Pause 1s at chest.</div>
+        </div>
+        <div class="ex-meta-row">
+          <span class="ex-badge">Compound</span>
+          <div class="unit-toggle">
+            <div class="unit-chip active">kg</div>
+            <div class="unit-chip">lb</div>
+          </div>
+        </div>
+        <div class="set-header">
+          <div class="set-header-label left">SET</div>
+          <div class="set-header-label">REPS</div>
+          <div class="set-header-label">WEIGHT</div>
+          <div></div>
+        </div>
+        <div class="set-row">
+          <div class="set-check done">✓</div>
+          <div class="num-field">8</div>
+          <div class="num-field">80</div>
+          <div class="pr-badge empty">·</div>
+        </div>
+        <div class="set-row">
+          <div class="set-check done">✓</div>
+          <div class="num-field">8</div>
+          <div class="num-field">85</div>
+          <div class="pr-badge empty">·</div>
+        </div>
+        <div class="set-row">
+          <div class="set-check done">✓</div>
+          <div class="num-field">6</div>
+          <div class="num-field">90</div>
+          <div class="pr-badge">PR</div>
+        </div>
+        <div class="set-row">
+          <div class="set-check undone">4</div>
+          <div class="num-field empty">—</div>
+          <div class="num-field empty">—</div>
+          <div class="pr-badge empty">·</div>
+        </div>
+      </div>
+
+      <!-- Exercise 2: Incline DB Press -->
+      <div class="exercise-card">
+        <div class="ex-header">
+          <div>
+            <div class="ex-name">Incline Dumbbell Press</div>
+            <div class="ex-meta">3 × 10 · 75s rest · best 32kg</div>
+          </div>
+          <div class="ex-note-btn">💬</div>
+        </div>
+        <div class="ex-meta-row">
+          <span class="ex-badge">Compound</span>
+          <div class="unit-toggle">
+            <div class="unit-chip active">kg</div>
+            <div class="unit-chip">lb</div>
+          </div>
+        </div>
+        <div class="set-header">
+          <div class="set-header-label left">SET</div>
+          <div class="set-header-label">REPS</div>
+          <div class="set-header-label">WEIGHT</div>
+          <div></div>
+        </div>
+        <div class="set-row">
+          <div class="set-check done">✓</div>
+          <div class="num-field">10</div>
+          <div class="num-field">28</div>
+          <div class="pr-badge empty">·</div>
+        </div>
+        <div class="set-row">
+          <div class="set-check done">✓</div>
+          <div class="num-field">10</div>
+          <div class="num-field">30</div>
+          <div class="pr-badge empty">·</div>
+        </div>
+        <div class="set-row">
+          <div class="set-check undone">3</div>
+          <div class="num-field empty">—</div>
+          <div class="num-field empty">—</div>
+          <div class="pr-badge empty">·</div>
+        </div>
+      </div>
+
+      <!-- Exercise 3: Triceps Pushdown -->
+      <div class="exercise-card">
+        <div class="ex-header">
+          <div>
+            <div class="ex-name">Triceps Rope Pushdown</div>
+            <div class="ex-meta">3 × 12 · 60s rest · best 45kg</div>
+          </div>
+          <div class="ex-note-btn">💬</div>
+        </div>
+        <div class="ex-meta-row">
+          <span class="ex-badge">Isolation</span>
+          <div class="unit-toggle">
+            <div class="unit-chip active">kg</div>
+            <div class="unit-chip">lb</div>
+          </div>
+        </div>
+        <div class="set-header">
+          <div class="set-header-label left">SET</div>
+          <div class="set-header-label">REPS</div>
+          <div class="set-header-label">WEIGHT</div>
+          <div></div>
+        </div>
+        <div class="set-row">
+          <div class="set-check done">✓</div>
+          <div class="num-field">12</div>
+          <div class="num-field">35</div>
+          <div class="pr-badge empty">·</div>
+        </div>
+        <div class="set-row">
+          <div class="set-check undone">2</div>
+          <div class="num-field empty">—</div>
+          <div class="num-field empty">—</div>
+          <div class="pr-badge empty">·</div>
+        </div>
+        <div class="set-row">
+          <div class="set-check undone">3</div>
+          <div class="num-field empty">—</div>
+          <div class="num-field empty">—</div>
+          <div class="pr-badge empty">·</div>
+        </div>
+      </div>
+    </div>
+    <div class="finish-bar">
+      <button class="btn-finish">Finish Workout</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

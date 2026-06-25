@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Onboarding Splash</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; height: 844px; background: radial-gradient(circle at 50% 30%, #10202C 0%, #0A0B0F 60%); border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; display: flex; flex-direction: column; }
+
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; flex-shrink: 0; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+
+  .splash-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 40px; text-align: center; }
+
+  .crest-wrap { width: 120px; height: 120px; margin-bottom: 36px; position: relative; }
+  .crest { width: 120px; height: 120px; border-radius: 28px; background: radial-gradient(circle at 50% 32%, #9BFFEE, #3FD9C0 55%, #1A8A78); box-shadow: 0 0 50px rgba(63,217,192,0.4), inset 0 3px 8px rgba(255,255,255,0.3), inset 0 -12px 22px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
+  .crest-inner { width: 44px; height: 44px; transform: rotate(45deg); border-radius: 10px; background: rgba(10,11,15,0.28); }
+  .crest-glow { position: absolute; inset: -25px; border-radius: 50%; background: radial-gradient(circle, rgba(63,217,192,0.15), transparent 70%); z-index: -1; }
+
+  .wordmark { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 64px; letter-spacing: -2.5px; color: #F5F6F8; line-height: 1; margin-bottom: 8px; }
+  .wordmark .accent { color: #3FD9C0; }
+
+  .tagline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; color: #3FD9C0; margin-bottom: 24px; }
+
+  .value-prop { font-family: 'Inter', sans-serif; font-size: 15px; color: #9B9CA8; line-height: 1.6; max-width: 280px; margin-bottom: 48px; }
+
+  .feature-row { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 290px; margin-bottom: 48px; }
+  .feature { display: flex; align-items: center; gap: 12px; text-align: left; }
+  .feature-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(63,217,192,0.1); border: 1px solid rgba(63,217,192,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .feature-icon svg { width: 18px; height: 18px; }
+  .feature-text { font-family: 'Inter', sans-serif; font-size: 13px; color: #C3C6CE; }
+  .feature-text strong { color: #F5F6F8; font-weight: 600; }
+
+  .actions { width: 100%; max-width: 290px; display: flex; flex-direction: column; gap: 10px; }
+  .btn-primary { width: 100%; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; text-align: center; border-radius: 13px; padding: 16px; border: none; }
+  .btn-secondary { width: 100%; background: transparent; color: #F5F6F8; border: 1px solid #2A2B38; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 15px; text-align: center; border-radius: 13px; padding: 15px; }
+
+  .login-link { font-family: 'Inter', sans-serif; font-size: 13px; color: #7E828D; margin-top: 16px; }
+  .login-link a { color: #3FD9C0; text-decoration: none; font-weight: 600; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Onboarding Splash · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+
+    <div class="splash-content">
+      <div class="crest-wrap">
+        <div class="crest-glow"></div>
+        <div class="crest"><div class="crest-inner"></div></div>
+      </div>
+
+      <div class="wordmark">Raptor<span class="accent">.</span></div>
+      <div class="tagline">Earned, not given</div>
+      <div class="value-prop">Coaching, ranked. Track progress. Log goals. Climb from Bronze to Apex.</div>
+
+      <div class="feature-row">
+        <div class="feature">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 12l6-7M3 12l6 7"/></svg></div>
+          <div class="feature-text"><strong>Data-driven coaching.</strong> Plans, KPIs, measurable results.</div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5"/></svg></div>
+          <div class="feature-text"><strong>8-tier ranking.</strong> Bronze to Apex. Earned by InBody data.</div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <div class="feature-text"><strong>In-app calls &amp; chat.</strong> Voice notes, booked sessions.</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-primary">Get Started</button>
+        <button class="btn-secondary">I have an invite</button>
+      </div>
+
+      <div class="login-link">Already have an account? <a href="#">Sign in</a></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

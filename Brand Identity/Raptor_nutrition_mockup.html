@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Nutrition Logging (Remake)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  ::selection { background: rgba(63,217,192,0.3); color: #fff; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; letter-spacing: -0.5px; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 0 14px; }
+  .top-bar h1 { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -1px; color: #F5F6F8; }
+  .streak-pill { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #3FD9C0; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); border-radius: 999px; padding: 7px 13px; }
+
+  .date-strip { display: flex; align-items: center; justify-content: space-between; padding: 0 0 16px; }
+  .date-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #9B9CA8; }
+  .date-btn.disabled { opacity: 0.3; }
+  .date-label { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 16px; color: #F5F6F8; }
+
+  .calorie-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 16px; padding: 22px; text-align: center; margin-bottom: 16px; }
+  .ring-wrap { width: 160px; height: 160px; margin: 0 auto 14px; position: relative; }
+  .ring-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+  .ring-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 36px; color: #3FD9C0; line-height: 1; }
+  .ring-cap { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 4px; letter-spacing: 0.5px; }
+  .ring-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9B9CA8; margin-top: 10px; }
+  .ring-sub .coach { color: #3FD9C0; }
+
+  .macros { display: flex; flex-direction: column; gap: 10px; }
+  .macro { display: flex; align-items: center; gap: 10px; }
+  .macro-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #9B9CA8; width: 65px; }
+  .macro-bar { flex: 1; height: 7px; background: #1F2029; border-radius: 4px; overflow: hidden; }
+  .macro-fill { height: 100%; border-radius: 4px; }
+  .macro-val { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; width: 85px; text-align: right; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 18px 0 10px; }
+
+  .meal-section { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 14px 15px; margin-bottom: 12px; }
+  .meal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .meal-title { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .meal-title .kcal { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; font-weight: 400; margin-left: 6px; }
+  .meal-add { width: 30px; height: 30px; border-radius: 9px; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); display: flex; align-items: center; justify-content: center; font-size: 16px; color: #3FD9C0; font-weight: 600; }
+  .food-item { display: flex; align-items: center; gap: 11px; padding: 9px 0; border-top: 1px solid #1C1D26; }
+  .check { width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .check.done { background: #3FD9C0; color: #0A0B0F; }
+  .check.undone { background: #1F2029; border: 1px solid #2A2B38; color: #5C616E; }
+  .food-info { flex: 1; }
+  .food-name { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 13px; color: #F5F6F8; }
+  .food-name.done { color: #7E828D; text-decoration: line-through; }
+  .food-macros { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; }
+  .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; }
+  .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Nutrition Logging · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="top-bar">
+        <h1>Nutrition</h1>
+        <div class="streak-pill">▲ 8 days</div>
+      </div>
+
+      <div class="date-strip">
+        <div class="date-btn">‹</div>
+        <div class="date-label">Today · Jun 25</div>
+        <div class="date-btn disabled">›</div>
+      </div>
+
+      <div class="calorie-card">
+        <div class="ring-wrap">
+          <svg width="160" height="160" viewBox="0 0 160 160" style="transform:rotate(-90deg);">
+            <circle cx="80" cy="80" r="68" fill="none" stroke="#1F2029" stroke-width="12"/>
+            <circle cx="80" cy="80" r="68" fill="none" stroke="#3FD9C0" stroke-width="12" stroke-linecap="round" stroke-dasharray="427" stroke-dashoffset="171"/>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-num">1,840</div>
+            <div class="ring-cap">kcal left</div>
+          </div>
+        </div>
+        <div class="ring-sub">2,160 / 4,000 kcal · <span class="coach">Coach-set target</span></div>
+      </div>
+
+      <div class="macros">
+        <div class="macro">
+          <div class="macro-label">Protein</div>
+          <div class="macro-bar"><div class="macro-fill" style="width:79%;background:#3FD9C0;"></div></div>
+          <div class="macro-val">142 / 180g</div>
+        </div>
+        <div class="macro">
+          <div class="macro-label">Carbs</div>
+          <div class="macro-bar"><div class="macro-fill" style="width:58%;background:#6B8AFF;"></div></div>
+          <div class="macro-val">198 / 340g</div>
+        </div>
+        <div class="macro">
+          <div class="macro-label">Fat</div>
+          <div class="macro-bar"><div class="macro-fill" style="width:69%;background:#9B7BF5;"></div></div>
+          <div class="macro-val">62 / 90g</div>
+        </div>
+      </div>
+
+      <div class="section-label">Meals</div>
+
+      <div class="meal-section">
+        <div class="meal-header">
+          <div class="meal-title">Breakfast <span class="kcal">· 420 kcal</span></div>
+          <div class="meal-add">+</div>
+        </div>
+        <div class="food-item">
+          <div class="check done">✓</div>
+          <div class="food-info"><div class="food-name done">Oatmeal with whey</div><div class="food-macros">80g · 320 kcal · P38 C48 F6</div></div>
+        </div>
+        <div class="food-item">
+          <div class="check done">✓</div>
+          <div class="food-info"><div class="food-name done">Black coffee</div><div class="food-macros">200ml · 5 kcal · P0 C0 F0</div></div>
+        </div>
+      </div>
+
+      <div class="meal-section">
+        <div class="meal-header">
+          <div class="meal-title">Lunch <span class="kcal">· 740 kcal</span></div>
+          <div class="meal-add">+</div>
+        </div>
+        <div class="food-item">
+          <div class="check done">✓</div>
+          <div class="food-info"><div class="food-name done">Grilled chicken breast</div><div class="food-macros">200g · 330 kcal · P62 C0 F7</div></div>
+        </div>
+        <div class="food-item">
+          <div class="check done">✓</div>
+          <div class="food-info"><div class="food-name done">Brown rice</div><div class="food-macros">150g · 200 kcal · P5 C42 F2</div></div>
+        </div>
+        <div class="food-item">
+          <div class="check done">✓</div>
+          <div class="food-info"><div class="food-name done">Mixed salad</div><div class="food-macros">1 bowl · 210 kcal · P8 C18 F12</div></div>
+        </div>
+      </div>
+
+      <div class="meal-section">
+        <div class="meal-header">
+          <div class="meal-title">Dinner <span class="kcal">· 0 kcal</span></div>
+          <div class="meal-add">+</div>
+        </div>
+        <div class="food-item" style="border-top:none;">
+          <div class="check undone">○</div>
+          <div class="food-info"><div class="food-name" style="color:#5C616E;">Add food</div></div>
+        </div>
+      </div>
+
+      <div class="meal-section">
+        <div class="meal-header">
+          <div class="meal-title">Snacks <span class="kcal">· 280 kcal</span></div>
+          <div class="meal-add">+</div>
+        </div>
+        <div class="food-item">
+          <div class="check done">✓</div>
+          <div class="food-info"><div class="food-name done">Greek yogurt</div><div class="food-macros">150g · 100 kcal · P15 C6 F4</div></div>
+        </div>
+        <div class="food-item">
+          <div class="check undone">○</div>
+          <div class="food-info"><div class="food-name">Almonds · planned</div><div class="food-macros">30g · 180 kcal · P6 C6 F15</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">PLAN</div></div>
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">NUTRITION</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

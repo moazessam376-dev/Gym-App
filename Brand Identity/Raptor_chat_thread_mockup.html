@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Chat Thread</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+
+  .chat-header { display: flex; align-items: center; gap: 12px; padding: 8px 18px 14px; border-bottom: 1px solid #1C1D26; }
+  .back-btn { width: 34px; height: 34px; border-radius: 10px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 17px; color: #9B9CA8; }
+  .chat-avatar { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg,#3FD9C0,#1A8A78); display: flex; align-items: center; justify-content: center; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 14px; color: #0A0B0F; }
+  .chat-header-info { flex: 1; }
+  .chat-header-name { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; color: #F5F6F8; }
+  .chat-header-status { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #3FD98A; margin-top: 1px; }
+  .call-btn { width: 34px; height: 34px; border-radius: 10px; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); display: flex; align-items: center; justify-content: center; font-size: 15px; color: #3FD9C0; }
+
+  .messages { padding: 18px 18px 90px; }
+
+  .date-divider { text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #5C616E; margin: 10px 0 18px; }
+
+  .msg { display: flex; margin-bottom: 10px; }
+  .msg.them { justify-content: flex-start; }
+  .msg.me { justify-content: flex-end; }
+  .bubble { max-width: 75%; padding: 11px 15px; border-radius: 16px; font-family: 'Inter', sans-serif; font-size: 14px; line-height: 1.5; }
+  .msg.them .bubble { background: #15161D; border: 1px solid #2A2B38; color: #F5F6F8; border-bottom-left-radius: 5px; }
+  .msg.me .bubble { background: #3FD9C0; color: #0A0B0F; border-bottom-right-radius: 5px; }
+  .msg-time { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #5C616E; margin-top: 4px; }
+  .msg.me .msg-time { text-align: right; }
+
+  .voice-msg { display: flex; align-items: center; gap: 10px; min-width: 200px; }
+  .play-btn { width: 32px; height: 32px; border-radius: 50%; background: #3FD9C0; color: #0A0B0F; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .waveform { flex: 1; height: 24px; display: flex; align-items: center; gap: 2px; }
+  .wave-bar { width: 3px; background: #0A0B0F; border-radius: 2px; opacity: 0.7; }
+  .voice-duration { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #0A0B0F; font-weight: 600; }
+
+  .msg-reaction { display: inline-flex; align-items: center; gap: 4px; background: #1F2029; border: 1px solid #2A2B38; border-radius: 999px; padding: 2px 8px; font-size: 11px; margin-top: 4px; }
+
+  .input-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 14px 24px; display: flex; align-items: center; gap: 10px; }
+  .attach-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 17px; color: #9B9CA8; flex-shrink: 0; }
+  .input-field { flex: 1; background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 11px 14px; font-family: 'Inter', sans-serif; font-size: 14px; color: #5C616E; }
+  .voice-btn { width: 38px; height: 38px; border-radius: 11px; background: #3FD9C0; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #0A0B0F; flex-shrink: 0; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Chat Thread · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="chat-header">
+      <div class="back-btn">‹</div>
+      <div class="chat-avatar">AH</div>
+      <div class="chat-header-info">
+        <div class="chat-header-name">Ahmed Al-Harbi</div>
+        <div class="chat-header-status">● Online · Coach</div>
+      </div>
+      <div class="call-btn">📞</div>
+    </div>
+
+    <div class="messages">
+      <div class="date-divider">Today · Jun 25</div>
+
+      <div class="msg them">
+        <div>
+          <div class="bubble">Saw your bench press PR. 90kg × 6 — solid. How did the form feel?</div>
+          <div class="msg-time">09:14</div>
+        </div>
+      </div>
+
+      <div class="msg me">
+        <div>
+          <div class="bubble">Felt clean. Shoulder blades stayed retracted the whole set.</div>
+          <div class="msg-time">09:22 · Read</div>
+        </div>
+      </div>
+
+      <div class="msg them">
+        <div>
+          <div class="bubble">
+            <div class="voice-msg">
+              <div class="play-btn">▶</div>
+              <div class="waveform">
+                <div class="wave-bar" style="height:8px;"></div><div class="wave-bar" style="height:14px;"></div><div class="wave-bar" style="height:20px;"></div><div class="wave-bar" style="height:12px;"></div><div class="wave-bar" style="height:18px;"></div><div class="wave-bar" style="height:22px;"></div><div class="wave-bar" style="height:10px;"></div><div class="wave-bar" style="height:16px;"></div><div class="wave-bar" style="height:20px;"></div><div class="wave-bar" style="height:14px;"></div><div class="wave-bar" style="height:8px;"></div><div class="wave-bar" style="height:12px;"></div><div class="wave-bar" style="height:18px;"></div><div class="wave-bar" style="height:6px;"></div>
+              </div>
+              <div class="voice-duration">0:42</div>
+            </div>
+          </div>
+          <div class="msg-time">09:25</div>
+        </div>
+      </div>
+
+      <div class="msg me">
+        <div>
+          <div class="bubble">Got it. +2.5kg next session, pause 1s at chest.</div>
+          <div class="msg-time">09:31 · Read</div>
+          <div class="msg-reaction">💪 1</div>
+        </div>
+      </div>
+
+      <div class="msg them">
+        <div>
+          <div class="bubble">Adjust your protein to 180g. Also add 1L water daily. InBody looked good — lean mass up 0.8kg.</div>
+          <div class="msg-time">09:33</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <div class="attach-btn">+</div>
+      <div class="input-field">Message…</div>
+      <div class="voice-btn">🎙</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

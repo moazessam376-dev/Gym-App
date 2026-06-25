@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #0A0B0F; }
+  ::selection { background: rgba(63,217,192,0.3); color: #fff; }
+</style>
+</helmet>
+
+<div style="background:#0A0B0F; color:#F5F6F8; font-family:'Inter',sans-serif; min-height:100vh; padding:0 0 140px 0;">
+
+<!-- ===== HEADER ===== -->
+<div style="max-width:1120px; margin:0 auto; padding:60px 40px 0;">
+  <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#3FD9C0; margin-bottom:22px;">App Redesign · Current → Raptor</div>
+  <h1 style="font-family:'Geist',sans-serif; font-weight:800; font-size:58px; line-height:0.98; letter-spacing:-2.5px; margin:0 0 20px;">From "Midnight Blue"<br>to Raptor.</h1>
+  <p style="font-size:16px; line-height:1.7; color:#9B9CA8; max-width:720px; margin:0;">The screens on the left are recreations of what ships today. On the right, the same screens after the Raptor system. Same data, same structure — it's a reskin plus the ranking, not a rebuild.</p>
+
+  <!-- gap table -->
+  <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:34px;">
+    <div style="background:#15161D; border:1px solid #2A2B38; border-radius:14px; padding:18px;">
+      <div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#7E828D;margin-bottom:9px;">Colour</div>
+      <div style="font-size:13.5px;line-height:1.5;color:#C3C6CE;">Navy + electric blue, glassy glow → <strong style="color:#3FD9C0;font-weight:600;">flat onyx + Signal cyan</strong></div>
+    </div>
+    <div style="background:#15161D; border:1px solid #2A2B38; border-radius:14px; padding:18px;">
+      <div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#7E828D;margin-bottom:9px;">Type</div>
+      <div style="font-size:13.5px;line-height:1.5;color:#C3C6CE;">Space Grotesk → <strong style="color:#3FD9C0;font-weight:600;">Geist + mono numbers</strong></div>
+    </div>
+    <div style="background:#15161D; border:1px solid #2A2B38; border-radius:14px; padding:18px;">
+      <div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#7E828D;margin-bottom:9px;">Ranking</div>
+      <div style="font-size:13.5px;line-height:1.5;color:#C3C6CE;">Weekly sessions + 🔥 medals → <strong style="color:#3FD9C0;font-weight:600;">8-tier crests</strong></div>
+    </div>
+    <div style="background:#15161D; border:1px solid #2A2B38; border-radius:14px; padding:18px;">
+      <div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#7E828D;margin-bottom:9px;">Voice</div>
+      <div style="font-size:13.5px;line-height:1.5;color:#C3C6CE;">"Workout crushed!" 🔥 → <strong style="color:#3FD9C0;font-weight:600;">numbers, no cringe</strong></div>
+    </div>
+  </div>
+  <div style="height:1px; background:#1C1D26; margin:48px 0 0;"></div>
+</div>
+
+<!-- ============================================================= -->
+<!-- HOME — BEFORE / AFTER                                          -->
+<!-- ============================================================= -->
+<div style="max-width:1120px; margin:0 auto; padding:54px 40px 0;">
+  <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#9B9CA8; display:flex; align-items:center; gap:9px; margin-bottom:24px;"><span style="width:6px;height:6px;border-radius:50%;background:#3FD9C0;"></span>Screen 01 · Athlete home</div>
+
+  <div style="display:flex; justify-content:center; gap:60px; flex-wrap:wrap;">
+
+    <!-- ===== BEFORE: ClientHome (Midnight Blue) ===== -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+      <span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#7E828D;border:1px solid #2A2B38;border-radius:7px;padding:6px 12px;">Before · Ships today</span>
+      <div style="width:330px; border:9px solid #1A1B22; border-radius:42px; overflow:hidden; box-shadow:0 30px 70px rgba(0,0,0,0.55);">
+        <div style="background:linear-gradient(180deg,#141B3A 0%,#0A0E20 55%,#070A18 100%); padding:0;">
+          <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-family:'Space Grotesk';font-size:12px;color:#C9CEDF;"><span>9:41</span><span>●●●</span></div>
+          <div style="padding:6px 18px 22px;">
+            <!-- top bar -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+              <div><div style="font-family:'Inter';font-size:12px;color:#8B93AD;">Good evening</div><div style="font-family:'Space Grotesk';font-weight:700;font-size:26px;letter-spacing:-0.3px;">Ahmed</div></div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="display:flex;align-items:center;gap:4px;background:#141A30;border:1px solid #232A45;border-radius:999px;padding:5px 11px;"><span style="font-size:13px;">🔥</span><span style="font-family:'Space Grotesk';font-weight:600;font-size:14px;color:#3D5AFE;">3</span></div>
+                <span style="width:36px;height:36px;border-radius:999px;background:linear-gradient(135deg,#3D5AFE,#7C5CFF);"></span>
+              </div>
+            </div>
+            <!-- hero ring card -->
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:22px;padding:24px 20px;text-align:center;box-shadow:0 0 26px rgba(61,90,254,0.22);">
+              <div style="font-family:'Inter';font-weight:700;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8B93AD;margin-bottom:18px;">Today · Push Day</div>
+              <div style="width:160px;height:160px;border-radius:999px;margin:0 auto;background:conic-gradient(#3D5AFE 0% 70%, #232A45 70% 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(61,90,254,0.35);">
+                <div style="width:128px;height:128px;border-radius:999px;background:#0C1124;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                  <div style="font-family:'Space Grotesk';font-weight:700;font-size:46px;line-height:1;">70<span style="font-size:20px;color:#8B93AD;">%</span></div>
+                  <div style="font-family:'Inter';font-size:11px;color:#8B93AD;margin-top:2px;">14 / 20 sets</div>
+                </div>
+              </div>
+              <div style="background:#3D5AFE;color:#fff;font-family:'Space Grotesk';font-weight:600;font-size:15px;border-radius:14px;padding:13px;margin-top:20px;">⚡ Start workout</div>
+            </div>
+            <!-- nutrition -->
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:15px;margin-top:14px;display:flex;align-items:center;gap:14px;">
+              <div style="width:54px;height:54px;border-radius:999px;background:conic-gradient(#7C5CFF 0% 55%,#232A45 55% 100%);display:flex;align-items:center;justify-content:center;"><div style="width:42px;height:42px;border-radius:999px;background:#10142b;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:600;font-size:11px;">1240</div></div>
+              <div style="flex:1;"><div style="font-family:'Space Grotesk';font-weight:600;font-size:16px;">1,240 kcal left</div><div style="font-family:'Inter';font-size:11px;color:#8B93AD;">1160 / 2400 · P120 C140 F45</div></div>
+            </div>
+            <!-- coach -->
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:14px;margin-top:12px;display:flex;align-items:center;gap:12px;">
+              <span style="width:38px;height:38px;border-radius:999px;background:linear-gradient(135deg,#00C2FF,#3D5AFE);"></span>
+              <span style="flex:1;font-family:'Space Grotesk';font-weight:500;font-size:16px;">Coach Mariam</span>
+              <span style="color:#3D5AFE;font-size:18px;">✦</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== AFTER: Raptor ===== -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+      <span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#0A0B0F;background:#3FD9C0;border-radius:7px;padding:6px 12px;font-weight:700;">After · Raptor</span>
+      <div style="width:330px; border:9px solid #1A1B22; border-radius:42px; overflow:hidden; box-shadow:0 30px 70px rgba(0,0,0,0.55);">
+        <div style="background:#0A0B0F;">
+          <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-family:'JetBrains Mono';font-size:12px;color:#C3C6CE;"><span>9:41</span><span style="color:#3FD9C0;">●●●</span></div>
+          <div style="padding:6px 18px 22px;">
+            <!-- top bar -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+              <div><div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#7E828D;">Tuesday</div><div style="font-family:'Geist';font-weight:700;font-size:26px;letter-spacing:-0.8px;">Ahmed</div></div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="display:flex;align-items:center;gap:5px;background:#15161D;border:1px solid #2A2B38;border-radius:999px;padding:6px 11px;"><span style="font-family:'JetBrains Mono';font-weight:700;font-size:13px;color:#3FD9C0;">12</span><span style="font-family:'JetBrains Mono';font-size:9px;letter-spacing:1px;color:#7E828D;">DAY</span></div>
+                <span style="width:36px;height:36px;border-radius:11px;background:#1F2029;border:1px solid #2A2B38;"></span>
+              </div>
+            </div>
+            <!-- rank strip (NEW) -->
+            <div style="display:flex;align-items:center;gap:13px;background:#15161D;border:1px solid #2A2B38;border-radius:14px;padding:12px 15px;margin-bottom:14px;">
+              <span style="width:42px;height:42px;border-radius:12px;background:radial-gradient(circle at 50% 32%,#AEC0FF,#6B8AFF 55%,#3A52C4);box-shadow:0 0 16px rgba(107,138,255,0.5),inset 0 1px 3px rgba(255,255,255,0.3);flex-shrink:0;"></span>
+              <div style="flex:1;"><div style="font-family:'Geist';font-weight:700;font-size:15px;">Diamond II</div><div style="font-family:'JetBrains Mono';font-size:10px;color:#9B9CA8;">Regional #312 · ▲4 this week</div></div>
+              <span style="font-family:'JetBrains Mono';font-size:11px;color:#3FD9C0;">→</span>
+            </div>
+            <!-- hero ring card -->
+            <div style="background:#15161D;border:1px solid #2A2B38;border-radius:18px;padding:24px 20px;text-align:center;">
+              <div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#7E828D;margin-bottom:18px;">Push Day · Today</div>
+              <div style="width:160px;height:160px;border-radius:999px;margin:0 auto;background:conic-gradient(#3FD9C0 0% 70%, #20212B 70% 100%);display:flex;align-items:center;justify-content:center;">
+                <div style="width:130px;height:130px;border-radius:999px;background:#0E0F14;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                  <div style="font-family:'JetBrains Mono';font-weight:700;font-size:44px;line-height:1;color:#F5F6F8;">70<span style="font-size:20px;color:#7E828D;">%</span></div>
+                  <div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;color:#7E828D;margin-top:4px;">14 / 20 SETS</div>
+                </div>
+              </div>
+              <div style="background:#3FD9C0;color:#0A0B0F;font-family:'Geist';font-weight:700;font-size:15px;border-radius:13px;padding:13px;margin-top:20px;">Start workout</div>
+            </div>
+            <!-- nutrition -->
+            <div style="background:#15161D;border:1px solid #2A2B38;border-radius:16px;padding:15px;margin-top:14px;display:flex;align-items:center;gap:14px;">
+              <div style="width:54px;height:54px;border-radius:999px;background:conic-gradient(#3FD9C0 0% 48%,#20212B 48% 100%);display:flex;align-items:center;justify-content:center;"><div style="width:42px;height:42px;border-radius:999px;background:#0E0F14;"></div></div>
+              <div style="flex:1;"><div style="font-family:'JetBrains Mono';font-weight:700;font-size:18px;">1,240<span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;color:#7E828D;"> KCAL LEFT</span></div><div style="font-family:'JetBrains Mono';font-size:10px;color:#7E828D;margin-top:3px;">1,160 / 2,400 · P120 C140 F45</div></div>
+            </div>
+            <!-- coach -->
+            <div style="background:#15161D;border:1px solid #2A2B38;border-radius:16px;padding:14px;margin-top:12px;display:flex;align-items:center;gap:12px;">
+              <span style="width:38px;height:38px;border-radius:11px;background:#1F2029;border:1px solid #2A2B38;"></span>
+              <span style="flex:1;font-family:'Geist';font-weight:600;font-size:16px;">Mariam</span>
+              <span style="color:#3FD9C0;font-size:16px;">→</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- LEADERBOARD — BEFORE / AFTER                                   -->
+<!-- ============================================================= -->
+<div style="max-width:1120px; margin:0 auto; padding:64px 40px 0;">
+  <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#9B9CA8; display:flex; align-items:center; gap:9px; margin-bottom:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#3FD9C0;"></span>Screen 02 · Leaderboard</div>
+  <p style="font-size:14.5px; line-height:1.6; color:#9B9CA8; max-width:720px; margin:0 0 24px;">This is the biggest change. Today it's a weekly session count among one coach's clients. Raptor turns it into the brand's engine — tiers, divisions, body-data stats — the screen people screenshot.</p>
+
+  <div style="display:flex; justify-content:center; gap:60px; flex-wrap:wrap;">
+
+    <!-- ===== BEFORE ===== -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+      <span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#7E828D;border:1px solid #2A2B38;border-radius:7px;padding:6px 12px;">Before · Ships today</span>
+      <div style="width:330px; border:9px solid #1A1B22; border-radius:42px; overflow:hidden; box-shadow:0 30px 70px rgba(0,0,0,0.55);">
+        <div style="background:linear-gradient(180deg,#141B3A 0%,#0A0E20 60%,#070A18 100%); min-height:560px;">
+          <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-family:'Space Grotesk';font-size:12px;color:#C9CEDF;"><span>9:41</span><span>●●●</span></div>
+          <div style="padding:8px 18px 22px;">
+            <div style="font-family:'Space Grotesk';font-weight:700;font-size:26px;letter-spacing:-0.3px;">This week</div>
+            <div style="font-family:'Inter';font-size:12px;color:#8B93AD;margin-bottom:18px;">Your clients, ranked by sessions</div>
+            <!-- rows -->
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:13px;display:flex;align-items:center;gap:12px;margin-bottom:10px;box-shadow:0 0 18px rgba(61,90,254,0.15);">
+              <span style="font-family:'Space Grotesk';font-weight:700;font-size:18px;color:#FFD43B;width:22px;text-align:center;">1</span>
+              <span style="width:38px;height:38px;border-radius:999px;background:linear-gradient(135deg,#3D5AFE,#7C5CFF);border:2px solid #FFD43B;"></span>
+              <div style="flex:1;"><div style="font-family:'Space Grotesk';font-weight:500;font-size:15px;">Khalid O.</div><div style="font-family:'Inter';font-size:11px;color:#8B93AD;">120 sets logged</div></div>
+              <span style="font-family:'Space Grotesk';font-weight:600;font-size:13px;color:#fff;background:#3D5AFE;border-radius:999px;padding:4px 10px;">8 🔥</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:13px;display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+              <span style="font-family:'Space Grotesk';font-weight:700;font-size:18px;color:#C0C7D0;width:22px;text-align:center;">2</span>
+              <span style="width:38px;height:38px;border-radius:999px;background:linear-gradient(135deg,#00C2FF,#3D5AFE);border:2px solid #C0C7D0;"></span>
+              <div style="flex:1;"><div style="font-family:'Space Grotesk';font-weight:500;font-size:15px;">Omar S.</div><div style="font-family:'Inter';font-size:11px;color:#8B93AD;">112 sets logged</div></div>
+              <span style="font-family:'Space Grotesk';font-weight:600;font-size:13px;color:#3D5AFE;background:#141A30;border:1px solid #232A45;border-radius:999px;padding:4px 10px;">7 🔥</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:13px;display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+              <span style="font-family:'Space Grotesk';font-weight:700;font-size:18px;color:#E8985E;width:22px;text-align:center;">3</span>
+              <span style="width:38px;height:38px;border-radius:999px;background:linear-gradient(135deg,#7C5CFF,#3D5AFE);border:2px solid #E8985E;"></span>
+              <div style="flex:1;"><div style="font-family:'Space Grotesk';font-weight:500;font-size:15px;">Yousef M.</div><div style="font-family:'Inter';font-size:11px;color:#8B93AD;">98 sets logged</div></div>
+              <span style="font-family:'Space Grotesk';font-weight:600;font-size:13px;color:#3D5AFE;background:#141A30;border:1px solid #232A45;border-radius:999px;padding:4px 10px;">6 🔥</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:13px;display:flex;align-items:center;gap:12px;">
+              <span style="font-family:'Space Grotesk';font-weight:700;font-size:18px;color:#8B93AD;width:22px;text-align:center;">4</span>
+              <span style="width:38px;height:38px;border-radius:999px;background:linear-gradient(135deg,#5B8DEF,#7C5CFF);"></span>
+              <div style="flex:1;"><div style="font-family:'Space Grotesk';font-weight:500;font-size:15px;">Tariq H.</div><div style="font-family:'Inter';font-size:11px;color:#8B93AD;">86 sets logged</div></div>
+              <span style="font-family:'Space Grotesk';font-weight:600;font-size:13px;color:#3D5AFE;background:#141A30;border:1px solid #232A45;border-radius:999px;padding:4px 10px;">5 🔥</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== AFTER ===== -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+      <span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#0A0B0F;background:#3FD9C0;border-radius:7px;padding:6px 12px;font-weight:700;">After · Raptor</span>
+      <div style="width:330px; border:9px solid #1A1B22; border-radius:42px; overflow:hidden; box-shadow:0 30px 70px rgba(0,0,0,0.55);">
+        <div style="background:#0A0B0F; min-height:560px;">
+          <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-family:'JetBrains Mono';font-size:12px;color:#C3C6CE;"><span>9:41</span><span style="color:#3FD9C0;">●●●</span></div>
+          <div style="padding:8px 18px 22px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;">
+              <div style="font-family:'Geist';font-weight:700;font-size:26px;letter-spacing:-0.8px;">Top athletes</div>
+              <div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;color:#3FD9C0;">SEASON 02</div>
+            </div>
+            <div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#7E828D;margin-bottom:16px;">Men · 75–85kg · Week 6</div>
+            <!-- rows -->
+            <div style="display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid #16171F;">
+              <span style="font-family:'JetBrains Mono';font-weight:700;font-size:16px;color:#3FD9C0;width:24px;">01</span>
+              <span style="width:40px;height:40px;border-radius:12px;background:radial-gradient(circle at 50% 32%,#9BFFEE,#3FD9C0 55%,#1A8A78);box-shadow:0 0 14px rgba(63,217,192,0.5);flex-shrink:0;"></span>
+              <div style="flex:1;"><div style="font-family:'Inter';font-weight:600;font-size:14px;">Khalid Al-Otaibi</div><div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:0.5px;color:#3FD9C0;">APEX</div></div>
+              <span style="font-family:'JetBrains Mono';font-size:12px;color:#9B9CA8;text-align:right;">−9.2kg<br><span style="font-size:10px;color:#7E828D;">12 wk</span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid #16171F;">
+              <span style="font-family:'JetBrains Mono';font-weight:700;font-size:16px;color:#3FD9C0;width:24px;">02</span>
+              <span style="width:40px;height:40px;border-radius:12px;background:radial-gradient(circle at 50% 32%,#FF96A6,#E0556B 55%,#9C2435);box-shadow:0 0 14px rgba(224,85,107,0.45);flex-shrink:0;"></span>
+              <div style="flex:1;"><div style="font-family:'Inter';font-weight:600;font-size:14px;">Omar El-Sayed</div><div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:0.5px;color:#E0556B;">GRANDMASTER</div></div>
+              <span style="font-family:'JetBrains Mono';font-size:12px;color:#9B9CA8;text-align:right;">−7.8kg<br><span style="font-size:10px;color:#7E828D;">10 wk</span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid #16171F;">
+              <span style="font-family:'JetBrains Mono';font-weight:700;font-size:16px;color:#3FD9C0;width:24px;">03</span>
+              <span style="width:40px;height:40px;border-radius:12px;background:radial-gradient(circle at 50% 32%,#CBB8FF,#9B7BF5 55%,#5E3FB0);box-shadow:0 0 14px rgba(155,123,245,0.45);flex-shrink:0;"></span>
+              <div style="flex:1;"><div style="font-family:'Inter';font-weight:600;font-size:14px;">Yousef Al-Mutairi</div><div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:0.5px;color:#9B7BF5;">MASTER</div></div>
+              <span style="font-family:'JetBrains Mono';font-size:12px;color:#9B9CA8;text-align:right;">+4.1kg<br><span style="font-size:10px;color:#7E828D;">lean</span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid #16171F;">
+              <span style="font-family:'JetBrains Mono';font-weight:700;font-size:16px;color:#7E828D;width:24px;">04</span>
+              <span style="width:40px;height:40px;border-radius:12px;background:radial-gradient(circle at 50% 32%,#AEC0FF,#6B8AFF 55%,#3A52C4);flex-shrink:0;"></span>
+              <div style="flex:1;"><div style="font-family:'Inter';font-weight:600;font-size:14px;">Tariq Hassan</div><div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:0.5px;color:#6B8AFF;">DIAMOND</div></div>
+              <span style="font-family:'JetBrains Mono';font-size:12px;color:#9B9CA8;text-align:right;">−6.4kg<br><span style="font-size:10px;color:#7E828D;">11 wk</span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:13px;padding:13px 0;">
+              <span style="font-family:'JetBrains Mono';font-weight:700;font-size:16px;color:#7E828D;width:24px;">05</span>
+              <span style="width:40px;height:40px;border-radius:12px;background:radial-gradient(circle at 50% 32%,#FFFFFF,#CFE6F0 55%,#8FB4C4);flex-shrink:0;"></span>
+              <div style="flex:1;"><div style="font-family:'Inter';font-weight:600;font-size:14px;">Faisal Al-Dossari</div><div style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:0.5px;color:#CFE6F0;">PLATINUM</div></div>
+              <span style="font-family:'JetBrains Mono';font-size:12px;color:#9B9CA8;text-align:right;">−5.9kg<br><span style="font-size:10px;color:#7E828D;">12 wk</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- MIGRATION PATH                                                 -->
+<!-- ============================================================= -->
+<div style="max-width:1120px; margin:0 auto; padding:68px 40px 0;">
+  <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#9B9CA8; display:flex; align-items:center; gap:9px; margin-bottom:16px;"><span style="width:6px;height:6px;border-radius:50%;background:#3FD9C0;"></span>How we get there</div>
+  <h2 style="font-family:'Geist',sans-serif; font-weight:700; font-size:32px; line-height:1.1; letter-spacing:-1px; margin:0 0 24px;">Four steps, in order of leverage.</h2>
+
+  <div style="display:flex; flex-direction:column; gap:12px;">
+    <div style="background:#15161D;border:1px solid #2A2B38;border-radius:14px;padding:20px 22px;display:flex;gap:18px;align-items:flex-start;">
+      <span style="font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:#3FD9C0;width:24px;flex-shrink:0;">01</span>
+      <div style="flex:1;"><div style="font-family:'Geist';font-weight:600;font-size:16px;margin-bottom:5px;">Swap the theme tokens</div><div style="font-size:13.5px;line-height:1.6;color:#9B9CA8;">Rewrite <span style="font-family:'JetBrains Mono';color:#C3C6CE;">colors.ts</span>, <span style="font-family:'JetBrains Mono';color:#C3C6CE;">typography.ts</span>, <span style="font-family:'JetBrains Mono';color:#C3C6CE;">effects.ts</span>. Because every screen reads <span style="font-family:'JetBrains Mono';color:#C3C6CE;">@/theme</span>, this reskins the whole app in one change — navy→onyx, blue→cyan, drop the glass/glow, Space Grotesk→Geist.</div></div>
+      <span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;color:#3FD9C0;background:rgba(63,217,192,0.14);border-radius:6px;padding:5px 9px;white-space:nowrap;">~1 day</span>
+    </div>
+    <div style="background:#15161D;border:1px solid #2A2B38;border-radius:14px;padding:20px 22px;display:flex;gap:18px;align-items:flex-start;">
+      <span style="font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:#3FD9C0;width:24px;flex-shrink:0;">02</span>
+      <div style="flex:1;"><div style="font-family:'Geist';font-weight:600;font-size:16px;margin-bottom:5px;">Mono every number + kill the cringe</div><div style="font-size:13.5px;line-height:1.6;color:#9B9CA8;">Add a <span style="font-family:'JetBrains Mono';color:#C3C6CE;">mono</span> text variant for all KPIs/stats/ranks. Sweep the i18n strings (<span style="font-family:'JetBrains Mono';color:#C3C6CE;">en.json</span>/<span style="font-family:'JetBrains Mono';color:#C3C6CE;">ar.json</span>) — replace "Workout crushed!" and 🔥 with factual lines.</div></div>
+      <span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;color:#3FD9C0;background:rgba(63,217,192,0.14);border-radius:6px;padding:5px 9px;white-space:nowrap;">~1 day</span>
+    </div>
+    <div style="background:#15161D;border:1px solid #2A2B38;border-radius:14px;padding:20px 22px;display:flex;gap:18px;align-items:flex-start;">
+      <span style="font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:#3FD9C0;width:24px;flex-shrink:0;">03</span>
+      <div style="flex:1;"><div style="font-family:'Geist';font-weight:600;font-size:16px;margin-bottom:5px;">Build the tier system</div><div style="font-size:13.5px;line-height:1.6;color:#9B9CA8;">The real feature work: tier computation (body-comp + adherence + goals), 8 crests, divisions, seasons, regional ranking. Bigger than a reskin — scope it as its own phase.</div></div>
+      <span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;color:#FFB020;background:rgba(255,176,32,0.14);border-radius:6px;padding:5px 9px;white-space:nowrap;">phase</span>
+    </div>
+    <div style="background:#15161D;border:1px solid #2A2B38;border-radius:14px;padding:20px 22px;display:flex;gap:18px;align-items:flex-start;">
+      <span style="font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:#3FD9C0;width:24px;flex-shrink:0;">04</span>
+      <div style="flex:1;"><div style="font-family:'Geist';font-weight:600;font-size:16px;margin-bottom:5px;">Commission the crest artwork</div><div style="font-size:13.5px;line-height:1.6;color:#9B9CA8;">The placeholders ship fine for v1; real illustrated crests are what make the competitive framing feel earned. Brief an illustrator off the design-system palette.</div></div>
+      <span style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:1px;color:#9B9CA8;background:#1F2029;border-radius:6px;padding:5px 9px;white-space:nowrap;">parallel</span>
+    </div>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#5C616E; margin-top:40px;">
+    <span>Raptor · Current → Raptor</span>
+    <span>Recreated from the live repo</span>
+  </div>
+</div>
+
+</div>
+</x-dc>
+</body>
+</html>

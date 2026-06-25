@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Achievement Badges</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; padding: 40px 0; }
+  .container { max-width: 1080px; margin: 0 auto; padding: 0 40px; }
+  .doc-header { margin-bottom: 48px; }
+  .doc-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; margin-bottom: 12px; }
+  .doc-title { font-family: 'Geist', sans-serif; font-weight: 900; font-size: 56px; letter-spacing: -2.5px; color: #F5F6F8; line-height: 1; margin-bottom: 12px; }
+  .doc-desc { font-family: 'Inter', sans-serif; font-size: 16px; color: #9B9CA8; max-width: 620px; line-height: 1.5; }
+  .section { margin-bottom: 56px; }
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: #7E828D; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .section-label .dot { width: 6px; height: 6px; border-radius: 50%; background: #3FD9C0; }
+  .section-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 28px; letter-spacing: -1px; color: #F5F6F8; margin-bottom: 24px; }
+  .badge-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px 20px; }
+  .badge-cell { text-align: center; }
+  .badge-stage { width: 120px; height: 120px; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; position: relative; }
+  .badge-stage .glow { position: absolute; inset: 16px; border-radius: 50%; opacity: 0.2; filter: blur(16px); }
+  .badge-stage svg { width: 100%; height: 100%; position: relative; z-index: 1; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.5)); }
+  .badge-cell.locked svg { opacity: 0.25; filter: grayscale(1); }
+  .badge-name { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 14px; color: #F5F6F8; margin-bottom: 3px; }
+  .badge-cell.locked .badge-name { color: #5C616E; }
+  .badge-desc { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #7E828D; letter-spacing: 0.3px; }
+  .badge-cell.locked .badge-desc { color: #3A3D4C; }
+  .badge-status { font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-top: 5px; }
+  .badge-status.earned { color: #3FD9C0; }
+  .badge-status.locked { color: #5C616E; }
+  .badge-status.progress { color: #FFB323; }
+  .doc-footer { margin-top: 56px; padding-top: 24px; border-top: 1px solid #1C1D26; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #5C616E; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="doc-header">
+    <div class="doc-tag">Achievement Badges · v1</div>
+    <h1 class="doc-title">Beyond <span style="color:#3FD9C0;">tiers.</span></h1>
+    <p class="doc-desc">Milestone badges for streaks, firsts, and volume — earned on top of the 8-tier ranking system. Same ornate crest aesthetic, same Raptor palette. Collectible and shareable.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-label"><span class="dot"></span>01 · Streaks</div>
+    <h2 class="section-title">Consistency rewards.</h2>
+    <div class="badge-grid">
+      <!-- 7-day streak -->
+      <div class="badge-cell">
+        <div class="badge-stage">
+          <div class="glow" style="background:#3FD9C0;"></div>
+          <svg viewBox="0 0 100 100">
+            <defs><radialGradient id="b7" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#9BFFEE"/><stop offset="52%" stop-color="#3FD9C0"/><stop offset="100%" stop-color="#1A8A78"/></radialGradient></defs>
+            <circle cx="50" cy="50" r="40" fill="url(#b7)" stroke="#1A8A78" stroke-width="2"/>
+            <circle cx="50" cy="50" r="32" fill="#0A0B0F" stroke="#2BA897" stroke-width="1"/>
+            <text x="50" y="58" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="22" fill="#3FD9C0">7</text>
+            <text x="50" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#7E828D" letter-spacing="1">DAYS</text>
+          </svg>
+        </div>
+        <div class="badge-name">7-Day Streak</div>
+        <div class="badge-desc">Train 7 days straight</div>
+        <div class="badge-status earned">Earned · Jun 20</div>
+      </div>
+      <!-- 30-day streak -->
+      <div class="badge-cell">
+        <div class="badge-stage">
+          <div class="glow" style="background:#6B8AFF;"></div>
+          <svg viewBox="0 0 100 100">
+            <defs><radialGradient id="b30" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#AEC0FF"/><stop offset="52%" stop-color="#6B8AFF"/><stop offset="100%" stop-color="#3A52C4"/></radialGradient></defs>
+            <circle cx="50" cy="50" r="40" fill="url(#b30)" stroke="#3A52C4" stroke-width="2"/>
+            <circle cx="50" cy="50" r="32" fill="#0A0B0F" stroke="#4A60D0" stroke-width="1"/>
+            <text x="50" y="58" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="20" fill="#6B8AFF">30</text>
+            <text x="50" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#7E828D" letter-spacing="1">DAYS</text>
+          </svg>
+        </div>
+        <div class="badge-name">30-Day Streak</div>
+        <div class="badge-desc">Train 30 days straight</div>
+        <div class="badge-status progress">22 / 30 days</div>
+      </div>
+      <!-- 100-day streak -->
+      <div class="badge-cell locked">
+        <div class="badge-stage">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="40" fill="#1F2029" stroke="#2A2B38" stroke-width="2"/>
+            <circle cx="50" cy="50" r="32" fill="#0A0B0F" stroke="#2A2B38" stroke-width="1"/>
+            <text x="50" y="58" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="18" fill="#5C616E">100</text>
+            <text x="50" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#3A3D4C" letter-spacing="1">DAYS</text>
+          </svg>
+        </div>
+        <div class="badge-name">100-Day Streak</div>
+        <div class="badge-desc">Train 100 days straight</div>
+        <div class="badge-status locked">Locked</div>
+      </div>
+      <!-- 365-day streak -->
+      <div class="badge-cell locked">
+        <div class="badge-stage">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="40" fill="#1F2029" stroke="#2A2B38" stroke-width="2"/>
+            <circle cx="50" cy="50" r="32" fill="#0A0B0F" stroke="#2A2B38" stroke-width="1"/>
+            <text x="50" y="56" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="16" fill="#5C616E">365</text>
+            <text x="50" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#3A3D4C" letter-spacing="1">DAYS</text>
+          </svg>
+        </div>
+        <div class="badge-name">Iron Will</div>
+        <div class="badge-desc">Train 365 days straight</div>
+        <div class="badge-status locked">Locked</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label"><span class="dot"></span>02 · Firsts</div>
+    <h2 class="section-title">Milestone firsts.</h2>
+    <div class="badge-grid">
+      <!-- First workout -->
+      <div class="badge-cell">
+        <div class="badge-stage">
+          <div class="glow" style="background:#3FD9C0;"></div>
+          <svg viewBox="0 0 100 100">
+            <defs><radialGradient id="bf1" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#9BFFEE"/><stop offset="52%" stop-color="#3FD9C0"/><stop offset="100%" stop-color="#1A8A78"/></radialGradient></defs>
+            <path d="M 50 10 L 82 22 L 82 56 Q 82 80 50 92 Q 18 80 18 56 L 18 22 Z" fill="url(#bf1)" stroke="#1A8A78" stroke-width="2"/>
+            <path d="M 50 18 L 75 27 L 75 54 Q 75 74 50 84 Q 25 74 25 54 L 25 27 Z" fill="#0A0B0F" stroke="#2BA897" stroke-width="1"/>
+            <g transform="translate(50,50)">
+              <rect x="-2" y="-14" width="4" height="28" fill="#3FD9C0" rx="1"/>
+              <rect x="-14" y="-2" width="28" height="4" fill="#3FD9C0" rx="1"/>
+            </g>
+          </svg>
+        </div>
+        <div class="badge-name">First Workout</div>
+        <div class="badge-desc">Log your first session</div>
+        <div class="badge-status earned">Earned · May 13</div>
+      </div>
+      <!-- First PR -->
+      <div class="badge-cell">
+        <div class="badge-stage">
+          <div class="glow" style="background:#E5B83C;"></div>
+          <svg viewBox="0 0 100 100">
+            <defs><radialGradient id="bf2" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#FFE08A"/><stop offset="52%" stop-color="#E5B83C"/><stop offset="100%" stop-color="#9A7615"/></radialGradient></defs>
+            <path d="M 50 10 L 82 22 L 82 56 Q 82 80 50 92 Q 18 80 18 56 L 18 22 Z" fill="url(#bf2)" stroke="#9A7615" stroke-width="2"/>
+            <path d="M 50 18 L 75 27 L 75 54 Q 75 74 50 84 Q 25 74 25 54 L 25 27 Z" fill="#0A0B0F" stroke="#B8860B" stroke-width="1"/>
+            <text x="50" y="56" text-anchor="middle" font-family="Geist" font-weight="900" font-size="20" fill="#E5B83C">PR</text>
+          </svg>
+        </div>
+        <div class="badge-name">First PR</div>
+        <div class="badge-desc">Beat a personal record</div>
+        <div class="badge-status earned">Earned · May 20</div>
+      </div>
+      <!-- First goal hit -->
+      <div class="badge-cell">
+        <div class="badge-stage">
+          <div class="glow" style="background:#3FD98A;"></div>
+          <svg viewBox="0 0 100 100">
+            <defs><radialGradient id="bf3" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#7BE8B5"/><stop offset="52%" stop-color="#3FD98A"/><stop offset="100%" stop-color="#1A8A5C"/></radialGradient></defs>
+            <path d="M 50 10 L 82 22 L 82 56 Q 82 80 50 92 Q 18 80 18 56 L 18 22 Z" fill="url(#bf3)" stroke="#1A8A5C" stroke-width="2"/>
+            <path d="M 50 18 L 75 27 L 75 54 Q 75 74 50 84 Q 25 74 25 54 L 25 27 Z" fill="#0A0B0F" stroke="#2BA86E" stroke-width="1"/>
+            <circle cx="50" cy="50" r="14" fill="none" stroke="#3FD98A" stroke-width="2"/>
+            <circle cx="50" cy="50" r="6" fill="#3FD98A"/>
+          </svg>
+        </div>
+        <div class="badge-name">First Goal Hit</div>
+        <div class="badge-desc">Achieve your first logged goal</div>
+        <div class="badge-status earned">Earned · Jun 14</div>
+      </div>
+      <!-- First InBody -->
+      <div class="badge-cell">
+        <div class="badge-stage">
+          <div class="glow" style="background:#9B7BF5;"></div>
+          <svg viewBox="0 0 100 100">
+            <defs><radialGradient id="bf4" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#CBB8FF"/><stop offset="52%" stop-color="#9B7BF5"/><stop offset="100%" stop-color="#5E3FB0"/></radialGradient></defs>
+            <path d="M 50 10 L 82 22 L 82 56 Q 82 80 50 92 Q 18 80 18 56 L 18 22 Z" fill="url(#bf4)" stroke="#5E3FB0" stroke-width="2"/>
+            <path d="M 50 18 L 75 27 L 75 54 Q 75 74 50 84 Q 25 74 25 54 L 25 27 Z" fill="#0A0B0F" stroke="#7A5BD0" stroke-width="1"/>
+            <rect x="38" y="38" width="24" height="24" rx="3" transform="rotate(45 50 50)" fill="none" stroke="#9B7BF5" stroke-width="2"/>
+            <rect x="44" y="44" width="12" height="12" rx="2" transform="rotate(45 50 50)" fill="#9B7BF5" opacity="0.6"/>
+          </svg>
+        </div>
+        <div class="badge-name">First Scan</div>
+        <div class="badge-desc">Submit your first InBody</div>
+        <div class="badge-status earned">Earned · May 13</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label"><span class="dot"></span>03 · Volume</div>
+    <h2 class="section-title">Volume milestones.</h2>
+    <div class="badge-grid">
+      <!-- 100 workouts -->
+      <div class="badge-cell">
+        <div class="badge-stage">
+          <div class="glow" style="background:#6B8AFF;"></div>
+          <svg viewBox="0 0 100 100">
+            <defs><radialGradient id="bv1" cx="50%" cy="32%" r="60%"><stop offset="0%" stop-color="#AEC0FF"/><stop offset="52%" stop-color="#6B8AFF"/><stop offset="100%" stop-color="#3A52C4"/></radialGradient></defs>
+            <path d="M 50 10 L 82 22 L 82 56 Q 82 80 50 92 Q 18 80 18 56 L 18 22 Z" fill="url(#bv1)" stroke="#3A52C4" stroke-width="2"/>
+            <path d="M 50 18 L 75 27 L 75 54 Q 75 74 50 84 Q 25 74 25 54 L 25 27 Z" fill="#0A0B0F" stroke="#4A60D0" stroke-width="1"/>
+            <text x="50" y="48" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="18" fill="#6B8AFF">100</text>
+            <text x="50" y="64" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#7E828D" letter-spacing="1">WORKOUTS</text>
+          </svg>
+        </div>
+        <div class="badge-name">Centurion</div>
+        <div class="badge-desc">Log 100 workouts</div>
+        <div class="badge-status progress">47 / 100</div>
+      </div>
+      <!-- 500 workouts -->
+      <div class="badge-cell locked">
+        <div class="badge-stage">
+          <svg viewBox="0 0 100 100">
+            <path d="M 50 10 L 82 22 L 82 56 Q 82 80 50 92 Q 18 80 18 56 L 18 22 Z" fill="#1F2029" stroke="#2A2B38" stroke-width="2"/>
+            <path d="M 50 18 L 75 27 L 75 54 Q 75 74 50 84 Q 25 74 25 54 L 25 27 Z" fill="#0A0B0F" stroke="#2A2B38" stroke-width="1"/>
+            <text x="50" y="48" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="16" fill="#5C616E">500</text>
+            <text x="50" y="64" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#3A3D4C" letter-spacing="1">WORKOUTS</text>
+          </svg>
+        </div>
+        <div class="badge-name">Iron Centurion</div>
+        <div class="badge-desc">Log 500 workouts</div>
+        <div class="badge-status locked">Locked</div>
+      </div>
+      <!-- 1000 workouts -->
+      <div class="badge-cell locked">
+        <div class="badge-stage">
+          <svg viewBox="0 0 100 100">
+            <path d="M 50 10 L 82 22 L 82 56 Q 82 80 50 92 Q 18 80 18 56 L 18 22 Z" fill="#1F2029" stroke="#2A2B38" stroke-width="2"/>
+            <path d="M 50 18 L 75 27 L 75 54 Q 75 74 50 84 Q 25 74 25 54 L 25 27 Z" fill="#0A0B0F" stroke="#2A2B38" stroke-width="1"/>
+            <text x="50" y="48" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="14" fill="#5C616E">1000</text>
+            <text x="50" y="64" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#3A3D4C" letter-spacing="1">WORKOUTS</text>
+          </svg>
+        </div>
+        <div class="badge-name">Apex Centurion</div>
+        <div class="badge-desc">Log 1,000 workouts</div>
+        <div class="badge-status locked">Locked</div>
+      </div>
+      <!-- Diamond Club -->
+      <div class="badge-cell locked">
+        <div class="badge-stage">
+          <svg viewBox="0 0 100 100">
+            <path d="M 50 10 L 82 22 L 82 56 Q 82 80 50 92 Q 18 80 18 56 L 18 22 Z" fill="#1F2029" stroke="#2A2B38" stroke-width="2"/>
+            <path d="M 50 18 L 75 27 L 75 54 Q 75 74 50 84 Q 25 74 25 54 L 25 27 Z" fill="#0A0B0F" stroke="#2A2B38" stroke-width="1"/>
+            <rect x="38" y="38" width="24" height="24" rx="3" transform="rotate(45 50 50)" fill="none" stroke="#5C616E" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="badge-name">Diamond Club</div>
+        <div class="badge-desc">Reach Diamond tier</div>
+        <div class="badge-status progress">2 goals left</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-footer">
+    <span>Raptor · Achievement Badges · v1</span>
+    <span>12 badges · End</span>
+  </div>
+</div>
+</body>
+</html>

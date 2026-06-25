@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Coach Invite Client</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 24px 40px; }
+
+  .nav-header { display: flex; align-items: center; gap: 14px; padding: 8px 0 24px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 18px; color: #F5F6F8; }
+
+  .hero { text-align: center; padding: 10px 0 30px; }
+  .hero-icon { font-size: 40px; margin-bottom: 14px; }
+  .hero h1 { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 26px; letter-spacing: -0.8px; color: #F5F6F8; line-height: 1.15; }
+  .hero p { font-family: 'Inter', sans-serif; font-size: 14px; color: #9B9CA8; line-height: 1.55; margin-top: 8px; max-width: 280px; margin-left: auto; margin-right: auto; }
+
+  .form-group { margin-bottom: 18px; }
+  .form-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #9B9CA8; margin-bottom: 7px; display: block; }
+  .form-input { width: 100%; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 11px; padding: 15px; font-family: 'Inter', sans-serif; font-size: 15px; color: #F5F6F8; }
+  .form-input::placeholder { color: #5C616E; }
+
+  .role-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .role-chip { background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 13px; text-align: center; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; color: #9B9CA8; }
+  .role-chip.active { background: rgba(63,217,192,0.1); border-color: #3FD9C0; color: #3FD9C0; }
+
+  .preview-card { background: linear-gradient(165deg, #10202C, #0A0B0F); border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 18px; }
+  .preview-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #7E828D; margin-bottom: 10px; }
+  .preview-msg { font-family: 'Inter', sans-serif; font-size: 13px; color: #C3C6CE; line-height: 1.6; }
+  .preview-msg strong { color: #F5F6F8; }
+  .preview-msg .accent { color: #3FD9C0; }
+
+  .btn-primary { width: 100%; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; text-align: center; border-radius: 13px; padding: 16px; border: none; display: block; margin-bottom: 12px; }
+  .btn-ghost { width: 100%; background: transparent; color: #9B9CA8; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; text-align: center; border-radius: 13px; padding: 14px; border: none; }
+
+  .pending-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid #1C1D26; }
+  .pending-avatar { width: 38px; height: 38px; border-radius: 11px; background: #1F2029; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #9B9CA8; flex-shrink: 0; }
+  .pending-info { flex: 1; }
+  .pending-email { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 13px; color: #F5F6F8; }
+  .pending-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+  .pending-status { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; border-radius: 6px; padding: 4px 8px; }
+  .pending-status.sent { color: #FFB323; background: rgba(255,179,35,0.12); }
+  .pending-status.accepted { color: #3FD98A; background: rgba(63,217,138,0.14); }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 18px 0 10px; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Coach Invite Client · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Invite Client</div>
+      </div>
+
+      <div class="hero">
+        <div class="hero-icon">✉</div>
+        <h1>Invite a new client</h1>
+        <p>They'll get a sign-up link valid for 7 days. The standard $3/client fee applies once they accept.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Client email</label>
+        <input class="form-input" type="email" placeholder="client@example.com">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Personal note (optional)</label>
+        <input class="form-input" type="text" placeholder="Hi Khalid, looking forward to coaching you.">
+      </div>
+
+      <div class="preview-card">
+        <div class="preview-label">Preview</div>
+        <div class="preview-msg"><strong>Ahmed Al-Harbi</strong> invited you to join <span class="accent">Raptor</span> as their client. Accept to start your coaching journey — track progress, log workouts, and rank up. <br><br><span style="color:#7E828D;font-size:11px;">Link valid for 7 days · raptor.app/invite/abc123</span></div>
+      </div>
+
+      <button class="btn-primary">Send Invite</button>
+      <button class="btn-ghost">Cancel</button>
+
+      <div class="section-label">Pending Invites · 3</div>
+      <div class="pending-row">
+        <div class="pending-avatar">✉</div>
+        <div class="pending-info"><div class="pending-email">khalid.o@example.com</div><div class="pending-time">Sent 2h ago</div></div>
+        <div class="pending-status sent">Sent</div>
+      </div>
+      <div class="pending-row">
+        <div class="pending-avatar">✉</div>
+        <div class="pending-info"><div class="pending-email">nora.s@example.com</div><div class="pending-time">Sent yesterday</div></div>
+        <div class="pending-status sent">Sent</div>
+      </div>
+      <div class="pending-row">
+        <div class="pending-avatar">✓</div>
+        <div class="pending-info"><div class="pending-email">rami.i@example.com</div><div class="pending-time">Accepted 3d ago</div></div>
+        <div class="pending-status accepted">Accepted</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

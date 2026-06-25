@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Leaderboard (Remake)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  ::selection { background: rgba(63,217,192,0.3); color: #fff; }
+
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; letter-spacing: -0.5px; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  /* Header */
+  .header { padding: 6px 0 16px; }
+  .header .season { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #3FD9C0; }
+  .header h1 { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -1px; color: #F5F6F8; line-height: 1.1; margin-top: 4px; }
+  .header .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+
+  /* Tier filter pills */
+  .tier-filters { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 14px; -webkit-overflow-scrolling: touch; }
+  .tier-filters::-webkit-scrollbar { display: none; }
+  .tier-pill { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #9B9CA8; background: #15161D; border: 1px solid #2A2B38; border-radius: 999px; padding: 7px 13px; white-space: nowrap; flex-shrink: 0; }
+  .tier-pill.active { background: #3FD9C0; color: #0A0B0F; border-color: #3FD9C0; }
+
+  /* Podium — top 3 */
+  .podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 8px; align-items: end; margin-bottom: 20px; padding-top: 10px; }
+  .podium-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px 10px 14px; text-align: center; }
+  .podium-card.first { background: linear-gradient(165deg, #10202C, #0A0B0F); border-color: rgba(63,217,192,0.3); padding-top: 20px; padding-bottom: 18px; }
+  .podium-rank { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; color: #7E828D; margin-bottom: 8px; }
+  .podium-card.first .podium-rank { color: #3FD9C0; }
+  .podium-crest { width: 48px; height: 48px; border-radius: 12px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; }
+  .podium-crest.first { width: 60px; height: 60px; }
+  .podium-crest-inner { width: 20px; height: 20px; transform: rotate(45deg); border-radius: 5px; background: rgba(10,11,15,0.28); }
+  .podium-crest.first .podium-crest-inner { width: 24px; height: 24px; }
+  .podium-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 12px; color: #F5F6F8; line-height: 1.2; }
+  .podium-card.first .podium-name { font-size: 13px; font-weight: 700; }
+  .podium-stat { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 4px; }
+
+  /* Section label */
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 0 0 10px; display: flex; justify-content: space-between; }
+  .section-label .count { color: #5C616E; }
+
+  /* Ranked list */
+  .rank-list { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; overflow: hidden; }
+  .rank-row { display: flex; align-items: center; gap: 13px; padding: 14px 15px; border-bottom: 1px solid #1C1D26; }
+  .rank-row:last-child { border-bottom: none; }
+  .rank-row.you { background: rgba(63,217,192,0.04); }
+  .rank-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; color: #7E828D; width: 28px; text-align: center; flex-shrink: 0; }
+  .rank-num.top { color: #3FD9C0; }
+  .rank-avatar { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 14px; color: #0A0B0F; flex-shrink: 0; }
+  .rank-info { flex: 1; min-width: 0; }
+  .rank-name { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .rank-name .you-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; color: #3FD9C0; background: rgba(63,217,192,0.16); border-radius: 4px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; }
+  .rank-stat { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+  .rank-tier-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; border-radius: 6px; padding: 5px 9px; flex-shrink: 0; }
+
+  /* Tab bar */
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; }
+  .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; }
+  .tab-label.inactive { color: #7E828D; }
+
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Leaderboard · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <span class="brand">Raptor</span>
+      <span class="signal">●●●</span>
+    </div>
+
+    <div class="content">
+      <!-- Header -->
+      <div class="header">
+        <div class="season">Season 02 · Week 8 of 12</div>
+        <h1>Leaderboard</h1>
+        <div class="sub">Men · 75–85kg · Egypt region</div>
+      </div>
+
+      <!-- Tier filters -->
+      <div class="tier-filters">
+        <div class="tier-pill active">All</div>
+        <div class="tier-pill">Bronze</div>
+        <div class="tier-pill">Silver</div>
+        <div class="tier-pill">Gold</div>
+        <div class="tier-pill">Platinum</div>
+        <div class="tier-pill">Diamond</div>
+        <div class="tier-pill">Master</div>
+        <div class="tier-pill">Grandmaster</div>
+        <div class="tier-pill">Apex</div>
+      </div>
+
+      <!-- Podium top 3 -->
+      <div class="podium">
+        <!-- 2nd -->
+        <div class="podium-card">
+          <div class="podium-rank">02</div>
+          <div class="podium-crest" style="background: radial-gradient(circle at 50% 32%, #FF96A6, #E0556B 55%, #9C2435); box-shadow: 0 0 16px rgba(224,85,107,0.4), inset 0 2px 5px rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.4);">
+            <div class="podium-crest-inner"></div>
+          </div>
+          <div class="podium-name">Omar El-Sayed</div>
+          <div class="podium-stat">−7.8kg · 10wk</div>
+        </div>
+        <!-- 1st -->
+        <div class="podium-card first">
+          <div class="podium-rank">01</div>
+          <div class="podium-crest first" style="background: radial-gradient(circle at 50% 32%, #9BFFEE, #3FD9C0 55%, #1A8A78); box-shadow: 0 0 26px rgba(63,217,192,0.55), inset 0 2px 5px rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.4);">
+            <div class="podium-crest-inner"></div>
+          </div>
+          <div class="podium-name">Khalid Al-Otaibi</div>
+          <div class="podium-stat">−9.2kg · 12wk</div>
+        </div>
+        <!-- 3rd -->
+        <div class="podium-card">
+          <div class="podium-rank">03</div>
+          <div class="podium-crest" style="background: radial-gradient(circle at 50% 32%, #CBB8FF, #9B7BF5 55%, #5E3FB0); box-shadow: 0 0 16px rgba(155,123,245,0.4), inset 0 2px 5px rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.4);">
+            <div class="podium-crest-inner"></div>
+          </div>
+          <div class="podium-name">Yousef Al-Mutairi</div>
+          <div class="podium-stat">+4.1kg muscle</div>
+        </div>
+      </div>
+
+      <!-- Ranked list -->
+      <div class="section-label">
+        <span>Rankings</span>
+        <span class="count">4,820 athletes</span>
+      </div>
+
+      <div class="rank-list">
+        <div class="rank-row">
+          <div class="rank-num">04</div>
+          <div class="rank-avatar" style="background: linear-gradient(135deg, #6B8AFF, #3A52C4);">TH</div>
+          <div class="rank-info">
+            <div class="rank-name">Tariq Hassan</div>
+            <div class="rank-stat">−6.4kg · 11 weeks · 88% adherence</div>
+          </div>
+          <div class="rank-tier-badge" style="color: #6B8AFF; background: rgba(107,138,255,0.16);">Diamond</div>
+        </div>
+
+        <div class="rank-row">
+          <div class="rank-num">05</div>
+          <div class="rank-avatar" style="background: linear-gradient(135deg, #CFE6F0, #8FB4C4);">FD</div>
+          <div class="rank-info">
+            <div class="rank-name">Faisal Al-Dossari</div>
+            <div class="rank-stat">−5.9kg · 12 weeks · 85% adherence</div>
+          </div>
+          <div class="rank-tier-badge" style="color: #CFE6F0; background: rgba(207,230,240,0.12);">Platinum</div>
+        </div>
+
+        <div class="rank-row you">
+          <div class="rank-num top">06</div>
+          <div class="rank-avatar" style="background: linear-gradient(135deg, #E5B83C, #9A7615);">MI</div>
+          <div class="rank-info">
+            <div class="rank-name">Marwan Ibrahim <span class="you-tag">YOU</span></div>
+            <div class="rank-stat">−4.7kg · 9 weeks · 82% adherence</div>
+          </div>
+          <div class="rank-tier-badge" style="color: #E5B83C; background: rgba(229,184,60,0.16);">Gold</div>
+        </div>
+
+        <div class="rank-row">
+          <div class="rank-num">07</div>
+          <div class="rank-avatar" style="background: linear-gradient(135deg, #E5B83C, #9A7615);">SQ</div>
+          <div class="rank-info">
+            <div class="rank-name">Saud Al-Qahtani</div>
+            <div class="rank-stat">+3.2kg muscle · 13 weeks · 79% adherence</div>
+          </div>
+          <div class="rank-tier-badge" style="color: #E5B83C; background: rgba(229,184,60,0.16);">Gold</div>
+        </div>
+
+        <div class="rank-row">
+          <div class="rank-num">08</div>
+          <div class="rank-avatar" style="background: linear-gradient(135deg, #9AA3AF, #5C636E);">RI</div>
+          <div class="rank-info">
+            <div class="rank-name">Rami Ibrahim</div>
+            <div class="rank-stat">−3.8kg · 8 weeks · 76% adherence</div>
+          </div>
+          <div class="rank-tier-badge" style="color: #9AA3AF; background: rgba(154,163,175,0.16);">Silver</div>
+        </div>
+
+        <div class="rank-row">
+          <div class="rank-num">09</div>
+          <div class="rank-avatar" style="background: linear-gradient(135deg, #B07A42, #6E4A22);">KA</div>
+          <div class="rank-info">
+            <div class="rank-name">Karim Adel</div>
+            <div class="rank-stat">−2.9kg · 6 weeks · 71% adherence</div>
+          </div>
+          <div class="rank-tier-badge" style="color: #B07A42; background: rgba(176,122,66,0.16);">Bronze</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">PLAN</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">NUTRITION</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

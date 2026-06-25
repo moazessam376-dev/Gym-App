@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Community Guidelines</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 18px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.5px; color: #F5F6F8; flex: 1; }
+
+  .hero-card { background: linear-gradient(165deg, #10202C, #0A0B0F); border: 1px solid #2A2B38; border-radius: 16px; padding: 22px 20px; margin-bottom: 20px; }
+  .hero-icon { width: 48px; height: 48px; border-radius: 13px; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+  .hero-icon svg { width: 24px; height: 24px; }
+  .hero-title { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.6px; color: #F5F6F8; line-height: 1.15; margin-bottom: 8px; }
+  .hero-desc { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; line-height: 1.55; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 18px 0 12px; }
+
+  .rule-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 10px; }
+  .rule-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  .rule-num { width: 28px; height: 28px; border-radius: 8px; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; color: #3FD9C0; flex-shrink: 0; }
+  .rule-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 14px; color: #F5F6F8; margin-top: 5px; }
+  .rule-body { font-family: 'Inter', sans-serif; font-size: 12.5px; color: #9B9CA8; line-height: 1.6; padding-left: 40px; }
+
+  .ban-card { background: linear-gradient(165deg, rgba(255,107,74,0.06), #15161D); border: 1px solid rgba(255,107,74,0.25); border-radius: 14px; padding: 16px; margin-bottom: 10px; }
+  .ban-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  .ban-icon { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,107,74,0.12); border: 1px solid rgba(255,107,74,0.25); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ban-icon svg { width: 14px; height: 14px; }
+  .ban-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 14px; color: #FF6B4A; margin-top: 5px; }
+  .ban-body { font-family: 'Inter', sans-serif; font-size: 12.5px; color: #C3C6CE; line-height: 1.6; padding-left: 40px; }
+  .ban-body strong { color: #FF6B4A; }
+
+  .consent-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  .consent-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 14px; color: #F5F6F8; margin-bottom: 10px; }
+  .consent-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1C1D26; }
+  .consent-row:last-child { border-bottom: none; }
+  .consent-text { flex: 1; font-family: 'Inter', sans-serif; font-size: 12.5px; color: #C3C6CE; }
+  .consent-text strong { color: #F5F6F8; }
+  .toggle { width: 40px; height: 24px; border-radius: 12px; background: #2A2B38; position: relative; flex-shrink: 0; }
+  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #9B9CA8; border-radius: 50%; }
+  .toggle.on { background: #3FD9C0; }
+  .toggle.on::after { right: 3px; left: auto; background: #0A0B0F; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Community Guidelines · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Community Guidelines</div>
+      </div>
+
+      <div class="hero-card">
+        <div class="hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div class="hero-title">Respect the community.</div>
+        <div class="hero-desc">Raptor ranks athletes and coaches by measurable data — not by who shouts loudest. Keep the community focused on progress.</div>
+      </div>
+
+      <div class="section-label">Core Rules</div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <div class="rule-num">01</div>
+          <div class="rule-title">No harassment</div>
+        </div>
+        <div class="rule-body">Insulting, harassing, or body-shaming another user gets you permanently banned. No warnings. No appeals. This applies to DMs, public comments, and reported messages.</div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <div class="rule-num">02</div>
+          <div class="rule-title">No fake data</div>
+        </div>
+        <div class="rule-body">Uploading falsified InBody scans, edited progress photos, or fabricated body metrics to climb the leaderboard is permanent ban + legal action. Raptor verifies scans via OCR cross-checking.</div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <div class="rule-num">03</div>
+          <div class="rule-title">No off-platform coaching</div>
+        </div>
+        <div class="rule-body">Coaches who bypass Find-a-Coach commissions or pull clients off-platform to dodge fees lose their account. See Find-a-Coach anti-abuse policy in Privacy.</div>
+      </div>
+
+      <div class="section-label">Zero-tolerance policy</div>
+
+      <div class="ban-card">
+        <div class="ban-header">
+          <div class="ban-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#FF6B4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg></div>
+          <div class="ban-title">Permanent ban + legal action</div>
+        </div>
+        <div class="ban-body">Insulting or harassing someone will get you <strong>permanently banned</strong>. Raptor supports <strong>legal action</strong> against severe harassment, threats, or defamation. Reported messages are reviewed within 24 hours. False reports are also a violation.</div>
+      </div>
+
+      <div class="section-label">Moderation consent</div>
+      <div class="consent-card">
+        <div class="consent-title">Heavy auto-moderation</div>
+        <div class="consent-row">
+          <div class="consent-text"><strong>On by default.</strong> Scans messages for flagged words and harassment patterns. Only metadata stored — not full message text.</div>
+          <div class="toggle on"></div>
+        </div>
+        <div class="consent-row">
+          <div class="consent-text"><strong>Coach + athlete consent</strong> to disable. If both agree to keep banter between them, moderation lifts for that conversation only.</div>
+          <div class="toggle"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">PLAN</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">PROGRESS</div></div>
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">ACCOUNT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

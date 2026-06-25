@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Plans List (Client)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .header { padding: 6px 0 16px; }
+  .header h1 { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -1px; color: #F5F6F8; }
+  .header .sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; margin-top: 3px; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 18px 0 12px; }
+
+  .plan-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .plan-top { display: flex; align-items: flex-start; gap: 13px; }
+  .plan-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+  .plan-icon.training { background: rgba(63,217,192,0.12); color: #3FD9C0; }
+  .plan-icon.nutrition { background: rgba(107,138,255,0.12); color: #6B8AFF; }
+  .plan-info { flex: 1; }
+  .plan-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; color: #F5F6F8; letter-spacing: -0.3px; }
+  .plan-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 3px; }
+  .plan-status { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; border-radius: 6px; padding: 4px 8px; flex-shrink: 0; }
+  .plan-status.published { color: #3FD98A; background: rgba(63,217,138,0.14); }
+  .plan-status.draft { color: #FFB323; background: rgba(255,179,35,0.12); }
+
+  .plan-days { display: flex; gap: 6px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #1C1D26; }
+  .day-chip { flex: 1; text-align: center; background: #0E0F14; border: 1px solid #2A2B38; border-radius: 8px; padding: 9px 4px; }
+  .day-chip.done { background: rgba(63,217,192,0.08); border-color: rgba(63,217,192,0.25); }
+  .day-chip.today { background: #3FD9C0; border-color: #3FD9C0; }
+  .day-name { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #7E828D; }
+  .day-chip.today .day-name { color: #0A0B0F; }
+  .day-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; color: #F5F6F8; margin-top: 3px; }
+  .day-chip.today .day-num { color: #0A0B0F; }
+  .day-chip.done .day-num { color: #3FD9C0; }
+  .day-label { font-family: 'JetBrains Mono', monospace; font-size: 7px; color: #5C616E; margin-top: 2px; text-transform: uppercase; }
+  .day-chip.done .day-label { color: #3FD9C0; }
+
+  .nutrition-summary { margin-top: 12px; padding-top: 12px; border-top: 1px solid #1C1D26; display: flex; gap: 16px; }
+  .ns-item { flex: 1; }
+  .ns-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.8px; text-transform: uppercase; color: #7E828D; }
+  .ns-val { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; color: #F5F6F8; margin-top: 3px; }
+  .ns-val.accent { color: #3FD9C0; }
+
+  .empty-card { background: #15161D; border: 1px dashed #2A2B38; border-radius: 14px; padding: 30px 20px; text-align: center; }
+  .empty-icon { font-size: 32px; opacity: 0.3; margin-bottom: 10px; }
+  .empty-title { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 15px; color: #9B9CA8; }
+  .empty-desc { font-family: 'Inter', sans-serif; font-size: 12px; color: #5C616E; margin-top: 4px; line-height: 1.5; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Plans List (Client) · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="header">
+        <h1>Your Plans</h1>
+        <div class="sub">Assigned by Coach Ahmed</div>
+      </div>
+
+      <div class="section-label">Training</div>
+      <div class="plan-card">
+        <div class="plan-top">
+          <div class="plan-icon training">🏋</div>
+          <div class="plan-info">
+            <div class="plan-title">Push Pull Legs · 4-day split</div>
+            <div class="plan-meta">12 weeks · Started Jun 12</div>
+          </div>
+          <div class="plan-status published">Active</div>
+        </div>
+        <div class="plan-days">
+          <div class="day-chip done"><div class="day-name">MON</div><div class="day-num">✓</div><div class="day-label">Push</div></div>
+          <div class="day-chip done"><div class="day-name">TUE</div><div class="day-num">✓</div><div class="day-label">Pull</div></div>
+          <div class="day-chip today"><div class="day-name">WED</div><div class="day-num">●</div><div class="day-label">Legs</div></div>
+          <div class="day-chip"><div class="day-name">THU</div><div class="day-num">—</div><div class="day-label">Rest</div></div>
+          <div class="day-chip"><div class="day-name">FRI</div><div class="day-num">—</div><div class="day-label">Push</div></div>
+          <div class="day-chip"><div class="day-name">SAT</div><div class="day-num">—</div><div class="day-label">Pull</div></div>
+          <div class="day-chip"><div class="day-name">SUN</div><div class="day-num">—</div><div class="day-label">Rest</div></div>
+        </div>
+      </div>
+
+      <div class="section-label">Nutrition</div>
+      <div class="plan-card">
+        <div class="plan-top">
+          <div class="plan-icon nutrition">🥗</div>
+          <div class="plan-info">
+            <div class="plan-title">High-protein cut · 3,200 kcal</div>
+            <div class="plan-meta">Daily target · Coach-set</div>
+          </div>
+          <div class="plan-status published">Active</div>
+        </div>
+        <div class="nutrition-summary">
+          <div class="ns-item"><div class="ns-lbl">Kcal</div><div class="ns-val accent">3,200</div></div>
+          <div class="ns-item"><div class="ns-lbl">Protein</div><div class="ns-val">180g</div></div>
+          <div class="ns-item"><div class="ns-lbl">Carbs</div><div class="ns-val">340g</div></div>
+          <div class="ns-item"><div class="ns-lbl">Fat</div><div class="ns-val">90g</div></div>
+        </div>
+      </div>
+
+      <div class="section-label">Archived</div>
+      <div class="plan-card" style="opacity:0.6;">
+        <div class="plan-top">
+          <div class="plan-icon training">🏋</div>
+          <div class="plan-info">
+            <div class="plan-title">Full-body beginner · 3-day</div>
+            <div class="plan-meta">Completed May 28 · 8 weeks</div>
+          </div>
+          <div class="plan-status draft">Done</div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">PLAN</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">PROGRESS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

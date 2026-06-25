@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Plan Editor (Coach)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 14px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 17px; color: #F5F6F8; flex: 1; }
+  .save-btn { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 13px; color: #3FD9C0; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); border-radius: 9px; padding: 8px 14px; }
+
+  .plan-title-row { background: #15161D; border: 1px solid #2A2B38; border-radius: 12px; padding: 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+  .pt-status { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #FFB323; background: rgba(255,179,35,0.12); border-radius: 5px; padding: 4px 7px; flex-shrink: 0; }
+  .pt-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; flex: 1; }
+
+  .day-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; }
+  .day-tabs::-webkit-scrollbar { display: none; }
+  .day-tab { flex-shrink: 0; text-align: center; background: #15161D; border: 1px solid #2A2B38; border-radius: 10px; padding: 10px 14px; min-width: 54px; }
+  .day-tab.active { background: #3FD9C0; border-color: #3FD9C0; }
+  .dt-name { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; color: #7E828D; }
+  .day-tab.active .dt-name { color: #0A0B0F; }
+  .dt-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; color: #F5F6F8; margin-top: 2px; }
+  .day-tab.active .dt-num { color: #0A0B0F; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 14px 0 10px; display: flex; justify-content: space-between; }
+
+  .exercise-block { background: #15161D; border: 1px solid #2A2B38; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .ex-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .ex-drag { color: #3A3D4C; font-size: 16px; margin-top: 2px; cursor: grab; }
+  .ex-info { flex: 1; }
+  .ex-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .ex-spec { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+  .ex-delete { width: 28px; height: 28px; border-radius: 8px; background: #1F2029; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; }
+  .ex-delete svg { width: 14px; height: 14px; }
+  .ex-sets-header { display: grid; grid-template-columns: 30px 1fr 1fr 1fr; gap: 6px; padding: 0 0 6px; }
+  .sh { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.8px; text-transform: uppercase; color: #5C616E; text-align: center; }
+  .sh.left { text-align: left; }
+  .set-row { display: grid; grid-template-columns: 30px 1fr 1fr 1fr; gap: 6px; align-items: center; padding: 4px 0; }
+  .set-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7E828D; text-align: center; }
+  .set-field { background: #0E0F14; border: 1px solid #2A2B38; border-radius: 7px; padding: 7px 4px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #F5F6F8; }
+
+  .add-exercise-btn { width: 100%; background: transparent; color: #3FD9C0; border: 1px dashed #3FD9C0; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; text-align: center; border-radius: 11px; padding: 13px; display: block; margin-bottom: 14px; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Plan Editor (Coach) · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Edit Plan</div>
+        <div class="save-btn">Save</div>
+      </div>
+
+      <div class="plan-title-row">
+        <div class="pt-status">Draft</div>
+        <div class="pt-name">Push Pull Legs · 4-day</div>
+      </div>
+
+      <div class="day-tabs">
+        <div class="day-tab active"><div class="dt-name">MON</div><div class="dt-num">Push</div></div>
+        <div class="day-tab"><div class="dt-name">TUE</div><div class="dt-num">Pull</div></div>
+        <div class="day-tab"><div class="dt-name">WED</div><div class="dt-num">Legs</div></div>
+        <div class="day-tab"><div class="dt-name">FRI</div><div class="dt-num">Push</div></div>
+        <div class="day-tab"><div class="dt-name">SAT</div><div class="dt-num">Pull</div></div>
+      </div>
+
+      <div class="section-label"><span>Monday · Push</span><span>3 exercises</span></div>
+
+      <div class="exercise-block">
+        <div class="ex-top">
+          <div class="ex-drag">⠿</div>
+          <div class="ex-info"><div class="ex-name">Barbell Bench Press</div><div class="ex-spec">Compound · 90s rest</div></div>
+          <div class="ex-delete"><svg viewBox="0 0 24 24" fill="none" stroke="#9B9CA8" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+        </div>
+        <div class="ex-sets-header"><div class="sh left">SET</div><div class="sh">REPS</div><div class="sh">WEIGHT</div><div class="sh">%1RM</div></div>
+        <div class="set-row"><div class="set-num">1</div><div class="set-field">8</div><div class="set-field">80</div><div class="set-field">75%</div></div>
+        <div class="set-row"><div class="set-num">2</div><div class="set-field">8</div><div class="set-field">85</div><div class="set-field">80%</div></div>
+        <div class="set-row"><div class="set-num">3</div><div class="set-field">6</div><div class="set-field">90</div><div class="set-field">85%</div></div>
+        <div class="set-row"><div class="set-num">4</div><div class="set-field">6</div><div class="set-field">90</div><div class="set-field">85%</div></div>
+      </div>
+
+      <div class="exercise-block">
+        <div class="ex-top">
+          <div class="ex-drag">⠿</div>
+          <div class="ex-info"><div class="ex-name">Incline Dumbbell Press</div><div class="ex-spec">Compound · 75s rest</div></div>
+          <div class="ex-delete"><svg viewBox="0 0 24 24" fill="none" stroke="#9B9CA8" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+        </div>
+        <div class="ex-sets-header"><div class="sh left">SET</div><div class="sh">REPS</div><div class="sh">WEIGHT</div><div class="sh">%1RM</div></div>
+        <div class="set-row"><div class="set-num">1</div><div class="set-field">10</div><div class="set-field">28</div><div class="set-field">70%</div></div>
+        <div class="set-row"><div class="set-num">2</div><div class="set-field">10</div><div class="set-field">30</div><div class="set-field">75%</div></div>
+        <div class="set-row"><div class="set-num">3</div><div class="set-field">10</div><div class="set-field">32</div><div class="set-field">80%</div></div>
+      </div>
+
+      <div class="exercise-block">
+        <div class="ex-top">
+          <div class="ex-drag">⠿</div>
+          <div class="ex-info"><div class="ex-name">Triceps Rope Pushdown</div><div class="ex-spec">Isolation · 60s rest</div></div>
+          <div class="ex-delete"><svg viewBox="0 0 24 24" fill="none" stroke="#9B9CA8" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+        </div>
+        <div class="ex-sets-header"><div class="sh left">SET</div><div class="sh">REPS</div><div class="sh">WEIGHT</div><div class="sh">%1RM</div></div>
+        <div class="set-row"><div class="set-num">1</div><div class="set-field">12</div><div class="set-field">35</div><div class="set-field">65%</div></div>
+        <div class="set-row"><div class="set-num">2</div><div class="set-field">12</div><div class="set-field">37.5</div><div class="set-field">70%</div></div>
+        <div class="set-row"><div class="set-num">3</div><div class="set-field">12</div><div class="set-field">40</div><div class="set-field">75%</div></div>
+      </div>
+
+      <button class="add-exercise-btn">+ Add Exercise</button>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CLIENTS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">ANALYTICS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

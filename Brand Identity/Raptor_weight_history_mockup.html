@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Weight History</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 18px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.6px; color: #F5F6F8; flex: 1; }
+
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .stat-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 14px; }
+  .stat-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 22px; line-height: 1; color: #3FD9C0; }
+  .stat-num.neutral { color: #F5F6F8; }
+  .stat-num .unit { font-size: 11px; color: #7E828D; }
+  .stat-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.8px; text-transform: uppercase; color: #7E828D; margin-top: 6px; }
+
+  .chart-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .chart-title { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .chart-period { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; }
+  .chart { width: 100%; height: 160px; }
+
+  .log-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 0 0 12px; }
+
+  .log-entry { display: flex; align-items: center; gap: 13px; padding: 12px 0; border-bottom: 1px solid #1C1D26; }
+  .log-entry:last-child { border-bottom: none; }
+  .log-date { width: 60px; flex-shrink: 0; }
+  .log-day { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; color: #7E828D; }
+  .log-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; color: #F5F6F8; margin-top: 2px; }
+  .log-weight { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 17px; color: #F5F6F8; flex: 1; }
+  .log-weight .unit { font-size: 11px; color: #7E828D; }
+  .log-delta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3FD9C0; font-weight: 600; }
+  .log-delta.up { color: #FF6B4A; }
+
+  .add-btn { width: 100%; background: #3FD9C0; color: #0A0B0F; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; text-align: center; border-radius: 13px; padding: 16px; border: none; display: block; margin-top: 16px; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Weight History · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Weight History</div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card"><div class="stat-num">84.2<span class="unit">kg</span></div><div class="stat-lbl">Current</div></div>
+        <div class="stat-card"><div class="stat-num neutral">−4.1<span class="unit">kg</span></div><div class="stat-lbl">Total Δ</div></div>
+        <div class="stat-card"><div class="stat-num">82<span class="unit">kg</span></div><div class="stat-lbl">Target</div></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Weight trend</div>
+          <div class="chart-period">Last 8 weeks</div>
+        </div>
+        <svg class="chart" viewBox="0 0 320 160" preserveAspectRatio="none">
+          <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3FD9C0" stop-opacity="0.3"/><stop offset="100%" stop-color="#3FD9C0" stop-opacity="0"/></linearGradient></defs>
+          <line x1="0" y1="40" x2="320" y2="40" stroke="#1C1D26" stroke-width="1" stroke-dasharray="3 3"/>
+          <line x1="0" y1="80" x2="320" y2="80" stroke="#1C1D26" stroke-width="1" stroke-dasharray="3 3"/>
+          <line x1="0" y1="120" x2="320" y2="120" stroke="#1C1D26" stroke-width="1" stroke-dasharray="3 3"/>
+          <path d="M 0 30 L 46 38 L 92 48 L 138 42 L 184 62 L 230 72 L 276 88 L 320 98 L 320 160 L 0 160 Z" fill="url(#wg)"/>
+          <path d="M 0 30 L 46 38 L 92 48 L 138 42 L 184 62 L 230 72 L 276 88 L 320 98" fill="none" stroke="#3FD9C0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="320" cy="98" r="5" fill="#3FD9C0"/>
+          <circle cx="320" cy="98" r="10" fill="#3FD9C0" opacity="0.2"/>
+          <text x="6" y="18" font-family="JetBrains Mono" font-size="9" fill="#5C616E">89kg</text>
+          <text x="6" y="155" font-family="JetBrains Mono" font-size="9" fill="#5C616E">84kg</text>
+        </svg>
+      </div>
+
+      <div class="log-label">Recent Log</div>
+      <div class="chart-card" style="padding:14px 18px;">
+        <div class="log-entry">
+          <div class="log-date"><div class="log-day">JUN 24</div><div class="log-num">Today</div></div>
+          <div class="log-weight">84.2<span class="unit"> kg</span></div>
+          <div class="log-delta">−0.4</div>
+        </div>
+        <div class="log-entry">
+          <div class="log-date"><div class="log-day">JUN 22</div><div class="log-num">Sun</div></div>
+          <div class="log-weight">84.6<span class="unit"> kg</span></div>
+          <div class="log-delta">−0.3</div>
+        </div>
+        <div class="log-entry">
+          <div class="log-date"><div class="log-day">JUN 20</div><div class="log-num">Fri</div></div>
+          <div class="log-weight">84.9<span class="unit"> kg</span></div>
+          <div class="log-delta">−0.6</div>
+        </div>
+        <div class="log-entry">
+          <div class="log-date"><div class="log-day">JUN 17</div><div class="log-num">Tue</div></div>
+          <div class="log-weight">85.5<span class="unit"> kg</span></div>
+          <div class="log-delta">−0.2</div>
+        </div>
+        <div class="log-entry">
+          <div class="log-date"><div class="log-day">JUN 15</div><div class="log-num">Sun</div></div>
+          <div class="log-weight">85.7<span class="unit"> kg</span></div>
+          <div class="log-delta">−0.5</div>
+        </div>
+      </div>
+
+      <button class="add-btn">Log New Weight</button>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">PLAN</div></div>
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">PROGRESS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

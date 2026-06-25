@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Food Picker (Coach)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 14px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 17px; color: #F5F6F8; flex: 1; }
+
+  .search-bar { background: #15161D; border: 1px solid #2A2B38; border-radius: 11px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .search-bar svg { width: 16px; height: 16px; }
+  .search-input { font-family: 'Inter', sans-serif; font-size: 14px; color: #5C616E; }
+
+  .client-hint { background: rgba(63,217,192,0.06); border: 1px solid rgba(63,217,192,0.2); border-radius: 10px; padding: 10px 13px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+  .hint-icon { width: 28px; height: 28px; border-radius: 8px; background: rgba(63,217,192,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .hint-icon svg { width: 14px; height: 14px; }
+  .hint-text { font-family: 'Inter', sans-serif; font-size: 12px; color: #9B9CA8; line-height: 1.4; }
+  .hint-text strong { color: #3FD9C0; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 14px 0 10px; }
+
+  .food-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 12px; padding: 13px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+  .food-info { flex: 1; }
+  .food-name { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; }
+  .food-brand { font-family: 'Inter', sans-serif; font-size: 11px; color: #7E828D; margin-top: 2px; }
+  .food-macros { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 4px; }
+  .food-macros .p { color: #3FD9C0; } .food-macros .c { color: #6B8AFF; } .food-macros .f { color: #9B7BF5; }
+  .food-kcal { text-align: right; flex-shrink: 0; }
+  .food-kcal-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; color: #3FD9C0; }
+  .food-kcal-unit { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #7E828D; }
+
+  .add-icon { width: 32px; height: 32px; border-radius: 9px; background: rgba(63,217,192,0.12); border: 1px solid rgba(63,217,192,0.25); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .add-icon svg { width: 16px; height: 16px; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Food Picker (Coach) · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Add Food · Lunch</div>
+      </div>
+
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#5C616E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <span class="search-input">Search 2.7M foods…</span>
+      </div>
+
+      <div class="client-hint">
+        <div class="hint-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></div>
+        <div class="hint-text"><strong>Yousef's diet:</strong> Halal · No dairy allergy · Prefers high-protein</div>
+      </div>
+
+      <div class="section-label">High-protein · matches client goal</div>
+
+      <div class="food-card">
+        <div class="food-info">
+          <div class="food-name">Grilled chicken breast</div>
+          <div class="food-brand">Generic · per 100g</div>
+          <div class="food-macros"><span class="p">P 31g</span> · <span class="c">C 0g</span> · <span class="f">F 3.6g</span></div>
+        </div>
+        <div class="food-kcal"><div class="food-kcal-num">165</div><div class="food-kcal-unit">kcal/100g</div></div>
+        <div class="add-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      </div>
+
+      <div class="food-card">
+        <div class="food-info">
+          <div class="food-name">Lean beef sirloin</div>
+          <div class="food-brand">Generic · per 100g</div>
+          <div class="food-macros"><span class="p">P 26g</span> · <span class="c">C 0g</span> · <span class="f">F 8g</span></div>
+        </div>
+        <div class="food-kcal"><div class="food-kcal-num">206</div><div class="food-kcal-unit">kcal/100g</div></div>
+        <div class="add-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      </div>
+
+      <div class="food-card">
+        <div class="food-info">
+          <div class="food-name">Atlantic salmon, baked</div>
+          <div class="food-brand">Generic · per 100g</div>
+          <div class="food-macros"><span class="p">P 25g</span> · <span class="c">C 0g</span> · <span class="f">F 13g</span></div>
+        </div>
+        <div class="food-kcal"><div class="food-kcal-num">208</div><div class="food-kcal-unit">kcal/100g</div></div>
+        <div class="add-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      </div>
+
+      <div class="food-card">
+        <div class="food-info">
+          <div class="food-name">Eggs, whole, boiled</div>
+          <div class="food-brand">Generic · per 100g</div>
+          <div class="food-macros"><span class="p">P 13g</span> · <span class="c">C 1.1g</span> · <span class="f">F 11g</span></div>
+        </div>
+        <div class="food-kcal"><div class="food-kcal-num">155</div><div class="food-kcal-unit">kcal/100g</div></div>
+        <div class="add-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      </div>
+
+      <div class="section-label">Carbs · rice &amp; grains</div>
+
+      <div class="food-card">
+        <div class="food-info">
+          <div class="food-name">Brown rice, cooked</div>
+          <div class="food-brand">Generic · per 100g</div>
+          <div class="food-macros"><span class="p">P 2.7g</span> · <span class="c">C 28g</span> · <span class="f">F 1g</span></div>
+        </div>
+        <div class="food-kcal"><div class="food-kcal-num">130</div><div class="food-kcal-unit">kcal/100g</div></div>
+        <div class="add-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      </div>
+
+      <div class="food-card">
+        <div class="food-info">
+          <div class="food-name">Quinoa, cooked</div>
+          <div class="food-brand">Generic · per 100g</div>
+          <div class="food-macros"><span class="p">P 4.4g</span> · <span class="c">C 21g</span> · <span class="f">F 1.9g</span></div>
+        </div>
+        <div class="food-kcal"><div class="food-kcal-num">120</div><div class="food-kcal-unit">kcal/100g</div></div>
+        <div class="add-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3FD9C0" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CLIENTS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">ANALYTICS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

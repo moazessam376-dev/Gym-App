@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Body Composition</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .nav-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 18px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 11px; background: #15161D; border: 1px solid #2A2B38; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #9B9CA8; }
+  .nav-title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.6px; color: #F5F6F8; flex: 1; }
+
+  .latest-card { background: linear-gradient(165deg, #10202C, #0A0B0F); border: 1px solid #2A2B38; border-radius: 16px; padding: 20px; margin-bottom: 18px; }
+  .latest-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #3FD9C0; margin-bottom: 6px; }
+  .latest-date { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 18px; color: #F5F6F8; margin-bottom: 16px; }
+  .latest-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .lg-item { background: rgba(21,22,29,0.5); border: 1px solid #2A2B38; border-radius: 12px; padding: 14px; }
+  .lg-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 24px; color: #3FD9C0; line-height: 1; }
+  .lg-num.neutral { color: #F5F6F8; }
+  .lg-num .unit { font-size: 12px; color: #7E828D; }
+  .lg-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.8px; text-transform: uppercase; color: #7E828D; margin-top: 6px; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #7E828D; margin: 18px 0 12px; }
+
+  .delta-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .delta-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #1C1D26; }
+  .delta-row:last-child { border-bottom: none; }
+  .delta-name { flex: 1; font-family: 'Geist', sans-serif; font-weight: 500; font-size: 13px; color: #F5F6F8; }
+  .delta-vals { display: flex; align-items: center; gap: 12px; }
+  .delta-before { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7E828D; }
+  .delta-arrow { color: #5C616E; font-size: 13px; }
+  .delta-after { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #F5F6F8; font-weight: 600; }
+  .delta-change { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #3FD9C0; min-width: 50px; text-align: right; }
+  .delta-change.up { color: #FF6B4A; }
+  .delta-change.neutral { color: #7E828D; }
+
+  .chart-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .chart-title { font-family: 'Geist', sans-serif; font-weight: 600; font-size: 14px; color: #F5F6F8; margin-bottom: 12px; }
+  .chart { width: 100%; height: 110px; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Body Composition · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="nav-header">
+        <div class="back-btn">‹</div>
+        <div class="nav-title">Body Composition</div>
+      </div>
+
+      <div class="latest-card">
+        <div class="latest-label">Latest InBody · Jun 22</div>
+        <div class="latest-date">2 days ago</div>
+        <div class="latest-grid">
+          <div class="lg-item"><div class="lg-num">84.2<span class="unit"> kg</span></div><div class="lg-lbl">Weight</div></div>
+          <div class="lg-item"><div class="lg-num">16.8<span class="unit"> %</span></div><div class="lg-lbl">Body Fat</div></div>
+          <div class="lg-item"><div class="lg-num neutral">38.2<span class="unit"> kg</span></div><div class="lg-lbl">Lean Mass</div></div>
+          <div class="lg-item"><div class="lg-num neutral">14.1<span class="unit"> kg</span></div><div class="lg-lbl">Fat Mass</div></div>
+        </div>
+      </div>
+
+      <div class="section-label">Change Since Baseline · 14 weeks</div>
+      <div class="delta-card">
+        <div class="delta-row">
+          <div class="delta-name">Weight</div>
+          <div class="delta-vals"><span class="delta-before">88.3</span><span class="delta-arrow">→</span><span class="delta-after">84.2</span></div>
+          <div class="delta-change">−4.1</div>
+        </div>
+        <div class="delta-row">
+          <div class="delta-name">Body Fat %</div>
+          <div class="delta-vals"><span class="delta-before">19.4</span><span class="delta-arrow">→</span><span class="delta-after">16.8</span></div>
+          <div class="delta-change">−2.6</div>
+        </div>
+        <div class="delta-row">
+          <div class="delta-name">Lean Mass</div>
+          <div class="delta-vals"><span class="delta-before">37.4</span><span class="delta-arrow">→</span><span class="delta-after">38.2</span></div>
+          <div class="delta-change">+0.8</div>
+        </div>
+        <div class="delta-row">
+          <div class="delta-name">Fat Mass</div>
+          <div class="delta-vals"><span class="delta-before">17.1</span><span class="delta-arrow">→</span><span class="delta-after">14.1</span></div>
+          <div class="delta-change">−3.0</div>
+        </div>
+        <div class="delta-row">
+          <div class="delta-name">BMI</div>
+          <div class="delta-vals"><span class="delta-before">27.9</span><span class="delta-arrow">→</span><span class="delta-after">26.6</span></div>
+          <div class="delta-change neutral">−1.3</div>
+        </div>
+      </div>
+
+      <div class="section-label">Lean Mass Trend</div>
+      <div class="chart-card">
+        <div class="chart-title">Skeletal muscle mass (kg)</div>
+        <svg class="chart" viewBox="0 0 320 110" preserveAspectRatio="none">
+          <defs><linearGradient id="lm" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6B8AFF" stop-opacity="0.25"/><stop offset="100%" stop-color="#6B8AFF" stop-opacity="0"/></linearGradient></defs>
+          <line x1="0" y1="55" x2="320" y2="55" stroke="#1C1D26" stroke-width="1" stroke-dasharray="3 3"/>
+          <path d="M 0 75 L 64 70 L 128 65 L 192 55 L 256 48 L 320 42 L 320 110 L 0 110 Z" fill="url(#lm)"/>
+          <path d="M 0 75 L 64 70 L 128 65 L 192 55 L 256 48 L 320 42" fill="none" stroke="#6B8AFF" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="320" cy="42" r="4" fill="#6B8AFF"/>
+        </svg>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">HOME</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">RANK</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">PLAN</div></div>
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">PROGRESS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">CHAT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

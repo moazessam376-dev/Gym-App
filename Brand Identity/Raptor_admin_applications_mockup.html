@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raptor — Admin Coach Applications</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0A0B0F; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; display: flex; justify-content: center; min-height: 100vh; }
+  .phone { width: 390px; background: #0A0B0F; border: 10px solid #1A1B22; border-radius: 44px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; }
+  .status-bar { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C3C6CE; }
+  .status-bar .brand { font-family: 'Geist', sans-serif; font-weight: 700; color: #F5F6F8; }
+  .status-bar .signal { color: #3FD9C0; }
+  .content { padding: 0 18px 100px; }
+
+  .header { padding: 6px 0 16px; }
+  .header .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #3FD9C0; }
+  .header h1 { font-family: 'Geist', sans-serif; font-weight: 800; font-size: 26px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 3px; }
+
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+  .stat-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 12px; padding: 12px; text-align: center; }
+  .stat-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 22px; line-height: 1; color: #FFB323; }
+  .stat-num.approved { color: #3FD98A; }
+  .stat-num.pending { color: #3FD9C0; }
+  .stat-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.8px; text-transform: uppercase; color: #7E828D; margin-top: 5px; }
+
+  .filter-row { display: flex; gap: 6px; margin-bottom: 14px; }
+  .filter-chip { flex: 1; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 9px; border-radius: 8px; color: #7E828D; background: #15161D; border: 1px solid #2A2B38; }
+  .filter-chip.active { color: #0A0B0F; background: #3FD9C0; border-color: #3FD9C0; }
+
+  .app-card { background: #15161D; border: 1px solid #2A2B38; border-radius: 14px; padding: 15px; margin-bottom: 10px; }
+  .app-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+  .app-avatar { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-family: 'Geist', sans-serif; font-weight: 700; font-size: 16px; color: #0A0B0F; flex-shrink: 0; }
+  .app-info { flex: 1; }
+  .app-name { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 15px; color: #F5F6F8; }
+  .app-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7E828D; margin-top: 2px; }
+  .app-status { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-radius: 5px; padding: 4px 7px; flex-shrink: 0; }
+  .app-status.pending { color: #FFB323; background: rgba(255,179,35,0.12); }
+
+  .app-details { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .app-chip { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #C3C6CE; background: #1F2029; border: 1px solid #2A2B38; border-radius: 5px; padding: 4px 7px; }
+
+  .app-bio { font-family: 'Inter', sans-serif; font-size: 12px; color: #9B9CA8; line-height: 1.5; margin-bottom: 12px; padding: 10px 12px; background: #0E0F14; border-radius: 9px; border: 1px solid #1C1D26; }
+
+  .app-actions { display: flex; gap: 8px; }
+  .app-btn { flex: 1; text-align: center; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 12px; border-radius: 9px; padding: 11px; }
+  .app-btn.approve { background: #3FD9C0; color: #0A0B0F; }
+  .app-btn.reject { background: transparent; color: #FF6B4A; border: 1px solid rgba(255,107,74,0.3); }
+  .app-btn.view { background: transparent; color: #9B9CA8; border: 1px solid #2A2B38; }
+
+  .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #0E0F14; border-top: 1px solid #2A2B38; padding: 10px 8px 22px; display: flex; justify-content: space-around; }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 6px; }
+  .tab-icon.active { background: #3FD9C0; } .tab-icon.inactive { border: 1.5px solid #5C616E; }
+  .tab-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; }
+  .tab-label.active { color: #3FD9C0; } .tab-label.inactive { color: #7E828D; }
+  .page-context { width: 390px; padding: 30px 0 16px; text-align: center; }
+  .page-context .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #3FD9C0; }
+  .page-context .title { font-family: 'Geist', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.8px; color: #F5F6F8; margin-top: 6px; }
+  .page-context .sub { font-family: 'Inter', sans-serif; font-size: 13px; color: #9B9CA8; margin-top: 4px; }
+  .wrapper { display: flex; flex-direction: column; align-items: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="page-context">
+    <div class="tag">Admin Coach Applications · Remake</div>
+    <div class="title">Raptor Design System v1</div>
+    <div class="sub">Mobile screen · 390px · Dark canonical</div>
+  </div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span class="brand">Raptor</span><span class="signal">●●●</span></div>
+    <div class="content">
+      <div class="header">
+        <div class="label">Admin Console</div>
+        <h1>Applications</h1>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-num">4</div><div class="stat-lbl">Pending</div></div>
+        <div class="stat-card"><div class="stat-num approved">38</div><div class="stat-lbl">Approved</div></div>
+        <div class="stat-card"><div class="stat-num pending">7</div><div class="stat-lbl">This Week</div></div>
+      </div>
+
+      <div class="filter-row">
+        <div class="filter-chip active">Pending</div>
+        <div class="filter-chip">Approved</div>
+        <div class="filter-chip">Rejected</div>
+      </div>
+
+      <div class="app-card">
+        <div class="app-top">
+          <div class="app-avatar" style="background:linear-gradient(135deg,#3FD9C0,#1A8A78);">AH</div>
+          <div class="app-info"><div class="app-name">Ahmed Al-Harbi</div><div class="app-meta">Riyadh · Applied 2h ago</div></div>
+          <div class="app-status pending">Pending</div>
+        </div>
+        <div class="app-details">
+          <span class="app-chip">8 yrs exp</span>
+          <span class="app-chip">200+ clients</span>
+          <span class="app-chip">NASM CPT</span>
+          <span class="app-chip">PN1</span>
+        </div>
+        <div class="app-bio">Helping men in Riyadh build muscle and lose fat — with data, not guesswork.</div>
+        <div class="app-actions">
+          <div class="app-btn view">View</div>
+          <div class="app-btn reject">Reject</div>
+          <div class="app-btn approve">Approve</div>
+        </div>
+      </div>
+
+      <div class="app-card">
+        <div class="app-top">
+          <div class="app-avatar" style="background:linear-gradient(135deg,#9B7BF5,#5E3FB0);">SK</div>
+          <div class="app-info"><div class="app-name">Sara Khan</div><div class="app-meta">Dubai · Applied 5h ago</div></div>
+          <div class="app-status pending">Pending</div>
+        </div>
+        <div class="app-details">
+          <span class="app-chip">5 yrs exp</span>
+          <span class="app-chip">120+ clients</span>
+          <span class="app-chip">ACE CPT</span>
+          <span class="app-chip">Women's training</span>
+        </div>
+        <div class="app-bio">Women's strength and nutrition specialist. Pre/post-natal certified.</div>
+        <div class="app-actions">
+          <div class="app-btn view">View</div>
+          <div class="app-btn reject">Reject</div>
+          <div class="app-btn approve">Approve</div>
+        </div>
+      </div>
+
+      <div class="app-card">
+        <div class="app-top">
+          <div class="app-avatar" style="background:linear-gradient(135deg,#6B8AFF,#3A52C4);">MO</div>
+          <div class="app-info"><div class="app-name">Mahmoud Omar</div><div class="app-meta">Cairo · Applied yesterday</div></div>
+          <div class="app-status pending">Pending</div>
+        </div>
+        <div class="app-details">
+          <span class="app-chip">3 yrs exp</span>
+          <span class="app-chip">80+ clients</span>
+          <span class="app-chip">ISSA</span>
+          <span class="app-chip">Powerlifting</span>
+        </div>
+        <div class="app-bio">Powerlifting coach. Competition prep and technique refinement.</div>
+        <div class="app-actions">
+          <div class="app-btn view">View</div>
+          <div class="app-btn reject">Reject</div>
+          <div class="app-btn approve">Approve</div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item"><div class="tab-icon active"></div><div class="tab-label active">APPS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">REPORTS</div></div>
+      <div class="tab-item"><div class="tab-icon inactive"></div><div class="tab-label inactive">ACCOUNT</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
