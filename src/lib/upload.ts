@@ -11,6 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { File } from 'expo-file-system';
 import { uploadMedia } from './media';
+import { setMyAvatar } from './profile';
 import type { MediaKind } from '../schemas/media';
 
 export type PickSource = 'camera' | 'library';
@@ -82,4 +83,16 @@ export async function captureAndUploadPhoto(args: {
   const res = await uploadMedia({ file: bytes, mimeType: 'image/jpeg', kind });
   if ('dailyLimit' in res) return { limited: 'daily' };
   return { mediaId: res.mediaId };
+}
+
+/**
+ * Pick/capture a photo, upload it as an `avatar` (EXIF-stripped + magic-byte validated
+ * server-side, same as every other upload), then point the user's profile at it
+ * (Phase 19). Returns the new media id, or a cancelled/denied marker. The avatar
+ * pipeline reuses captureAndUploadPhoto; only the profile link is new.
+ */
+export async function pickAndSetAvatar(args: { userId: string; source: PickSource }): Promise<UploadResult> {
+  const res = await captureAndUploadPhoto({ source: args.source, kind: 'avatar' });
+  if ('mediaId' in res) await setMyAvatar(args.userId, res.mediaId);
+  return res;
 }

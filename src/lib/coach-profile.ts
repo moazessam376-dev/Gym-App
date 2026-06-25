@@ -9,12 +9,15 @@ export type CoachProfile = {
   specialties: Specialty[];
   years_experience: number | null;
   certifications: string | null;
+  is_public: boolean;
+  achievements: string[];
   onboarded_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
-const COLS = 'user_id, bio, specialties, years_experience, certifications, onboarded_at, created_at, updated_at';
+const COLS =
+  'user_id, bio, specialties, years_experience, certifications, is_public, achievements, onboarded_at, created_at, updated_at';
 
 /** The signed-in coach's own profile (null if not started). */
 export async function getMyCoachProfile(userId: string): Promise<CoachProfile | null> {
@@ -42,4 +45,20 @@ export async function upsertCoachProfile(userId: string, input: UpsertCoachProfi
     .single();
   if (error) throw error;
   return data as CoachProfile;
+}
+
+/**
+ * Toggle the coach's public portfolio on/off and/or update achievements (Phase 19).
+ * A focused partial upsert (like setWeightUnit) so it doesn't require re-sending the
+ * whole profile. Allowlisted fields only (§4); user_id is forced by the upsert key + RLS.
+ */
+export async function setCoachVisibility(
+  userId: string,
+  input: { is_public?: boolean; achievements?: string[] },
+): Promise<void> {
+  const v = upsertCoachProfileSchema.parse(input);
+  const { error } = await supabase
+    .from('coach_profile')
+    .upsert({ user_id: userId, ...v }, { onConflict: 'user_id' });
+  if (error) throw error;
 }

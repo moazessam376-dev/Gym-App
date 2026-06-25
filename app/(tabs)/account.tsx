@@ -120,6 +120,21 @@ export default function AccountTab() {
           onPress={go('/profile-setup')}
         />
 
+        {role === 'coach' || role === 'client' ? (
+          <>
+            <LinkRow
+              icon="globe-outline"
+              label={t('account.publicProfile')}
+              onPress={go('/public-profile-edit')}
+            />
+            <LinkRow
+              icon="compass-outline"
+              label={t('account.discoverCoaches')}
+              onPress={go('/discover/coaches')}
+            />
+          </>
+        ) : null}
+
         {role === 'client' ? (
           <>
             <LinkRow icon="heart-outline" label={t('account.foodPreferences')} onPress={go('/food/preferences')} />

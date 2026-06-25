@@ -22,3 +22,24 @@ export async function getMyName(userId: string): Promise<string | null> {
   if (error) throw error;
   return data?.full_name ?? null;
 }
+
+/** The signed-in user's current avatar media id (null if none set) — Phase 19. */
+export async function getMyAvatarMediaId(userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('avatar_media_id')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data?.avatar_media_id as string | null) ?? null;
+}
+
+/**
+ * Point the user's avatar at one of their OWN `avatar`-kind media rows (Phase 19).
+ * The DB trigger (0044) rejects a media id that isn't the caller's own avatar, so an
+ * impersonation attempt fails server-side regardless of the client. Pass null to clear.
+ */
+export async function setMyAvatar(userId: string, mediaId: string | null): Promise<void> {
+  const { error } = await supabase.from('profiles').update({ avatar_media_id: mediaId }).eq('id', userId);
+  if (error) throw error;
+}

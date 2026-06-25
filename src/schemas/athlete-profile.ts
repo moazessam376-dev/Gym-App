@@ -56,5 +56,10 @@ export const upsertAthleteProfileSchema = z.object({
   training_days: z.number().int().min(0).max(7).nullable().optional(),
   dietary_tags: z.array(dietaryTagSchema).max(20).optional(),
   injuries_notes: z.string().max(2000).nullable().optional(),
+  // Phase 19 — opt-in public profile fields (default private). The PUBLIC read path
+  // (get_public_athlete_profile) deliberately exposes only name/avatar/goal/these
+  // achievements — never the sensitive fields above.
+  is_public: z.boolean().optional(),
+  public_achievements: z.array(z.string().trim().min(1).max(200)).max(20).optional(),
 });
 export type UpsertAthleteProfile = z.infer<typeof upsertAthleteProfileSchema>;

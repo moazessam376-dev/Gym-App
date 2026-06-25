@@ -9,7 +9,7 @@ export const MEDIA_MIME_TYPES = [
   'image/jpeg', 'image/png', 'application/pdf',
   'audio/mp4', 'audio/mpeg', 'audio/wav', // voice notes (Phase 18)
 ] as const;
-export const MEDIA_KINDS = ['progress_photo', 'inbody', 'other', 'audio'] as const;
+export const MEDIA_KINDS = ['progress_photo', 'inbody', 'other', 'audio', 'avatar'] as const;
 export const MEDIA_MAX_BYTES = 10 * 1024 * 1024; // 10 MB (§7)
 
 export const mediaKindSchema = z.enum(MEDIA_KINDS);
