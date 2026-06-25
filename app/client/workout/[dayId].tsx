@@ -3,8 +3,10 @@
 // integer grams). The ring fills as sets complete. Beating your best e1RM (which
 // rewards more reps at the same load) or your best reps pops a "PR" badge. You can
 // also fire a quick note to your coach (Challenge / Compliment, migration 0021).
-// A set can't be completed without reps AND a weight value. Finishing completes the
-// workout_sessions row that powers streaks/adherence.
+// A set needs reps; WEIGHT IS OPTIONAL so bodyweight moves (pull-ups, plank) log
+// cleanly (empty weight => load_grams null). A rest timer counts down after each set.
+// Finishing completes the workout_sessions row that powers streaks/adherence — and if
+// nothing was logged we confirm first, so we don't pollute streak/adherence data.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -46,6 +48,8 @@ import {
   type WorkoutNote,
 } from '../../../src/lib/workout-notes';
 import { convertDisplay, displayToGrams, formatWeight, gramsToInput, type WeightUnit } from '../../../src/lib/units';
+import { confirm } from '../../../src/lib/confirm';
+import { haptics } from '../../../src/lib/haptics';
 import { Icon, Screen, Text, Card, Badge, Button, Chip, Input, ProgressRing } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
@@ -55,6 +59,13 @@ function intOrNull(s?: string): number | null {
   if (!s || s.trim() === '') return null;
   const n = parseInt(s.trim(), 10);
   return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/** Seconds → m:ss for the rest timer. */
+function fmtClock(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 // Which exercise (or the whole session) the note composer is targeting.
@@ -88,6 +99,11 @@ export default function WorkoutScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
+
+  // Rest timer — counts down ex.rest_seconds after a set is completed. restEndsAt is
+  // the wall-clock target (survives re-renders); a 250ms tick keeps the seconds snappy.
+  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
+  const [restRemaining, setRestRemaining] = useState(0);
 
   // Note composer
   const [composer, setComposer] = useState<Composer | null>(null);
@@ -152,6 +168,30 @@ export default function WorkoutScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Start / skip the post-set rest countdown.
+  const startRest = useCallback((seconds: number) => {
+    setRestRemaining(seconds);
+    setRestEndsAt(Date.now() + seconds * 1000);
+  }, []);
+  const skipRest = useCallback(() => {
+    setRestEndsAt(null);
+    setRestRemaining(0);
+  }, []);
+  useEffect(() => {
+    if (restEndsAt == null) return;
+    const tick = () => {
+      const msLeft = restEndsAt - Date.now();
+      setRestRemaining(Math.max(0, Math.round(msLeft / 1000)));
+      if (msLeft <= 0) {
+        setRestEndsAt(null);
+        haptics.success(); // rest's up
+      }
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [restEndsAt]);
 
   const totalPlanned = useMemo(
     () => exercises.reduce((sum, e) => sum + (e.sets ?? 0), 0),
@@ -275,12 +315,13 @@ export default function WorkoutScreen() {
     const k = key(ex.id, setIndex);
     const existingId = done.get(k);
 
-    // Completing a set REQUIRES reps > 0 AND a weight > 0.
+    // Completing a set REQUIRES reps > 0. WEIGHT IS OPTIONAL — an empty weight is a
+    // valid bodyweight set (pull-ups, plank…); a *typed* weight still has to be > 0.
     if (!existingId) {
       const repsVal = intOrNull(reps.get(k));
       const wStr = (weight.get(k) ?? '').trim();
       const grams = wStr === '' ? null : displayToGrams(wStr, unitFor(ex.exercise_name));
-      if (repsVal == null || repsVal <= 0 || grams == null || grams <= 0) {
+      if (repsVal == null || repsVal <= 0 || (wStr !== '' && (grams == null || grams <= 0))) {
         setInvalid((prev) => new Set(prev).add(k));
         return;
       }
@@ -297,7 +338,9 @@ export default function WorkoutScreen() {
         });
       } else {
         const s = await ensureSession();
-        const grams = displayToGrams(weight.get(k) ?? '', unitFor(ex.exercise_name));
+        // Empty weight => null grams (bodyweight), never 0 (displayToGrams('') is 0).
+        const wStr = (weight.get(k) ?? '').trim();
+        const grams = wStr === '' ? null : displayToGrams(wStr, unitFor(ex.exercise_name));
         const row = await logSet({
           session_id: s.id,
           plan_exercise_id: ex.id,
@@ -308,6 +351,8 @@ export default function WorkoutScreen() {
           is_completed: true,
         });
         setDone((prev) => new Map(prev).set(k, row.id));
+        haptics.tap();
+        if (ex.rest_seconds) startRest(ex.rest_seconds);
       }
       refreshPRs(); // keep all-time bests current for cross-session PR detection
     } catch {
@@ -317,17 +362,18 @@ export default function WorkoutScreen() {
     }
   }
 
-  // Persist reps/weight edits to an already-completed set (on blur). A completed
-  // set must keep valid reps>0 AND weight>0 — editing either to empty/0
-  // UN-COMPLETES it (deletes the log) and flags it red, so you can't end up with a
-  // "done" set logged as 0×0.
+  // Persist reps/weight edits to an already-completed set (on blur). A completed set
+  // must keep valid reps>0; weight stays OPTIONAL (bodyweight). Editing reps to
+  // empty/0 — or a *typed* weight to 0/garbage — UN-COMPLETES it (deletes the log)
+  // and flags it red, so you can't end up with a "done" set logged as 0 reps.
   async function persistIfDone(ex: ExerciseRow, setIndex: number) {
     const k = key(ex.id, setIndex);
     const id = done.get(k);
     if (!id) return;
     const repsVal = intOrNull(reps.get(k));
-    const grams = displayToGrams(weight.get(k) ?? '', unitFor(ex.exercise_name));
-    if (repsVal == null || repsVal <= 0 || grams == null || grams <= 0) {
+    const wStr = (weight.get(k) ?? '').trim();
+    const grams = wStr === '' ? null : displayToGrams(wStr, unitFor(ex.exercise_name));
+    if (repsVal == null || repsVal <= 0 || (wStr !== '' && (grams == null || grams <= 0))) {
       try {
         await deleteSetLog(id);
       } catch {
@@ -385,10 +431,21 @@ export default function WorkoutScreen() {
   }
 
   async function finish() {
+    // Don't pollute streak/adherence with an empty "done" session — confirm first.
+    if (doneCount === 0) {
+      const ok = await confirm(
+        'Mark as done?',
+        'You haven’t logged any sets yet. Mark this workout as done anyway?',
+        'Mark as done',
+        'Keep logging',
+      );
+      if (!ok) return;
+    }
     setBusy(true);
     try {
       const s = await ensureSession();
       await completeSession(s.id);
+      haptics.success();
       setCelebrating(true);
       setTimeout(() => router.back(), 1700);
     } catch {
@@ -563,7 +620,7 @@ export default function WorkoutScreen() {
                       })}
                       {hasInvalid ? (
                         <Text variant="caption" color="danger">
-                          Enter reps and weight to log a set.
+                          Enter your reps to log a set (weight is optional).
                         </Text>
                       ) : null}
                     </View>
@@ -607,6 +664,37 @@ export default function WorkoutScreen() {
             onPress={() => openComposer({ scope: 'session' })}
           />
         </ScrollView>
+
+        {/* Rest timer — floats just above the finish bar after a set completes */}
+        {restEndsAt != null ? (
+          <View
+            style={{
+              position: 'absolute',
+              left: theme.spacing.lg,
+              right: theme.spacing.lg,
+              bottom: 104,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: theme.spacing.md,
+              backgroundColor: theme.colors.surfaceElevated,
+              borderWidth: 1,
+              borderColor: theme.colors.primary,
+              borderRadius: theme.radii.md,
+              paddingVertical: theme.spacing.md,
+              paddingHorizontal: theme.spacing.lg,
+            }}
+          >
+            <Icon name="clock" size={20} color={theme.colors.primary} />
+            <Text variant="bodyStrong" style={{ flex: 1 }}>
+              Rest · {fmtClock(restRemaining)}
+            </Text>
+            <Pressable onPress={skipRest} hitSlop={8}>
+              <Text variant="label" color="primary">
+                Skip
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         {/* Finish bar */}
         <View
@@ -676,7 +764,7 @@ export default function WorkoutScreen() {
               <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
                 <Button title="Cancel" variant="ghost" fullWidth={false} onPress={closeComposer} />
                 <View style={{ flex: 1 }}>
-                  <Button title="Send to coach" onPress={saveNote} loading={savingNote} />
+                  <Button title="Save note" onPress={saveNote} loading={savingNote} />
                 </View>
               </View>
             </Pressable>

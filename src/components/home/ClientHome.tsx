@@ -291,6 +291,40 @@ export default function ClientHome() {
             </View>
           </Card>
         </View>
+      ) : coachQ.isSuccess ? (
+        // Coach-less state — the single highest-impact client fix. Without this, a
+        // brand-new (invited) client lands on Home with no path forward. Primary path
+        // is accepting a coach's invite (the pilot funnel); finding a coach is secondary.
+        <View style={{ gap: theme.spacing.sm }}>
+          <Text variant="label" muted style={textStart}>
+            {t('home.yourCoach')}
+          </Text>
+          <Card style={{ borderColor: theme.colors.primary }}>
+            <View style={{ gap: theme.spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                <Icon name="person-add" size={22} color={theme.colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyStrong" style={textStart}>
+                    {t('home.connectCoachTitle')}
+                  </Text>
+                  <Text variant="caption" muted style={textStart}>
+                    {t('home.connectCoachSub')}
+                  </Text>
+                </View>
+              </View>
+              <Button
+                title={t('home.acceptInvite')}
+                onPress={() => router.push('/accept-invite')}
+                left={<Icon name="mail" size={18} color={theme.colors.onPrimary} />}
+              />
+              <Button
+                title={t('home.findCoach')}
+                variant="ghost"
+                onPress={() => router.push('/discover/coaches')}
+              />
+            </View>
+          </Card>
+        </View>
       ) : null}
 
       {/* League standing — the leaderboard hook (Phase 20). Shown even before opting in. */}
