@@ -1,12 +1,12 @@
 // Language switcher (Phase 16). A two-option Segmented (English · العربية) that flips
 // the UI language and writing direction. Switching English⇄Arabic always crosses the
-// LTR↔RTL boundary, which React Native only fully applies after a bundle reload — so we
-// confirm first, then reloadAppAsync() (exported by `expo`, works in Expo Go + release,
-// no extra dependency). The chosen language is persisted by setLanguage(); on the next
-// boot loadSavedLanguage()+applyDirection re-apply it before first paint. English stays
-// available here — the app is bilingual, not Arabic-only.
+// LTR↔RTL boundary. I18nManager.forceRTL is a NATIVE setting that only takes full effect
+// when the native Activity is recreated, so we confirm first, then do a real native
+// restart (restartApp → react-native-restart, with a reloadAppAsync fallback). A JS-only
+// reload left the bottom tab bar in the old direction on Android. The chosen language is
+// persisted by setLanguage(); on the next boot loadSavedLanguage()+applyDirection re-apply
+// it before first paint. English stays available — the app is bilingual, not Arabic-only.
 import { View } from 'react-native';
-import { reloadAppAsync } from 'expo';
 import { useTranslation } from 'react-i18next';
 import {
   isRTLLanguage,
@@ -16,6 +16,7 @@ import {
   type Language,
 } from '@/i18n';
 import { confirm } from '@/lib/confirm';
+import { restartApp } from '@/lib/restart';
 import { Text, Segmented } from '@/components/ui';
 import { theme } from '@/theme';
 
@@ -39,7 +40,7 @@ export function LanguageSwitcher() {
       );
       if (!ok) return;
       await setLanguage(lng);
-      await reloadAppAsync();
+      await restartApp();
       return;
     }
     await setLanguage(lng);
