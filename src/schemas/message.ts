@@ -3,15 +3,24 @@
 // part of this schema — only the recipient and the body are caller-supplied.
 import { z } from 'zod';
 
-export const sendMessageSchema = z.object({
-  recipient_id: z.string().uuid(),
-  // Trim + bound to match the DB check (1..4000 chars). Render must not treat
-  // this as HTML (§8) — RN <Text> is inherently safe.
-  body: z.string().trim().min(1).max(4000),
-  // Optional reply: the quoted message id (must be in the same thread; the server
-  // trigger validates the sender can see it).
-  reply_to_id: z.string().uuid().optional(),
-});
+export const sendMessageSchema = z
+  .object({
+    recipient_id: z.string().uuid(),
+    // Trim + bound to match the DB check (≤ 4000 chars). Render must not treat this
+    // as HTML (§8) — RN <Text> is inherently safe. May be empty ONLY for a voice
+    // note (media_id present); the refine + DB check enforce that.
+    body: z.string().trim().max(4000).default(''),
+    // Optional reply: the quoted message id (must be in the same thread; the server
+    // trigger validates the sender can see it).
+    reply_to_id: z.string().uuid().optional(),
+    // Optional voice note: a finalized `media` id (kind 'audio'). When set, the body
+    // may be empty (Phase 18 voice notes).
+    media_id: z.string().uuid().optional(),
+  })
+  .refine((d) => d.body.length >= 1 || d.media_id !== undefined, {
+    message: 'A message needs text or a voice note.',
+    path: ['body'],
+  });
 export type SendMessage = z.infer<typeof sendMessageSchema>;
 
 // Soft edit (Phase 18 Slice 2): the sender corrects their OWN recent message. Only

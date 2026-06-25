@@ -33,6 +33,8 @@ export type Message = {
   reply_to_id: string | null;
   /** Resolved quote of the replied-to message (embedded on read; may be null). */
   reply_to: ReplyPreview | null;
+  /** A voice-note `media` id (kind 'audio'), or null (Phase 18 voice notes). */
+  media_id: string | null;
 };
 
 export type Reaction = {
@@ -46,7 +48,7 @@ export type Reaction = {
 // NOT the constraint name — the constraint-name hint (messages_reply_to_id_fkey)
 // returns PGRST200 "Could not find a relationship between 'messages' and 'messages'".
 const MSG_COLS =
-  'id, sender_id, recipient_id, body, created_at, edited_at, reply_to_id, ' +
+  'id, sender_id, recipient_id, body, created_at, edited_at, reply_to_id, media_id, ' +
   'reply_to:messages!reply_to_id(id, body, sender_id)';
 
 // PostgREST types a to-one embed as either an object or a single-element array; this
@@ -68,7 +70,12 @@ export async function sendMessage(input: SendMessage): Promise<Message> {
   const v = sendMessageSchema.parse(input);
   const { data, error } = await supabase
     .from('messages')
-    .insert({ recipient_id: v.recipient_id, body: v.body, reply_to_id: v.reply_to_id ?? null })
+    .insert({
+      recipient_id: v.recipient_id,
+      body: v.body,
+      reply_to_id: v.reply_to_id ?? null,
+      media_id: v.media_id ?? null,
+    })
     .select(MSG_COLS)
     .single();
   if (error) throw error;

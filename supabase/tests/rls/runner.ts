@@ -63,6 +63,8 @@ const migrationFiles = [
   '0039_chat_acknowledgments.sql',
   '0040_device_tokens.sql',
   '0041_push_fanout.sql',
+  // 0042_push_fanout_harden.sql lands via the push branch (PR #30); inserted here on merge.
+  '0043_voice_notes.sql',
 ];
 
 const baseUrl =

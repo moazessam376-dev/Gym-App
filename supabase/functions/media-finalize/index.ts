@@ -20,7 +20,13 @@ import { Image } from 'imagescript';
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB (§7)
 
-type Mime = 'image/jpeg' | 'image/png' | 'application/pdf';
+type Mime =
+  | 'image/jpeg'
+  | 'image/png'
+  | 'application/pdf'
+  | 'audio/mp4'
+  | 'audio/mpeg'
+  | 'audio/wav';
 
 /** Detect the real content type from leading bytes — never trust extension/MIME. */
 function detectType(b: Uint8Array): Mime | null {
@@ -35,6 +41,22 @@ function detectType(b: Uint8Array): Mime | null {
   if (b.length >= 5 && b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 && b[4] === 0x2d) {
     return 'application/pdf';
   }
+  // ── Audio (voice notes, Phase 18) ──
+  // M4A/MP4 (AAC): an 'ftyp' box at bytes 4..7 (what expo-audio records on iOS+Android).
+  if (b.length >= 8 && b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
+    return 'audio/mp4';
+  }
+  // MP3: ID3v2 tag ('ID3') or an MPEG-audio frame sync (0xFF Ex/Fx).
+  if (b.length >= 3 && b[0] === 0x49 && b[1] === 0x44 && b[2] === 0x33) return 'audio/mpeg';
+  if (b.length >= 2 && b[0] === 0xff && (b[1] & 0xe0) === 0xe0) return 'audio/mpeg';
+  // WAV: 'RIFF' .... 'WAVE'.
+  if (
+    b.length >= 12 &&
+    b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+    b[8] === 0x57 && b[9] === 0x41 && b[10] === 0x56 && b[11] === 0x45
+  ) {
+    return 'audio/wav';
+  }
   return null;
 }
 
@@ -42,7 +64,12 @@ const EXT: Record<Mime, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'application/pdf': 'pdf',
+  'audio/mp4': 'm4a',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
 };
+
+const AUDIO_MIMES = new Set<Mime>(['audio/mp4', 'audio/mpeg', 'audio/wav']);
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -122,9 +149,11 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'invalid_file' }, 400);
     }
 
-    // Sanitize: re-encode images to strip EXIF; pass PDFs through.
+    // Sanitize: re-encode images to strip EXIF; pass PDFs and audio through. (Voice
+    // notes from expo-audio carry no location metadata; deep audio-tag scrubbing is
+    // deferred, like the PDF scrub.)
     let clean: Uint8Array;
-    if (mime === 'application/pdf') {
+    if (mime === 'application/pdf' || AUDIO_MIMES.has(mime)) {
       clean = raw;
     } else {
       const img = await Image.decode(raw);

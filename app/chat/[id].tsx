@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming, ZoomIn } from 'react-native-reanimated';
+import { useAudioRecorder, useAudioRecorderState, RecordingPresets } from 'expo-audio';
 import { useTranslation } from 'react-i18next';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -50,9 +51,11 @@ import {
 } from '../../src/lib/moderation';
 import { REACTION_EMOJIS, type ReactionEmoji } from '../../src/schemas/message';
 import type { ReportReason } from '../../src/schemas/moderation';
+import { ensureMicPermission, uploadVoiceNote } from '../../src/lib/voice';
 import { ReportMessageSheet } from '../../src/components/ReportMessageSheet';
 import { BanAppealSheet } from '../../src/components/BanAppealSheet';
 import { MessageActionsSheet } from '../../src/components/MessageActionsSheet';
+import { VoiceNoteBubble } from '../../src/components/VoiceNoteBubble';
 import { Emoji } from '../../src/components/Emoji';
 import { Screen, Text, Button } from '../../src/components/ui';
 import { theme } from '../../src/theme';
@@ -181,6 +184,7 @@ function QuoteBox({
 function Bubble({
   mine,
   body,
+  mediaId,
   at,
   edited,
   reply,
@@ -194,6 +198,8 @@ function Bubble({
 }: {
   mine: boolean;
   body: string;
+  /** A voice-note media id (kind 'audio'), or null for a text message. */
+  mediaId: string | null;
   at: string;
   edited: boolean;
   reply: ReplyPreview | null;
@@ -293,9 +299,12 @@ function Bubble({
             }}
           >
             {reply ? <QuoteBox reply={reply} mine={mine} authorLabel={authorLabel} /> : null}
-            <Text variant="body" color={mine ? theme.colors.onPrimary : theme.colors.text}>
-              {body}
-            </Text>
+            {mediaId ? <VoiceNoteBubble mediaId={mediaId} mine={mine} /> : null}
+            {body.length > 0 ? (
+              <Text variant="body" color={mine ? theme.colors.onPrimary : theme.colors.text}>
+                {body}
+              </Text>
+            ) : null}
           </Pressable>
           <Animated.View
             pointerEvents="none"
@@ -347,6 +356,65 @@ function DayDivider({ at }: { at: string }) {
   );
 }
 
+// Recording bar shown in place of the text composer while a voice note is recording
+// (or uploading). Trash discards; the send button stops + uploads + sends.
+function RecordingBar({
+  durationMillis,
+  sending,
+  onCancel,
+  onSend,
+}: {
+  durationMillis: number;
+  sending: boolean;
+  onCancel: () => void;
+  onSend: () => void;
+}) {
+  const { t } = useTranslation();
+  const total = Math.floor((durationMillis ?? 0) / 1000);
+  const mmss = `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.md,
+        padding: theme.spacing.md,
+        borderTopWidth: 1,
+        borderTopColor: theme.colors.border,
+        backgroundColor: theme.colors.bg,
+      }}
+    >
+      <Pressable onPress={onCancel} disabled={sending} hitSlop={8}>
+        <Ionicons name="trash-outline" size={22} color={theme.colors.danger} />
+      </Pressable>
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+        <Ionicons name="mic" size={18} color={theme.colors.danger} />
+        <Text variant="body" color={theme.colors.text}>
+          {sending ? t('chat.voiceSending') : mmss}
+        </Text>
+      </View>
+      <Pressable
+        onPress={onSend}
+        disabled={sending}
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: theme.colors.primary,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {sending ? (
+          <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+        ) : (
+          <Ionicons name="send" size={18} color={theme.colors.onPrimary} />
+        )}
+      </Pressable>
+    </View>
+  );
+}
+
 export default function ChatThread() {
   const { id: otherId, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const { t } = useTranslation();
@@ -355,6 +423,13 @@ export default function ChatThread() {
   const myId = session?.user?.id;
   // Measured header height → exact keyboard offset (the hardcoded 90 clipped).
   const headerHeight = useHeaderHeight();
+
+  // Voice notes (Phase 18): record AAC-in-MP4 via expo-audio, then upload through the
+  // secure media pipeline and send a message carrying the media id.
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder, 200);
+  const [recording, setRecording] = useState(false);
+  const [sendingVoice, setSendingVoice] = useState(false);
 
   // Stored newest-first to feed an inverted FlatList (index 0 renders at bottom).
   const [messages, setMessages] = useState<Message[]>([]);
@@ -531,6 +606,51 @@ export default function ChatThread() {
     }
   }
 
+  // ── Voice notes ──────────────────────────────────────────────────────────
+  async function startRecording() {
+    if (recording || sending || sendingVoice) return;
+    try {
+      if (!(await ensureMicPermission())) {
+        Alert.alert(t('chat.micDeniedTitle'), t('chat.micDeniedBody'));
+        return;
+      }
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      setRecording(true);
+    } catch {
+      Alert.alert(t('common.error'), t('chat.sendFailed'));
+    }
+  }
+
+  async function cancelRecording() {
+    if (!recording) return;
+    setRecording(false);
+    try {
+      await recorder.stop();
+    } catch {
+      /* discard — nothing is sent */
+    }
+  }
+
+  async function stopAndSendVoice() {
+    if (!recording || !otherId) return;
+    setRecording(false);
+    setSendingVoice(true);
+    try {
+      await recorder.stop();
+      const uri = recorder.uri;
+      if (!uri) throw new Error('no_recording');
+      const mediaId = await uploadVoiceNote(uri);
+      const sent = await sendMessage({ recipient_id: otherId, body: '', media_id: mediaId });
+      setMessages((prev) => (prev.some((x) => x.id === sent.id) ? prev : [sent, ...prev]));
+    } catch (err) {
+      if (errIs(err, 'banned')) setBanned(true);
+      else Alert.alert(t('common.error'), t('chat.sendFailed'));
+    } finally {
+      setSendingVoice(false);
+    }
+  }
+
   // Reply + edit are mutually exclusive composer modes.
   function startReply(m: Message) {
     setActionsFor(null);
@@ -674,6 +794,7 @@ export default function ChatThread() {
                     <Bubble
                       mine={item.sender_id === myId}
                       body={item.body}
+                      mediaId={item.media_id}
                       at={item.created_at}
                       edited={item.edited_at != null}
                       reply={item.reply_to}
@@ -805,58 +926,84 @@ export default function ChatThread() {
                   </Pressable>
                 </View>
               ) : null}
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'flex-end',
-                  gap: theme.spacing.sm,
-                  padding: theme.spacing.md,
-                  borderTopWidth: editingId || replyTo ? 0 : 1,
-                  borderTopColor: theme.colors.border,
-                  backgroundColor: theme.colors.bg,
-                }}
-              >
-                <TextInput
-                  value={input}
-                  onChangeText={setInput}
-                  placeholder={t('chat.messagePlaceholder')}
-                  placeholderTextColor={theme.colors.textMuted}
-                  multiline
-                  maxLength={4000}
-                  style={{
-                    flex: 1,
-                    maxHeight: 120,
-                    backgroundColor: theme.colors.surface,
-                    borderWidth: 1,
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.radii.lg,
-                    paddingHorizontal: theme.spacing.lg,
-                    paddingTop: theme.spacing.md,
-                    paddingBottom: theme.spacing.md,
-                    color: theme.colors.text,
-                    fontFamily: theme.fontFamily.bodyRegular,
-                    fontSize: 15,
-                  }}
+              {recording || sendingVoice ? (
+                <RecordingBar
+                  durationMillis={recorderState.durationMillis}
+                  sending={sendingVoice}
+                  onCancel={cancelRecording}
+                  onSend={stopAndSendVoice}
                 />
-                <Pressable
-                  onPress={onSend}
-                  disabled={sending || input.trim().length === 0}
+              ) : (
+                <View
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 22,
-                    backgroundColor: input.trim().length === 0 ? theme.colors.surfaceElevated : theme.colors.primary,
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    flexDirection: 'row',
+                    alignItems: 'flex-end',
+                    gap: theme.spacing.sm,
+                    padding: theme.spacing.md,
+                    borderTopWidth: editingId || replyTo ? 0 : 1,
+                    borderTopColor: theme.colors.border,
+                    backgroundColor: theme.colors.bg,
                   }}
                 >
-                  <Ionicons
-                    name={editingId ? 'checkmark' : 'send'}
-                    size={18}
-                    color={input.trim().length === 0 ? theme.colors.textMuted : theme.colors.onPrimary}
+                  <TextInput
+                    value={input}
+                    onChangeText={setInput}
+                    placeholder={t('chat.messagePlaceholder')}
+                    placeholderTextColor={theme.colors.textMuted}
+                    multiline
+                    maxLength={4000}
+                    style={{
+                      flex: 1,
+                      maxHeight: 120,
+                      backgroundColor: theme.colors.surface,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      borderRadius: theme.radii.lg,
+                      paddingHorizontal: theme.spacing.lg,
+                      paddingTop: theme.spacing.md,
+                      paddingBottom: theme.spacing.md,
+                      color: theme.colors.text,
+                      fontFamily: theme.fontFamily.bodyRegular,
+                      fontSize: 15,
+                    }}
                   />
-                </Pressable>
-              </View>
+                  {/* Empty input (and not editing) → mic to record a voice note; otherwise send. */}
+                  {input.trim().length === 0 && !editingId ? (
+                    <Pressable
+                      onPress={startRecording}
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        backgroundColor: theme.colors.primary,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="mic" size={20} color={theme.colors.onPrimary} />
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      onPress={onSend}
+                      disabled={sending || input.trim().length === 0}
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        backgroundColor: input.trim().length === 0 ? theme.colors.surfaceElevated : theme.colors.primary,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons
+                        name={editingId ? 'checkmark' : 'send'}
+                        size={18}
+                        color={input.trim().length === 0 ? theme.colors.textMuted : theme.colors.onPrimary}
+                      />
+                    </Pressable>
+                  )}
+                </View>
+              )}
             </View>
           )}
         </KeyboardAvoidingView>

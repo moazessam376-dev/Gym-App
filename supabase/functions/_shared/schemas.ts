@@ -42,8 +42,13 @@ export const pushSendSchema = z.object({
 
 // ── Media uploads (Phase 4, §7) ─────────────────────────────────────────────
 // The allowlist is enforced here AND by magic-byte detection in media-finalize.
-export const MEDIA_MIME_TYPES = ['image/jpeg', 'image/png', 'application/pdf'] as const;
-export const MEDIA_KINDS = ['progress_photo', 'inbody', 'other'] as const;
+// Audio (voice notes, Phase 18): expo-audio records AAC-in-MP4 (.m4a → audio/mp4);
+// mp3/wav accepted defensively. Bytes are validated by magic bytes server-side.
+export const MEDIA_MIME_TYPES = [
+  'image/jpeg', 'image/png', 'application/pdf',
+  'audio/mp4', 'audio/mpeg', 'audio/wav',
+] as const;
+export const MEDIA_KINDS = ['progress_photo', 'inbody', 'other', 'audio'] as const;
 const MEDIA_MAX_BYTES = 10 * 1024 * 1024; // 10 MB (§7)
 
 // Request a signed upload URL into the locked inbox. No media row yet.
@@ -55,7 +60,7 @@ export const createUploadSchema = z.object({
 // Finalize: the inbox_path must be `{ownerUuid}/{uuid}.{ext}` (no traversal); the
 // function re-checks the owner segment against the verified caller.
 export const finalizeSchema = z.object({
-  inbox_path: z.string().regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|pdf)$/i),
+  inbox_path: z.string().regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|pdf|m4a|mp3|wav)$/i),
   kind: z.enum(MEDIA_KINDS),
   progress_entry_id: z.string().uuid().optional(),
 });
