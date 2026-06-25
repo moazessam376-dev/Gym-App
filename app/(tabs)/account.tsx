@@ -132,6 +132,11 @@ export default function AccountTab() {
               label={t('account.discoverCoaches')}
               onPress={go('/discover/coaches')}
             />
+            <LinkRow
+              icon="trophy-outline"
+              label={t('account.leaderboards')}
+              onPress={go('/leaderboards')}
+            />
           </>
         ) : null}
 

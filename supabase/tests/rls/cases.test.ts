@@ -3263,3 +3263,104 @@ describe('public profiles (0044, Phase 19) — opt-in portfolio via field-allowl
     ).rejects.toThrow();
   });
 });
+
+describe('public leaderboards (0045, Phase 20) — opt-in physique/outcomes boards via field-allowlist RPCs (§2)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const COACH_P: Identity = { sub: 'c0c0c0c0-0000-0000-0000-000000000001', userRole: 'coach' }; // private coach
+  const COACH_L = '1ea00000-0000-0000-0000-0000000000c1'; // public + opted-in league coach
+  const L1 = '1ea00000-0000-0000-0000-000000000001'; // male, opted-in, public → men's board
+  const L2 = '1ea00000-0000-0000-0000-000000000002'; // female, opted-in, public → women's board
+  const L3 = '1ea00000-0000-0000-0000-000000000003'; // male, opted-in, public → men's board
+  const L4 = '1ea00000-0000-0000-0000-000000000004'; // male, public, NOT opted in → excluded
+  const L5 = '1ea00000-0000-0000-0000-000000000005'; // female, opted-in, PRIVATE → excluded
+  const L6 = '1ea00000-0000-0000-0000-000000000006'; // male, opted-in, public, BANNED → excluded
+
+  // ── The board adds NO new read path to the raw body_metrics / athlete_profile ──
+  it('the public board does NOT widen the raw body_metrics / athlete_profile RLS', async () => {
+    // An unrelated coach still cannot read another cohort's raw rows — only the RPC is reachable.
+    const rawMetrics = await asUser(COACH_B, (c) =>
+      c.query('select id from public.body_metrics where user_id = $1', [L1]),
+    );
+    const rawProfile = await asUser(COACH_B, (c) =>
+      c.query('select user_id from public.athlete_profile where user_id = $1', [L1]),
+    );
+    expect(rawMetrics.rows).toHaveLength(0);
+    expect(rawProfile.rows).toHaveLength(0);
+  });
+
+  // ── public_athlete_leaderboard: allowlist + per-sex + every exclusion reason ──
+  it('the men’s board returns opted-in public athletes, FFMI-ranked, with the allowlist only', async () => {
+    const r = await asUser(COACH_B, (c) =>
+      c.query("select * from public.public_athlete_leaderboard('male')"),
+    );
+    const ids = r.rows.map((row) => row.athlete_id);
+    expect(ids).toContain(L1);
+    expect(ids).toContain(L3);
+    // L3 (FFMI ≈ 21.7) ranks above L1 (≈ 21.5).
+    expect(ids.indexOf(L3)).toBeLessThan(ids.indexOf(L1));
+    // The SELECT column list IS the allowlist — raw inputs (weight/body-fat/height/sex) absent.
+    const cols = Object.keys(r.rows[0]);
+    expect(cols.sort()).toEqual(['athlete_id', 'avatar_media_id', 'ffmi', 'full_name', 'primary_goal'].sort());
+    for (const banned of ['weight_grams', 'body_fat_bp', 'skeletal_muscle_mass_grams', 'height_cm', 'sex']) {
+      expect(cols).not.toContain(banned);
+    }
+  });
+
+  it('the men’s board excludes a private athlete, a not-opted-in athlete, a banned athlete, and women', async () => {
+    const r = await asUser(COACH_B, (c) =>
+      c.query("select athlete_id from public.public_athlete_leaderboard('male')"),
+    );
+    const ids = r.rows.map((row) => row.athlete_id);
+    expect(ids).not.toContain(L4); // leaderboard_opt_in = false (even though public)
+    expect(ids).not.toContain(L5); // is_public = false
+    expect(ids).not.toContain(L6); // banned_at set
+    expect(ids).not.toContain(L2); // female → not on the men's board
+  });
+
+  it('the women’s board returns the opted-in public female athlete and no men', async () => {
+    const r = await asUser(COACH_B, (c) =>
+      c.query("select athlete_id from public.public_athlete_leaderboard('female')"),
+    );
+    const ids = r.rows.map((row) => row.athlete_id);
+    expect(ids).toContain(L2);
+    expect(ids).not.toContain(L1); // male → not on the women's board
+    expect(ids).not.toContain(L3);
+    expect(ids).not.toContain(L5); // private female still excluded
+  });
+
+  // ── public_coach_leaderboard: counts only, opt-in/floor gated ─────────────────
+  it('the coach board returns opted-in public coaches as AGGREGATE counts (no client ids)', async () => {
+    const r = await asUser(COACH_B, (c) =>
+      c.query('select * from public.public_coach_leaderboard()'),
+    );
+    const row = r.rows.find((x) => x.coach_id === COACH_L);
+    expect(row).toBeTruthy();
+    expect(row.tracked_clients).toBe(3);
+    expect(row.improved_clients).toBe(3);
+    // Aggregate-only shape — structurally no client identifier column.
+    const cols = Object.keys(r.rows[0]);
+    expect(cols.sort()).toEqual(['avatar_media_id', 'coach_id', 'full_name', 'improved_clients', 'tracked_clients'].sort());
+    for (const banned of ['client_id', 'user_id']) {
+      expect(cols).not.toContain(banned);
+    }
+  });
+
+  it('the coach board excludes a public-but-not-opted-in coach and a private coach', async () => {
+    const r = await asUser(COACH_B, (c) =>
+      c.query('select coach_id from public.public_coach_leaderboard()'),
+    );
+    const ids = r.rows.map((row) => row.coach_id);
+    expect(ids).not.toContain(COACH_A.sub); // public (Phase 19) but leaderboard_opt_in defaults false
+    expect(ids).not.toContain(COACH_P.sub); // private coach
+  });
+
+  // ── both RPCs are authenticated-only — anon cannot execute them ───────────────
+  it('anon cannot execute either leaderboard RPC (no execute grant)', async () => {
+    await expect(
+      asAnon((c) => c.query("select * from public.public_athlete_leaderboard('male')")),
+    ).rejects.toThrow();
+    await expect(
+      asAnon((c) => c.query('select * from public.public_coach_leaderboard()')),
+    ).rejects.toThrow();
+  });
+});

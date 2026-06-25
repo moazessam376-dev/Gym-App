@@ -34,6 +34,7 @@ export default function PublicProfileEdit() {
   const [error, setError] = useState<string | null>(null);
 
   const [isPublic, setIsPublic] = useState(false);
+  const [leaderboardOptIn, setLeaderboardOptIn] = useState(false);
   const [achievements, setAchievements] = useState<string[]>([]);
   const [avatarMediaId, setAvatarMediaId] = useState<string | null>(null);
   const [avatarDirty, setAvatarDirty] = useState(false); // a new photo is picked but not yet saved
@@ -51,6 +52,7 @@ export default function PublicProfileEdit() {
       setAvatarMediaId(avatar);
       if (profile) {
         setIsPublic(profile.is_public);
+        setLeaderboardOptIn(profile.leaderboard_opt_in);
         setAchievements(
           isCoach
             ? (profile as { achievements: string[] }).achievements
@@ -113,10 +115,16 @@ export default function PublicProfileEdit() {
     try {
       // Link the newly-picked avatar (if any) only now, on Save.
       if (avatarDirty) await setMyAvatar(userId, avatarMediaId);
+      // The board needs a public profile to link to, so opting in only persists while public.
+      const optIn = isPublic && leaderboardOptIn;
       if (isCoach) {
-        await setCoachVisibility(userId, { is_public: isPublic, achievements: cleaned });
+        await setCoachVisibility(userId, { is_public: isPublic, achievements: cleaned, leaderboard_opt_in: optIn });
       } else {
-        await setAthleteVisibility(userId, { is_public: isPublic, public_achievements: cleaned });
+        await setAthleteVisibility(userId, {
+          is_public: isPublic,
+          public_achievements: cleaned,
+          leaderboard_opt_in: optIn,
+        });
       }
       setAchievements(cleaned);
       router.back();
@@ -197,6 +205,30 @@ export default function PublicProfileEdit() {
             <Text variant="caption" muted style={textStart}>
               {t('publicProfile.whoCanSee')}
             </Text>
+          </GlassCard>
+
+          {/* Leaderboard opt-in (Phase 20) — a separate, bigger disclosure than a profile
+              page, so its own consent. Only available once the profile is public. */}
+          <GlassCard style={{ gap: theme.spacing.sm, opacity: isPublic ? 1 : 0.55 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+              <Text variant="bodyStrong" style={{ flex: 1 }}>
+                {t('publicProfile.leaderboardTitle')}
+              </Text>
+              <Switch
+                value={isPublic && leaderboardOptIn}
+                onValueChange={setLeaderboardOptIn}
+                disabled={!isPublic}
+                trackColor={{ true: theme.colors.primary, false: theme.colors.border }}
+              />
+            </View>
+            <Text variant="caption" muted style={textStart}>
+              {isCoach ? t('publicProfile.leaderboardSubCoach') : t('publicProfile.leaderboardSubAthlete')}
+            </Text>
+            {!isPublic ? (
+              <Text variant="caption" muted style={textStart}>
+                {t('publicProfile.leaderboardNeedsPublic')}
+              </Text>
+            ) : null}
           </GlassCard>
 
           {/* Achievements */}

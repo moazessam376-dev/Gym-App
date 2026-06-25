@@ -66,6 +66,7 @@ const migrationFiles = [
   '0042_push_fanout_harden.sql',
   '0043_voice_notes.sql',
   '0044_public_profiles.sql',
+  '0045_public_leaderboards.sql',
 ];
 
 const baseUrl =

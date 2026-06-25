@@ -28,5 +28,8 @@ export const upsertCoachProfileSchema = z.object({
   // Phase 19 — opt-in public portfolio fields (default private; server-owned read path).
   is_public: z.boolean().optional(),
   achievements: z.array(achievementSchema).max(20).optional(),
+  // Phase 20 — separate opt-in to the public Top Coaches board (ranked by aggregate
+  // verified client outcomes). Only meaningful when is_public is on.
+  leaderboard_opt_in: z.boolean().optional(),
 });
 export type UpsertCoachProfile = z.infer<typeof upsertCoachProfileSchema>;

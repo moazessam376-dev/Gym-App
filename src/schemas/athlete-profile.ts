@@ -61,5 +61,8 @@ export const upsertAthleteProfileSchema = z.object({
   // achievements — never the sensitive fields above.
   is_public: z.boolean().optional(),
   public_achievements: z.array(z.string().trim().min(1).max(200)).max(20).optional(),
+  // Phase 20 — separate opt-in to the public physique leaderboard (a bigger disclosure
+  // than a profile page, so its own consent). Only meaningful when is_public is on.
+  leaderboard_opt_in: z.boolean().optional(),
 });
 export type UpsertAthleteProfile = z.infer<typeof upsertAthleteProfileSchema>;
