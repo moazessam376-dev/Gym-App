@@ -1,9 +1,8 @@
-// Coach "Performance Hub" — Neon Glassy Dark (blue family). Twin stat hero + top
-// performers ranked by goal-relative InBody progress. No quick-action grid (it
-// duplicated the bottom tabs). All data is REAL — the deeper KPI dashboard lives in
-// the Analytics tab (Phase 15); the old mock activity feed has been removed.
+// Coach "Performance Hub" — Raptor. Twin KPI tiles + top performers ranked by
+// goal-relative InBody progress. No quick-action grid (it duplicated the bottom
+// tabs). All data is REAL — the deeper KPI dashboard lives in the Analytics tab
+// (Phase 15); the old mock activity feed has been removed.
 import { View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
@@ -15,7 +14,7 @@ import {
   useBodyMetricsBoard,
   useRefreshOnFocus,
 } from '@/lib/queries/home';
-import { Icon, Screen, Text, Avatar, GlassCard, StatBlock, EmptyState } from '@/components/ui';
+import { Icon, Screen, Text, Avatar, GlassCard, KpiTile, EmptyState } from '@/components/ui';
 import { NotificationBell } from '@/components/NotificationBell';
 import { theme } from '@/theme';
 
@@ -68,38 +67,22 @@ export default function CoachHome() {
         </View>
       </View>
 
-      {/* Twin hero stats */}
+      {/* Twin KPI tiles */}
       <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-        <LinearGradient
-          colors={theme.gradients.hero}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            flex: 1,
-            borderRadius: theme.radii.lg,
-            borderWidth: 1,
-            borderColor: theme.colors.glassBorder,
-            padding: theme.spacing.lg,
-          }}
-        >
-          <StatBlock value={pad2(clients)} label={t('home.activeClients')} valueColor={theme.colors.primary} />
-        </LinearGradient>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: theme.colors.glass,
-            borderRadius: theme.radii.lg,
-            borderWidth: 1,
-            borderColor: theme.colors.glassBorder,
-            padding: theme.spacing.lg,
-          }}
-        >
-          <StatBlock
-            value={pad2(pending)}
-            label={t('home.pendingInvites')}
-            valueColor={pending > 0 ? theme.colors.warning : theme.colors.text}
-          />
-        </View>
+        <KpiTile
+          value={pad2(clients)}
+          label={t('home.activeClients')}
+          tone="primary"
+          icon="users"
+          onPress={go('/(tabs)/clients')}
+        />
+        <KpiTile
+          value={pad2(pending)}
+          label={t('home.pendingInvites')}
+          tone={pending > 0 ? 'warning' : 'neutral'}
+          icon="user-plus"
+          onPress={go('/coach/invite')}
+        />
       </View>
 
       {/* Top performers — REAL, ranked by goal-relative InBody progress (0026) */}
@@ -125,9 +108,9 @@ export default function CoachHome() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
                 <Text
-                  variant="title"
+                  variant="mono"
                   color={r.rank === 1 ? theme.colors.primary : theme.colors.textMuted}
-                  style={{ width: 18 }}
+                  style={{ width: 20, fontFamily: theme.fontFamily.monoBold, fontSize: 15 }}
                 >
                   {r.rank}
                 </Text>

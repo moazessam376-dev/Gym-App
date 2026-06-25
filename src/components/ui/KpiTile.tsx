@@ -1,7 +1,7 @@
 // A coach-dashboard KPI tile — a big mono number + an uppercase mono label on an
 // elevated surface. `tone` tints the number (primary = highlighted cyan, warning =
 // amber draft/pending, neutral = cloud). Optional leading line icon.
-import { View, type ViewStyle } from 'react-native';
+import { Pressable, View, type ViewStyle } from 'react-native';
 import { theme } from '@/theme';
 import { Text } from './Text';
 import { Icon, type IconName } from './Icon';
@@ -23,10 +23,12 @@ const TONE: Record<KpiTone, string> = {
   neutral: theme.colors.text,
 };
 
-export function KpiTile({ value, label, tone = 'neutral', icon, onPress: _onPress, style }: KpiTileProps) {
+export function KpiTile({ value, label, tone = 'neutral', icon, onPress, style }: KpiTileProps) {
   const c = TONE[tone];
+  const Container = onPress ? Pressable : View;
   return (
-    <View
+    <Container
+      onPress={onPress}
       style={[
         {
           flex: 1,
@@ -47,6 +49,6 @@ export function KpiTile({ value, label, tone = 'neutral', icon, onPress: _onPres
       <Text variant="label" muted>
         {label}
       </Text>
-    </View>
+    </Container>
   );
 }
