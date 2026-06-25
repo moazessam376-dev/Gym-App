@@ -87,7 +87,8 @@ export default function ProgressPhotos() {
   }
 
   function openPhoto(id: string) {
-    router.push({ pathname: '/client/progress/view', params: { mediaId: id } });
+    // own=1 enables the delete affordance in the viewer (owner, not a coach's read-only view).
+    router.push({ pathname: '/client/progress/view', params: { mediaId: id, own: readOnly ? '0' : '1' } });
   }
 
   return (

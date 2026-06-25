@@ -23,7 +23,16 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
     more coherent built alongside F's coach notes surface, and avoids a prod migration in the blocker slice.
   - ⏸ **Chat-tab coach-less empty-state CTA** → moved to **D2b** (when `messages.tsx` is i18n'd anyway,
     so we don't add throwaway English now).
-- ⬜ **B — Progress/media delete + body-metric safety** (migration 0047, needs prod go-ahead)
+- ✅ **B — Progress/media delete + body-metric safety** (code done; needs **function deploy**, see below)
+  - ✅ `media-delete` **Edge Function** (NOT a migration/RLS policy) — `supabase/functions/media-delete/`.
+    Why: the `media` table is service-role-write-only and the storage buckets have **no object policies**,
+    so a client can't delete the object directly; deletion must go through a service-role function that
+    verifies owner_id === caller, removes the bytes, then the row. All FKs to media(id) are ON DELETE SET
+    NULL, so no constraint breaks. `deleteMedia()` added to `src/lib/media.ts`.
+  - ✅ Owner-guarded delete in the photo viewer (`progress/view.tsx`, `own` flag from photos + inbody grids).
+  - ✅ Coach `body-metric.tsx`: `confirmDestructive` on Discard; `DateField` (native picker + web text fallback).
+  - ⚠️ **Deploy gate:** needs `deploy_edge_function media-delete` to prod (your go-ahead). The native date
+    picker needs the next **dev-client rebuild**; web + media-delete work on the current build after deploy.
 - ⬜ **C — App-wide quality basics** (toast, haptics breadth, error+retry, pull-to-refresh, unsaved guards)
 - ⬜ **D — Full bilingual retrofit + a11y** (D1 auth/onboarding · D2a client daily-1 · D2b client daily-2 · D3 coach/admin · D4 nav titles)
 - ⬜ **E — Catalog expansion** (migration 0048, needs prod go-ahead)

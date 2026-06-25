@@ -24,6 +24,8 @@ import {
   type Segment,
 } from '../../src/lib/body-metrics';
 import { requestInBodyInsights } from '../../src/lib/inbody-ocr';
+import { confirmDestructive } from '../../src/lib/confirm';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Icon, Screen, Text, Input, Button, GlassCard, SignedImage } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
@@ -136,6 +138,50 @@ function ExtrasCard({ extras }: { extras: BodyMetricExtras }) {
         </Text>
       ) : null}
     </GlassCard>
+  );
+}
+
+// Date field: a tappable native date picker on iOS/Android (no more error-prone
+// YYYY-MM-DD typing); web keeps a typed field (the native picker has no web support).
+// The native module ships with the next dev-client build — until then web works and
+// the rest of the screen is unaffected.
+function DateField({ label, value, onChange }: { label: string; value: string; onChange: (d: string) => void }) {
+  const [show, setShow] = useState(false);
+  if (Platform.OS === 'web') {
+    return <Input label={label} value={value} onChangeText={onChange} placeholder="YYYY-MM-DD" autoCapitalize="none" />;
+  }
+  const valid = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const current = valid ? new Date(`${value}T00:00:00`) : new Date();
+  return (
+    <View style={{ gap: 6 }}>
+      <Text variant="label" muted>
+        {label}
+      </Text>
+      <Pressable
+        onPress={() => setShow(true)}
+        style={{
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          borderRadius: theme.radii.md,
+          backgroundColor: theme.colors.surfaceElevated,
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: 14,
+        }}
+      >
+        <Text variant="body">{valid ? value : 'Select a date'}</Text>
+      </Pressable>
+      {show ? (
+        <DateTimePicker
+          value={current}
+          mode="date"
+          maximumDate={new Date()}
+          onChange={(_e, d) => {
+            setShow(false);
+            if (d) onChange(d.toISOString().slice(0, 10));
+          }}
+        />
+      ) : null}
+    </View>
   );
 }
 
@@ -258,6 +304,12 @@ export default function BodyMetricScreen() {
 
   async function onDiscard() {
     if (!metricId) return;
+    const ok = await confirmDestructive(
+      'Discard reading?',
+      'This permanently deletes this scan reading. This can’t be undone.',
+      'Discard',
+    );
+    if (!ok) return;
     setError(null);
     setBusy(true);
     try {
@@ -355,7 +407,7 @@ export default function BodyMetricScreen() {
                 : 'Enter the values from the client’s InBody sheet. Only weight is required.'}
             </Text>
 
-            <Input label="Test date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" autoCapitalize="none" />
+            <DateField label="Test date" value={date} onChange={setDate} />
             <Input label="Weight (kg)" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder="e.g. 92.5" error={error} />
             <Input label="Body fat (%)" value={bodyFat} onChangeText={setBodyFat} keyboardType="decimal-pad" placeholder="e.g. 25.6" />
             <Input label="Skeletal muscle mass (kg)" value={muscle} onChangeText={setMuscle} keyboardType="decimal-pad" placeholder="e.g. 39.2" />

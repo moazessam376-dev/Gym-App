@@ -234,7 +234,7 @@ export default function InBodyScans() {
           const scanComments = comments[item.id] ?? [];
           return (
             <GlassCard padded={false} style={{ overflow: 'hidden' }}>
-              <Pressable onPress={() => router.push({ pathname: '/client/progress/view', params: { mediaId: item.id } })}>
+              <Pressable onPress={() => router.push({ pathname: '/client/progress/view', params: { mediaId: item.id, own: isCoachView ? '0' : '1' } })}>
                 <SignedImage mediaId={item.id} style={{ width: '100%', height: 200 }} resizeMode="cover" />
                 <View style={{ padding: theme.spacing.md, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                   <Icon name="document-text" size={18} color={theme.colors.primary} />
