@@ -11,7 +11,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { File } from 'expo-file-system';
 import { uploadMedia } from './media';
-import { setMyAvatar } from './profile';
 import type { MediaKind } from '../schemas/media';
 
 export type PickSource = 'camera' | 'library';
@@ -94,14 +93,13 @@ export async function captureAndUploadPhoto(args: {
 }
 
 /**
- * Pick/capture a photo, upload it as an `avatar` (EXIF-stripped + magic-byte validated
- * server-side, same as every other upload), then point the user's profile at it
- * (Phase 19). Returns the new media id, or a cancelled/denied marker. The avatar
- * pipeline reuses captureAndUploadPhoto; only the profile link is new.
+ * Pick/capture + upload an `avatar` photo (square-cropped, EXIF-stripped + magic-byte
+ * validated server-side like every other upload). Returns the new media id — but does
+ * NOT link it to the profile. The editor holds the id locally for preview and persists
+ * the link (setMyAvatar) only when the user taps Save, so the photo behaves like the
+ * rest of the form (nothing saves until Save).
  */
-export async function pickAndSetAvatar(args: { userId: string; source: PickSource }): Promise<UploadResult> {
+export async function pickAvatar(source: PickSource): Promise<UploadResult> {
   // squareCrop: let the user frame (pan + zoom) a 1:1 avatar like WhatsApp.
-  const res = await captureAndUploadPhoto({ source: args.source, kind: 'avatar', squareCrop: true });
-  if ('mediaId' in res) await setMyAvatar(args.userId, res.mediaId);
-  return res;
+  return captureAndUploadPhoto({ source, kind: 'avatar', squareCrop: true });
 }

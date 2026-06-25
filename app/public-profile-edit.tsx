@@ -11,10 +11,10 @@ import { Redirect, Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../src/lib/auth-context';
 import { forwardChevron, textStart } from '../src/lib/rtl';
-import { getMyAvatarMediaId } from '../src/lib/profile';
+import { getMyAvatarMediaId, setMyAvatar } from '../src/lib/profile';
 import { getMyCoachProfile, setCoachVisibility } from '../src/lib/coach-profile';
 import { getMyAthleteProfile, setAthleteVisibility } from '../src/lib/athlete-profile';
-import { pickAndSetAvatar, type PickSource } from '../src/lib/upload';
+import { pickAvatar, type PickSource } from '../src/lib/upload';
 import { ProfileAvatar } from '../src/components/ProfileAvatar';
 import { Screen, Text, Input, Button, GlassCard } from '../src/components/ui';
 import { theme } from '../src/theme';
@@ -36,6 +36,7 @@ export default function PublicProfileEdit() {
   const [isPublic, setIsPublic] = useState(false);
   const [achievements, setAchievements] = useState<string[]>([]);
   const [avatarMediaId, setAvatarMediaId] = useState<string | null>(null);
+  const [avatarDirty, setAvatarDirty] = useState(false); // a new photo is picked but not yet saved
   const [avatarKey, setAvatarKey] = useState(0); // bump to re-mint the signed URL
 
   const name = session?.user?.email ?? '?';
@@ -76,9 +77,12 @@ export default function PublicProfileEdit() {
     setError(null);
     setUploading(true);
     try {
-      const res = await pickAndSetAvatar({ userId, source });
+      // Upload now (for the preview) but DON'T link it to the profile — that happens on
+      // Save, so picking a photo and leaving without saving doesn't change your avatar.
+      const res = await pickAvatar(source);
       if ('mediaId' in res) {
         setAvatarMediaId(res.mediaId);
+        setAvatarDirty(true);
         setAvatarKey((k) => k + 1);
       } else if ('denied' in res) {
         setError(t('publicProfile.photoError'));
@@ -107,6 +111,8 @@ export default function PublicProfileEdit() {
     // Trim + drop blank achievement lines before persisting.
     const cleaned = achievements.map((a) => a.trim()).filter((a) => a.length > 0);
     try {
+      // Link the newly-picked avatar (if any) only now, on Save.
+      if (avatarDirty) await setMyAvatar(userId, avatarMediaId);
       if (isCoach) {
         await setCoachVisibility(userId, { is_public: isPublic, achievements: cleaned });
       } else {
