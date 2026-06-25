@@ -4,7 +4,6 @@
 // Copy is rendered from each row's type + params, so it follows the active language.
 import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
@@ -18,7 +17,7 @@ import {
   markRead,
   type NotificationRow,
 } from '@/lib/notifications';
-import { Screen, Text, EmptyState, Button } from '@/components/ui';
+import { Icon, Screen, Text, EmptyState, Button } from '@/components/ui';
 import { theme } from '@/theme';
 
 export default function NotificationsScreen() {
@@ -115,7 +114,7 @@ export default function NotificationsScreen() {
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name={icon} size={20} color={theme.colors.primary} />
+                <Icon name={icon} size={20} color={theme.colors.primary} />
               </View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text variant="bodyStrong">{title}</Text>

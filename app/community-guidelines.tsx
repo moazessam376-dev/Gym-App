@@ -4,17 +4,15 @@
 import { View } from 'react-native';
 import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
-import { Screen, Text } from '../src/components/ui';
+import { Icon, type IconName, Screen, Text } from '../src/components/ui';
 import { theme } from '../src/theme';
 
-type IconName = keyof typeof Ionicons.glyphMap;
 
 function Section({ icon, title, body }: { icon: IconName; title: string; body: string }) {
   return (
     <View style={{ gap: theme.spacing.xs }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-        <Ionicons name={icon} size={18} color={theme.colors.primary} />
+        <Icon name={icon} size={18} color={theme.colors.primary} />
         <Text variant="bodyStrong">{title}</Text>
       </View>
       <Text variant="body" muted>

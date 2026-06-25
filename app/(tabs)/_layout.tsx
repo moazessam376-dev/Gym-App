@@ -4,17 +4,17 @@
 // stay in the ROOT stack (app/_layout.tsx) so router.push slides them full-screen
 // over the tab bar. The redirect guard already blocks roleless users, so role is
 // resolved before this layout mounts (no flicker).
-import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { theme } from '../../src/theme';
+import { Icon, type IconName } from '../../src/components/ui';
 
-type IconName = keyof typeof Ionicons.glyphMap;
-
-function tabIcon(active: IconName, inactive: IconName) {
-  return ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
-    <Ionicons name={focused ? active : inactive} size={size} color={color} />
+// One line-icon per tab — active state is the cyan tint, not a filled variant
+// (the brand uses a single line set, no filled/outline pairs).
+function tabIcon(name: IconName) {
+  return ({ color, size }: { color: string; focused: boolean; size: number }) => (
+    <Icon name={name} size={size} color={color} />
   );
 }
 
@@ -55,7 +55,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: t('tabs.home'), lazy: false, tabBarIcon: tabIcon('home', 'home-outline') }}
+        options={{ title: t('tabs.home'), lazy: false, tabBarIcon: tabIcon('home') }}
       />
       <Tabs.Screen
         name="plans"
@@ -63,7 +63,7 @@ export default function TabsLayout() {
           title: t('tabs.plans'),
           href: showFor(isClient),
           lazy: eager(isClient),
-          tabBarIcon: tabIcon('barbell', 'barbell-outline'),
+          tabBarIcon: tabIcon('dumbbell'),
         }}
       />
       <Tabs.Screen
@@ -72,7 +72,7 @@ export default function TabsLayout() {
           title: t('tabs.nutrition'),
           href: showFor(isClient),
           lazy: eager(isClient),
-          tabBarIcon: tabIcon('restaurant', 'restaurant-outline'),
+          tabBarIcon: tabIcon('salad'),
         }}
       />
       <Tabs.Screen
@@ -81,7 +81,7 @@ export default function TabsLayout() {
           title: t('tabs.progress'),
           href: showFor(isClient),
           lazy: eager(isClient),
-          tabBarIcon: tabIcon('trending-up', 'trending-up-outline'),
+          tabBarIcon: tabIcon('trending-up'),
         }}
       />
       <Tabs.Screen
@@ -90,7 +90,7 @@ export default function TabsLayout() {
           title: t('tabs.clients'),
           href: showFor(isCoach),
           lazy: eager(isCoach),
-          tabBarIcon: tabIcon('people', 'people-outline'),
+          tabBarIcon: tabIcon('users'),
         }}
       />
       <Tabs.Screen
@@ -99,7 +99,7 @@ export default function TabsLayout() {
           title: t('tabs.ranks'),
           href: showFor(isCoach),
           lazy: eager(isCoach),
-          tabBarIcon: tabIcon('trophy', 'trophy-outline'),
+          tabBarIcon: tabIcon('trophy'),
         }}
       />
       <Tabs.Screen
@@ -108,7 +108,7 @@ export default function TabsLayout() {
           title: t('tabs.analytics'),
           href: showFor(isCoach),
           lazy: eager(isCoach),
-          tabBarIcon: tabIcon('analytics', 'analytics-outline'),
+          tabBarIcon: tabIcon('bar-chart'),
         }}
       />
       <Tabs.Screen
@@ -117,7 +117,7 @@ export default function TabsLayout() {
           title: t('tabs.chat'),
           href: showFor(isClient || isCoach),
           lazy: eager(isClient || isCoach),
-          tabBarIcon: tabIcon('chatbubbles', 'chatbubbles-outline'),
+          tabBarIcon: tabIcon('message-square'),
         }}
       />
       <Tabs.Screen
@@ -128,7 +128,7 @@ export default function TabsLayout() {
           // at five: Home · Plans · Nutrition · Progress · Chat). Coach/admin keep it.
           href: showFor(!isClient),
           lazy: eager(!isClient),
-          tabBarIcon: tabIcon('person-circle', 'person-circle-outline'),
+          tabBarIcon: tabIcon('user'),
         }}
       />
     </Tabs>

@@ -6,11 +6,10 @@
 // from the verified JWT. Errors are generic on purpose.
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { acceptInvitationSchema } from '../src/schemas/invitation';
 import { acceptInvitation } from '../src/lib/invitations';
-import { Screen, Text, Input, Button } from '../src/components/ui';
+import { Icon, Screen, Text, Input, Button } from '../src/components/ui';
 import { theme } from '../src/theme';
 
 const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
@@ -60,7 +59,7 @@ export default function AcceptInvite() {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="checkmark" size={40} color={theme.colors.bg} />
+            <Icon name="checkmark" size={40} color={theme.colors.bg} />
           </View>
           <Text variant="h1" align="center">
             You’re connected!

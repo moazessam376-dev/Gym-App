@@ -17,7 +17,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
@@ -47,7 +46,7 @@ import {
   type WorkoutNote,
 } from '../../../src/lib/workout-notes';
 import { convertDisplay, displayToGrams, formatWeight, gramsToInput, type WeightUnit } from '../../../src/lib/units';
-import { Screen, Text, Card, Badge, Button, Chip, Input, ProgressRing } from '../../../src/components/ui';
+import { Icon, Screen, Text, Card, Badge, Button, Chip, Input, ProgressRing } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 const key = (exerciseId: string, setIndex: number) => `${exerciseId}:${setIndex}`;
@@ -462,7 +461,7 @@ export default function WorkoutScreen() {
                       hitSlop={8}
                       style={{ paddingTop: 2 }}
                     >
-                      <Ionicons name="chatbubble-ellipses-outline" size={20} color={theme.colors.textMuted} />
+                      <Icon name="chatbubble-ellipses-outline" size={20} color={theme.colors.textMuted} />
                     </Pressable>
                   </View>
 
@@ -476,7 +475,7 @@ export default function WorkoutScreen() {
                         padding: theme.spacing.md,
                       }}
                     >
-                      <Ionicons name="chatbubble-ellipses" size={16} color={theme.colors.primary} />
+                      <Icon name="chatbubble-ellipses" size={16} color={theme.colors.primary} />
                       <Text variant="caption" style={{ flex: 1 }}>
                         {ex.note}
                       </Text>
@@ -533,7 +532,7 @@ export default function WorkoutScreen() {
                               }}
                             >
                               {completed ? (
-                                <Ionicons name="checkmark" size={20} color={theme.colors.onPrimary} />
+                                <Icon name="checkmark" size={20} color={theme.colors.onPrimary} />
                               ) : (
                                 <Text variant="bodyStrong" muted>
                                   {i + 1}
@@ -557,7 +556,7 @@ export default function WorkoutScreen() {
                               invalid={bad}
                             />
                             <View style={{ height: 44, justifyContent: 'center' }}>
-                              {isPR ? <Badge label="🏆 PR" tone="primary" /> : null}
+                              {isPR ? <Badge label="PR" tone="primary" /> : null}
                             </View>
                           </View>
                         );
@@ -604,7 +603,7 @@ export default function WorkoutScreen() {
           <Button
             title="Leave a note for your coach"
             variant="ghost"
-            left={<Ionicons name="chatbubble-ellipses-outline" size={18} color={theme.colors.link} />}
+            left={<Icon name="chatbubble-ellipses-outline" size={18} color={theme.colors.link} />}
             onPress={() => openComposer({ scope: 'session' })}
           />
         </ScrollView>
@@ -624,7 +623,7 @@ export default function WorkoutScreen() {
           }}
         >
           <Button
-            title={doneCount > 0 ? 'Finish workout 💥' : 'Mark as done'}
+            title={doneCount > 0 ? 'Finish workout' : 'Mark as done'}
             size="lg"
             loading={busy && celebrating}
             onPress={finish}
@@ -657,15 +656,15 @@ export default function WorkoutScreen() {
                   {composer?.scope === 'exercise' ? composer.exName : 'Note to your coach'}
                 </Text>
                 <Pressable onPress={closeComposer} hitSlop={8}>
-                  <Ionicons name="close" size={24} color={theme.colors.textMuted} />
+                  <Icon name="close" size={24} color={theme.colors.textMuted} />
                 </Pressable>
               </View>
               <Text variant="caption" muted>
                 Tell your coach how it went — they’ll see it on your profile.
               </Text>
               <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                <Chip label="🔥 Challenge" active={noteCat === 'challenge'} onPress={() => setNoteCat('challenge')} />
-                <Chip label="💪 Compliment" active={noteCat === 'compliment'} onPress={() => setNoteCat('compliment')} />
+                <Chip label="Challenge" active={noteCat === 'challenge'} onPress={() => setNoteCat('challenge')} />
+                <Chip label="Compliment" active={noteCat === 'compliment'} onPress={() => setNoteCat('compliment')} />
               </View>
               <Input
                 value={noteBody}
@@ -710,10 +709,10 @@ export default function WorkoutScreen() {
                 justifyContent: 'center',
               }}
             >
-              <Ionicons name="checkmark" size={72} color={theme.colors.onPrimary} />
+              <Icon name="checkmark" size={72} color={theme.colors.onPrimary} />
             </View>
             <Text variant="h1" color="white">
-              {fullyDone ? 'Workout Crushed 💥' : 'Workout completed ✓'}
+              {fullyDone ? 'Workout complete' : 'Workout logged'}
             </Text>
           </Animated.View>
         </View>

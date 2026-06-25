@@ -8,8 +8,8 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { TFunction } from 'i18next';
 import type { Href } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { supabase } from './supabase';
+import type { IconName } from '../components/ui/Icon';
 import { notificationPrefsSchema } from '../schemas/notification';
 
 export type NotificationType = 'message' | 'coach_comment' | 'plan_published' | 'pr_achieved';
@@ -25,9 +25,7 @@ export type NotificationRow = {
   created_at: string;
 };
 
-type IconName = keyof typeof Ionicons.glyphMap;
-
-const COLS = 'id, type, actor_id, params, entity_type, entity_id, read_at, created_at';
+const COLS ='id, type, actor_id, params, entity_type, entity_id, read_at, created_at';
 
 /** Newest-first page of the signed-in user's feed (RLS scopes it to them). */
 export async function listNotifications(limit = 50): Promise<NotificationRow[]> {

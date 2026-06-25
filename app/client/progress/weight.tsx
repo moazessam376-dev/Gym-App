@@ -4,14 +4,12 @@
 // grants the coach read; no log/delete controls are shown).
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../../src/lib/auth-context';
 import { upsertTodayWeight, deleteWeightEntry, listProgressWeights, type WeightEntry } from '../../../src/lib/progress';
 import { getAthleteProfileFor, setWeightUnit } from '../../../src/lib/athlete-profile';
 import { displayToGrams, gramsToDisplay, formatWeight, type WeightUnit } from '../../../src/lib/units';
-import {
-  Screen,
+import { Icon, Screen,
   Text,
   Input,
   Button,
@@ -19,8 +17,7 @@ import {
   Segmented,
   LineChart,
   IconButton,
-  EmptyState,
-} from '../../../src/components/ui';
+  EmptyState, } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 function shortDate(iso: string): string {

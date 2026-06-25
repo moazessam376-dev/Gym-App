@@ -1,8 +1,7 @@
 // Admin console home. Lean — the main job is reviewing coach applications.
 import { View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Screen, Text, Card } from '@/components/ui';
+import { Icon, Screen, Text, Card } from '@/components/ui';
 import { theme } from '@/theme';
 
 export default function AdminHome() {
@@ -28,7 +27,7 @@ export default function AdminHome() {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="clipboard" size={22} color={theme.colors.primary} />
+            <Icon name="clipboard" size={22} color={theme.colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text variant="title">Coach applications</Text>
@@ -36,7 +35,7 @@ export default function AdminHome() {
               Review and approve coach requests
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+          <Icon name="chevron-forward" size={20} color={theme.colors.textMuted} />
         </View>
       </Card>
     </Screen>

@@ -4,10 +4,9 @@
 // use. Colors adapt to whether the bubble is mine (on-primary) or theirs.
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { getSignedUrl } from '../lib/media';
-import { Text } from './ui';
+import { Icon, Text } from './ui';
 import { theme } from '../theme';
 
 function fmt(seconds: number): string {
@@ -63,7 +62,7 @@ export function VoiceNoteBubble({ mediaId, mine }: { mediaId: string; mine: bool
         {busy ? (
           <ActivityIndicator size="small" color={tint} />
         ) : (
-          <Ionicons name={status.playing ? 'pause-circle' : 'play-circle'} size={30} color={tint} />
+          <Icon name={status.playing ? 'pause' : 'play'} size={30} color={tint} />
         )}
       </Pressable>
 
@@ -76,7 +75,7 @@ export function VoiceNoteBubble({ mediaId, mine }: { mediaId: string; mine: bool
           {fmt(status.playing || status.currentTime > 0 ? status.currentTime : status.duration)}
         </Text>
       ) : (
-        <Ionicons name="mic" size={14} color={tint} style={{ opacity: 0.9 }} />
+        <Icon name="mic" size={14} color={tint} style={{ opacity: 0.9 }} />
       )}
     </View>
   );

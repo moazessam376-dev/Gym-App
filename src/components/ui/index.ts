@@ -1,3 +1,5 @@
+export { Icon } from './Icon';
+export type { IconName } from './Icon';
 export { Text } from './Text';
 export type { TextProps } from './Text';
 export { Screen } from './Screen';

@@ -4,7 +4,6 @@
 // owner-scoped (RLS); the athlete only ever sets their own.
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { listFoods, type Food } from '../../src/lib/library';
@@ -15,7 +14,7 @@ import {
   setFoodPreference,
 } from '../../src/lib/food-preferences';
 import type { FoodPrefKind } from '../../src/schemas/food-preference';
-import { Screen, Text, Input, Chip, GlassCard } from '../../src/components/ui';
+import { Icon, Screen, Text, Input, Chip, GlassCard } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 function label(s: string): string {
@@ -202,7 +201,7 @@ function PrefToggle({
         backgroundColor: active ? `${activeColor}22` : theme.colors.glass,
       }}
     >
-      <Ionicons
+      <Icon
         name={active ? icon : (`${icon}-outline` as 'heart-outline' | 'ban-outline')}
         size={20}
         color={active ? activeColor : theme.colors.textMuted}

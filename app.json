@@ -1,11 +1,18 @@
 {
   "expo": {
-    "name": "Gym-App",
-    "slug": "gym-app",
-    "scheme": "gymapp",
+    "name": "Raptor",
+    "slug": "raptor",
+    "scheme": "raptor",
     "version": "0.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A0B0F",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0B0F"
+    },
     "newArchEnabled": true,
     "platforms": [
       "ios",
@@ -14,13 +21,18 @@
     ],
     "web": {
       "bundler": "metro",
-      "output": "static"
+      "output": "static",
+      "favicon": "./assets/favicon.png"
     },
     "android": {
-      "package": "com.mo2adev.gymapp"
+      "package": "com.mo2adev.raptor",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0B0F"
+      }
     },
     "ios": {
-      "bundleIdentifier": "com.mo2adev.gymapp"
+      "bundleIdentifier": "com.mo2adev.raptor"
     },
     "plugins": [
       "expo-router",

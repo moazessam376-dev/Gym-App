@@ -1,12 +1,11 @@
 // Client → my plans tab. RLS returns only this client's NON-draft plans.
 import { FlatList, RefreshControl, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { forwardChevron } from '../../src/lib/rtl';
 import { usePlansForClient, useRefreshOnFocus } from '../../src/lib/queries/home';
-import { Screen, Text, Card, Badge, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, Card, Badge, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function PlansTab() {
@@ -60,7 +59,7 @@ export default function PlansTab() {
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons
+                <Icon
                   name={item.type === 'training' ? 'barbell' : 'restaurant'}
                   size={22}
                   color={theme.colors.primary}
@@ -73,7 +72,7 @@ export default function PlansTab() {
                   {item.status === 'archived' ? <Badge label={t('plans.archived')} tone="neutral" /> : null}
                 </View>
               </View>
-              <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
+              <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
             </View>
           </Card>
         )}

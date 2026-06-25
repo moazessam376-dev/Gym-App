@@ -1,7 +1,7 @@
 // Forgot-password — request a reset email. Supabase sends a recovery link; opening
 // it brings the user back into the app on a PASSWORD_RECOVERY session, where
 // reset-password.tsx lets them set a new password. The redirect target is the app's
-// own deep link (native: gymapp://reset-password; web: /reset-password) — both must
+// own deep link (native: raptor://reset-password; web: /reset-password) — both must
 // be added to the Supabase project's Auth → URL Configuration redirect allowlist.
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
@@ -28,7 +28,7 @@ export default function ForgotPassword() {
     }
     setLoading(true);
     // Deep link back into the app to complete the reset. createURL builds the right
-    // URI per platform (gymapp://reset-password on native, <origin>/reset-password on web).
+    // URI per platform (raptor://reset-password on native, <origin>/reset-password on web).
     const redirectTo = createURL('/reset-password');
     const { error: authError } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
       redirectTo,

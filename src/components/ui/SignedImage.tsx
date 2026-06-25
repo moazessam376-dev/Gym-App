@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, View, type ImageStyle, type StyleProp } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from './Icon';
 import { getSignedUrl } from '@/lib/media';
 import { theme } from '@/theme';
 
@@ -53,7 +53,7 @@ export function SignedImage({ mediaId, style, resizeMode = 'cover', refreshKey =
   if (failed) {
     return (
       <View style={[styleToCenter(style)]}>
-        <Ionicons name="image-outline" size={28} color={theme.colors.textMuted} />
+        <Icon name="image-outline" size={28} color={theme.colors.textMuted} />
       </View>
     );
   }

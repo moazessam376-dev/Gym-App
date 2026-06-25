@@ -16,7 +16,7 @@ const STATUS_COPY: Record<CoachApplication['status'], { title: string; body: str
     tone: 'warning',
   },
   approved: {
-    title: 'Approved 🎉',
+    title: 'Approved',
     body: 'You’re a coach now. Sign out and back in to load your coach tools.',
     tone: 'success',
   },

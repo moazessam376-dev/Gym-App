@@ -68,7 +68,7 @@ export default function LeaderboardTab() {
                     {t('ranks.setsLogged', { count: item.sets_done })}
                   </Text>
                 </View>
-                <Badge label={`${item.sessions_done} 🔥`} tone="primary" solid={item.rank === 1} />
+                <Badge label={String(item.sessions_done)} tone="primary" solid={item.rank === 1} />
               </View>
             </Card>
           );

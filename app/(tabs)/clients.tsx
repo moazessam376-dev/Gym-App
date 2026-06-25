@@ -1,11 +1,10 @@
 // Coach → clients tab. RLS (is_coach_of) returns only this coach's clients.
 import { FlatList, RefreshControl, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useMyClients, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { forwardChevron } from '../../src/lib/rtl';
-import { Screen, Text, Card, Avatar, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, Card, Avatar, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function ClientsTab() {
@@ -43,7 +42,7 @@ export default function ClientsTab() {
           padded={false}
           style={{ paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 6 }}
         >
-          <Ionicons name="person-add" size={16} color={theme.colors.primary} />
+          <Icon name="person-add" size={16} color={theme.colors.primary} />
           <Text variant="bodyStrong" color="primary">
             {t('clients.invite')}
           </Text>
@@ -85,7 +84,7 @@ export default function ClientsTab() {
                     </Text>
                   ) : null}
                 </View>
-                <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
+                <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
               </View>
             </Card>
           );

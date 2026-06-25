@@ -7,8 +7,6 @@
 // them), so it can use the display font directly without the Text UI primitive.
 import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
   FadeOut,
@@ -17,6 +15,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { Monogram, Wordmark } from './brand';
 import { theme } from '../theme';
 
 export function BootSplash() {
@@ -35,19 +34,10 @@ export function BootSplash() {
     <Animated.View style={styles.fill} exiting={FadeOut.duration(280)}>
       <View style={styles.center}>
         <Animated.View style={logoStyle}>
-          <LinearGradient
-            colors={theme.gradients.hero}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.logo}
-          >
-            <Ionicons name="barbell" size={40} color={theme.colors.primary} />
-          </LinearGradient>
+          <Monogram size={88} framed />
         </Animated.View>
 
-        <Animated.Text style={styles.wordmark}>
-          Gym<Animated.Text style={styles.wordmarkAccent}>App</Animated.Text>
-        </Animated.Text>
+        <Wordmark size={30} />
 
         <ActivityIndicator color={theme.colors.primary} style={styles.spinner} />
       </View>
@@ -62,27 +52,5 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.lg },
-  logo: {
-    width: 88,
-    height: 88,
-    borderRadius: theme.radii.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.glassBorder,
-    // Soft glow around the logo tile.
-    shadowColor: theme.colors.primaryGlow,
-    shadowOpacity: 0.5,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 12,
-  },
-  wordmark: {
-    fontFamily: theme.fontFamily.displayBold,
-    fontSize: 30,
-    letterSpacing: -0.5,
-    color: theme.colors.text,
-  },
-  wordmarkAccent: { color: theme.colors.primary },
   spinner: { marginTop: theme.spacing.sm },
 });

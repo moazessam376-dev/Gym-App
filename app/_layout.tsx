@@ -5,11 +5,17 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BootSplash } from '../src/components/BootSplash';
 import { useFonts } from 'expo-font';
 import {
-  SpaceGrotesk_400Regular,
-  SpaceGrotesk_500Medium,
-  SpaceGrotesk_600SemiBold,
-  SpaceGrotesk_700Bold,
-} from '@expo-google-fonts/space-grotesk';
+  Geist_400Regular,
+  Geist_500Medium,
+  Geist_600SemiBold,
+  Geist_700Bold,
+  Geist_900Black,
+} from '@expo-google-fonts/geist';
+import {
+  JetBrainsMono_400Regular,
+  JetBrainsMono_500Medium,
+  JetBrainsMono_700Bold,
+} from '@expo-google-fonts/jetbrains-mono';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -180,10 +186,14 @@ export default function RootLayout() {
   // Gate the app on the design-system fonts so text never flashes in the system
   // font. Family keys here MUST match src/theme/typography.ts.
   const [fontsLoaded, fontError] = useFonts({
-    SpaceGrotesk_400Regular,
-    SpaceGrotesk_500Medium,
-    SpaceGrotesk_600SemiBold,
-    SpaceGrotesk_700Bold,
+    Geist_400Regular,
+    Geist_500Medium,
+    Geist_600SemiBold,
+    Geist_700Bold,
+    Geist_900Black,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_500Medium,
+    JetBrainsMono_700Bold,
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,

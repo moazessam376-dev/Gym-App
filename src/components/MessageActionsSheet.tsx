@@ -5,10 +5,9 @@
 // existing reason picker (ReportMessageSheet).
 import { Modal, Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
 import { REACTION_EMOJIS, type ReactionEmoji } from '../schemas/message';
 import { Emoji } from './Emoji';
-import { Text } from './ui';
+import { Icon, type IconName, Text } from './ui';
 import { theme } from '../theme';
 
 export function MessageActionsSheet({
@@ -134,7 +133,7 @@ function Action({
   busy,
   danger,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   label: string;
   onPress: () => void;
   busy: boolean;
@@ -156,7 +155,7 @@ function Action({
         opacity: pressed || busy ? 0.7 : 1,
       })}
     >
-      <Ionicons name={icon} size={20} color={danger ? theme.colors.danger : theme.colors.primary} />
+      <Icon name={icon} size={20} color={danger ? theme.colors.danger : theme.colors.primary} />
       <Text variant="bodyStrong" color={danger ? theme.colors.danger : theme.colors.text} style={{ flex: 1 }}>
         {label}
       </Text>

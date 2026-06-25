@@ -3,7 +3,6 @@
 // duplicated the bottom tabs). All data is REAL — the deeper KPI dashboard lives in
 // the Analytics tab (Phase 15); the old mock activity feed has been removed.
 import { View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +15,7 @@ import {
   useBodyMetricsBoard,
   useRefreshOnFocus,
 } from '@/lib/queries/home';
-import { Screen, Text, Avatar, GlassCard, StatBlock, EmptyState } from '@/components/ui';
+import { Icon, Screen, Text, Avatar, GlassCard, StatBlock, EmptyState } from '@/components/ui';
 import { NotificationBell } from '@/components/NotificationBell';
 import { theme } from '@/theme';
 
@@ -139,7 +138,7 @@ export default function CoachHome() {
                     {r.progress.headline}
                   </Text>
                 </View>
-                <Ionicons name={forwardChevron()} size={18} color={theme.colors.textMuted} />
+                <Icon name={forwardChevron()} size={18} color={theme.colors.textMuted} />
               </View>
             </GlassCard>
           ))

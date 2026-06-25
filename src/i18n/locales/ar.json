@@ -168,7 +168,7 @@
     "setGoalsSub": "قول لنا أهدافك عشان الكوتش يظبّط خطتك على مزاجك.",
     "todayDay": "النهارده · {{day}}",
     "setsCount": "{{done}}/{{planned}} مجموعة",
-    "workoutCrushed": "كسرت التمرين 💥",
+    "workoutCrushed": "التمرين خلص",
     "startWorkout": "ابدأ التمرين",
     "continueWorkout": "كمّل التمرين",
     "reviewWorkout": "راجع التمرين",
@@ -225,7 +225,7 @@
   },
   "progress": {
     "title": "تقدّمك",
-    "dayStreak": "أيام ورا بعض 🔥",
+    "dayStreak": "أيام ورا بعض",
     "workoutsDone": "تمارين خلصت",
     "weight": "الوزن",
     "logWeight": "سجّل وزنك",
@@ -411,7 +411,7 @@
     "assignToClient": "اسند لعميل",
     "unpublish": "ألغِ النشر (رجوع لمسودة)",
     "publish": "انشر للعميل",
-    "adjustWithAi": "✨ عدّل بالذكاء الاصطناعي",
+    "adjustWithAi": "عدّل بالذكاء الاصطناعي",
     "addPlanNote": "ضيف ملاحظة على الخطة",
     "planNotePlaceholder": "ملاحظة عامة للمتدرب (مثلاً ركّز على الإيقاع البلوك ده)",
     "planTotal": "إجمالي الخطة",
@@ -493,7 +493,7 @@
       "body": "{{name}} نشرلك خطة {{type}}: {{title}}"
     },
     "pr": {
-      "title": "رقم قياسي جديد 💪",
+      "title": "رقم قياسي جديد",
       "body": "{{exercise}}"
     },
     "settingsTitle": "إعدادات الإشعارات",
@@ -509,7 +509,7 @@
     "title": "الشات",
     "messagePlaceholder": "اكتب رسالة…",
     "emptyTitle": "لسه مفيش رسائل",
-    "emptySub": "سلّم وابدأ الكلام 👋",
+    "emptySub": "سلّم وابدأ الكلام",
     "today": "النهارده",
     "yesterday": "إمبارح",
     "edited": "اتعدّلت",

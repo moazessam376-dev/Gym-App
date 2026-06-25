@@ -3,7 +3,6 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
 import { textStart } from '../../../src/lib/rtl';
@@ -11,7 +10,7 @@ import { deleteExerciseRow, getDayPlanClient, getExerciseRow, swapPlanExercise, 
 import { suggestExerciseSwap, type SwapSuggestion } from '../../../src/lib/coach-ai';
 import { updateExerciseRowSchema, type TrainingBlock } from '../../../src/schemas/plan';
 import { BLOCK_LABEL, BLOCK_ORDER } from '../../../src/lib/plan-ui';
-import { Screen, Text, Input, Button, GlassCard } from '../../../src/components/ui';
+import { Icon, Screen, Text, Input, Button, GlassCard } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 function intOrNull(s: string): number | null {
@@ -220,7 +219,7 @@ export default function ExerciseRowEditor() {
               <Button
                 title={t('exerciseEditor.suggestSwap')}
                 variant="ghost"
-                left={<Ionicons name="sparkles" size={16} color={theme.colors.primary} />}
+                left={<Icon name="sparkles" size={16} color={theme.colors.primary} />}
                 onPress={onSuggestSwap}
                 loading={swapBusy}
               />

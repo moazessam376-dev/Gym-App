@@ -85,7 +85,7 @@ export default function Profile() {
           ) : null}
           {saved ? (
             <Text variant="bodyStrong" color="success">
-              Saved ✓
+              Saved
             </Text>
           ) : null}
 

@@ -56,6 +56,7 @@ import {
   type Macros,
 } from '../../../src/lib/plan-ui';
 import { adjustPlan, getPlanInsight } from '../../../src/lib/coach-ai';
+import { Icon } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 export default function PlanEditor() {
@@ -515,7 +516,7 @@ export default function PlanEditor() {
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={styles.sheetTitle}>{t('planEditor.adjustWithAi')}</Text>
                 <Pressable onPress={() => !adjustBusy && setAdjustOpen(false)} hitSlop={8}>
-                  <Text style={{ color: theme.colors.textMuted, fontSize: 22 }}>✕</Text>
+                  <Icon name="x" size={22} color={theme.colors.textMuted} />
                 </Pressable>
               </View>
               <Text style={styles.sheetHint}>
@@ -595,7 +596,7 @@ function EditableText({
         }}
       >
         <Text style={textStyle}>{value}</Text>
-        <Text style={styles.pencil}>✎</Text>
+        <Icon name="pencil" size={14} color={theme.colors.textMuted} />
       </Pressable>
     );
   }
@@ -657,7 +658,7 @@ function NoteEditor({
           setEditing(true);
         }}
       >
-        <Text style={styles.noteIcon}>💬</Text>
+        <Icon name="message-square" size={14} color={theme.colors.textMuted} />
         {value ? <Text style={styles.noteText}>{value}</Text> : <Text style={styles.notePrompt}>{addPrompt}</Text>}
       </Pressable>
     );
@@ -719,13 +720,13 @@ function DayCard({
           <EditableText value={day.name} onSave={onSaveName} textStyle={styles.cardTitle} placeholder={t('planEditor.dayNamePlaceholder')} />
         </View>
         <Pressable hitSlop={8} onPress={onMoveUp} disabled={!canMoveUp}>
-          <Text style={[styles.move, !canMoveUp && styles.moveOff]}>▲</Text>
+          <Icon name="chevron-up" size={18} color={canMoveUp ? theme.colors.primary : theme.colors.borderStrong} />
         </Pressable>
         <Pressable hitSlop={8} onPress={onMoveDown} disabled={!canMoveDown}>
-          <Text style={[styles.move, !canMoveDown && styles.moveOff]}>▼</Text>
+          <Icon name="chevron-down" size={18} color={canMoveDown ? theme.colors.primary : theme.colors.borderStrong} />
         </Pressable>
         <Pressable hitSlop={8} onPress={onDelete}>
-          <Text style={styles.remove}>✕</Text>
+          <Icon name="x" size={18} color={theme.colors.danger} />
         </Pressable>
       </View>
       <NoteEditor addPrompt={t('planEditor.addDayNote')} value={day.note} placeholder={t('planEditor.dayNotePlaceholder')} onSave={onSaveNote} />
@@ -777,7 +778,7 @@ function MealCard({
       <View style={styles.cardHead}>
         <Text style={styles.cardTitle}>{meal.name}</Text>
         <Pressable hitSlop={10} onPress={onDelete}>
-          <Text style={styles.remove}>✕</Text>
+          <Icon name="x" size={17} color={theme.colors.danger} />
         </Pressable>
       </View>
       {items.length > 0 ? (

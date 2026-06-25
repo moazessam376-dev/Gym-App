@@ -4,7 +4,6 @@
 // by macro targets (P10), progress (P11), ranks (P12).
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '../src/lib/auth-context';
 import {
@@ -26,7 +25,7 @@ import {
   type Sex,
 } from '../src/schemas/athlete-profile';
 import { specialtySchema, type Specialty } from '../src/schemas/coach-profile';
-import { Screen, Text, Input, Button, Chip } from '../src/components/ui';
+import { Icon, Screen, Text, Input, Button, Chip } from '../src/components/ui';
 import { theme } from '../src/theme';
 
 function label(s: string): string {
@@ -108,7 +107,7 @@ function OptionRows<T extends string>({
               borderColor: active ? theme.colors.primary : theme.colors.glassBorder,
             }}
           >
-            <Ionicons
+            <Icon
               name={active ? 'radio-button-on' : 'radio-button-off'}
               size={20}
               color={active ? theme.colors.primary : theme.colors.textMuted}
@@ -331,14 +330,14 @@ export default function ProfileSetup() {
                     borderColor: theme.colors.glassBorder,
                   }}
                 >
-                  <Ionicons name="heart" size={20} color={theme.colors.primary} />
+                  <Icon name="heart" size={20} color={theme.colors.primary} />
                   <View style={{ flex: 1 }}>
                     <Text variant="bodyStrong">Pick foods you love or avoid</Text>
                     <Text variant="caption" muted>
                       Helps your coach build a plan you’ll actually stick to.
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+                  <Icon name="chevron-forward" size={20} color={theme.colors.textMuted} />
                 </Pressable>
               </Field>
               <Field title="Injuries / notes">

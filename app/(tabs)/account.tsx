@@ -2,7 +2,6 @@
 // account bits of the old launcher home (edit profile, become-coach, invite).
 import { useState } from 'react';
 import { View, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../src/lib/supabase';
@@ -11,11 +10,10 @@ import { forwardChevron } from '../../src/lib/rtl';
 import { useMyName, useMyCoach, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { deleteAccount } from '../../src/lib/account';
 import { confirmDestructive } from '../../src/lib/confirm';
-import { Screen, Text, Card, Avatar, Badge, Button } from '../../src/components/ui';
+import { Icon, type IconName, Screen, Text, Card, Avatar, Badge, Button } from '../../src/components/ui';
 import { LanguageSwitcher } from '../../src/components/LanguageSwitcher';
 import { theme } from '../../src/theme';
 
-type IconName = keyof typeof Ionicons.glyphMap;
 
 function LinkRow({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
   return (
@@ -34,11 +32,11 @@ function LinkRow({ icon, label, onPress }: { icon: IconName; label: string; onPr
         opacity: pressed ? 0.85 : 1,
       })}
     >
-      <Ionicons name={icon} size={20} color={theme.colors.primary} />
+      <Icon name={icon} size={20} color={theme.colors.primary} />
       <Text variant="bodyStrong" style={{ flex: 1 }}>
         {label}
       </Text>
-      <Ionicons name={forwardChevron()} size={18} color={theme.colors.textMuted} />
+      <Icon name={forwardChevron()} size={18} color={theme.colors.textMuted} />
     </Pressable>
   );
 }
@@ -208,7 +206,7 @@ export default function AccountTab() {
             opacity: pressed || deleting ? 0.7 : 1,
           })}
         >
-          <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
+          <Icon name="trash-outline" size={20} color={theme.colors.danger} />
           <Text variant="bodyStrong" style={{ flex: 1, color: theme.colors.danger }}>
             {deleting ? t('common.loading') : t('account.deleteAccount')}
           </Text>

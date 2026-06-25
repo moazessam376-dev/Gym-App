@@ -4,8 +4,8 @@
 // secondary action so the email primary button stays the main path.
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { signInWithGoogle } from '../lib/oauth';
+import { GoogleMark } from './brand';
 import { Text } from './ui';
 import { theme } from '../theme';
 
@@ -61,7 +61,7 @@ export function GoogleSignInButton({
           <ActivityIndicator color={theme.colors.text} />
         ) : (
           <>
-            <Ionicons name="logo-google" size={20} color={theme.colors.text} />
+            <GoogleMark size={20} />
             <Text variant="bodyStrong">Continue with Google</Text>
           </>
         )}

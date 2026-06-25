@@ -7,10 +7,12 @@ export type InputProps = TextInputProps & {
   label?: string;
   error?: string | null;
   containerStyle?: ViewStyle;
+  /** Render the value in JetBrains Mono — for numeric / code fields (weight, reps, invite code). */
+  mono?: boolean;
 };
 
 /** Themed text field with optional label + error line. */
-export function Input({ label, error, containerStyle, style, onFocus, onBlur, ...rest }: InputProps) {
+export function Input({ label, error, containerStyle, style, mono = false, onFocus, onBlur, ...rest }: InputProps) {
   const [focused, setFocused] = useState(false);
 
   return (
@@ -49,7 +51,7 @@ export function Input({ label, error, containerStyle, style, onFocus, onBlur, ..
             paddingHorizontal: theme.spacing.lg,
             paddingVertical: theme.spacing.md,
             color: theme.colors.text,
-            fontFamily: theme.fontFamily.bodyRegular,
+            fontFamily: mono ? theme.fontFamily.monoRegular : theme.fontFamily.bodyRegular,
             fontSize: 15,
           },
           // Cap multiline growth so newlines can't push the layout off-screen

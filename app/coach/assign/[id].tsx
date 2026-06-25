@@ -2,14 +2,13 @@
 // the template into a new DRAFT plan (assign_plan_to_client RPC) and opens it.
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
 import { forwardChevron, textStart } from '../../../src/lib/rtl';
 import { listMyClients, type Client } from '../../../src/lib/invitations';
 import { assignPlanToClient } from '../../../src/lib/plans';
-import { Screen, Text, Avatar, GlassCard, EmptyState } from '../../../src/components/ui';
+import { Icon, Screen, Text, Avatar, GlassCard, EmptyState } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 export default function AssignTemplate() {
@@ -95,7 +94,7 @@ export default function AssignTemplate() {
                 <Text variant="title" style={{ flex: 1 }}>
                   {label}
                 </Text>
-                <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
+                <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
               </View>
             </GlassCard>
           );

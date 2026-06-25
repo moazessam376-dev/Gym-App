@@ -17,7 +17,7 @@ export type ButtonProps = Omit<PressableProps, 'style' | 'children'> & {
 
 const BG: Record<ButtonVariant, string> = {
   primary: theme.colors.primary,
-  secondary: theme.colors.surfaceElevated,
+  secondary: 'transparent', // brand: secondary = transparent + 1px edge border
   ghost: 'transparent',
   danger: theme.colors.danger,
 };
@@ -57,7 +57,7 @@ export function Button({
           flexDirection: 'row',
           gap: theme.spacing.sm,
           alignSelf: fullWidth ? 'stretch' : 'flex-start',
-          borderWidth: variant === 'ghost' ? 1 : 0,
+          borderWidth: variant === 'ghost' || variant === 'secondary' ? 1 : 0,
           borderColor: theme.colors.border,
           opacity: isDisabled ? 0.5 : pressed ? 0.85 : 1,
         },

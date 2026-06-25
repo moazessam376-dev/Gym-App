@@ -7,7 +7,6 @@
 // in the meal MERGES the grams instead of creating a duplicate row.
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { createFood, listFoods, type Food } from '../../src/lib/library';
@@ -17,7 +16,7 @@ import { listMyClients, type Client } from '../../src/lib/invitations';
 import { listClientFoodPreferences } from '../../src/lib/food-preferences';
 import { suggestFoodMacros } from '../../src/lib/coach-ai';
 import { createFoodSchema } from '../../src/schemas/library';
-import { Screen, Text, Input, Button, GlassCard, Avatar, Chip, Badge } from '../../src/components/ui';
+import { Icon, Screen, Text, Input, Button, GlassCard, Avatar, Chip, Badge } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 function intOr0(s: string): number {
@@ -328,7 +327,7 @@ export default function FoodPicker() {
                   <Button
                     title="Auto-fill macros with AI"
                     variant="ghost"
-                    left={<Ionicons name="sparkles" size={16} color={theme.colors.primary} />}
+                    left={<Icon name="sparkles" size={16} color={theme.colors.primary} />}
                     onPress={onAutoFillMacros}
                     loading={macroBusy}
                   />
@@ -399,7 +398,7 @@ function FoodRow({
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
             <Text variant="bodyStrong">{food.name}</Text>
-            {focusLikes ? <Badge label="♥ likes" tone="primary" /> : null}
+            {focusLikes ? <Badge label="Likes" tone="primary" /> : null}
             {focusAvoids ? <Badge label="avoids" tone="danger" /> : null}
           </View>
           <Text variant="caption" muted>
@@ -414,7 +413,7 @@ function FoodRow({
               onPress={() => setShowNames((s) => !s)}
               style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, marginTop: 6 }}
             >
-              <Ionicons name="heart" size={13} color={theme.colors.primary} />
+              <Icon name="heart" size={13} color={theme.colors.primary} />
               <View style={{ flexDirection: 'row' }}>
                 {likers.slice(0, 4).map((id, i) => (
                   <View key={id} style={{ marginLeft: i === 0 ? 0 : -8 }}>
@@ -441,7 +440,7 @@ function FoodRow({
             </Text>
           ) : null}
         </View>
-        <Ionicons
+        <Icon
           name={inMeal ? 'checkmark-circle' : 'add-circle'}
           size={24}
           color={inMeal ? theme.colors.textMuted : theme.colors.primary}

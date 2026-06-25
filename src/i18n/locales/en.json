@@ -46,7 +46,7 @@
     "setGoalsSub": "Tell us your goals so your coach can tailor your plan.",
     "todayDay": "Today · {{day}}",
     "setsCount": "{{done}}/{{planned}} sets",
-    "workoutCrushed": "Workout crushed 💥",
+    "workoutCrushed": "Workout complete",
     "startWorkout": "Start workout",
     "continueWorkout": "Continue workout",
     "reviewWorkout": "Review workout",
@@ -103,7 +103,7 @@
   },
   "progress": {
     "title": "Progress",
-    "dayStreak": "Day streak 🔥",
+    "dayStreak": "Day streak",
     "workoutsDone": "Workouts done",
     "weight": "Weight",
     "logWeight": "Log weight",
@@ -277,7 +277,7 @@
     "assignToClient": "Assign to a client",
     "unpublish": "Unpublish (back to draft)",
     "publish": "Publish to client",
-    "adjustWithAi": "✨ Adjust with AI",
+    "adjustWithAi": "Adjust with AI",
     "addPlanNote": "Add plan note",
     "planNotePlaceholder": "Overall note for the trainee (e.g. focus on tempo this block)",
     "planTotal": "PLAN TOTAL",
@@ -465,7 +465,7 @@
       "body": "{{name}} published your {{type}} plan: {{title}}"
     },
     "pr": {
-      "title": "New personal record 💪",
+      "title": "New personal record",
       "body": "{{exercise}}"
     },
     "settingsTitle": "Notification settings",
@@ -481,7 +481,7 @@
     "title": "Chat",
     "messagePlaceholder": "Message…",
     "emptyTitle": "No messages yet",
-    "emptySub": "Say hello 👋",
+    "emptySub": "Say hello",
     "today": "Today",
     "yesterday": "Yesterday",
     "edited": "edited",

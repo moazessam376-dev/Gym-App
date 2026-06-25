@@ -18,7 +18,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming, ZoomIn } from 'react-native-reanimated';
 import { useAudioRecorder, useAudioRecorderState, RecordingPresets } from 'expo-audio';
 import { useTranslation } from 'react-i18next';
@@ -57,7 +56,7 @@ import { BanAppealSheet } from '../../src/components/BanAppealSheet';
 import { MessageActionsSheet } from '../../src/components/MessageActionsSheet';
 import { VoiceNoteBubble } from '../../src/components/VoiceNoteBubble';
 import { Emoji } from '../../src/components/Emoji';
-import { Screen, Text, Button } from '../../src/components/ui';
+import { Icon, Screen, Text, Button } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 const EDIT_WINDOW_MS = 15 * 60 * 1000; // mirrors the 0036 server-side edit window
@@ -271,7 +270,7 @@ function Bubble({
         pointerEvents="none"
         style={[{ position: 'absolute', left: 4, top: 0, bottom: 0, justifyContent: 'center' }, arrowStyle]}
       >
-        <Ionicons name="arrow-undo" size={20} color={theme.colors.primary} />
+        <Icon name="arrow-undo" size={20} color={theme.colors.primary} />
       </Animated.View>
 
       <Animated.View
@@ -385,10 +384,10 @@ function RecordingBar({
       }}
     >
       <Pressable onPress={onCancel} disabled={sending} hitSlop={8}>
-        <Ionicons name="trash-outline" size={22} color={theme.colors.danger} />
+        <Icon name="trash-outline" size={22} color={theme.colors.danger} />
       </Pressable>
       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-        <Ionicons name="mic" size={18} color={theme.colors.danger} />
+        <Icon name="mic" size={18} color={theme.colors.danger} />
         <Text variant="body" color={theme.colors.text}>
           {sending ? t('chat.voiceSending') : mmss}
         </Text>
@@ -408,7 +407,7 @@ function RecordingBar({
         {sending ? (
           <ActivityIndicator size="small" color={theme.colors.onPrimary} />
         ) : (
-          <Ionicons name="send" size={18} color={theme.colors.onPrimary} />
+          <Icon name="send" size={18} color={theme.colors.onPrimary} />
         )}
       </Pressable>
     </View>
@@ -826,7 +825,7 @@ export default function ChatThread() {
                 backgroundColor: theme.colors.surface,
               }}
             >
-              <Ionicons name="ban-outline" size={22} color={theme.colors.danger} />
+              <Icon name="ban-outline" size={22} color={theme.colors.danger} />
               <View style={{ flex: 1, gap: theme.spacing.sm }}>
                 <Text variant="bodyStrong" color={theme.colors.danger}>
                   {t('chat.blockedTitle')}
@@ -836,7 +835,7 @@ export default function ChatThread() {
                 </Text>
                 {hasOpenAppeal ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
-                    <Ionicons name="time-outline" size={14} color={theme.colors.textMuted} />
+                    <Icon name="time-outline" size={14} color={theme.colors.textMuted} />
                     <Text variant="caption" muted>
                       {t('chat.appealPending')}
                     </Text>
@@ -862,7 +861,7 @@ export default function ChatThread() {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.md }}>
-                <Ionicons name="shield-outline" size={22} color={theme.colors.primary} />
+                <Icon name="shield-outline" size={22} color={theme.colors.primary} />
                 <View style={{ flex: 1, gap: theme.spacing.xs }}>
                   <Text variant="bodyStrong">{t('chat.disclaimerTitle')}</Text>
                   <Text variant="caption" muted>
@@ -889,7 +888,7 @@ export default function ChatThread() {
                     paddingTop: theme.spacing.sm,
                   }}
                 >
-                  <Ionicons name="create-outline" size={14} color={theme.colors.primary} />
+                  <Icon name="create-outline" size={14} color={theme.colors.primary} />
                   <Text variant="caption" color={theme.colors.primary} style={{ flex: 1 }}>
                     {t('chat.editingBanner')}
                   </Text>
@@ -910,7 +909,7 @@ export default function ChatThread() {
                     paddingTop: theme.spacing.sm,
                   }}
                 >
-                  <Ionicons name="arrow-undo-outline" size={16} color={theme.colors.primary} />
+                  <Icon name="arrow-undo-outline" size={16} color={theme.colors.primary} />
                   <View style={{ flex: 1 }}>
                     <Text variant="caption" color={theme.colors.primary} style={{ fontSize: 11 }}>
                       {t('chat.replyingTo', {
@@ -922,7 +921,7 @@ export default function ChatThread() {
                     </Text>
                   </View>
                   <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
-                    <Ionicons name="close" size={18} color={theme.colors.textMuted} />
+                    <Icon name="close" size={18} color={theme.colors.textMuted} />
                   </Pressable>
                 </View>
               ) : null}
@@ -980,7 +979,7 @@ export default function ChatThread() {
                         justifyContent: 'center',
                       }}
                     >
-                      <Ionicons name="mic" size={20} color={theme.colors.onPrimary} />
+                      <Icon name="mic" size={20} color={theme.colors.onPrimary} />
                     </Pressable>
                   ) : (
                     <Pressable
@@ -995,7 +994,7 @@ export default function ChatThread() {
                         justifyContent: 'center',
                       }}
                     >
-                      <Ionicons
+                      <Icon
                         name={editingId ? 'checkmark' : 'send'}
                         size={18}
                         color={input.trim().length === 0 ? theme.colors.textMuted : theme.colors.onPrimary}

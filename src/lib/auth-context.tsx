@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Native password-reset deep link. On web, detectSessionInUrl (supabase.ts) handles
   // the recovery link and fires PASSWORD_RECOVERY automatically; on native it's off, so
-  // we parse the gymapp://reset-password?code=… link ourselves, exchange the PKCE code
+  // we parse the raptor://reset-password?code=… link ourselves, exchange the PKCE code
   // for a session, and flag recovery so the root guard shows the set-new-password screen.
   // (OAuth redirects use a different path and are handled in src/lib/oauth.ts.)
   useEffect(() => {

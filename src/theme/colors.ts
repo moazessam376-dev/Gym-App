@@ -1,77 +1,95 @@
-// "Midnight Blue" palette — Neon Glassy Dark in the blue family (refs: Тихий
-// режим, FRQNCY). Deep navy base, electric-blue accent, glowing rings, glassy
-// rounded cards. Dark-only for now, structured so a light theme can be added later.
-//
-// Accessibility: electric blue reads well on the navy bg as an accent and as a
-// button fill (white text on blue). Body text is `text`/`textMuted`.
+// Raptor — "Onyx Premium" palette. Replaces the old "Midnight Blue" theme.
+// Flat near-black canvas + one electric Signal cyan accent. Dark-only for now,
+// structured so a light theme can be added later. Drop-in for src/theme/colors.ts
+// (every key the app already reads is preserved — this is a value swap, not a rename).
 
 export const palette = {
   // Raw brand colors
-  navy: '#0A0E20',
-  surface: '#141A30',
-  surfaceElevated: '#1C2342',
-  blue: '#3D5AFE', // electric / royal blue — the primary accent
-  blueBright: '#6E8BFF', // lighter blue for glow / highlights
-  violet: '#7C5CFF',
+  onyx: '#0A0B0F', // page background
+  slate: '#15161D', // cards / surfaces
+  raise: '#1F2029', // elevated surfaces
+  edge: '#2A2B38', // borders / dividers
+  edgeStrong: '#3A3D4C',
+  cloud: '#F5F6F8', // primary text (off-white)
+  mist: '#9B9CA8', // secondary text
+  faint: '#5C616E', // tertiary / disabled
+
+  signal: '#3FD9C0', // THE accent — primary CTA, rank-up, highlights (~80% of accent use)
+  signalBright: '#9BFFEE', // glow / highlight only
+  cobalt: '#6B8AFF', // secondary data series in charts — never UI chrome
+  ember: '#FF6B4A', // alerts, errors, rank-down
+  amber: '#FFB323', // warnings / draft
+  positive: '#3FD98A', // success (kept distinct from the cyan accent)
   white: '#FFFFFF',
-  muted: '#8B93AD',
-  success: '#00E676',
-  danger: '#FF3D71',
-  warning: '#FFB020',
 } as const;
 
 export const darkColors = {
-  // Backgrounds — deep navy/indigo (the screen gradient adds the soft glow).
-  bg: palette.navy,
-  surface: palette.surface,
-  surfaceElevated: palette.surfaceElevated,
-  overlay: 'rgba(6,8,18,0.7)',
+  // Backgrounds — flat onyx (no screen gradient lift; see effects.ts).
+  bg: palette.onyx,
+  surface: palette.slate,
+  surfaceElevated: palette.raise,
+  overlay: 'rgba(5,6,9,0.72)',
 
-  // Glassy translucent surfaces (sit over the screen gradient).
-  glass: 'rgba(255,255,255,0.05)',
-  glassStrong: 'rgba(255,255,255,0.08)',
-  glassBorder: 'rgba(255,255,255,0.10)',
+  // "Glass" surfaces are now flat slate so GlassCard matches Card (premium = flat,
+  // not translucent). Keeps the GlassCard component working with no code change.
+  glass: palette.slate,
+  glassStrong: palette.raise,
+  glassBorder: palette.edge,
 
   // Borders / dividers
-  border: '#232A45',
-  borderStrong: '#39426B',
+  border: palette.edge,
+  borderStrong: palette.edgeStrong,
 
   // Brand / accents
-  primary: palette.blue,
-  primaryGlow: palette.blueBright,
-  onPrimary: palette.white, // white text/icon ON the blue fill
-  secondary: palette.violet,
-  onSecondary: palette.white,
+  primary: palette.signal,
+  primaryGlow: palette.signalBright,
+  onPrimary: palette.onyx, // dark text/icon ON the cyan fill (NOT white)
+  secondary: palette.cobalt,
+  onSecondary: palette.onyx,
 
   // Text
-  text: palette.white,
-  textMuted: palette.muted,
-  textOnSurface: palette.white,
-  link: palette.blue,
+  text: palette.cloud,
+  textMuted: palette.mist,
+  textOnSurface: palette.cloud,
+  link: palette.signal,
   white: palette.white,
 
   // Status
-  success: palette.success,
-  danger: palette.danger,
-  warning: palette.warning,
+  success: palette.positive,
+  danger: palette.ember,
+  warning: palette.amber,
 
-  // Plan status (folds in the old src/lib/plan-ui.ts PLAN_STATUS_STYLE)
-  statusDraft: palette.warning,
-  statusPublished: palette.success,
-  statusArchived: palette.muted,
+  // Plan status
+  statusDraft: palette.amber,
+  statusPublished: palette.positive,
+  statusArchived: palette.mist,
 } as const;
 
 export type AppColors = typeof darkColors;
 
-// Gradient pairs for avatars / hero accents — cool blue/violet/cyan family for
-// cohesion with the blue theme. Deterministic pick by initial.
+// Tier colors — the 8-tier ranking ramp (Bronze → Apex). Use these everywhere a
+// tier is shown (badge, leaderboard row, rank-up). NEVER hardcode tier hex values.
+export const tier = {
+  bronze: '#B07A42',
+  silver: '#9AA3AF',
+  gold: '#E5B83C',
+  platinum: '#CFE6F0',
+  diamond: '#6B8AFF',
+  master: '#9B7BF5',
+  grandmaster: '#E0556B',
+  apex: '#3FD9C0', // the apex predator owns the brand accent
+} as const;
+
+export type Tier = keyof typeof tier;
+
+// Avatar gradients — cool teal/steel/cobalt family for cohesion with the cyan accent.
 export const avatarGradients: readonly [string, string][] = [
-  ['#3D5AFE', '#7C5CFF'],
-  ['#00B0FF', '#3D5AFE'],
-  ['#7C5CFF', '#3D5AFE'],
-  ['#2E5BFF', '#00C2FF'],
-  ['#5B8DEF', '#7C5CFF'],
-  ['#00C2FF', '#3D5AFE'],
+  ['#3FD9C0', '#2BA897'],
+  ['#6B8AFF', '#3FD9C0'],
+  ['#3FD9C0', '#1A8A78'],
+  ['#8FA8C4', '#3FD9C0'],
+  ['#6B8AFF', '#9B7BF5'],
+  ['#3FD9C0', '#6B8AFF'],
 ];
 
 /** Stable gradient for a name/seed so the same person always looks the same. */

@@ -2,14 +2,13 @@
 // coach builds them once, then assigns deep copies to clients.
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { forwardChevron } from '../../src/lib/rtl';
 import { listTemplates, type Plan } from '../../src/lib/plans';
 import { type PlanType } from '../../src/schemas/plan';
-import { Screen, Text, Button, GlassCard, Segmented, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, Button, GlassCard, Segmented, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function Templates() {
@@ -57,7 +56,7 @@ export default function Templates() {
             />
             <Button
               title={t('templates.newPlan')}
-              left={<Ionicons name="add" size={18} color={theme.colors.onPrimary} />}
+              left={<Icon name="add" size={18} color={theme.colors.onPrimary} />}
               onPress={() => router.push({ pathname: '/coach/new-plan', params: { type } })}
             />
             <Text variant="label" muted style={{ marginTop: theme.spacing.sm }}>
@@ -82,7 +81,7 @@ export default function Templates() {
               <Text variant="title" style={{ flex: 1 }}>
                 {item.title}
               </Text>
-              <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
+              <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
             </View>
           </GlassCard>
         )}

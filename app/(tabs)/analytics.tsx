@@ -6,7 +6,6 @@
 // grid on wide screens (coaches will live in this on web). Coach-only; others redirect.
 import { useState } from 'react';
 import { View, useWindowDimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -31,7 +30,7 @@ import {
   type GoalDelivered,
 } from '../../src/lib/analytics';
 import type { AthleteGoal } from '../../src/schemas/athlete-profile';
-import { Screen, Text, GlassCard, StatBlock, DeltaChip, Avatar, Badge, Button, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, GlassCard, StatBlock, DeltaChip, Avatar, Badge, Button, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -217,7 +216,7 @@ export default function AnalyticsTab() {
                             {r.progress.headline}
                           </Text>
                         </View>
-                        <Ionicons name={forwardChevron()} size={18} color={theme.colors.textMuted} />
+                        <Icon name={forwardChevron()} size={18} color={theme.colors.textMuted} />
                       </View>
                     </GlassCard>
                   ))
@@ -307,7 +306,7 @@ export default function AnalyticsTab() {
                       </>
                     ) : (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                        <Ionicons name="sparkles-outline" size={18} color={theme.colors.primary} />
+                        <Icon name="sparkles-outline" size={18} color={theme.colors.primary} />
                         <Text variant="body" muted style={{ flex: 1 }}>
                           {t('analytics.aiSummarySub')}
                         </Text>

@@ -1,7 +1,7 @@
 import { View, type ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/theme';
 import { Text } from './Text';
+import { Icon } from './Icon';
 
 export type DeltaChipProps = { value: number; suffix?: string };
 
@@ -15,13 +15,13 @@ export function DeltaChip({ value, suffix = '%' }: DeltaChipProps) {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 2,
-        backgroundColor: up ? 'rgba(0,230,118,0.12)' : 'rgba(255,61,113,0.12)',
+        backgroundColor: up ? 'rgba(63,217,138,0.12)' : 'rgba(255,107,74,0.12)',
         borderRadius: theme.radii.sm,
         paddingHorizontal: 6,
         paddingVertical: 2,
       }}
     >
-      <Ionicons name={up ? 'arrow-up' : 'arrow-down'} size={11} color={color} />
+      <Icon name={up ? 'arrow-up' : 'arrow-down'} size={11} color={color} />
       <Text variant="caption" color={color} style={{ fontFamily: theme.fontFamily.bodyBold }}>
         {Math.abs(value)}
         {suffix}
