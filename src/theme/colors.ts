@@ -42,6 +42,7 @@ export const darkColors = {
 
   // Brand / accents
   primary: palette.signal,
+  primarySoft: 'rgba(63,217,192,0.16)', // Signal-soft — tag fills / active-selection tints
   primaryGlow: palette.signalBright,
   onPrimary: palette.onyx, // dark text/icon ON the cyan fill (NOT white)
   secondary: palette.cobalt,

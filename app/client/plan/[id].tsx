@@ -31,7 +31,7 @@ function CoachNote({ text }: { text: string }) {
       style={{
         flexDirection: 'row',
         gap: theme.spacing.sm,
-        backgroundColor: 'rgba(61,90,254,0.12)',
+        backgroundColor: theme.colors.primarySoft,
         borderRadius: theme.radii.sm,
         padding: theme.spacing.md,
         marginTop: theme.spacing.sm,

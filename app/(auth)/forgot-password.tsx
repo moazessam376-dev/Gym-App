@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { emailSchema } from '../../src/schemas/auth';
 import { Screen, Text, Input, Button } from '../../src/components/ui';
+import { Wordmark } from '../../src/components/brand';
 import { theme } from '../../src/theme';
 
 export default function ForgotPassword() {
@@ -44,6 +45,7 @@ export default function ForgotPassword() {
     <Screen gradient padded={false}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1, justifyContent: 'center', padding: theme.spacing.xl, gap: theme.spacing.lg }}>
+          <Wordmark size={30} style={{ alignSelf: 'center', marginBottom: theme.spacing.sm }} />
           <View style={{ gap: theme.spacing.xs, marginBottom: theme.spacing.sm }}>
             <Text variant="h1">Reset your password</Text>
             <Text variant="body" muted>

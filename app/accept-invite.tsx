@@ -12,7 +12,7 @@ import { acceptInvitation } from '../src/lib/invitations';
 import { Icon, Screen, Text, Input, Button } from '../src/components/ui';
 import { theme } from '../src/theme';
 
-const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
+const MONO = theme.fontFamily.monoBold; // JetBrains Mono — brand mono for codes
 
 export default function AcceptInvite() {
   const router = useRouter();

@@ -35,8 +35,8 @@ export function GoogleSignInButton({
     <View style={{ gap: theme.spacing.md }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
         <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.border }} />
-        <Text variant="caption" muted>
-          or
+        <Text variant="label" muted style={{ letterSpacing: 1.5 }}>
+          Or continue with
         </Text>
         <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.border }} />
       </View>

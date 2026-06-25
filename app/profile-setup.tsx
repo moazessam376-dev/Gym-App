@@ -102,7 +102,7 @@ function OptionRows<T extends string>({
               gap: theme.spacing.md,
               padding: theme.spacing.md,
               borderRadius: theme.radii.md,
-              backgroundColor: active ? 'rgba(61,90,254,0.10)' : theme.colors.glass,
+              backgroundColor: active ? theme.colors.primarySoft : theme.colors.glass,
               borderWidth: 1,
               borderColor: active ? theme.colors.primary : theme.colors.glassBorder,
             }}
