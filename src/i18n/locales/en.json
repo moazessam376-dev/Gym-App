@@ -335,6 +335,10 @@
   },
   "account": {
     "title": "Account",
+    "sectionProfile": "Profile",
+    "sectionCommunity": "Community",
+    "sectionManage": "Manage",
+    "sectionPreferences": "Preferences",
     "setYourName": "Set your name",
     "editProfile": "Edit profile",
     "notifications": "Notifications",

@@ -38,6 +38,10 @@
   },
   "account": {
     "title": "حسابك",
+    "sectionProfile": "الملف",
+    "sectionCommunity": "المجتمع",
+    "sectionManage": "الإدارة",
+    "sectionPreferences": "التفضيلات",
     "setYourName": "اكتب اسمك",
     "editProfile": "تعديل الملف",
     "notifications": "الإشعارات",

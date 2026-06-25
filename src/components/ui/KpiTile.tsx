@@ -12,6 +12,10 @@ export type KpiTileProps = {
   value: string | number;
   label: string;
   tone?: KpiTone;
+  /** Explicit number color — overrides `tone` (e.g. success/warning/danger thresholds). */
+  valueColor?: string;
+  /** Optional small caption under the label (e.g. "last 30 days"). */
+  note?: string;
   icon?: IconName;
   onPress?: () => void;
   style?: ViewStyle;
@@ -23,8 +27,8 @@ const TONE: Record<KpiTone, string> = {
   neutral: theme.colors.text,
 };
 
-export function KpiTile({ value, label, tone = 'neutral', icon, onPress, style }: KpiTileProps) {
-  const c = TONE[tone];
+export function KpiTile({ value, label, tone = 'neutral', valueColor, note, icon, onPress, style }: KpiTileProps) {
+  const c = valueColor ?? TONE[tone];
   const Container = onPress ? Pressable : View;
   return (
     <Container
@@ -42,13 +46,18 @@ export function KpiTile({ value, label, tone = 'neutral', icon, onPress, style }
         style,
       ]}
     >
-      {icon ? <Icon name={icon} size={20} color={c} /> : null}
+      {icon ? <Icon name={icon} size={20} color={tone === 'primary' ? theme.colors.primary : c} /> : null}
       <Text variant="display" color={c} style={{ fontSize: 30, lineHeight: 34 }}>
         {value}
       </Text>
       <Text variant="label" muted>
         {label}
       </Text>
+      {note ? (
+        <Text variant="caption" muted style={{ fontSize: 11 }}>
+          {note}
+        </Text>
+      ) : null}
     </Container>
   );
 }

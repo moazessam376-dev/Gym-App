@@ -66,7 +66,7 @@ function appendChip(prev: string, phrase: string): string {
 function MiniStat({ value, label }: { value: string; label: string }) {
   return (
     <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-      <Text variant="h2">{value}</Text>
+      <Text style={{ fontFamily: theme.fontFamily.monoBold, fontSize: 22, color: theme.colors.text }}>{value}</Text>
       <Text variant="label" muted style={{ fontSize: 9 }}>
         {label}
       </Text>

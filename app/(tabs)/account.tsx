@@ -15,6 +15,14 @@ import { LanguageSwitcher } from '../../src/components/LanguageSwitcher';
 import { theme } from '../../src/theme';
 
 
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <Text variant="label" muted style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.xs }}>
+      {children}
+    </Text>
+  );
+}
+
 function LinkRow({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
   return (
     <Pressable
@@ -106,6 +114,7 @@ export default function AccountTab() {
       </Card>
 
       <View style={{ gap: theme.spacing.sm }}>
+        <SectionLabel>{t('account.sectionProfile')}</SectionLabel>
         <LinkRow icon="person-outline" label={t('account.editProfile')} onPress={go('/profile')} />
         <LinkRow
           icon="notifications-outline"
@@ -120,6 +129,7 @@ export default function AccountTab() {
 
         {role === 'coach' || role === 'client' ? (
           <>
+            <SectionLabel>{t('account.sectionCommunity')}</SectionLabel>
             <LinkRow
               icon="globe-outline"
               label={t('account.publicProfile')}
@@ -138,6 +148,9 @@ export default function AccountTab() {
           </>
         ) : null}
 
+        {role === 'client' || role === 'coach' || role === 'admin' ? (
+          <SectionLabel>{t('account.sectionManage')}</SectionLabel>
+        ) : null}
         {role === 'client' ? (
           <>
             <LinkRow icon="heart-outline" label={t('account.foodPreferences')} onPress={go('/food/preferences')} />
@@ -177,6 +190,7 @@ export default function AccountTab() {
         />
       </View>
 
+      <SectionLabel>{t('account.sectionPreferences')}</SectionLabel>
       <LanguageSwitcher />
 
       <Button
