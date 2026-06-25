@@ -36,6 +36,13 @@ Topic detail for CLAUDE.md §2 ("deny by default"). **This file wins over a prom
   to `authenticated` only — the raw table gets no new read path. See Phase 19's
   `get_public_coach_profile` / `get_public_athlete_profile` (0044) and the Phase 15
   coach-fenced RPCs (0031). Aggregate "proof" surfaces return counts only, never ids.
+  Don't return a value whose units reveal the input — Phase 20's `public_*_leaderboard`
+  (0045) returns a derived `FFMI` index, never the weight/body-fat/height it's computed from.
+- **A computed `numeric`/`decimal` returned by an RPC arrives in the app as a STRING**
+  (PostgREST serializes Postgres `numeric` as text to avoid float loss). Coerce it with
+  `Number(...)` in the `supabase.rpc(...)` wrapper (`src/lib/*`) before the UI does math or
+  `.toFixed()` — e.g. `listTopAthletes` maps `ffmi: Number(r.ffmi)`. Integer columns come
+  back as numbers; only `numeric`/`decimal` need this.
 
 ## Test gate
 - The harness in `supabase/tests/rls/` MUST stay green (CLAUDE.md §11). Any new
