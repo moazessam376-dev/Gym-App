@@ -155,6 +155,11 @@ they are expensive to change later:
 - CI gates that must pass on every change: secret scan (gitleaks), `npm audit`,
   RLS test suite, webhook signature + idempotency tests (once billing exists).
 - All timestamps stored in **UTC**; convert in the UI.
+- **Edge Functions deploy separately from the repo, and bundle their own copy of
+  `supabase/functions/_shared/`.** Editing a function — or a shared contract like
+  `_shared/schemas.ts` — changes nothing until you **redeploy every function that imports
+  it**. A repo↔deployed drift surfaces as a runtime 400/500, not a build error (e.g.
+  adding an `avatar` media kind needed `media-finalize` redeployed before uploads worked).
 - When unsure about a security-relevant choice, **stop and ask** rather than guessing.
 
 ---
