@@ -4,13 +4,16 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
+import { forwardChevron, textStart } from '../../../src/lib/rtl';
 import { listMyClients, type Client } from '../../../src/lib/invitations';
 import { assignPlanToClient } from '../../../src/lib/plans';
 import { Screen, Text, Avatar, GlassCard, EmptyState } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 export default function AssignTemplate() {
+  const { t } = useTranslation();
   const { role } = useAuth();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -46,7 +49,7 @@ export default function AssignTemplate() {
       const newId = await assignPlanToClient(id, client.id);
       router.replace({ pathname: '/coach/plan/[id]', params: { id: newId } });
     } catch {
-      setError('Could not assign the plan. Please try again.');
+      setError(t('assign.error'));
       setAssigning(false);
     }
   }
@@ -68,8 +71,8 @@ export default function AssignTemplate() {
         ListHeaderComponent={
           clients.length === 0 ? null : (
             <View style={{ marginBottom: theme.spacing.xs }}>
-              <Text variant="body" muted>
-                Assign this template to a client. They get their own editable copy as a draft — publish it when ready.
+              <Text variant="body" muted style={textStart}>
+                {t('assign.intro')}
               </Text>
               {error ? (
                 <Text variant="caption" color="danger" style={{ marginTop: theme.spacing.sm }}>
@@ -81,10 +84,10 @@ export default function AssignTemplate() {
           )
         }
         ListEmptyComponent={
-          <EmptyState icon="people-outline" title="No clients yet" subtitle="Invite a client before assigning plans." />
+          <EmptyState icon="people-outline" title={t('assign.noClientsTitle')} subtitle={t('assign.noClientsSub')} />
         }
         renderItem={({ item }) => {
-          const label = item.full_name ?? item.invited_email ?? 'Client';
+          const label = item.full_name ?? item.invited_email ?? t('home.client');
           return (
             <GlassCard onPress={() => onAssign(item)}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
@@ -92,7 +95,7 @@ export default function AssignTemplate() {
                 <Text variant="title" style={{ flex: 1 }}>
                   {label}
                 </Text>
-                <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+                <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
               </View>
             </GlassCard>
           );

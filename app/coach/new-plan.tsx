@@ -4,13 +4,16 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
+import { textStart } from '../../src/lib/rtl';
 import { cloneTemplate, createTemplate, createWeek, listSystemTemplates, type Plan } from '../../src/lib/plans';
 import { planTypeSchema, type PlanType } from '../../src/schemas/plan';
 import { Screen, Text, Input, Button, GlassCard, Segmented } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function NewPlan() {
+  const { t } = useTranslation();
   const { role, session } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ type?: string }>();
@@ -44,24 +47,25 @@ export default function NewPlan() {
     if (!session?.user?.id || busy) return;
     setBusy(true);
     try {
-      const t = title.trim() || (type === 'training' ? 'New training plan' : 'New nutrition plan');
-      const created = await createTemplate(session.user.id, { type, title: t });
+      const name =
+        title.trim() || (type === 'training' ? t('newPlan.defaultTrainingTitle') : t('newPlan.defaultNutritionTitle'));
+      const created = await createTemplate(session.user.id, { type, title: name });
       if (type === 'training') await createWeek({ plan_id: created.id, name: 'Week 1', position: 0 });
       router.replace({ pathname: '/coach/plan/[id]', params: { id: created.id } });
     } catch {
-      Alert.alert('Error', 'Could not create the plan. Please try again.');
+      Alert.alert(t('common.errorTitle'), t('newPlan.createError'));
       setBusy(false);
     }
   }
 
-  async function startFromTemplate(t: Plan) {
+  async function startFromTemplate(tpl: Plan) {
     if (busy) return;
     setBusy(true);
     try {
-      const newId = await cloneTemplate(t.id);
+      const newId = await cloneTemplate(tpl.id);
       router.replace({ pathname: '/coach/plan/[id]', params: { id: newId } });
     } catch {
-      Alert.alert('Error', 'Could not start from that template. Please try again.');
+      Alert.alert(t('common.errorTitle'), t('newPlan.templateError'));
       setBusy(false);
     }
   }
@@ -80,30 +84,37 @@ export default function NewPlan() {
                 value={type}
                 onChange={setType}
                 options={[
-                  { value: 'training', label: 'Training' },
-                  { value: 'nutrition', label: 'Nutrition' },
+                  { value: 'training', label: t('common.training') },
+                  { value: 'nutrition', label: t('common.nutrition') },
                 ]}
               />
-              <Text variant="label" muted style={{ marginTop: theme.spacing.sm }}>
-                Start blank
+              <Text variant="label" muted style={[{ marginTop: theme.spacing.sm }, textStart]}>
+                {t('newPlan.startBlank')}
               </Text>
               <Input
                 value={title}
                 onChangeText={setTitle}
-                placeholder={type === 'training' ? 'Plan name (e.g. PPL Hypertrophy)' : 'Plan name (e.g. Lean Cut)'}
+                placeholder={
+                  type === 'training' ? t('newPlan.titlePlaceholderTraining') : t('newPlan.titlePlaceholderNutrition')
+                }
                 editable={!busy}
               />
-              <Button title={`Start blank ${type} plan`} variant="secondary" onPress={startBlank} disabled={busy} />
-              <Text variant="label" muted style={{ marginTop: theme.spacing.sm }}>
-                Or start from a template
+              <Button
+                title={t('newPlan.startBlankBtn', { type: t(`common.${type}`) })}
+                variant="secondary"
+                onPress={startBlank}
+                disabled={busy}
+              />
+              <Text variant="label" muted style={[{ marginTop: theme.spacing.sm }, textStart]}>
+                {t('newPlan.orFromTemplate')}
               </Text>
               {loading ? <ActivityIndicator style={{ marginTop: 16 }} color={theme.colors.primary} /> : null}
             </View>
           }
           ListEmptyComponent={
             loading ? null : (
-              <Text variant="body" muted>
-                No {type} templates yet — start blank above.
+              <Text variant="body" muted style={textStart}>
+                {t('newPlan.noTemplates', { type: t(`common.${type}`) })}
               </Text>
             )
           }
@@ -119,7 +130,7 @@ export default function NewPlan() {
                   ) : null}
                 </View>
                 <Text variant="bodyStrong" color="primary">
-                  Use ›
+                  {t('newPlan.use')}
                 </Text>
               </View>
             </GlassCard>

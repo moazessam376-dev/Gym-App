@@ -4,13 +4,16 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
+import { forwardChevron } from '../../src/lib/rtl';
 import { listTemplates, type Plan } from '../../src/lib/plans';
 import { type PlanType } from '../../src/schemas/plan';
 import { Screen, Text, Button, GlassCard, Segmented, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function Templates() {
+  const { t } = useTranslation();
   const { role } = useAuth();
   const router = useRouter();
   const [type, setType] = useState<PlanType>('training');
@@ -48,17 +51,17 @@ export default function Templates() {
               value={type}
               onChange={setType}
               options={[
-                { value: 'training', label: 'Training' },
-                { value: 'nutrition', label: 'Nutrition' },
+                { value: 'training', label: t('common.training') },
+                { value: 'nutrition', label: t('common.nutrition') },
               ]}
             />
             <Button
-              title="New plan (template or blank)"
+              title={t('templates.newPlan')}
               left={<Ionicons name="add" size={18} color={theme.colors.onPrimary} />}
               onPress={() => router.push({ pathname: '/coach/new-plan', params: { type } })}
             />
-            <Text variant="label" muted style={{ marginTop: theme.spacing.sm, textTransform: 'capitalize' }}>
-              Your {type} plans
+            <Text variant="label" muted style={{ marginTop: theme.spacing.sm }}>
+              {t('templates.yourPlans', { type: t(`common.${type}`) })}
             </Text>
           </View>
         }
@@ -66,7 +69,11 @@ export default function Templates() {
           loading ? (
             <ActivityIndicator style={{ marginTop: 24 }} color={theme.colors.primary} />
           ) : (
-            <EmptyState icon="documents-outline" title="No templates yet" subtitle="Create your first plan above." />
+            <EmptyState
+              icon="documents-outline"
+              title={t('templates.emptyTitle')}
+              subtitle={t('templates.emptySub')}
+            />
           )
         }
         renderItem={({ item }) => (
@@ -75,7 +82,7 @@ export default function Templates() {
               <Text variant="title" style={{ flex: 1 }}>
                 {item.title}
               </Text>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+              <Ionicons name={forwardChevron()} size={20} color={theme.colors.textMuted} />
             </View>
           </GlassCard>
         )}

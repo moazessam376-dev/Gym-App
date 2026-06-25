@@ -5,7 +5,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
+import { textStart } from '../../../src/lib/rtl';
 import {
   getPlan,
   listDays,
@@ -45,6 +47,7 @@ function CoachNote({ text }: { text: string }) {
 }
 
 export default function ClientPlanView() {
+  const { t } = useTranslation();
   const { role } = useAuth();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -114,7 +117,7 @@ export default function ClientPlanView() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
         <Text variant="body" muted>
-          This plan isn’t available.
+          {t('planView.unavailable')}
         </Text>
       </View>
     );
@@ -131,8 +134,8 @@ export default function ClientPlanView() {
       <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md }}>
         <View>
           <Text variant="h1">{plan.title}</Text>
-          <Text variant="caption" muted style={{ textTransform: 'capitalize' }}>
-            {plan.type}
+          <Text variant="caption" muted style={textStart}>
+            {t(`common.${plan.type}`)}
           </Text>
         </View>
 
@@ -141,10 +144,15 @@ export default function ClientPlanView() {
         {!isTraining && meals.length > 0 ? (
           <GlassCard>
             <Text variant="label" color="primary">
-              Daily total
+              {t('planView.dailyTotal')}
             </Text>
             <Text variant="title" style={{ marginTop: 2 }}>
-              {planMacros.kcal} kcal · {planMacros.protein}P / {planMacros.carbs}C / {planMacros.fat}F
+              {t('planView.macroLine', {
+                kcal: planMacros.kcal,
+                p: planMacros.protein,
+                c: planMacros.carbs,
+                f: planMacros.fat,
+              })}
             </Text>
           </GlassCard>
         ) : null}
@@ -185,7 +193,7 @@ export default function ClientPlanView() {
                   {d.note ? <CoachNote text={d.note} /> : null}
                   {ex.length === 0 ? (
                     <Text variant="caption" muted>
-                      No exercises.
+                      {t('planView.noExercises')}
                     </Text>
                   ) : null}
                   {BLOCK_ORDER.filter((b) => ex.some((e) => e.block === b)).map((b) => (
@@ -209,8 +217,8 @@ export default function ClientPlanView() {
                             <Text variant="caption" muted style={{ marginTop: 1 }}>
                               {[
                                 e.sets != null ? `${e.sets}×${e.reps ?? '—'}` : e.reps ?? null,
-                                e.rest_seconds != null ? `${e.rest_seconds}s rest` : null,
-                                e.tempo ? `tempo ${e.tempo}` : null,
+                                e.rest_seconds != null ? t('planView.restShort', { n: e.rest_seconds }) : null,
+                                e.tempo ? t('planView.tempoShort', { tempo: e.tempo }) : null,
                               ]
                                 .filter(Boolean)
                                 .join('  ·  ')}
@@ -222,7 +230,7 @@ export default function ClientPlanView() {
                   ))}
                   {ex.length > 0 ? (
                     <Button
-                      title="Log this workout"
+                      title={t('planView.logWorkout')}
                       left={<Ionicons name="barbell" size={18} color={theme.colors.onPrimary} />}
                       style={{ marginTop: theme.spacing.md }}
                       onPress={() =>
@@ -244,11 +252,11 @@ export default function ClientPlanView() {
                   <Text variant="title">{m.name}</Text>
                   {items.length > 0 ? (
                     <Text variant="caption" color="link" style={{ fontFamily: theme.fontFamily.bodySemiBold }}>
-                      {mm.kcal} kcal · {mm.protein}P / {mm.carbs}C / {mm.fat}F
+                      {t('planView.macroLine', { kcal: mm.kcal, p: mm.protein, c: mm.carbs, f: mm.fat })}
                     </Text>
                   ) : (
                     <Text variant="caption" muted>
-                      No foods.
+                      {t('planView.noFoods')}
                     </Text>
                   )}
                   {m.note ? <CoachNote text={m.note} /> : null}
@@ -263,7 +271,7 @@ export default function ClientPlanView() {
                       }}
                     >
                       <Text variant="bodyStrong">
-                        {it.food_name} · {it.grams} g
+                        {t('planView.foodLine', { name: it.food_name, grams: it.grams })}
                       </Text>
                       {it.note ? <CoachNote text={it.note} /> : null}
                     </View>

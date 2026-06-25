@@ -4,7 +4,9 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
+import { textStart } from '../../../src/lib/rtl';
 import { deleteExerciseRow, getDayPlanClient, getExerciseRow, swapPlanExercise, updateExerciseRow, type ExerciseRow } from '../../../src/lib/plans';
 import { suggestExerciseSwap, type SwapSuggestion } from '../../../src/lib/coach-ai';
 import { updateExerciseRowSchema, type TrainingBlock } from '../../../src/schemas/plan';
@@ -20,6 +22,7 @@ function intOrNull(s: string): number | null {
 }
 
 export default function ExerciseRowEditor() {
+  const { t } = useTranslation();
   const { role } = useAuth();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -76,7 +79,7 @@ export default function ExerciseRowEditor() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
         <Text variant="body" muted>
-          Exercise not found.
+          {t('exerciseEditor.notFound')}
         </Text>
       </View>
     );
@@ -93,7 +96,7 @@ export default function ExerciseRowEditor() {
       note: note.trim() === '' ? null : note.trim(),
     });
     if (!parsed.success) {
-      Alert.alert('Check your input', 'Sets/rest must be whole numbers.');
+      Alert.alert(t('common.checkInput'), t('exerciseEditor.setsRestError'));
       return;
     }
     setSaving(true);
@@ -101,7 +104,7 @@ export default function ExerciseRowEditor() {
       await updateExerciseRow(id, parsed.data);
       router.back();
     } catch {
-      Alert.alert('Error', 'Could not save.');
+      Alert.alert(t('common.errorTitle'), t('exerciseEditor.saveError'));
       setSaving(false);
     }
   }
@@ -114,9 +117,9 @@ export default function ExerciseRowEditor() {
       if (res.status === 'suggested' && res.suggestions) {
         setSwaps(res.suggestions);
       } else if (res.status === 'rate_limited') {
-        Alert.alert('Daily limit reached', 'You’ve reached today’s suggestion limit. Try again tomorrow.');
+        Alert.alert(t('exerciseEditor.dailyLimitTitle'), t('exerciseEditor.dailyLimitBody'));
       } else {
-        Alert.alert('No suggestions', 'Could not find a suitable swap. Please try again.');
+        Alert.alert(t('exerciseEditor.noSuggestionsTitle'), t('exerciseEditor.noSuggestionsBody'));
       }
     } finally {
       setSwapBusy(false);
@@ -124,16 +127,16 @@ export default function ExerciseRowEditor() {
   }
 
   function onApplySwap(s: SwapSuggestion) {
-    Alert.alert('Swap exercise', `Replace "${row!.exercise_name}" with "${s.name}"? Sets, reps and notes are kept.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('exerciseEditor.swapTitle'), t('exerciseEditor.swapConfirm', { from: row!.exercise_name, to: s.name }), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Swap',
+        text: t('exerciseEditor.swapAction'),
         onPress: async () => {
           try {
             await swapPlanExercise(id!, s.exercise_id, s.name);
             router.back();
           } catch {
-            Alert.alert('Error', 'Could not swap the exercise.');
+            Alert.alert(t('common.errorTitle'), t('exerciseEditor.swapError'));
           }
         },
       },
@@ -141,17 +144,17 @@ export default function ExerciseRowEditor() {
   }
 
   function onDelete() {
-    Alert.alert('Remove exercise', `Remove "${row!.exercise_name}" from this day?`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('exerciseEditor.removeTitle'), t('exerciseEditor.removeConfirm', { name: row!.exercise_name }), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await deleteExerciseRow(id!);
             router.back();
           } catch {
-            Alert.alert('Error', 'Could not remove.');
+            Alert.alert(t('common.errorTitle'), t('exerciseEditor.removeError'));
           }
         },
       },
@@ -165,8 +168,8 @@ export default function ExerciseRowEditor() {
           <Text variant="h2">{row.exercise_name}</Text>
 
           <View style={{ gap: theme.spacing.sm }}>
-            <Text variant="label" muted>
-              Block
+            <Text variant="label" muted style={textStart}>
+              {t('exerciseEditor.block')}
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
               {BLOCK_ORDER.map((b) => {
@@ -194,19 +197,19 @@ export default function ExerciseRowEditor() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-            <Input label="Sets" containerStyle={{ flex: 1 }} value={sets} onChangeText={setSets} keyboardType="number-pad" placeholder="e.g. 4" />
-            <Input label="Reps" containerStyle={{ flex: 1 }} value={reps} onChangeText={setReps} placeholder="e.g. 8-12" />
+            <Input label={t('exerciseEditor.sets')} containerStyle={{ flex: 1 }} value={sets} onChangeText={setSets} keyboardType="number-pad" placeholder={t('exerciseEditor.setsPlaceholder')} />
+            <Input label={t('exerciseEditor.reps')} containerStyle={{ flex: 1 }} value={reps} onChangeText={setReps} placeholder={t('exerciseEditor.repsPlaceholder')} />
           </View>
           <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-            <Input label="Rest (sec)" containerStyle={{ flex: 1 }} value={rest} onChangeText={setRest} keyboardType="number-pad" placeholder="e.g. 120" />
-            <Input label="Tempo" containerStyle={{ flex: 1 }} value={tempo} onChangeText={setTempo} placeholder="e.g. 3-1-1-0" />
+            <Input label={t('exerciseEditor.rest')} containerStyle={{ flex: 1 }} value={rest} onChangeText={setRest} keyboardType="number-pad" placeholder={t('exerciseEditor.restPlaceholder')} />
+            <Input label={t('exerciseEditor.tempo')} containerStyle={{ flex: 1 }} value={tempo} onChangeText={setTempo} placeholder={t('exerciseEditor.tempoPlaceholder')} />
           </View>
 
           <Input
-            label="Note for the trainee"
+            label={t('exerciseEditor.noteLabel')}
             value={note}
             onChangeText={setNote}
-            placeholder="Cues, e.g. Knees out, pause at bottom"
+            placeholder={t('exerciseEditor.notePlaceholder')}
             multiline
             style={{ minHeight: 70, textAlignVertical: 'top' }}
           />
@@ -215,7 +218,7 @@ export default function ExerciseRowEditor() {
           {clientId ? (
             <View style={{ gap: theme.spacing.sm }}>
               <Button
-                title="Suggest a swap (injury-aware)"
+                title={t('exerciseEditor.suggestSwap')}
                 variant="ghost"
                 left={<Ionicons name="sparkles" size={16} color={theme.colors.primary} />}
                 onPress={onSuggestSwap}
@@ -231,7 +234,7 @@ export default function ExerciseRowEditor() {
                       </Text>
                     </View>
                     <Text variant="caption" color="primary">
-                      Swap ›
+                      {t('exerciseEditor.swapAction')} ›
                     </Text>
                   </View>
                 </GlassCard>
@@ -239,8 +242,8 @@ export default function ExerciseRowEditor() {
             </View>
           ) : null}
 
-          <Button title="Save" onPress={onSave} loading={saving} size="lg" style={{ marginTop: theme.spacing.sm }} />
-          <Button title="Remove exercise" variant="ghost" onPress={onDelete} />
+          <Button title={t('common.save')} onPress={onSave} loading={saving} size="lg" style={{ marginTop: theme.spacing.sm }} />
+          <Button title={t('exerciseEditor.removeExercise')} variant="ghost" onPress={onDelete} />
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
