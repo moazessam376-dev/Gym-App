@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
 import { deleteMealItem, getMealItem, updateMealItem, type MealItem } from '../../../src/lib/plans';
 import { updateMealItemSchema } from '../../../src/schemas/plan';
@@ -16,6 +17,7 @@ function intOr0(s: string): number {
 }
 
 export default function MealItemEditor() {
+  const { t } = useTranslation();
   const { role } = useAuth();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -58,7 +60,7 @@ export default function MealItemEditor() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
         <Text variant="body" muted>
-          Item not found.
+          {t('mealItem.notFound')}
         </Text>
       </View>
     );
@@ -70,7 +72,7 @@ export default function MealItemEditor() {
     if (!id) return;
     const g = intOr0(grams);
     if (g <= 0) {
-      Alert.alert('Check your input', 'Enter grams greater than 0.');
+      Alert.alert(t('mealItem.checkInputTitle'), t('mealItem.checkInputBody'));
       return;
     }
     const parsed = updateMealItemSchema.safeParse({ grams: g, note: note.trim() === '' ? null : note.trim() });
@@ -80,23 +82,23 @@ export default function MealItemEditor() {
       await updateMealItem(id, parsed.data);
       router.back();
     } catch {
-      Alert.alert('Error', 'Could not save.');
+      Alert.alert(t('common.errorTitle'), t('mealItem.saveError'));
       setSaving(false);
     }
   }
 
   function onDelete() {
-    Alert.alert('Remove food', `Remove "${item!.food_name}" from this meal?`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('mealItem.removeTitle'), t('mealItem.removeConfirm', { name: item!.food_name }), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await deleteMealItem(id!);
             router.back();
           } catch {
-            Alert.alert('Error', 'Could not remove.');
+            Alert.alert(t('common.errorTitle'), t('mealItem.removeError'));
           }
         },
       },
@@ -110,29 +112,45 @@ export default function MealItemEditor() {
           <View>
             <Text variant="h2">{item.food_name}</Text>
             <Text variant="caption" muted>
-              {item.kcal_per_100g} kcal · {item.protein_g_per_100g}P / {item.carbs_g_per_100g}C / {item.fat_g_per_100g}F per 100g
+              {t('mealItem.per100', {
+                kcal: item.kcal_per_100g,
+                p: item.protein_g_per_100g,
+                c: item.carbs_g_per_100g,
+                f: item.fat_g_per_100g,
+              })}
             </Text>
           </View>
 
-          <Input label="Grams" value={grams} onChangeText={setGrams} keyboardType="number-pad" placeholder="e.g. 150" />
+          <Input
+            label={t('mealItem.grams')}
+            value={grams}
+            onChangeText={setGrams}
+            keyboardType="number-pad"
+            placeholder={t('mealItem.gramsPlaceholder')}
+          />
 
           <GlassCard glowColor={theme.colors.primary}>
             <Text variant="title" color="primary">
-              {preview.kcal} kcal · {preview.protein}P / {preview.carbs}C / {preview.fat}F
+              {t('mealItem.macroPreview', {
+                kcal: preview.kcal,
+                p: preview.protein,
+                c: preview.carbs,
+                f: preview.fat,
+              })}
             </Text>
           </GlassCard>
 
           <Input
-            label="Note for the trainee"
+            label={t('mealItem.noteLabel')}
             value={note}
             onChangeText={setNote}
-            placeholder="e.g. cooked weight"
+            placeholder={t('mealItem.notePlaceholder')}
             multiline
             style={{ minHeight: 70, textAlignVertical: 'top' }}
           />
 
-          <Button title="Save" onPress={onSave} loading={saving} size="lg" style={{ marginTop: theme.spacing.sm }} />
-          <Button title="Remove food" variant="ghost" onPress={onDelete} />
+          <Button title={t('common.save')} onPress={onSave} loading={saving} size="lg" style={{ marginTop: theme.spacing.sm }} />
+          <Button title={t('mealItem.removeFood')} variant="ghost" onPress={onDelete} />
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>

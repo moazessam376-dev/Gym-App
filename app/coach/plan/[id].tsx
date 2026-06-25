@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
 import { confirmDestructive } from '../../../src/lib/confirm';
 import {
@@ -58,6 +59,7 @@ import { adjustPlan, getPlanInsight } from '../../../src/lib/coach-ai';
 import { theme } from '../../../src/theme';
 
 export default function PlanEditor() {
+  const { t } = useTranslation();
   const { role } = useAuth();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -152,7 +154,7 @@ export default function PlanEditor() {
   if (!plan || !id) {
     return (
       <View style={styles.center}>
-        <Text style={styles.empty}>Plan not found.</Text>
+        <Text style={styles.empty}>{t('planEditor.notFound')}</Text>
       </View>
     );
   }
@@ -179,7 +181,7 @@ export default function PlanEditor() {
       const w = await createWeek({ plan_id: id!, name: `Week ${weeks.length + 1}`, position: weeks.length });
       await refreshWeeks(w.id);
     } catch {
-      Alert.alert('Error', 'Could not add a week.');
+      Alert.alert(t('common.errorTitle'), t('planEditor.addWeekError'));
     } finally {
       setBusy(false);
     }
@@ -192,7 +194,7 @@ export default function PlanEditor() {
       const newWeek = await duplicateWeek(weekId);
       await refreshWeeks(newWeek);
     } catch {
-      Alert.alert('Error', 'Could not duplicate the week.');
+      Alert.alert(t('common.errorTitle'), t('planEditor.duplicateWeekError'));
     } finally {
       setBusy(false);
     }
@@ -201,16 +203,16 @@ export default function PlanEditor() {
   async function onDeleteWeek() {
     if (!weekId) return;
     if (weeks.length <= 1) {
-      Alert.alert('Keep one week', 'A plan needs at least one week.');
+      Alert.alert(t('planEditor.keepOneWeekTitle'), t('planEditor.keepOneWeekBody'));
       return;
     }
-    if (!(await confirmDestructive('Delete week', 'Delete this week and all its days?'))) return;
+    if (!(await confirmDestructive(t('planEditor.deleteWeekTitle'), t('planEditor.deleteWeekBody')))) return;
     setBusy(true);
     try {
       await deleteWeek(weekId);
       await refreshWeeks();
     } catch {
-      Alert.alert('Error', 'Could not delete the week.');
+      Alert.alert(t('common.errorTitle'), t('planEditor.deleteWeekError'));
     } finally {
       setBusy(false);
     }
@@ -230,29 +232,29 @@ export default function PlanEditor() {
       }
       setNewName('');
     } catch {
-      Alert.alert('Error', 'Could not add. Please try again.');
+      Alert.alert(t('common.errorTitle'), t('planEditor.addError'));
     } finally {
       setBusy(false);
     }
   }
 
   async function onDeleteDay(dayId: string, name: string) {
-    if (!(await confirmDestructive('Delete day', `Delete "${name}" and everything in it?`))) return;
+    if (!(await confirmDestructive(t('planEditor.deleteDayTitle'), t('planEditor.deleteContainerBody', { name })))) return;
     try {
       await deleteDay(dayId);
       if (weekId) await loadWeekDays(weekId);
     } catch {
-      Alert.alert('Error', 'Could not delete.');
+      Alert.alert(t('common.errorTitle'), t('planEditor.deleteError'));
     }
   }
 
   async function onDeleteMeal(mealId: string, name: string) {
-    if (!(await confirmDestructive('Delete meal', `Delete "${name}" and everything in it?`))) return;
+    if (!(await confirmDestructive(t('planEditor.deleteMealTitle'), t('planEditor.deleteContainerBody', { name })))) return;
     try {
       await deleteMeal(mealId);
       await load();
     } catch {
-      Alert.alert('Error', 'Could not delete.');
+      Alert.alert(t('common.errorTitle'), t('planEditor.deleteError'));
     }
   }
 
@@ -269,7 +271,7 @@ export default function PlanEditor() {
       await updateDay(other.id, { position: day.position });
       await loadWeekDays(weekId);
     } catch {
-      Alert.alert('Error', 'Could not reorder.');
+      Alert.alert(t('common.errorTitle'), t('planEditor.reorderError'));
     } finally {
       setBusy(false);
     }
@@ -282,7 +284,7 @@ export default function PlanEditor() {
       await setPlanStatus(plan.id, published ? 'draft' : 'published');
       await load();
     } catch {
-      Alert.alert('Error', 'Could not update status.');
+      Alert.alert(t('common.errorTitle'), t('planEditor.statusError'));
     } finally {
       setBusy(false);
     }
@@ -314,11 +316,11 @@ export default function PlanEditor() {
         setAdjustPrompt('');
         await load();
       } else if (res.status === 'not_draft') {
-        Alert.alert('Publish first', 'Only draft plans can be adjusted. Unpublish it to make changes.');
+        Alert.alert(t('planEditor.publishFirstTitle'), t('planEditor.publishFirstBody'));
       } else if (res.status === 'rate_limited') {
-        Alert.alert('Daily limit reached', 'You’ve reached today’s AI limit. Try again tomorrow.');
+        Alert.alert(t('planEditor.aiLimitTitle'), t('planEditor.aiLimitBody'));
       } else {
-        Alert.alert('Could not adjust', 'The AI adjustment failed. Please try again.');
+        Alert.alert(t('planEditor.adjustFailTitle'), t('planEditor.adjustFailBody'));
       }
     } finally {
       setAdjustBusy(false);
@@ -364,20 +366,20 @@ export default function PlanEditor() {
           {/* Header — editable title */}
           <View style={styles.titleRow}>
             <View style={styles.flex}>
-              <EditableText value={plan.title} onSave={savePlanTitle} textStyle={styles.title} placeholder="Plan name" />
+              <EditableText value={plan.title} onSave={savePlanTitle} textStyle={styles.title} placeholder={t('planEditor.planNamePlaceholder')} />
             </View>
             <View style={[styles.status, isTemplate ? styles.template : PLAN_STATUS_STYLE[plan.status]]}>
-              <Text style={styles.statusText}>{isTemplate ? 'template' : plan.status}</Text>
+              <Text style={styles.statusText}>{isTemplate ? t('planEditor.template') : t(`planStatus.${plan.status}`)}</Text>
             </View>
           </View>
-          <Text style={styles.type}>{plan.type}</Text>
+          <Text style={styles.type}>{t(`common.${plan.type}`)}</Text>
 
           {isTemplate ? (
             <Pressable
               style={[styles.headerBtn, styles.assign]}
               onPress={() => router.push({ pathname: '/coach/assign/[id]', params: { id: plan.id } })}
             >
-              <Text style={styles.headerBtnText}>Assign to a client</Text>
+              <Text style={styles.headerBtnText}>{t('planEditor.assignToClient')}</Text>
             </Pressable>
           ) : (
             <Pressable
@@ -386,7 +388,7 @@ export default function PlanEditor() {
               disabled={busy}
             >
               <Text style={styles.headerBtnText}>
-                {published ? 'Unpublish (back to draft)' : 'Publish to client'}
+                {published ? t('planEditor.unpublish') : t('planEditor.publish')}
               </Text>
             </Pressable>
           )}
@@ -394,22 +396,27 @@ export default function PlanEditor() {
           {/* Adjust with AI — drafts only (published plans are locked). */}
           {plan.status === 'draft' ? (
             <Pressable style={[styles.headerBtn, styles.adjust]} onPress={openAdjust} disabled={busy}>
-              <Text style={styles.headerBtnText}>✨ Adjust with AI</Text>
+              <Text style={styles.headerBtnText}>{t('planEditor.adjustWithAi')}</Text>
             </Pressable>
           ) : null}
 
           <NoteEditor
-            label="Plan note"
+            addPrompt={t('planEditor.addPlanNote')}
             value={plan.note}
-            placeholder="Overall note for the trainee (e.g. focus on tempo this block)"
+            placeholder={t('planEditor.planNotePlaceholder')}
             onSave={savePlanNote}
           />
 
           {!isTraining && meals.length > 0 ? (
             <View style={styles.totalCard}>
-              <Text style={styles.totalLabel}>PLAN TOTAL</Text>
+              <Text style={styles.totalLabel}>{t('planEditor.planTotal')}</Text>
               <Text style={styles.totalMacros}>
-                {planMacros.kcal} kcal · {planMacros.protein}P / {planMacros.carbs}C / {planMacros.fat}F
+                {t('planView.macroLine', {
+                  kcal: planMacros.kcal,
+                  p: planMacros.protein,
+                  c: planMacros.carbs,
+                  f: planMacros.fat,
+                })}
               </Text>
             </View>
           ) : null}
@@ -428,17 +435,17 @@ export default function PlanEditor() {
                   </Pressable>
                 ))}
                 <Pressable style={styles.weekAdd} onPress={onAddWeek} disabled={busy}>
-                  <Text style={styles.weekAddText}>＋ Week</Text>
+                  <Text style={styles.weekAddText}>{t('planEditor.addWeek')}</Text>
                 </Pressable>
               </ScrollView>
               {weekId ? (
                 <View style={styles.weekActions}>
                   <Pressable onPress={onDuplicateWeek} disabled={busy} hitSlop={6}>
-                    <Text style={styles.weekActionText}>Duplicate this week</Text>
+                    <Text style={styles.weekActionText}>{t('planEditor.duplicateWeek')}</Text>
                   </Pressable>
                   {weeks.length > 1 ? (
                     <Pressable onPress={onDeleteWeek} disabled={busy} hitSlop={6}>
-                      <Text style={[styles.weekActionText, styles.weekDelete]}>Delete week</Text>
+                      <Text style={[styles.weekActionText, styles.weekDelete]}>{t('planEditor.deleteWeek')}</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -487,12 +494,12 @@ export default function PlanEditor() {
                 style={styles.input}
                 value={newName}
                 onChangeText={setNewName}
-                placeholder={isTraining ? 'New day (e.g. Arms)' : 'New meal (e.g. Breakfast)'}
+                placeholder={isTraining ? t('planEditor.newDayPlaceholder') : t('planEditor.newMealPlaceholder')}
                 placeholderTextColor={theme.colors.textMuted}
                 editable={!busy}
               />
               <Pressable style={styles.addBtn} onPress={onAddContainer} disabled={busy}>
-                <Text style={styles.addBtnText}>Add {isTraining ? 'day' : 'meal'}</Text>
+                <Text style={styles.addBtnText}>{isTraining ? t('planEditor.addDay') : t('planEditor.addMeal')}</Text>
               </Pressable>
             </View>
           ) : null}
@@ -506,32 +513,32 @@ export default function PlanEditor() {
           <Pressable style={styles.sheetOverlay} onPress={() => !adjustBusy && setAdjustOpen(false)}>
             <Pressable style={styles.sheet} onPress={Keyboard.dismiss}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={styles.sheetTitle}>✨ Adjust with AI</Text>
+                <Text style={styles.sheetTitle}>{t('planEditor.adjustWithAi')}</Text>
                 <Pressable onPress={() => !adjustBusy && setAdjustOpen(false)} hitSlop={8}>
                   <Text style={{ color: theme.colors.textMuted, fontSize: 22 }}>✕</Text>
                 </Pressable>
               </View>
               <Text style={styles.sheetHint}>
-                Tell the AI how to change this draft (e.g. “make it harder”, “more compound lifts”, “lower carbs”). It rewrites the plan; you review before publishing.
+                {t('planEditor.adjustHint')}
               </Text>
               <TextInput
                 style={styles.adjustInput}
                 value={adjustPrompt}
                 onChangeText={setAdjustPrompt}
-                placeholder="e.g. add more volume for chest, swap in dumbbell work"
+                placeholder={t('planEditor.adjustPlaceholder')}
                 placeholderTextColor={theme.colors.textMuted}
                 editable={!adjustBusy}
                 multiline
               />
               <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
                 <Pressable onPress={() => !adjustBusy && setAdjustOpen(false)} style={{ paddingVertical: 13, paddingHorizontal: 16 }}>
-                  <Text style={{ color: theme.colors.link, fontSize: 15, fontWeight: '600' }}>Cancel</Text>
+                  <Text style={{ color: theme.colors.link, fontSize: 15, fontWeight: '600' }}>{t('common.cancel')}</Text>
                 </Pressable>
                 <Pressable style={[styles.adjustSend, adjustBusy && { opacity: 0.6 }]} onPress={onAdjust} disabled={adjustBusy}>
                   {adjustBusy ? (
                     <ActivityIndicator color={theme.colors.onPrimary} />
                   ) : (
-                    <Text style={styles.adjustSendText}>Adjust plan</Text>
+                    <Text style={styles.adjustSendText}>{t('planEditor.adjustPlan')}</Text>
                   )}
                 </Pressable>
               </View>
@@ -555,23 +562,24 @@ function EditableText({
   textStyle: object;
   placeholder?: string;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value);
   const [saving, setSaving] = useState(false);
 
   async function save() {
-    const t = text.trim();
-    if (t.length === 0) {
+    const trimmed = text.trim();
+    if (trimmed.length === 0) {
       setText(value);
       setEditing(false);
       return;
     }
     setSaving(true);
     try {
-      await onSave(t);
+      await onSave(trimmed);
       setEditing(false);
     } catch {
-      Alert.alert('Error', 'Could not save.');
+      Alert.alert(t('common.errorTitle'), t('planEditor.saveError'));
     } finally {
       setSaving(false);
     }
@@ -605,7 +613,7 @@ function EditableText({
         returnKeyType="done"
       />
       <Pressable onPress={save} disabled={saving} hitSlop={8}>
-        <Text style={styles.noteSave}>{saving ? '…' : 'Save'}</Text>
+        <Text style={styles.noteSave}>{saving ? '…' : t('common.save')}</Text>
       </Pressable>
     </View>
   );
@@ -613,16 +621,17 @@ function EditableText({
 
 /** Inline editable coach comment (optional, multiline). */
 function NoteEditor({
-  label,
+  addPrompt,
   value,
   placeholder,
   onSave,
 }: {
-  label: string;
+  addPrompt: string;
   value: string | null;
   placeholder: string;
   onSave: (text: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value ?? '');
   const [saving, setSaving] = useState(false);
@@ -633,7 +642,7 @@ function NoteEditor({
       await onSave(text);
       setEditing(false);
     } catch {
-      Alert.alert('Error', 'Could not save the note.');
+      Alert.alert(t('common.errorTitle'), t('planEditor.saveNoteError'));
     } finally {
       setSaving(false);
     }
@@ -649,7 +658,7 @@ function NoteEditor({
         }}
       >
         <Text style={styles.noteIcon}>💬</Text>
-        {value ? <Text style={styles.noteText}>{value}</Text> : <Text style={styles.notePrompt}>{`Add ${label.toLowerCase()}`}</Text>}
+        {value ? <Text style={styles.noteText}>{value}</Text> : <Text style={styles.notePrompt}>{addPrompt}</Text>}
       </Pressable>
     );
   }
@@ -667,10 +676,10 @@ function NoteEditor({
       />
       <View style={styles.noteBtns}>
         <Pressable onPress={() => setEditing(false)} disabled={saving} hitSlop={6}>
-          <Text style={styles.noteCancel}>Cancel</Text>
+          <Text style={styles.noteCancel}>{t('common.cancel')}</Text>
         </Pressable>
         <Pressable onPress={save} disabled={saving} hitSlop={6}>
-          <Text style={styles.noteSave}>{saving ? 'Saving…' : 'Save'}</Text>
+          <Text style={styles.noteSave}>{saving ? t('planEditor.saving') : t('common.save')}</Text>
         </Pressable>
       </View>
     </View>
@@ -702,11 +711,12 @@ function DayCard({
   onSaveName: (text: string) => Promise<void>;
   onSaveNote: (text: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.card}>
       <View style={styles.cardHead}>
         <View style={styles.flex}>
-          <EditableText value={day.name} onSave={onSaveName} textStyle={styles.cardTitle} placeholder="Day name" />
+          <EditableText value={day.name} onSave={onSaveName} textStyle={styles.cardTitle} placeholder={t('planEditor.dayNamePlaceholder')} />
         </View>
         <Pressable hitSlop={8} onPress={onMoveUp} disabled={!canMoveUp}>
           <Text style={[styles.move, !canMoveUp && styles.moveOff]}>▲</Text>
@@ -718,7 +728,7 @@ function DayCard({
           <Text style={styles.remove}>✕</Text>
         </Pressable>
       </View>
-      <NoteEditor label="Day note" value={day.note} placeholder="Note for this day (e.g. rest 3 min on heavy sets)" onSave={onSaveNote} />
+      <NoteEditor addPrompt={t('planEditor.addDayNote')} value={day.note} placeholder={t('planEditor.dayNotePlaceholder')} onSave={onSaveNote} />
       {BLOCK_ORDER.filter((b) => exercises.some((e) => e.block === b)).map((b) => (
         <View key={b}>
           <Text style={styles.blockLabel}>{BLOCK_LABEL[b]}</Text>
@@ -728,9 +738,12 @@ function DayCard({
               <Pressable key={e.id} style={styles.exRow} onPress={() => onOpenExercise(e.id)}>
                 <Text style={styles.exName}>{e.exercise_name}</Text>
                 <Text style={styles.exMeta}>
-                  {[e.sets != null ? `${e.sets}×${e.reps ?? '—'}` : null, e.rest_seconds != null ? `${e.rest_seconds}s rest` : null]
+                  {[
+                    e.sets != null ? `${e.sets}×${e.reps ?? '—'}` : null,
+                    e.rest_seconds != null ? t('planView.restShort', { n: e.rest_seconds }) : null,
+                  ]
                     .filter(Boolean)
-                    .join('  ·  ') || 'tap to set details'}
+                    .join('  ·  ') || t('planEditor.tapToSetDetails')}
                 </Text>
                 {e.note ? <Text style={styles.exNote}>“{e.note}”</Text> : null}
               </Pressable>
@@ -738,7 +751,7 @@ function DayCard({
         </View>
       ))}
       <Pressable style={styles.addInline} onPress={onAddExercise}>
-        <Text style={styles.addInlineText}>＋ Add exercise</Text>
+        <Text style={styles.addInlineText}>{t('planEditor.addExercise')}</Text>
       </Pressable>
     </View>
   );
@@ -757,6 +770,7 @@ function MealCard({
   onOpenItem: (itemId: string) => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const macros = sumMacros(items);
   return (
     <View style={styles.card}>
@@ -768,17 +782,17 @@ function MealCard({
       </View>
       {items.length > 0 ? (
         <Text style={styles.mealMacros}>
-          {macros.kcal} kcal · {macros.protein}P / {macros.carbs}C / {macros.fat}F
+          {t('planView.macroLine', { kcal: macros.kcal, p: macros.protein, c: macros.carbs, f: macros.fat })}
         </Text>
       ) : null}
       {items.map((it) => (
         <Pressable key={it.id} style={styles.exRow} onPress={() => onOpenItem(it.id)}>
           <Text style={styles.exName}>{it.food_name}</Text>
-          <Text style={styles.exMeta}>{it.grams} g</Text>
+          <Text style={styles.exMeta}>{t('planEditor.gramsShort', { grams: it.grams })}</Text>
         </Pressable>
       ))}
       <Pressable style={styles.addInline} onPress={onAddFood}>
-        <Text style={styles.addInlineText}>＋ Add food</Text>
+        <Text style={styles.addInlineText}>{t('planEditor.addFood')}</Text>
       </Pressable>
     </View>
   );
