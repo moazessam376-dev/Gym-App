@@ -675,6 +675,8 @@ export default function ChatThread() {
     try {
       const sent = await sendMessage({ recipient_id: otherId, body, reply_to_id: replyId });
       setMessages((prev) => (prev.some((x) => x.id === sent.id) ? prev : [sent, ...prev]));
+      // My own send won't arrive via realtime (recipient-filtered) → re-sort the chat list myself.
+      queryClient.invalidateQueries({ queryKey: ['conversation-previews'] });
     } catch (err) {
       setInput(body); // restore on failure
       if (replyTo) setReplyTo(replyTo);
@@ -721,6 +723,7 @@ export default function ChatThread() {
       const mediaId = await uploadVoiceNote(uri);
       const sent = await sendMessage({ recipient_id: otherId, body: '', media_id: mediaId });
       setMessages((prev) => (prev.some((x) => x.id === sent.id) ? prev : [sent, ...prev]));
+      queryClient.invalidateQueries({ queryKey: ['conversation-previews'] }); // re-sort the chat list (own send)
     } catch (err) {
       if (errIs(err, 'banned')) setBanned(true);
       else Alert.alert(t('common.error'), t('chat.sendFailed'));

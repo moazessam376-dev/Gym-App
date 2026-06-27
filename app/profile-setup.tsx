@@ -336,7 +336,9 @@ export default function ProfileSetup() {
     t('profileSetup.step.targets'),
     t('profileSetup.step.preferences'),
   ];
-  const canAdvance = step !== 0 || goal != null; // step 1 needs a goal — the wizard's point
+  // A goal is the wizard's point — required to advance OR save, on every step (so the
+  // step-dot jump can't reach Save with a null goal, not just the linear Next path).
+  const canAdvance = goal != null;
   const isLast = step === ATHLETE_STEPS - 1;
   const goNext = () => (isLast ? onSave() : setStep((s) => Math.min(ATHLETE_STEPS - 1, s + 1)));
 

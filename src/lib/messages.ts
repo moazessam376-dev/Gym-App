@@ -222,11 +222,19 @@ export async function removeReaction(input: ReactToMessage): Promise<void> {
  * channel; call `supabase.removeChannel(channel)` to unsubscribe. (Own sent/edited
  * messages are reflected optimistically by the caller, so we only listen for the
  * counterpart's inserts + edits.)
+ *
+ * `channelKey` makes the channel TOPIC unique per subscriber. Two subscriptions must
+ * never share a topic: Supabase returns the existing channel for a duplicate topic, and
+ * adding `.on('postgres_changes', …)` to an already-`subscribe()`d channel throws
+ * ("cannot add postgres_changes callbacks after subscribe()"). The app-root chat-list
+ * listener and the open chat thread both watch my incoming messages, so they pass
+ * DISTINCT keys ('previews' vs the default 'to').
  */
 export function subscribeToIncoming(
   myUserId: string,
   onInsert: (m: Message) => void,
   onEdit?: (m: Message) => void,
+  channelKey = 'to',
 ): RealtimeChannel {
   // Raw realtime rows have the columns (incl. reply_to_id, workout_note_id) but not the
   // embedded reply_to quote / workout_note — default them to null. A live note-card
@@ -237,7 +245,7 @@ export function subscribeToIncoming(
     workout_note: (row as Message).workout_note ?? null,
   });
   return supabase
-    .channel(`messages:to:${myUserId}`)
+    .channel(`messages:${channelKey}:${myUserId}`)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${myUserId}` },
