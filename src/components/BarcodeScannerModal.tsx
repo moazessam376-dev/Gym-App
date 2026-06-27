@@ -1,10 +1,15 @@
 // Barcode scanner modal for food logging (Slice G4). Wraps expo-camera's CameraView.
 //
-// IMPORTANT: expo-camera is a native module — it only works in a dev-client / standalone
-// build that bundled it, NOT in a JS-only reload of an older build. The camera content is
-// wrapped in an error boundary so a missing native module (or any camera failure) degrades
-// to an "unavailable" message instead of crashing the food screen. The caller should also
-// hide the entry button on web (no camera) — see app/food/add.tsx.
+// RUNTIME: expo-camera ships INSIDE Expo Go (SDK 54), so the scanner works in Expo Go on a
+// PHYSICAL device with no rebuild. A rebuild is only needed for a standalone / EAS / custom
+// dev-client binary that predates the expo-camera dependency (its bundle lacks the native
+// module). The iOS Simulator has no real camera, so it can't decode a barcode there.
+// The camera content is wrapped in an error boundary + onMountError so a missing native
+// module or a failed camera init degrades to an "unavailable" message instead of a silent
+// black screen. The caller hides the entry button on web (no camera) — see app/food/add.tsx.
+//
+// Scanning a barcode shown on a screen is finicky; autofocus="on" + facing="back" make a
+// real product barcode decode reliably.
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Modal, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -36,6 +41,7 @@ function Centered({ children }: { children: ReactNode }) {
 function ScannerBody({ onScanned }: { onScanned: (code: string) => void }) {
   const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
+  const [mountError, setMountError] = useState(false);
   const handled = useRef(false);
 
   useEffect(() => {
@@ -54,10 +60,22 @@ function ScannerBody({ onScanned }: { onScanned: (code: string) => void }) {
       </Centered>
     );
   }
+  if (mountError) {
+    return (
+      <Centered>
+        <Text variant="title" color="#fff" style={{ textAlign: 'center' }}>{t('food.scan.unavailableTitle')}</Text>
+        <Text variant="caption" muted style={{ textAlign: 'center' }}>{t('food.scan.unavailableSub')}</Text>
+      </Centered>
+    );
+  }
 
   return (
     <CameraView
       style={{ flex: 1 }}
+      facing="back"
+      autofocus="on"
+      active
+      onMountError={() => setMountError(true)}
       barcodeScannerSettings={{ barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128'] }}
       onBarcodeScanned={({ data }) => {
         if (handled.current || !data) return;
