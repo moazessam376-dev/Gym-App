@@ -47,7 +47,8 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
   - ✅ **D1 auth/onboarding** — sign-in/up, forgot/reset, onboarding, accept-invite, become-coach, profile, profile-setup
     (new namespaces: auth, onboarding, acceptInvite, becomeCoach, profileSetup, profile; `label()` title-caser replaced
     with dictionary lookups via `labelFor`; a11y on links + option rows; profile save → toast).
-  - ⬜ **D2a** client daily-1 (workout logger, food/add + header date picker, food/preferences)
+  - ✅ **D2a** client daily-1 — workout logger, food/add (+ header date picker), food/preferences
+    (new food + workout namespaces; `label()` removed from both food screens; a11y on toggles/skip).
   - ⬜ **D2b** client daily-2 (5 progress pillars + viewer, messages tab)
   - ⬜ **D3** coach/admin (coach client detail, exercise/food pickers, body-metric, invite, admin/applications, AdminHome)
   - ⬜ **D4** nav titles (`app/_layout.tsx` Stack.Screen titles)
