@@ -51,7 +51,10 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
     (new food + workout namespaces; `label()` removed from both food screens; a11y on toggles/skip).
   - ✅ **D2b** client daily-2 — 5 progress pillars + viewer + messages tab (progress namespace extended +
     new messages namespace; FIELD/COACH_OCR_MESSAGE de-hardcoded; **coach-less chat CTA → accept-invite** landed here).
-  - ⬜ **D3** coach/admin (coach client detail, exercise/food pickers, body-metric, invite, admin/applications, AdminHome)
+  - ✅ **D3** coach/admin — exercise/food pickers, invite, admin/applications, AdminHome, **coach/client/[id].tsx** (589 lines),
+    **coach/body-metric.tsx** (full InBody review screen incl. all medical-term labels).
+    (new coach/admin/clientDetail/bodyMetric namespaces; `label()` removed from all 3 screens that used it; PROMPT_CHIPS → keys;
+    `t`-shadow fixes in client detail; module-scope ExtrasCard/DateField/FoodRow got their own useTranslation).
   - ⬜ **D4** nav titles (`app/_layout.tsx` Stack.Screen titles)
 - ⬜ **E — Catalog expansion** (migration 0048, needs prod go-ahead)
 - ⬜ **F — Coach workflow** (Message button, assign-with-context, AI plan-gen entry points, client-detail sub-tabs, plan-editor UI-kit; + the deferred coach-feedback notification)
