@@ -263,7 +263,15 @@
     "logWorkout": "Log this workout",
     "foodLine": "{{name}} · {{grams}} g"
   },
+  "aiPlan": {
+    "intro": "Pick a client to generate a plan for.",
+    "noClientsTitle": "No clients yet",
+    "noClientsSub": "Invite a client first, then generate a plan for them."
+  },
   "newPlan": {
+    "aiTitle": "AI plan",
+    "aiIntro": "Generate a starting draft for a client from their goals — you review and edit before publishing.",
+    "generateWithAi": "Generate with AI",
     "startBlank": "Start blank",
     "titlePlaceholderTraining": "Plan name (e.g. PPL Hypertrophy)",
     "titlePlaceholderNutrition": "Plan name (e.g. Lean Cut)",
@@ -1019,6 +1027,7 @@
     "clientPlans": "Client plans",
     "planTemplates": "Plan templates",
     "newPlan": "New plan",
+    "generatePlan": "Generate with AI",
     "plan": "Plan",
     "addExercise": "Add exercise",
     "exercise": "Exercise",

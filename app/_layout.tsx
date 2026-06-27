@@ -147,6 +147,7 @@ function RootNavigator() {
       <Stack.Screen name="coach/client/[id]" options={{ headerShown: true, title: t('nav.clientPlans') }} />
       <Stack.Screen name="coach/templates" options={{ headerShown: true, title: t('nav.planTemplates') }} />
       <Stack.Screen name="coach/new-plan" options={{ headerShown: true, title: t('nav.newPlan') }} />
+      <Stack.Screen name="coach/ai-plan" options={{ headerShown: true, title: t('nav.generatePlan') }} />
       <Stack.Screen name="coach/plan/[id]" options={{ headerShown: true, title: t('nav.plan') }} />
       <Stack.Screen name="coach/exercise-picker" options={{ headerShown: true, title: t('nav.addExercise') }} />
       <Stack.Screen name="coach/exercise/[id]" options={{ headerShown: true, title: t('nav.exercise') }} />

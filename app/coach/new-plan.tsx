@@ -9,7 +9,7 @@ import { useAuth } from '../../src/lib/auth-context';
 import { textStart } from '../../src/lib/rtl';
 import { cloneTemplate, createTemplate, createWeek, listSystemTemplates, type Plan } from '../../src/lib/plans';
 import { planTypeSchema, type PlanType } from '../../src/schemas/plan';
-import { Screen, Text, Input, Button, GlassCard, Segmented } from '../../src/components/ui';
+import { Icon, Screen, Text, Input, Button, GlassCard, Segmented } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function NewPlan() {
@@ -90,6 +90,23 @@ export default function NewPlan() {
                   { value: 'nutrition', label: t('common.nutrition') },
                 ]}
               />
+              {/* AI plan-gen is client-scoped → pick a client, then the generator opens. */}
+              <GlassCard glowColor={theme.colors.primary}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                  <Icon name="sparkles" size={16} color={theme.colors.primary} />
+                  <Text variant="label" muted style={{ flex: 1 }}>
+                    {t('newPlan.aiTitle')}
+                  </Text>
+                </View>
+                <Text variant="caption" muted style={[{ marginBottom: theme.spacing.sm }, textStart]}>
+                  {t('newPlan.aiIntro')}
+                </Text>
+                <Button
+                  title={t('newPlan.generateWithAi')}
+                  left={<Icon name="sparkles" size={16} color={theme.colors.onPrimary} />}
+                  onPress={() => router.push({ pathname: '/coach/ai-plan', params: { type } })}
+                />
+              </GlassCard>
               <Text variant="label" muted style={[{ marginTop: theme.spacing.sm }, textStart]}>
                 {t('newPlan.startBlank')}
               </Text>

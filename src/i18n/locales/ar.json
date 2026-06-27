@@ -406,7 +406,15 @@
     "logWorkout": "سجّل التمرين ده",
     "foodLine": "{{name}} · {{grams}} جم"
   },
+  "aiPlan": {
+    "intro": "اختار العميل اللي هتعملّه خطة.",
+    "noClientsTitle": "لسه مفيش عملاء",
+    "noClientsSub": "اعمل دعوة لعميل الأول، وبعدين اعملّه خطة."
+  },
   "newPlan": {
+    "aiTitle": "خطة بالذكاء",
+    "aiIntro": "اعمل مسودة بداية لعميل من أهدافه — تراجعها وتعدّلها قبل النشر.",
+    "generateWithAi": "أنشئ بالذكاء الاصطناعي",
     "startBlank": "ابدأ من الفاضي",
     "titlePlaceholderTraining": "اسم الخطة (مثلاً PPL تضخيم)",
     "titlePlaceholderNutrition": "اسم الخطة (مثلاً تنشيف)",
@@ -1047,6 +1055,7 @@
     "clientPlans": "خطط العميل",
     "planTemplates": "قوالب الخطط",
     "newPlan": "خطة جديدة",
+    "generatePlan": "أنشئ بالذكاء الاصطناعي",
     "plan": "خطة",
     "addExercise": "أضف تمرين",
     "exercise": "تمرين",

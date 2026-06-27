@@ -80,7 +80,14 @@ export default function ClientDetail() {
   const { t } = useTranslation();
   const { role } = useAuth();
   const router = useRouter();
-  const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
+  // openAi/aiType arrive when the coach came from the "Generate with AI" client picker
+  // (app/coach/ai-plan.tsx) — the AI modal opens on mount, pre-set to the chosen type.
+  const { id, name, openAi, aiType: aiTypeParam } = useLocalSearchParams<{
+    id: string;
+    name?: string;
+    openAi?: string;
+    aiType?: string;
+  }>();
   const cacheKey = id ? `coach-client:${id}` : null;
   const cached = readCache<ClientSnapshot>(cacheKey);
 
@@ -99,8 +106,8 @@ export default function ClientDetail() {
   const [tab, setTab] = useState<ClientTab>('overview');
 
   // Coach AI (Phase 13): plan-gen modal + plan-adjustment nudges. Coach-only.
-  const [aiOpen, setAiOpen] = useState(false);
-  const [aiType, setAiType] = useState<PlanType>('training');
+  const [aiOpen, setAiOpen] = useState(openAi === '1');
+  const [aiType, setAiType] = useState<PlanType>(aiTypeParam === 'nutrition' ? 'nutrition' : 'training');
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [nudge, setNudge] = useState<string | null>(cached?.nudge ?? null);
