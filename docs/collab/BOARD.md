@@ -4,7 +4,7 @@ The single source of truth for **what's in flight** across the two agents. **Cla
 keeps this current** (it owns the GitHub surface). Read it at the start of every session.
 For the protocol, see [`WORKFLOW.md`](WORKFLOW.md).
 
-- **`main` baseline:** `6b914d9` (PR #41 — Raptor reskin) — _update when main moves._
+- **`main` baseline:** `abb1d30` (PR #43 — collab workflow setup) — _update when main moves._
 - **Last board update:** 2026-06-27
 
 ## How to read this
@@ -19,7 +19,7 @@ integrated by Claude Code; `cc/*` are Claude-Code-authored. Status: `todo` →
 
 | Task | Owner | Branch | Spec | Status | PR |
 |------|-------|--------|------|--------|----|
-| Two-agent collab workflow docs | Claude Code | `claude/claude-glm-workflow-setup-2b9ou0` | this doc set | in-review | — |
+| Tab-switch black-frame fix | GLM 5-2 | `glm/tab-switch-black-screen` | dev-mode tab flash (`docs/pre-launch-checklist.md`, `CLAUDE.md §13`) | in-review | [#44](https://github.com/moazessam376-dev/Gym-App/pull/44) |
 
 ## Up next (assign an owner before starting)
 
@@ -38,5 +38,12 @@ landed on `main`. The forward roadmap (re-sequenced) lives in
 ---
 
 ## Log (newest first)
+- **2026-06-27** — Integrated GLM's **tab-switch black-frame fix** (`freezeOnBlur: false`
+  on the tabs layout + dropped the volatile `key` on the two `ZoomIn` hero views). GLM's
+  patch arrived paste-mangled (unified-diff prefixes stripped) so it wouldn't `git apply`;
+  re-based the intent by hand per WORKFLOW §4.2 — result is byte-identical to GLM's
+  (post-image blob hashes match). `tsc` + en/ar parity green. **PR #44** on
+  `glm/tab-switch-black-screen` — first run of the two-agent loop; awaiting owner review,
+  **not merged**. (PR #43 — the workflow setup — is now the `main` baseline `abb1d30`.)
 - **2026-06-27** — Set up the Claude Code × GLM parallel workflow: `AGENTS.md`,
   `docs/collab/{WORKFLOW,BOARD,GLM_BRIEF_TEMPLATE}.md`, and a pointer in `CLAUDE.md §14`.
