@@ -211,3 +211,23 @@ build; OAuth (Google/Apple), phone/SMS, a server-enforced account *deactivate*, 
 password-reset deep-link are a **"launch auth" follow-up** (each needs external provider config
 + device testing); gyms/org tenancy, friends/followers, and multi-week AI plan-gen stay deferred
 per the roadmap.
+
+---
+
+## 14. Parallel build with GLM (two-agent workflow)
+
+This repo is built by **two AI agents in parallel**: **Claude Code** (this session — owns
+all GitHub/DB/Edge/deploy work and acts as integrator + security reviewer) and **GLM 5-2**
+(reads the repo and returns changes as a **unified diff**; cannot push, and does **not**
+auto-load this constitution).
+
+- **At the start of every session, read [`/docs/collab/BOARD.md`](/docs/collab/BOARD.md)**
+  for what's in flight, then [`/docs/collab/WORKFLOW.md`](/docs/collab/WORKFLOW.md) for the
+  handoff protocol. The agent-agnostic entry point is [`/AGENTS.md`](/AGENTS.md).
+- Task ownership is decided **per task** by the owner. When GLM takes a task, generate its
+  brief from [`/docs/collab/GLM_BRIEF_TEMPLATE.md`](/docs/collab/GLM_BRIEF_TEMPLATE.md).
+- **You are the review gate for GLM's diffs** — GLM never loaded this file, so check every
+  GLM change against §12 before committing (`WORKFLOW.md §6`).
+- Migrations, `supabase/tests/rls/runner.ts`, Edge Functions, deps, and the i18n locales
+  are collision hot-spots — Claude Code owns them by default (`WORKFLOW.md §5`).
+- **Keep `/docs/collab/BOARD.md` current** as work moves.
