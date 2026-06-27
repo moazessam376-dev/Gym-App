@@ -18,10 +18,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { usePreventRemove } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
-import { confirmDestructive } from '../../../src/lib/confirm';
+import { confirm, confirmDestructive } from '../../../src/lib/confirm';
+import { haptics } from '../../../src/lib/haptics';
 import {
   createDay,
   createMeal,
@@ -57,14 +59,16 @@ import {
   type Macros,
 } from '../../../src/lib/plan-ui';
 import { adjustPlan, getPlanInsight } from '../../../src/lib/coach-ai';
-import { Icon } from '../../../src/components/ui';
+import { Icon, useToast } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 export default function PlanEditor() {
   const { t } = useTranslation();
   const { role } = useAuth();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const navigation = useNavigation();
+  const toast = useToast();
+  const { id, fresh } = useLocalSearchParams<{ id: string; fresh?: string }>();
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [weeks, setWeeks] = useState<Week[]>([]);
@@ -80,6 +84,9 @@ export default function PlanEditor() {
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [adjustPrompt, setAdjustPrompt] = useState('');
   const [adjustBusy, setAdjustBusy] = useState(false);
+  // A freshly cloned/blank template is UNCOMMITTED until the coach taps "Save to my
+  // plans" (or assigns it). `kept` records that commitment for this editor session.
+  const [kept, setKept] = useState(false);
 
   const loadWeekDays = useCallback(async (wid: string) => {
     const ds = await listDays(wid);
@@ -144,6 +151,28 @@ export default function PlanEditor() {
     },
     [loadWeekDays],
   );
+
+  // Don't silently keep a freshly-created template the coach never committed to. While
+  // it's uncommitted, leaving prompts Discard / Keep-editing; Discard deletes the clone
+  // so it never lands in "your plans". Tapping "Save to my plans" (or assigning) clears
+  // this. Templates opened from the list carry no `fresh` flag, so they edit normally.
+  const uncommitted = fresh === '1' && plan?.client_id === null && !kept;
+  usePreventRemove(uncommitted, ({ data }) => {
+    confirm(
+      t('planEditor.keepTitle'),
+      t('planEditor.keepBody'),
+      t('planEditor.discardDraft'),
+      t('common.keepEditing'),
+    ).then(async (discard) => {
+      if (!discard) return; // keep editing → stay
+      try {
+        if (plan) await deletePlan(plan.id);
+      } catch {
+        /* best-effort; leaving anyway */
+      }
+      navigation.dispatch(data.action);
+    });
+  });
 
   if (role && role !== 'coach') return <Redirect href="/" />;
   if (loading) {
@@ -279,6 +308,14 @@ export default function PlanEditor() {
     }
   }
 
+  // Commit a fresh template to "your plans" — it's already in the DB, so this just
+  // clears the discard-on-leave guard and confirms it to the coach.
+  function onKeepTemplate() {
+    setKept(true);
+    haptics.tap();
+    toast.show(t('planEditor.savedToMyPlans'));
+  }
+
   async function onTogglePublish() {
     if (!plan) return;
     setBusy(true);
@@ -403,10 +440,21 @@ export default function PlanEditor() {
             <Text style={styles.draftHint}>{t('planEditor.draftHint')}</Text>
           ) : null}
 
+          {/* Fresh, uncommitted template → an explicit "Save to my plans" (the user's
+              requested fix). Until tapped, leaving the editor discards the clone. */}
+          {uncommitted ? (
+            <Pressable style={[styles.headerBtn, styles.publish]} onPress={onKeepTemplate} disabled={busy}>
+              <Text style={styles.headerBtnText}>{t('planEditor.saveToMyPlans')}</Text>
+            </Pressable>
+          ) : null}
+
           {isTemplate ? (
             <Pressable
               style={[styles.headerBtn, styles.assign]}
-              onPress={() => router.push({ pathname: '/coach/assign/[id]', params: { id: plan.id } })}
+              onPress={() => {
+                setKept(true); // assigning commits the template too
+                router.push({ pathname: '/coach/assign/[id]', params: { id: plan.id } });
+              }}
             >
               <Text style={styles.headerBtnText}>{t('planEditor.assignToClient')}</Text>
             </Pressable>

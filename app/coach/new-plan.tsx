@@ -51,7 +51,8 @@ export default function NewPlan() {
         title.trim() || (type === 'training' ? t('newPlan.defaultTrainingTitle') : t('newPlan.defaultNutritionTitle'));
       const created = await createTemplate(session.user.id, { type, title: name });
       if (type === 'training') await createWeek({ plan_id: created.id, name: 'Week 1', position: 0 });
-      router.replace({ pathname: '/coach/plan/[id]', params: { id: created.id } });
+      // fresh=1 → the editor treats it as uncommitted until "Save to my plans".
+      router.replace({ pathname: '/coach/plan/[id]', params: { id: created.id, fresh: '1' } });
     } catch {
       Alert.alert(t('common.errorTitle'), t('newPlan.createError'));
       setBusy(false);
@@ -63,7 +64,8 @@ export default function NewPlan() {
     setBusy(true);
     try {
       const newId = await cloneTemplate(tpl.id);
-      router.replace({ pathname: '/coach/plan/[id]', params: { id: newId } });
+      // fresh=1 → the editor treats it as uncommitted until "Save to my plans".
+      router.replace({ pathname: '/coach/plan/[id]', params: { id: newId, fresh: '1' } });
     } catch {
       Alert.alert(t('common.errorTitle'), t('newPlan.templateError'));
       setBusy(false);
