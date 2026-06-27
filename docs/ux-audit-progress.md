@@ -34,7 +34,15 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
   - ✅ **Deployed to prod** — `media-delete` is ACTIVE (verify_jwt on). No DB migration, so advisors unchanged.
     The native date picker + haptics need the next **dev-client rebuild**; everything else in A/B works on the
     current JS (run the branch via metro). On a stale native build the coach date tap should be avoided (web ok).
-- ⬜ **C — App-wide quality basics** (toast, haptics breadth, error+retry, pull-to-refresh, unsaved guards)
+- 🔵 **C — App-wide quality basics** — foundation done
+  - ✅ Toast system (`ui/Toast.tsx` + `ToastProvider` at root + `useToast()`), in-house on Reanimated.
+  - ✅ Unsaved-changes guard hook (`src/lib/useUnsavedGuard.ts`, `usePreventRemove` + `confirm`).
+  - ✅ Haptics wired into set-complete/finish/rest (A) + plans makeActive + template save.
+  - ✅ Applied to already-i18n'd surfaces: plans `makeActive` toast; `public-profile-edit` dirty-tracking + guard + save toast.
+  - ⬜ Remainder (error+retry, pull-to-refresh on remaining deep screens, save toasts on the **hardcoded** screens) → folded into **Slice D** per file, to avoid double-touching the 27 English-only screens.
+- ✅ **Template-save fix** (user-reported, plan-management): a freshly cloned/blank template no longer auto-lands
+  in "your plans". `new-plan` passes `fresh=1`; the editor shows **"Save to my plans"** and discards the clone on
+  back-without-save (usePreventRemove). No data-model change. `coach/new-plan.tsx`, `coach/plan/[id].tsx`.
 - ⬜ **D — Full bilingual retrofit + a11y** (D1 auth/onboarding · D2a client daily-1 · D2b client daily-2 · D3 coach/admin · D4 nav titles)
 - ⬜ **E — Catalog expansion** (migration 0048, needs prod go-ahead)
 - ⬜ **F — Coach workflow** (Message button, assign-with-context, AI plan-gen entry points, client-detail sub-tabs, plan-editor UI-kit; + the deferred coach-feedback notification)
