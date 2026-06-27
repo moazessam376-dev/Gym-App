@@ -43,7 +43,14 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
 - ✅ **Template-save fix** (user-reported, plan-management): a freshly cloned/blank template no longer auto-lands
   in "your plans". `new-plan` passes `fresh=1`; the editor shows **"Save to my plans"** and discards the clone on
   back-without-save (usePreventRemove). No data-model change. `coach/new-plan.tsx`, `coach/plan/[id].tsx`.
-- ⬜ **D — Full bilingual retrofit + a11y** (D1 auth/onboarding · D2a client daily-1 · D2b client daily-2 · D3 coach/admin · D4 nav titles)
+- 🔵 **D — Full bilingual retrofit + a11y**
+  - ✅ **D1 auth/onboarding** — sign-in/up, forgot/reset, onboarding, accept-invite, become-coach, profile, profile-setup
+    (new namespaces: auth, onboarding, acceptInvite, becomeCoach, profileSetup, profile; `label()` title-caser replaced
+    with dictionary lookups via `labelFor`; a11y on links + option rows; profile save → toast).
+  - ⬜ **D2a** client daily-1 (workout logger, food/add + header date picker, food/preferences)
+  - ⬜ **D2b** client daily-2 (5 progress pillars + viewer, messages tab)
+  - ⬜ **D3** coach/admin (coach client detail, exercise/food pickers, body-metric, invite, admin/applications, AdminHome)
+  - ⬜ **D4** nav titles (`app/_layout.tsx` Stack.Screen titles)
 - ⬜ **E — Catalog expansion** (migration 0048, needs prod go-ahead)
 - ⬜ **F — Coach workflow** (Message button, assign-with-context, AI plan-gen entry points, client-detail sub-tabs, plan-editor UI-kit; + the deferred coach-feedback notification)
 - ⬜ **G — Larger items** (G1 Ranks→Analytics merge + leaderboard in-page UX · G2 coach_requests funnel · G3 admin console · G4 nutrition barcode/serving sizes)
