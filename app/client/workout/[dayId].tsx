@@ -44,6 +44,7 @@ import {
 import { getMyAthleteProfile } from '../../../src/lib/athlete-profile';
 import {
   createWorkoutNote,
+  deleteWorkoutNote,
   listSessionNotes,
   type NoteCategory,
   type WorkoutNote,
@@ -78,7 +79,7 @@ export default function WorkoutScreen() {
     planId?: string;
     name?: string;
   }>();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { role, session: auth } = useAuth();
   const router = useRouter();
   const userId = auth?.user?.id;
@@ -410,6 +411,32 @@ export default function WorkoutScreen() {
     setNoteBody('');
   }
 
+  // Short, locale-aware date for a note (e.g. "Jun 27") so the athlete can see when they
+  // left it and decide whether to clear it.
+  function noteDate(iso: string): string {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' });
+  }
+
+  // Discard one of the athlete's OWN notes (RLS allows owner delete). Optimistic removal.
+  async function removeNote(id: string) {
+    const ok = await confirm(
+      t('workout.deleteNoteTitle'),
+      t('workout.deleteNoteMsg'),
+      t('common.delete'),
+      t('common.cancel'),
+    );
+    if (!ok) return;
+    const prev = notes;
+    setNotes((cur) => cur.filter((x) => x.id !== id));
+    try {
+      await deleteWorkoutNote(id);
+      haptics.tap();
+    } catch {
+      setNotes(prev); // restore on failure
+    }
+  }
+
   async function saveNote() {
     if (!composer || !userId || noteBody.trim() === '') return;
     setSavingNote(true);
@@ -568,11 +595,24 @@ export default function WorkoutScreen() {
                       >
                         <Icon name="clipboard" size={16} color={tint} />
                         <View style={{ flex: 1, gap: 2 }}>
-                          <Text variant="label" style={{ color: tint, fontSize: 10 }}>
-                            {t(`workout.${n.category}`)}
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                            <Text variant="label" style={{ color: tint, fontSize: 10, flex: 1 }}>
+                              {t(`workout.${n.category}`)}
+                            </Text>
+                            <Text variant="label" muted style={{ fontSize: 10 }}>
+                              {noteDate(n.created_at)}
+                            </Text>
+                          </View>
                           <Text variant="caption">{n.body}</Text>
                         </View>
+                        <Pressable
+                          onPress={() => removeNote(n.id)}
+                          hitSlop={8}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('workout.deleteNote')}
+                        >
+                          <Icon name="close" size={16} color={theme.colors.textMuted} />
+                        </Pressable>
                       </View>
                     );
                   })}
@@ -687,6 +727,18 @@ export default function WorkoutScreen() {
                           {n.exercise_name}
                         </Text>
                       ) : null}
+                      <View style={{ flex: 1 }} />
+                      <Text variant="label" muted style={{ fontSize: 10 }}>
+                        {noteDate(n.created_at)}
+                      </Text>
+                      <Pressable
+                        onPress={() => removeNote(n.id)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('workout.deleteNote')}
+                      >
+                        <Icon name="close" size={16} color={theme.colors.textMuted} />
+                      </Pressable>
                     </View>
                     <Text variant="body">{n.body}</Text>
                   </View>
