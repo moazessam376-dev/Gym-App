@@ -81,6 +81,7 @@ const migrationFiles = [
   '0057_my_rank_opt_in_gate.sql',
   '0058_conversation_previews.sql',
   '0059_harden_conversation_rpcs.sql',
+  '0060_workout_note_hide_and_delete_everywhere.sql',
 ];
 
 const baseUrl =

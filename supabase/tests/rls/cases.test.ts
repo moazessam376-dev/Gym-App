@@ -1783,6 +1783,53 @@ describe('workout note delete keeps the chat copy (0056) — FK SET NULL is not 
   });
 });
 
+describe('workout note: hide vs delete-for-everyone (0060)', () => {
+  const A1_SESSION = '5e550001-0000-0000-0000-000000000001';
+
+  // One transaction (the harness rolls back each asUser() call): the mirror message
+  // is created by the note-insert trigger, so author + act + assert must share a txn.
+  it('"hide from my log" sets hidden_at but keeps the mirrored chat message linked', async () => {
+    await asUser(CLIENT_A1, async (c) => {
+      const note = await c.query(
+        "insert into public.workout_notes (user_id, session_id, category, body) values ($1, $2, 'challenge', 'hide-me note') returning id",
+        [CLIENT_A1.sub, A1_SESSION],
+      );
+      const noteId = note.rows[0].id;
+      expect(
+        (await c.query('select id from public.messages where workout_note_id = $1', [noteId])).rows,
+      ).toHaveLength(1);
+
+      // Hide is a plain owner UPDATE (workout_notes owner UPDATE policy).
+      await c.query('update public.workout_notes set hidden_at = now() where id = $1', [noteId]);
+
+      const note2 = await c.query('select hidden_at from public.workout_notes where id = $1', [noteId]);
+      expect(note2.rows[0].hidden_at).not.toBeNull();
+      // The chat copy is untouched and still a note card (workout_note_id intact).
+      expect(
+        (await c.query('select id from public.messages where workout_note_id = $1', [noteId])).rows,
+      ).toHaveLength(1);
+    });
+  });
+
+  it('delete_workout_note_everywhere removes the note AND retracts its mirrored chat message', async () => {
+    await asUser(CLIENT_A1, async (c) => {
+      const note = await c.query(
+        "insert into public.workout_notes (user_id, session_id, category, body) values ($1, $2, 'challenge', 'nuke-me note') returning id",
+        [CLIENT_A1.sub, A1_SESSION],
+      );
+      const noteId = note.rows[0].id;
+      const mirror = await c.query('select id from public.messages where workout_note_id = $1', [noteId]);
+      expect(mirror.rows).toHaveLength(1);
+      const msgId = mirror.rows[0].id;
+
+      await c.query('select public.delete_workout_note_everywhere($1)', [noteId]);
+
+      expect((await c.query('select id from public.workout_notes where id = $1', [noteId])).rows).toHaveLength(0);
+      expect((await c.query('select id from public.messages where id = $1', [msgId])).rows).toHaveLength(0);
+    });
+  });
+});
+
 describe('nutrition system templates (0022) — clonable global starters (§2)', () => {
   it('a coach sees the seeded nutrition system templates, each with meals + items', async () => {
     const tpls = await asUser(COACH_A, (c) =>

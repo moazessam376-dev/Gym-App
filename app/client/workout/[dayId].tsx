@@ -44,7 +44,8 @@ import {
 import { getMyAthleteProfile } from '../../../src/lib/athlete-profile';
 import {
   createWorkoutNote,
-  deleteWorkoutNote,
+  deleteWorkoutNoteForEveryone,
+  hideWorkoutNote,
   listSessionNotes,
   type NoteCategory,
   type WorkoutNote,
@@ -53,6 +54,7 @@ import { convertDisplay, displayToGrams, formatWeight, gramsToInput, type Weight
 import { confirm } from '../../../src/lib/confirm';
 import { haptics } from '../../../src/lib/haptics';
 import { Icon, Screen, Text, Card, Badge, Button, Chip, Input, ProgressRing } from '../../../src/components/ui';
+import { NoteDeleteSheet } from '../../../src/components/NoteDeleteSheet';
 import { theme } from '../../../src/theme';
 
 const key = (exerciseId: string, setIndex: number) => `${exerciseId}:${setIndex}`;
@@ -99,6 +101,8 @@ export default function WorkoutScreen() {
   // exercise_name -> all-time bests (from history), for PR detection
   const [prInfo, setPrInfo] = useState<Map<string, ExercisePR>>(new Map());
   const [notes, setNotes] = useState<WorkoutNote[]>([]);
+  // The note whose remove-options sheet is open (Hide from my log / Delete for everyone).
+  const [noteMenuFor, setNoteMenuFor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
@@ -418,19 +422,30 @@ export default function WorkoutScreen() {
     return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' });
   }
 
-  // Discard one of the athlete's OWN notes (RLS allows owner delete). Optimistic removal.
-  async function removeNote(id: string) {
-    const ok = await confirm(
-      t('workout.deleteNoteTitle'),
-      t('workout.deleteNoteMsg'),
-      t('common.delete'),
-      t('common.cancel'),
-    );
-    if (!ok) return;
+  // Tapping the trash icon opens a sheet with the two remove intents (0060): "Hide
+  // from my log" keeps the coach's chat copy; "Delete for everyone" also retracts it.
+  function removeNote(id: string) {
+    setNoteMenuFor(id);
+  }
+
+  // Hide from my exercise view only — the note (and its chat copy to the coach) lives on.
+  async function hideNoteFromLog(id: string) {
     const prev = notes;
     setNotes((cur) => cur.filter((x) => x.id !== id));
     try {
-      await deleteWorkoutNote(id);
+      await hideWorkoutNote(id);
+      haptics.tap();
+    } catch {
+      setNotes(prev); // restore on failure
+    }
+  }
+
+  // Delete everywhere — removes the note AND retracts the mirrored chat note card.
+  async function deleteNoteEverywhere(id: string) {
+    const prev = notes;
+    setNotes((cur) => cur.filter((x) => x.id !== id));
+    try {
+      await deleteWorkoutNoteForEveryone(id);
       haptics.tap();
     } catch {
       setNotes(prev); // restore on failure
@@ -861,6 +876,23 @@ export default function WorkoutScreen() {
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Remove-note options (0060): hide from my log vs delete for everyone. */}
+      <NoteDeleteSheet
+        visible={noteMenuFor !== null}
+        busy={false}
+        onHide={() => {
+          const id = noteMenuFor;
+          setNoteMenuFor(null);
+          if (id) hideNoteFromLog(id);
+        }}
+        onDeleteEveryone={() => {
+          const id = noteMenuFor;
+          setNoteMenuFor(null);
+          if (id) deleteNoteEverywhere(id);
+        }}
+        onClose={() => setNoteMenuFor(null)}
+      />
 
       {/* Celebration overlay */}
       {celebrating ? (
