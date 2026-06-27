@@ -3625,4 +3625,11 @@ describe('conversation previews + read-state (0058) — chat list aggregation (�
     );
     expect(a1View.rows).toHaveLength(0); // A1 can't even see B1's row; B1 owns only its own
   });
+
+  it('anon cannot execute the conversation RPCs (0059 — execute revoked from anon)', async () => {
+    await expect(asAnon((c) => c.query('select * from public.list_conversation_previews()'))).rejects.toThrow();
+    await expect(
+      asAnon((c) => c.query('select public.mark_conversation_read($1)', [COACH_A.sub])),
+    ).rejects.toThrow();
+  });
 });

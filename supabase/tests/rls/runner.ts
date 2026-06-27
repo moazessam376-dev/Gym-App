@@ -80,6 +80,7 @@ const migrationFiles = [
   '0056_workout_note_delete_keeps_chat.sql',
   '0057_my_rank_opt_in_gate.sql',
   '0058_conversation_previews.sql',
+  '0059_harden_conversation_rpcs.sql',
 ];
 
 const baseUrl =
