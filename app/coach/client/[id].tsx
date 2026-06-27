@@ -6,6 +6,7 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
 import { deletePlan, listPlansForClient, type Plan } from '../../../src/lib/plans';
 import { confirmDestructive } from '../../../src/lib/confirm';
@@ -45,16 +46,13 @@ type ClientSnapshot = {
   sessions: WorkoutSession[];
 };
 
-function label(s: string): string {
-  return s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
-}
-
 const STATUS_TONE = { draft: 'warning', published: 'success', archived: 'neutral' } as const;
 
 // Quick-add prompt chips so coaches get high-quality AI output without typing much.
-const PROMPT_CHIPS: Record<PlanType, string[]> = {
-  training: ['Push/Pull/Legs split', 'Upper/Lower split', 'Full body', 'Knee-friendly', 'Minimal equipment', 'Progressive overload', 'Include core work'],
-  nutrition: ['High protein', 'Budget-friendly', 'Quick to prepare', 'More vegetables', 'Low carb', 'Vegetarian'],
+// i18n keys under clientDetail.chips.* — labels resolve via t() at render.
+const PROMPT_CHIP_KEYS: Record<PlanType, string[]> = {
+  training: ['ppl', 'ul', 'fullBody', 'kneeFriendly', 'minimalEquipment', 'progressiveOverload', 'includeCore'],
+  nutrition: ['highProtein', 'budget', 'quick', 'moreVeg', 'lowCarb', 'vegetarian'],
 };
 
 /** Append a chip phrase to the prompt (comma-separated), avoiding duplicates. */
@@ -76,6 +74,7 @@ function MiniStat({ value, label }: { value: string; label: string }) {
 }
 
 export default function ClientDetail() {
+  const { t } = useTranslation();
   const { role } = useAuth();
   const router = useRouter();
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
@@ -108,7 +107,7 @@ export default function ClientDetail() {
     if (!id) return;
     try {
       const today = todayLocalDate();
-      const [p, g, t, d, w, s, n, m, o, ins, wk, sess] = await Promise.all([
+      const [p, g, tg, d, w, s, n, m, o, ins, wk, sess] = await Promise.all([
         listPlansForClient(id),
         getAthleteProfileFor(id),
         getTargets(id),
@@ -124,7 +123,7 @@ export default function ClientDetail() {
       ]);
       setPlans(p);
       setGoals(g);
-      setNutTargets(t);
+      setNutTargets(tg);
       setNutDaily(d);
       setNutWeek(w);
       setNutStreak(s);
@@ -135,7 +134,7 @@ export default function ClientDetail() {
       setStreak(wk);
       setSessions(sess);
       writeCache<ClientSnapshot>(cacheKey, {
-        plans: p, goals: g, nutTargets: t, nutDaily: d, nutWeek: w, nutStreak: s, notes: n, metrics: m, pendingOcr: o, nudge: ins?.analysis ?? null, streak: wk, sessions: sess,
+        plans: p, goals: g, nutTargets: tg, nutDaily: d, nutWeek: w, nutStreak: s, notes: n, metrics: m, pendingOcr: o, nudge: ins?.analysis ?? null, streak: wk, sessions: sess,
       });
     } catch {
       /* keep prior */
@@ -180,9 +179,9 @@ export default function ClientDetail() {
   // drop it locally on success, and re-sync from the server on any failure.
   async function onDeletePlan(plan: Plan) {
     const ok = await confirmDestructive(
-      'Delete plan?',
-      `This permanently removes "${plan.title}". This can't be undone.`,
-      'Delete',
+      t('clientDetail.deletePlanTitle'),
+      t('clientDetail.deletePlanBody', { title: plan.title }),
+      t('common.delete'),
     );
     if (!ok) return;
     try {
@@ -203,11 +202,11 @@ export default function ClientDetail() {
         setAiPrompt('');
         router.push({ pathname: '/coach/plan/[id]', params: { id: res.plan_id } });
       } else if (res.status === 'no_profile') {
-        Alert.alert('Profile needed', 'This client hasn’t completed their profile yet, so the plan can’t be personalized.');
+        Alert.alert(t('clientDetail.profileNeededTitle'), t('clientDetail.profileNeededBody'));
       } else if (res.status === 'rate_limited') {
-        Alert.alert('Daily limit reached', 'You’ve generated the maximum number of AI plans today. Try again tomorrow.');
+        Alert.alert(t('clientDetail.dailyLimitTitle'), t('clientDetail.planLimitBody'));
       } else {
-        Alert.alert('Could not generate', 'The AI draft failed. Please try again.');
+        Alert.alert(t('clientDetail.genFailTitle'), t('clientDetail.genFailBody'));
       }
     } finally {
       setAiBusy(false);
@@ -223,11 +222,11 @@ export default function ClientDetail() {
         setNudge(res.analysis);
         setNudgePrompt('');
       } else if (res.status === 'no_data') {
-        Alert.alert('Not enough data', 'This client hasn’t logged enough workouts or nutrition yet for suggestions.');
+        Alert.alert(t('clientDetail.notEnoughTitle'), t('clientDetail.notEnoughBody'));
       } else if (res.status === 'rate_limited') {
-        Alert.alert('Daily limit reached', 'You’ve reached today’s suggestion limit. Try again tomorrow.');
+        Alert.alert(t('clientDetail.dailyLimitTitle'), t('clientDetail.nudgeLimitBody'));
       } else {
-        Alert.alert('Could not analyze', 'The suggestion failed. Please try again.');
+        Alert.alert(t('clientDetail.analyzeFailTitle'), t('clientDetail.analyzeFailBody'));
       }
     } finally {
       setNudgeBusy(false);
@@ -254,11 +253,11 @@ export default function ClientDetail() {
           <View style={{ gap: theme.spacing.lg, marginBottom: theme.spacing.sm }}>
             {/* Identity */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-              <Avatar name={name ?? 'Client'} size={56} />
+              <Avatar name={name ?? t('clientDetail.client')} size={56} />
               <View style={{ flex: 1 }}>
-                <Text variant="h2">{name ?? 'Client'}</Text>
+                <Text variant="h2">{name ?? t('clientDetail.client')}</Text>
                 <Text variant="caption" muted>
-                  Client
+                  {t('clientDetail.client')}
                 </Text>
               </View>
             </View>
@@ -267,21 +266,21 @@ export default function ClientDetail() {
             <GlassCard glowColor={theme.colors.primary}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
                 <Text variant="label" muted>
-                  This week
+                  {t('clientDetail.thisWeek')}
                 </Text>
                 {realLeanDeltaKg != null ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                     <Text variant="caption" muted>
-                      Lean mass
+                      {t('clientDetail.leanMass')}
                     </Text>
                     <DeltaChip value={realLeanDeltaKg} suffix=" kg" />
                   </View>
                 ) : null}
               </View>
               <View style={{ flexDirection: 'row' }}>
-                <MiniStat value={String(streak)} label="DAY STREAK" />
-                <MiniStat value={String(workoutsThisWeek)} label="WORKOUTS" />
-                <MiniStat value={adherencePct == null ? '—' : `${adherencePct}%`} label="ADHERENCE" />
+                <MiniStat value={String(streak)} label={t('clientDetail.dayStreak')} />
+                <MiniStat value={String(workoutsThisWeek)} label={t('clientDetail.workouts')} />
+                <MiniStat value={adherencePct == null ? '—' : `${adherencePct}%`} label={t('clientDetail.adherence')} />
               </View>
             </GlassCard>
 
@@ -289,15 +288,15 @@ export default function ClientDetail() {
             {goals?.onboarded_at ? (
               <GlassCard>
                 <Text variant="label" muted style={{ marginBottom: theme.spacing.sm }}>
-                  Goals
+                  {t('clientDetail.goalsTitle')}
                 </Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
-                  {goals.primary_goal ? <Chip label={label(goals.primary_goal)} active /> : null}
-                  {goals.experience_level ? <Chip label={label(goals.experience_level)} /> : null}
-                  {goals.training_days != null ? <Chip label={`${goals.training_days} days/wk`} /> : null}
-                  {goals.target_weight_grams ? <Chip label={`Target ${Math.round(goals.target_weight_grams / 1000)}kg`} /> : null}
-                  {goals.dietary_tags.map((t) => (
-                    <Chip key={t} label={label(t)} />
+                  {goals.primary_goal ? <Chip label={t(`goals.${goals.primary_goal}`)} active /> : null}
+                  {goals.experience_level ? <Chip label={t(`profileSetup.exp.${goals.experience_level}`)} /> : null}
+                  {goals.training_days != null ? <Chip label={t('clientDetail.daysPerWeek', { days: goals.training_days })} /> : null}
+                  {goals.target_weight_grams ? <Chip label={t('clientDetail.targetKg', { kg: Math.round(goals.target_weight_grams / 1000) })} /> : null}
+                  {goals.dietary_tags.map((tag) => (
+                    <Chip key={tag} label={t(`profileSetup.diet.${tag}`)} />
                   ))}
                 </View>
                 {goals.injuries_notes ? (
@@ -314,18 +313,18 @@ export default function ClientDetail() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
                 <Icon name="sparkles" size={16} color={theme.colors.primary} />
                 <Text variant="label" muted style={{ flex: 1 }}>
-                  AI assistant
+                  {t('clientDetail.aiAssistant')}
                 </Text>
               </View>
               <Button
-                title="Generate a plan with AI"
+                title={t('clientDetail.generateWithAi')}
                 variant="secondary"
                 left={<Icon name="sparkles" size={16} color={theme.colors.text} />}
                 onPress={() => setAiOpen(true)}
               />
               <View style={{ height: 1, backgroundColor: theme.colors.glassBorder, marginVertical: theme.spacing.md }} />
               <Text variant="caption" muted style={{ marginBottom: theme.spacing.sm }}>
-                Plan adjustments — private suggestions from this client’s recent logging. Only you see these.
+                {t('clientDetail.planAdjustIntro')}
               </Text>
               {nudge ? (
                 <Text variant="body" style={{ marginBottom: theme.spacing.sm }}>
@@ -335,11 +334,11 @@ export default function ClientDetail() {
               <Input
                 value={nudgePrompt}
                 onChangeText={setNudgePrompt}
-                placeholder="Optional: steer the suggestions (e.g. focus on nutrition)"
+                placeholder={t('clientDetail.nudgePlaceholder')}
                 editable={!nudgeBusy}
               />
               <Button
-                title={nudge ? 'Refresh suggestions' : 'Suggest plan adjustments'}
+                title={nudge ? t('clientDetail.refreshSuggestions') : t('clientDetail.suggestAdjustments')}
                 variant="ghost"
                 onPress={onNudge}
                 loading={nudgeBusy}
@@ -351,23 +350,23 @@ export default function ClientDetail() {
             <GlassCard>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
                 <Text variant="label" muted>
-                  Nutrition
+                  {t('clientDetail.nutrition')}
                 </Text>
                 {nutTargets ? (
                   <Text variant="caption" muted>
-                    Today {nutDaily?.kcal_total ?? 0} / {nutTargets.kcal_target} kcal
+                    {t('clientDetail.todayKcal', { consumed: nutDaily?.kcal_total ?? 0, target: nutTargets.kcal_target })}
                   </Text>
                 ) : null}
               </View>
               {nutWeek && (nutWeek.daysLogged > 0 || nutTargets) ? (
                 <View style={{ flexDirection: 'row' }}>
-                  <MiniStat value={String(nutStreak)} label="LOG STREAK" />
-                  <MiniStat value={`${nutWeek.daysLogged}/7`} label="DAYS LOGGED" />
-                  <MiniStat value={String(nutWeek.average.kcal)} label="AVG KCAL" />
+                  <MiniStat value={String(nutStreak)} label={t('clientDetail.logStreak')} />
+                  <MiniStat value={`${nutWeek.daysLogged}/7`} label={t('clientDetail.daysLogged')} />
+                  <MiniStat value={String(nutWeek.average.kcal)} label={t('clientDetail.avgKcal')} />
                 </View>
               ) : (
                 <Text variant="caption" muted>
-                  No nutrition logged yet.
+                  {t('clientDetail.noNutrition')}
                 </Text>
               )}
             </GlassCard>
@@ -379,12 +378,12 @@ export default function ClientDetail() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
                   <Icon name="sparkles" size={16} color={theme.colors.warning} />
                   <Text variant="label" muted style={{ flex: 1 }}>
-                    Pending InBody readings
+                    {t('clientDetail.pendingInbody')}
                   </Text>
                   <Badge label={String(pendingOcr.length)} tone="warning" />
                 </View>
                 <Text variant="caption" muted style={{ marginBottom: theme.spacing.sm }}>
-                  Auto-read from the client’s scans. Review each against the sheet and confirm to count it.
+                  {t('clientDetail.pendingIntro')}
                 </Text>
                 <View style={{ gap: theme.spacing.sm }}>
                   {pendingOcr.map((m) => (
@@ -404,15 +403,16 @@ export default function ClientDetail() {
                       <Icon name="document-text" size={18} color={theme.colors.primary} />
                       <View style={{ flex: 1 }}>
                         <Text variant="body">
-                          {Math.round(m.weight_grams / 100) / 10} kg
-                          {m.body_fat_bp != null ? ` · ${Math.round(m.body_fat_bp / 10) / 10}% fat` : ''}
+                          {m.body_fat_bp != null
+                            ? t('clientDetail.scanFat', { weight: Math.round(m.weight_grams / 100) / 10, pct: Math.round(m.body_fat_bp / 10) / 10 })
+                            : t('clientDetail.scanWeight', { weight: Math.round(m.weight_grams / 100) / 10 })}
                         </Text>
                         <Text variant="caption" muted>
                           {new Date(m.measured_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                         </Text>
                       </View>
                       <Text variant="caption" color="warning">
-                        Review
+                        {t('clientDetail.review')}
                       </Text>
                       <Icon name="chevron-forward" size={18} color={theme.colors.textMuted} />
                     </Pressable>
@@ -424,14 +424,14 @@ export default function ClientDetail() {
             {/* Progress: weight trend + photos + InBody (read-only; ?clientId=) */}
             <GlassCard>
               <Text variant="label" muted style={{ marginBottom: theme.spacing.sm }}>
-                Progress
+                {t('clientDetail.progressTitle')}
               </Text>
               <View style={{ gap: theme.spacing.sm }}>
                 {[
-                  { icon: 'body' as const, label: 'Body composition', route: '/client/progress/body-comp' as const },
-                  { icon: 'trending-up' as const, label: 'Weight history', route: '/client/progress/weight' as const },
-                  { icon: 'camera' as const, label: 'Progress photos', route: '/client/progress/photos' as const },
-                  { icon: 'document-text' as const, label: 'InBody scans', route: '/client/progress/inbody' as const },
+                  { icon: 'body' as const, label: t('progress.bodyComposition'), route: '/client/progress/body-comp' as const },
+                  { icon: 'trending-up' as const, label: t('clientDetail.weightHistory'), route: '/client/progress/weight' as const },
+                  { icon: 'camera' as const, label: t('progress.progressPhotos'), route: '/client/progress/photos' as const },
+                  { icon: 'document-text' as const, label: t('progress.inbodyScans'), route: '/client/progress/inbody' as const },
                 ].map((row) => (
                   <Pressable
                     key={row.route}
@@ -453,7 +453,7 @@ export default function ClientDetail() {
                 ))}
               </View>
               <Button
-                title="Add InBody reading"
+                title={t('clientDetail.addInbody')}
                 variant="secondary"
                 style={{ marginTop: theme.spacing.md }}
                 left={<Icon name="add" size={18} color={theme.colors.text} />}
@@ -467,14 +467,14 @@ export default function ClientDetail() {
             {notes.length > 0 ? (
               <GlassCard>
                 <Text variant="label" muted style={{ marginBottom: theme.spacing.sm }}>
-                  Recent feedback
+                  {t('clientDetail.recentFeedback')}
                 </Text>
                 <View style={{ gap: theme.spacing.md }}>
                   {notes.map((n) => (
                     <View key={n.id} style={{ gap: 4 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
                         <Badge
-                          label={n.category === 'challenge' ? 'Challenge' : 'Compliment'}
+                          label={n.category === 'challenge' ? t('workout.challenge') : t('workout.compliment')}
                           tone={n.category === 'challenge' ? 'warning' : 'success'}
                         />
                         {n.exercise_name ? (
@@ -491,19 +491,19 @@ export default function ClientDetail() {
             ) : null}
 
             <Button
-              title="Assign from templates"
+              title={t('clientDetail.assignFromTemplates')}
               left={<Icon name="add" size={18} color={theme.colors.onPrimary} />}
               onPress={() => router.push('/coach/templates')}
             />
 
             <Text variant="label" muted style={{ marginTop: theme.spacing.sm }}>
-              Assigned plans
+              {t('clientDetail.assignedPlans')}
             </Text>
           </View>
         }
         ListEmptyComponent={
           <Text variant="body" muted>
-            No plans assigned yet.
+            {t('clientDetail.noPlans')}
           </Text>
         }
         renderItem={({ item }) => (
@@ -523,7 +523,7 @@ export default function ClientDetail() {
               </View>
               <View style={{ flex: 1, gap: 4 }}>
                 <Text variant="bodyStrong">{item.title}</Text>
-                <Badge label={item.status} tone={STATUS_TONE[item.status]} />
+                <Badge label={t(`planStatus.${item.status}`)} tone={STATUS_TONE[item.status]} />
               </View>
               <IconButton name="trash-outline" onPress={() => onDeletePlan(item)} />
               <Icon name="chevron-forward" size={20} color={theme.colors.textMuted} />
@@ -552,51 +552,50 @@ export default function ClientDetail() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
               <Icon name="sparkles" size={20} color={theme.colors.primary} />
               <Text variant="title" style={{ flex: 1 }}>
-                Generate a plan
+                {t('clientDetail.generateTitle')}
               </Text>
               <Pressable onPress={() => !aiBusy && setAiOpen(false)} hitSlop={8}>
                 <Icon name="close" size={24} color={theme.colors.textMuted} />
               </Pressable>
             </View>
             <Text variant="caption" muted>
-              A draft is created from {name ?? 'this client'}’s goals and preferences. You review and edit it before publishing.
+              {t('clientDetail.generateIntro', { name: name ?? t('clientDetail.thisClient') })}
             </Text>
             <Segmented
               value={aiType}
-              onChange={(t) => {
+              onChange={(v) => {
                 // Training and nutrition steer differently — don't carry one's prompt
                 // into the other when the coach switches tabs.
-                setAiType(t);
+                setAiType(v);
                 setAiPrompt('');
               }}
               options={[
-                { value: 'training', label: 'Training' },
-                { value: 'nutrition', label: 'Nutrition' },
+                { value: 'training', label: t('common.training') },
+                { value: 'nutrition', label: t('common.nutrition') },
               ]}
             />
             <Input
               value={aiPrompt}
               onChangeText={setAiPrompt}
-              placeholder="Optional — tap a chip below or type your own"
+              placeholder={t('clientDetail.aiPromptPlaceholder')}
               editable={!aiBusy}
               multiline
               style={{ minHeight: 60, textAlignVertical: 'top' }}
             />
             {/* Quick-add chips: append proven phrases so the output is high quality. */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
-              {PROMPT_CHIPS[aiType].map((c) => (
-                <Chip key={c} label={`+ ${c}`} onPress={() => setAiPrompt((p) => appendChip(p, c))} />
-              ))}
+              {PROMPT_CHIP_KEYS[aiType].map((k) => {
+                const phrase = t(`clientDetail.chips.${k}`);
+                return <Chip key={k} label={`+ ${phrase}`} onPress={() => setAiPrompt((p) => appendChip(p, phrase))} />;
+              })}
             </View>
             <Text variant="label" muted style={{ fontSize: 10 }}>
-              {aiType === 'training'
-                ? 'Drafts one week sized to their training days. Duplicate or “Adjust with AI” in the editor to extend.'
-                : 'Drafts one day of meals toward their macro target.'}
+              {aiType === 'training' ? t('clientDetail.trainingNote') : t('clientDetail.nutritionNote')}
             </Text>
             <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-              <Button title="Cancel" variant="ghost" fullWidth={false} onPress={() => setAiOpen(false)} disabled={aiBusy} />
+              <Button title={t('common.cancel')} variant="ghost" fullWidth={false} onPress={() => setAiOpen(false)} disabled={aiBusy} />
               <View style={{ flex: 1 }}>
-                <Button title="Generate" onPress={onGenerate} loading={aiBusy} />
+                <Button title={t('clientDetail.generate')} onPress={onGenerate} loading={aiBusy} />
               </View>
             </View>
           </Pressable>
