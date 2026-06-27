@@ -592,13 +592,18 @@
       "title": "رقم قياسي جديد",
       "body": "{{exercise}}"
     },
+    "clientNote": {
+      "title": "ملاحظة من عميل",
+      "body": "{{name}} ساب ملاحظة على تمرينه"
+    },
     "settingsTitle": "إعدادات الإشعارات",
     "settingsSub": "اختار تتبلّغ بإيه.",
     "prefs": {
       "message": "الرسائل",
       "coachComment": "ملاحظات الكوتش",
       "planPublished": "الخطط الجديدة",
-      "prAchieved": "الأرقام القياسية"
+      "prAchieved": "الأرقام القياسية",
+      "clientNote": "ملاحظات العملاء"
     }
   },
   "chat": {

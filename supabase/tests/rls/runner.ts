@@ -71,6 +71,7 @@ const migrationFiles = [
   '0047_expand_catalogs.sql',
   '0048_muscle_group_arms.sql',
   '0049_recategorize_exercises.sql',
+  '0050_workout_note_notify.sql',
 ];
 
 const baseUrl =

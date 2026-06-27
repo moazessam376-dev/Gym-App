@@ -12,7 +12,12 @@ import { supabase } from './supabase';
 import type { IconName } from '../components/ui/Icon';
 import { notificationPrefsSchema } from '../schemas/notification';
 
-export type NotificationType = 'message' | 'coach_comment' | 'plan_published' | 'pr_achieved';
+export type NotificationType =
+  | 'message'
+  | 'coach_comment'
+  | 'plan_published'
+  | 'pr_achieved'
+  | 'client_note';
 
 export type NotificationRow = {
   id: string;
@@ -97,6 +102,7 @@ const ICONS: Record<NotificationType, IconName> = {
   coach_comment: 'chatbox-ellipses',
   plan_published: 'document-text',
   pr_achieved: 'trophy',
+  client_note: 'clipboard',
 };
 
 // Per-type semantic accent (brand notification colors): chat = purple, coach note =
@@ -107,6 +113,7 @@ export const NOTIFICATION_COLORS: Record<NotificationType, string> = {
   coach_comment: '#6B8AFF', // cobalt
   plan_published: '#3FD9C0', // Signal cyan
   pr_achieved: '#3FD98A', // positive
+  client_note: '#F5B544', // amber — an athlete's note to the coach
 };
 
 function str(params: Record<string, unknown>, key: string): string {
@@ -152,6 +159,12 @@ export function describeNotification(
         title: t('notifications.pr.title'),
         body: t('notifications.pr.body', { exercise: str(row.params, 'exercise_name') }),
       };
+    case 'client_note':
+      return {
+        icon: ICONS.client_note,
+        title: t('notifications.clientNote.title'),
+        body: t('notifications.clientNote.body', { name: actor }),
+      };
     default:
       return { icon: 'notifications', title: '', body: '' };
   }
@@ -170,6 +183,11 @@ export function notificationHref(row: NotificationRow): Href | null {
       return row.entity_id ? { pathname: '/client/plan/[id]', params: { id: row.entity_id } } : null;
     case 'pr_achieved':
       return '/(tabs)/progress';
+    case 'client_note':
+      // Coach taps → that client's detail (the note shows in "Recent feedback").
+      return row.actor_id
+        ? { pathname: '/coach/client/[id]', params: { id: row.actor_id, name: str(row.params, 'actor_name') } }
+        : null;
     default:
       return null;
   }
@@ -184,13 +202,14 @@ const DEFAULT_PREFS: NotificationPrefs = {
   coach_comment: true,
   plan_published: true,
   pr_achieved: true,
+  client_note: true,
 };
 
 /** The caller's prefs (RLS-scoped). No row yet → everything ON (the default). */
 export async function getNotificationPrefs(): Promise<NotificationPrefs> {
   const { data, error } = await supabase
     .from('notification_prefs')
-    .select('message, coach_comment, plan_published, pr_achieved')
+    .select('message, coach_comment, plan_published, pr_achieved, client_note')
     .maybeSingle();
   if (error) throw error;
   if (!data) return { ...DEFAULT_PREFS };
@@ -199,6 +218,7 @@ export async function getNotificationPrefs(): Promise<NotificationPrefs> {
     coach_comment: data.coach_comment,
     plan_published: data.plan_published,
     pr_achieved: data.pr_achieved,
+    client_note: data.client_note,
   };
 }
 

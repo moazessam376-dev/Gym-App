@@ -564,13 +564,18 @@
       "title": "New personal record",
       "body": "{{exercise}}"
     },
+    "clientNote": {
+      "title": "New client note",
+      "body": "{{name}} left a note on their training"
+    },
     "settingsTitle": "Notification settings",
     "settingsSub": "Choose what you get notified about.",
     "prefs": {
       "message": "Messages",
       "coachComment": "Coach feedback",
       "planPublished": "New plans",
-      "prAchieved": "Personal records"
+      "prAchieved": "Personal records",
+      "clientNote": "Client notes"
     }
   },
   "chat": {
