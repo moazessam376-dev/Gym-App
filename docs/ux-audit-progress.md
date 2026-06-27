@@ -87,7 +87,17 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
   - ⏸ **F6** plan-editor UI-kit refactor — **DEFERRED (founder call, 2026-06-27)**. The 1012-line editor is
     already on-brand via theme tokens; a full kit migration is high-risk/low-value on the core coach screen,
     and a partial pass would leave it half-migrated. Revisit as its own reviewed PR post device-test.
-- ⬜ **G — Larger items** (G1 Ranks→Analytics merge + leaderboard in-page UX · G2 coach_requests funnel · G3 admin console · G4 nutrition barcode/serving sizes)
+- 🔵 **G — Larger items**
+  - 🔵 **G1** Ranks→Analytics merge + leaderboard in-page UX — **code done, tsc + parity clean; migration
+    `0052` dry-run clean, AWAITING prod go-ahead.** Coach tabs 6→5: merged the *Ranks* tab + *Analytics*
+    tab + Home top-performers card into one **Performance** tab (`app/(tabs)/performance.tsx`; deleted
+    `leaderboard.tsx` + `analytics.tsx`; CoachHome now links to it). Public leaderboard (`app/leaderboards`)
+    gained a **period** toggle (month/quarter/all-time — real backend window on the verified-reading date),
+    a pinned **"You · #rank"** card (exact rank via the new `public_athlete_my_rank` RPC), and an **FFMI
+    info sheet** (`src/components/FfmiInfoSheet.tsx`) + a real error-retry. `0052` adds the period param to
+    `public_athlete_leaderboard`/`public_coach_leaderboard` (p_sex kept first for positional back-compat)
+    and the self-rank RPC; harness gets the migration + an L7 window-exclusion fixture + period/rank tests.
+  - ⬜ **G2** coach_requests funnel · **G3** admin console · **G4** nutrition barcode/serving sizes
 - ⬜ **H — First-run tour + guided goal wizard**
 
 ## Founder follow-ups (post-F, 2026-06-27)
@@ -100,7 +110,8 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
   Realtime-arriving note cards show body only until refetch (embed not in the realtime payload).
 
 ## Prod migrations pending go-ahead
-coach_requests (G2) · serving sizes (G4).
+`0052` leaderboard period + self-rank (G1, **dry-run clean, ready**) · coach_requests (G2) ·
+admin console RPCs (G3) · serving sizes (G4).
 _(Done & applied to prod 2026-06-27: `0047` catalog · `0048`/`0049` arms recategorize · `0050` workout-note
 notification · `0051` workout-note-in-chat. Slice B's media-delete shipped as an Edge Function, not a migration.)_
 

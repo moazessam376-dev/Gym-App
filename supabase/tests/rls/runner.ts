@@ -73,6 +73,7 @@ const migrationFiles = [
   '0049_recategorize_exercises.sql',
   '0050_workout_note_notify.sql',
   '0051_workout_note_in_chat.sql',
+  '0052_leaderboard_period_and_rank.sql',
 ];
 
 const baseUrl =

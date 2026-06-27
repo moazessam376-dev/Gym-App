@@ -11,10 +11,9 @@ import {
   useMyName,
   useMyClients,
   useMyInvitations,
-  useBodyMetricsBoard,
   useRefreshOnFocus,
 } from '@/lib/queries/home';
-import { Icon, Screen, Text, Avatar, GlassCard, KpiTile, EmptyState } from '@/components/ui';
+import { Icon, Screen, Text, Avatar, GlassCard, KpiTile } from '@/components/ui';
 import { NotificationBell } from '@/components/NotificationBell';
 import { theme } from '@/theme';
 
@@ -29,19 +28,16 @@ export default function CoachHome() {
   const nameQ = useMyName(userId);
   const clientsQ = useMyClients();
   const invitesQ = useMyInvitations();
-  const boardQ = useBodyMetricsBoard();
 
   useRefreshOnFocus(() => {
     nameQ.refetch();
     clientsQ.refetch();
     invitesQ.refetch();
-    boardQ.refetch();
   });
 
   const name = nameQ.data ?? null;
   const clients = clientsQ.data?.length ?? 0;
   const pending = invitesQ.data?.filter((i) => i.status === 'pending').length ?? 0;
-  const board = boardQ.data ?? [];
 
   const go = (href: Href) => () => router.push(href);
   const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -85,48 +81,22 @@ export default function CoachHome() {
         />
       </View>
 
-      {/* Top performers — REAL, ranked by goal-relative InBody progress (0026) */}
-      <View style={{ gap: theme.spacing.md }}>
-        <Text variant="label" muted>
-          {t('home.topPerformers')}
-        </Text>
-
-        {board.length === 0 ? (
-          <EmptyState
-            icon="trophy-outline"
-            title={t('home.noReadingsTitle')}
-            subtitle={t('home.noReadingsSub')}
-          />
-        ) : (
-          board.map((r) => (
-            <GlassCard
-              key={r.client_id}
-              glowColor={r.rank === 1 && r.progress.hasTrend ? theme.colors.primary : undefined}
-              onPress={() =>
-                router.push({ pathname: '/coach/client/[id]', params: { id: r.client_id, name: r.full_name ?? '' } })
-              }
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-                <Text
-                  variant="mono"
-                  color={r.rank === 1 ? theme.colors.primary : theme.colors.textMuted}
-                  style={{ width: 20, fontFamily: theme.fontFamily.monoBold, fontSize: 15 }}
-                >
-                  {r.rank}
-                </Text>
-                <Avatar name={r.full_name ?? t('home.client')} size={40} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text variant="bodyStrong">{r.full_name ?? t('home.client')}</Text>
-                  <Text variant="caption" color={r.progress.hasTrend ? 'primary' : theme.colors.textMuted}>
-                    {r.progress.headline}
-                  </Text>
-                </View>
-                <Icon name={forwardChevron()} size={18} color={theme.colors.textMuted} />
-              </View>
-            </GlassCard>
-          ))
-        )}
-      </View>
+      {/* Top performers + the KPI dashboard now live in the dedicated Performance tab
+          (Slice G1 merged Ranks + Analytics + this card into one place). */}
+      <GlassCard onPress={go('/(tabs)/performance')}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+          <Icon name="bar-chart" size={22} color={theme.colors.primary} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="bodyStrong" style={textStart}>
+              {t('home.viewPerformance')}
+            </Text>
+            <Text variant="caption" muted style={textStart}>
+              {t('home.viewPerformanceSub')}
+            </Text>
+          </View>
+          <Icon name={forwardChevron()} size={18} color={theme.colors.textMuted} />
+        </View>
+      </GlassCard>
     </Screen>
   );
 }

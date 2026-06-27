@@ -1,6 +1,7 @@
 {
   "common": {
     "cancel": "Cancel",
+    "close": "Close",
     "save": "Save",
     "delete": "Delete",
     "edit": "Edit",
@@ -37,8 +38,7 @@
     "nutrition": "Nutrition",
     "progress": "Progress",
     "clients": "Clients",
-    "ranks": "Ranks",
-    "analytics": "Analytics",
+    "performance": "Performance",
     "chat": "Chat",
     "account": "Account"
   },
@@ -83,6 +83,8 @@
     "topPerformers": "Top performers · body composition",
     "noReadingsTitle": "No verified readings yet",
     "noReadingsSub": "Record an InBody reading from a client's profile and your ranked board appears here.",
+    "viewPerformance": "Performance",
+    "viewPerformanceSub": "KPIs, rankings & weekly activity",
     "client": "Client"
   },
   "nutrition": {
@@ -526,6 +528,23 @@
     "emptyTitle": "No one ranked yet",
     "emptySub": "Be the first — opt in on your public profile and log a verified InBody.",
     "loadError": "Could not load the leaderboard",
+    "you": "You",
+    "rankOf": "Rank #{{rank}} of {{total}}",
+    "nudgeReading": "Log a coach-verified InBody to get ranked.",
+    "nudgeOptIn": "Opt in on your public profile to compete.",
+    "whatsFfmi": "What's FFMI?",
+    "period": {
+      "month": "This month",
+      "quarter": "This quarter",
+      "all": "All-time"
+    },
+    "ffmiInfo": {
+      "title": "What is FFMI?",
+      "what": "FFMI (Fat-Free Mass Index) measures how much lean muscle you carry for your height — your weight minus body fat, normalised by height. A higher FFMI means more muscle on your frame, so taller and shorter athletes can compete fairly.",
+      "verified": "Only coach-verified InBody readings count — no one can self-report their way up.",
+      "tiersTitle": "League tiers",
+      "tiersNote": "You're placed in the highest tier your FFMI reaches. Bands differ for men and women to match body-composition norms."
+    },
     "tier": {
       "bronze": "Bronze",
       "silver": "Silver",
@@ -536,6 +555,13 @@
       "grandmaster": "Grandmaster",
       "apex": "Apex"
     }
+  },
+  "performance": {
+    "label": "PERFORMANCE",
+    "title": "Performance",
+    "subtitle": "Your KPIs and client rankings, all in one place.",
+    "thisWeek": "This week",
+    "thisWeekSub": "Clients ranked by sessions logged"
   },
   "language": {
     "en": "English",

@@ -393,7 +393,8 @@ insert into auth.users (id, email) values
   ('1ea00000-0000-0000-0000-000000000003', 'lead3@example.test'),
   ('1ea00000-0000-0000-0000-000000000004', 'lead4@example.test'),
   ('1ea00000-0000-0000-0000-000000000005', 'lead5@example.test'),
-  ('1ea00000-0000-0000-0000-000000000006', 'lead6@example.test');
+  ('1ea00000-0000-0000-0000-000000000006', 'lead6@example.test'),
+  ('1ea00000-0000-0000-0000-000000000007', 'lead7@example.test');
 
 -- L1..L3 are Coach L's clients (feed the coach board); L4..L6 are coachless
 -- (athlete-board negatives only). L6 is inserted already-banned (the profiles
@@ -405,7 +406,10 @@ insert into public.profiles (id, role, coach_id, full_name, banned_at) values
   ('1ea00000-0000-0000-0000-000000000003', 'client', '1ea00000-0000-0000-0000-0000000000c1', 'Lead Three', null),
   ('1ea00000-0000-0000-0000-000000000004', 'client', null, 'Lead Four', null),
   ('1ea00000-0000-0000-0000-000000000005', 'client', null, 'Lead Five', null),
-  ('1ea00000-0000-0000-0000-000000000006', 'client', null, 'Lead Six',  now());
+  ('1ea00000-0000-0000-0000-000000000006', 'client', null, 'Lead Six',  now()),
+  -- L7: opted-in public male whose only verified reading is 200 days old → on the
+  -- all-time / quarter board (0052 window) but OFF the month board.
+  ('1ea00000-0000-0000-0000-000000000007', 'client', null, 'Lead Seven', null);
 
 insert into public.coach_profile (user_id, bio, specialties, years_experience, is_public, leaderboard_opt_in, onboarded_at) values
   ('1ea00000-0000-0000-0000-0000000000c1', 'League coach', '{bodybuilding}', 8, true, true, now());
@@ -416,7 +420,8 @@ insert into public.athlete_profile (user_id, primary_goal, sex, height_cm, is_pu
   ('1ea00000-0000-0000-0000-000000000003', 'build_muscle', 'male',   175, true,  true,  now()),
   ('1ea00000-0000-0000-0000-000000000004', 'build_muscle', 'male',   176, true,  false, now()), -- not opted in
   ('1ea00000-0000-0000-0000-000000000005', 'lose_fat',     'female', 168, false, true,  now()), -- private
-  ('1ea00000-0000-0000-0000-000000000006', 'build_muscle', 'male',   177, true,  true,  now()); -- banned
+  ('1ea00000-0000-0000-0000-000000000006', 'build_muscle', 'male',   177, true,  true,  now()), -- banned
+  ('1ea00000-0000-0000-0000-000000000007', 'build_muscle', 'male',   178, true,  true,  now()); -- only an old (200d) reading
 
 -- Verified InBody readings. L1/L2/L3 get a baseline + an improved latest (body fat
 -- down or skeletal muscle up) → counted as tracked + improved for Coach L. L4/L5/L6
@@ -435,6 +440,8 @@ insert into public.body_metrics
   -- L4/L5/L6 — single verified reading each (excluded by opt-in / privacy / ban, not by data)
   ('1ea0b004-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000004', now() - interval '5 days',  82000, 1500, 37000, 'coach_entered'),
   ('1ea0b005-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000005', now() - interval '5 days',  58000, 2400, 23000, 'coach_entered'),
-  ('1ea0b006-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000006', now() - interval '5 days',  80000, 1400, 38500, 'coach_entered');
+  ('1ea0b006-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000006', now() - interval '5 days',  80000, 1400, 38500, 'coach_entered'),
+  -- L7: single reading 200 days ago (FFMI ≈ 16.6) → present all-time, gone from the 30/90-day windows.
+  ('1ea0b007-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000007', now() - interval '200 days', 70000, 2500, 30000, 'coach_entered');
 
 alter table auth.users enable trigger on_auth_user_created;

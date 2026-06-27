@@ -96,18 +96,9 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="leaderboard"
+        name="performance"
         options={{
-          title: t('tabs.ranks'),
-          href: showFor(isCoach),
-          lazy: eager(isCoach),
-          tabBarIcon: tabIcon('trophy'),
-        }}
-      />
-      <Tabs.Screen
-        name="analytics"
-        options={{
-          title: t('tabs.analytics'),
+          title: t('tabs.performance'),
           href: showFor(isCoach),
           lazy: eager(isCoach),
           tabBarIcon: tabIcon('bar-chart'),

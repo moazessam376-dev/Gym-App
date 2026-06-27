@@ -3364,3 +3364,53 @@ describe('public leaderboards (0045, Phase 20) — opt-in physique/outcomes boar
     ).rejects.toThrow();
   });
 });
+
+describe('leaderboard period window + self-rank (0052, Slice G1)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const L1: Identity = { sub: '1ea00000-0000-0000-0000-000000000001', userRole: 'client' }; // recent reading, FFMI ≈ 21.5
+  const L3: Identity = { sub: '1ea00000-0000-0000-0000-000000000003', userRole: 'client' }; // recent reading, FFMI ≈ 21.7
+  const L7: Identity = { sub: '1ea00000-0000-0000-0000-000000000007', userRole: 'client' }; // ONLY a 200-day-old reading
+
+  // ── period window: an athlete with only an old reading drops off month/quarter ──
+  it('the all-time board still includes an athlete whose only verified reading is 200 days old', async () => {
+    const r = await asUser(COACH_B, (c) =>
+      c.query("select athlete_id from public.public_athlete_leaderboard('male', 'all')"),
+    );
+    expect(r.rows.map((x) => x.athlete_id)).toContain(L7.sub);
+  });
+
+  it('the month and quarter windows drop the 200-day reading but keep the recent ones', async () => {
+    const month = await asUser(COACH_B, (c) =>
+      c.query("select athlete_id from public.public_athlete_leaderboard('male', 'month')"),
+    );
+    const quarter = await asUser(COACH_B, (c) =>
+      c.query("select athlete_id from public.public_athlete_leaderboard('male', 'quarter')"),
+    );
+    expect(month.rows.map((x) => x.athlete_id)).not.toContain(L7.sub);
+    expect(quarter.rows.map((x) => x.athlete_id)).not.toContain(L7.sub); // 200d > 90d
+    // L1/L3 have a 5-day-old reading → present in every window.
+    expect(month.rows.map((x) => x.athlete_id)).toEqual(expect.arrayContaining([L1.sub, L3.sub]));
+  });
+
+  // ── self-rank: returns ONLY the caller's own standing (their own data) ──────────
+  it('public_athlete_my_rank gives the caller their exact rank + board size', async () => {
+    const top = await asUser(L3, (c) => c.query("select * from public.public_athlete_my_rank('male', 'all')"));
+    const mid = await asUser(L1, (c) => c.query("select * from public.public_athlete_my_rank('male', 'all')"));
+    const low = await asUser(L7, (c) => c.query("select * from public.public_athlete_my_rank('male', 'all')"));
+    expect(Number(top.rows[0].rank)).toBe(1);
+    expect(Number(top.rows[0].total)).toBe(3); // {L1, L3, L7} are the only opted-in public males
+    expect(Number(mid.rows[0].rank)).toBe(2);
+    expect(Number(low.rows[0].rank)).toBe(3);
+  });
+
+  it('public_athlete_my_rank returns no row when the caller has no in-window reading', async () => {
+    const r = await asUser(L7, (c) => c.query("select * from public.public_athlete_my_rank('male', 'month')"));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it('anon cannot execute public_athlete_my_rank (no execute grant)', async () => {
+    await expect(
+      asAnon((c) => c.query("select * from public.public_athlete_my_rank('male', 'all')")),
+    ).rejects.toThrow();
+  });
+});
