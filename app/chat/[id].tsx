@@ -247,7 +247,11 @@ function Bubble({
   const pan = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, g) =>
-        !!onReplyRef.current && g.dx > 12 && g.dx > Math.abs(g.dy) * 1.6,
+        // Claim any horizontal-dominant rightward drag. Was 1.6× (too strict — a
+        // slightly diagonal swipe got cancelled); now just dx > |dy| so diagonal
+        // swipe-to-reply works like Telegram, while true vertical scrolls (dy ≫ dx)
+        // still pass through to the list.
+        !!onReplyRef.current && g.dx > 10 && g.dx > Math.abs(g.dy),
       onPanResponderMove: (_, g) => {
         translateX.value = Math.min(Math.max(g.dx, 0), 72);
       },
@@ -767,6 +771,10 @@ export default function ChatThread() {
               keyExtractor={(m) => m.id}
               contentContainerStyle={{ padding: theme.spacing.lg }}
               keyboardDismissMode="interactive"
+              // "handled" (not the default "never") so a tap/drag while the keyboard is
+              // up reaches the bubble — fixes double-tap-to-react dismissing the keyboard
+              // and lets swipe-to-reply work without first lowering the keyboard.
+              keyboardShouldPersistTaps="handled"
               onEndReached={loadOlder}
               onEndReachedThreshold={0.3}
               ListFooterComponent={
