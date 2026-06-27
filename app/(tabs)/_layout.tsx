@@ -39,6 +39,13 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // Keep inactive tabs rendered (not frozen) so regaining focus does not
+        // trigger an unfreeze re-render. That re-render is the source of the
+        // intermittent black frame seen right after a tab transition: the native
+        // transition completes, then there is a gap before React re-commits the
+        // unfrozen tree, and the near-black sceneStyle bg shows through.
+        // Negligible CPU cost (~5 eager tabs). Tracked in docs/pre-launch-checklist.md.
+        freezeOnBlur: false,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarStyle: {

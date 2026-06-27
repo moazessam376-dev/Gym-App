@@ -256,7 +256,9 @@ export default function Nutrition() {
         <Card style={{ alignItems: 'center', gap: theme.spacing.lg, paddingVertical: theme.spacing.xl }}>
           <ProgressRing progress={progress} size={200} strokeWidth={16}>
             <View style={{ alignItems: 'center' }}>
-              <Animated.View key={kcalLeft} entering={ZoomIn.duration(350)}>
+              {/* No key={kcalLeft}: see ClientHome. A volatile key remounts on
+                  every focus-refetch and blanks the hero during re-entering. */}
+              <Animated.View entering={ZoomIn.duration(350)}>
                 <Text variant="display" style={{ fontSize: 46, lineHeight: 50 }}>
                   {kcalLeft}
                 </Text>

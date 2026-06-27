@@ -166,7 +166,12 @@ export default function ClientHome() {
           </Text>
           <ProgressRing progress={progress} size={220} strokeWidth={18}>
             <View style={{ alignItems: 'center' }}>
-              <Animated.View key={pct} entering={ZoomIn.duration(400)}>
+              {/* No key={pct}: a volatile key remounts this view on every value
+                  change (including silent focus-refetches via useRefreshOnFocus),
+                  re-firing ZoomIn from scale 0 and leaving a blank hero area for
+                  ~400ms. The entering still fires once on first mount; subsequent
+                  updates paint the new number in place. */}
+              <Animated.View entering={ZoomIn.duration(400)}>
                 <Text variant="display" style={{ fontSize: 56, lineHeight: 60 }}>
                   {pct}
                   <Text variant="h2" color="textMuted">
