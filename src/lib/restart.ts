@@ -9,7 +9,19 @@
 // switch still takes effect on the next launch (the boot gate re-applies the saved
 // direction) — no regression versus the previous behavior.
 import { reloadAppAsync } from 'expo';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import RNRestart from 'react-native-restart';
+
+/**
+ * True only inside the Expo Go sandbox. Expo Go ships a fixed native runtime, so the
+ * native modules we depend on — including a real app restart — aren't present, and a
+ * JS-only reload can't recreate the Activity. An I18nManager.forceRTL flip therefore
+ * cannot take effect there: the user must fully close and reopen the app. Custom dev/
+ * EAS builds report `standalone`, where restartApp() does a true native restart.
+ */
+export function isExpoGo(): boolean {
+  return Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+}
 
 export async function restartApp(): Promise<void> {
   try {

@@ -534,6 +534,7 @@
     "title": "Language",
     "restartTitle": "Restart needed",
     "restartBody": "The app will restart to apply the new layout direction.",
+    "restartBodyManual": "To apply the new layout direction, fully close the app and open it again.",
     "restartConfirm": "Restart now"
   },
   "notifications": {
