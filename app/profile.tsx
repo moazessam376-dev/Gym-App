@@ -3,15 +3,18 @@
 import { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../src/lib/auth-context';
 import { getMyName, updateMyName } from '../src/lib/profile';
 import { readCache, writeCache } from '../src/lib/screen-cache';
-import { Screen, Text, Input, Button } from '../src/components/ui';
+import { Screen, Text, Input, Button, useToast } from '../src/components/ui';
 import { theme } from '../src/theme';
 
 export default function Profile() {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const userId = session?.user?.id;
   const cacheKey = userId ? `profile-name:${userId}` : null;
 
@@ -20,7 +23,6 @@ export default function Profile() {
   const [name, setName] = useState(readCache<string>(cacheKey) ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -41,22 +43,21 @@ export default function Profile() {
 
   async function onSave() {
     setError(null);
-    setSaved(false);
     if (name.trim().length < 1) {
-      setError('Enter your name.');
+      setError(t('auth.enterName'));
       return;
     }
     if (!userId) {
-      setError('Your session expired. Sign in again.');
+      setError(t('becomeCoach.sessionExpired'));
       return;
     }
     setSaving(true);
     try {
       await updateMyName(userId, name);
       writeCache(cacheKey, name.trim());
-      setSaved(true);
+      toast.show(t('common.saved'));
     } catch {
-      setError('Could not save your name. Please try again.');
+      setError(t('common.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -67,13 +68,10 @@ export default function Profile() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1, justifyContent: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
           <Input
-            label="Display name"
+            label={t('profile.displayName')}
             value={name}
-            onChangeText={(t) => {
-              setName(t);
-              setSaved(false);
-            }}
-            placeholder="Your name"
+            onChangeText={setName}
+            placeholder={t('auth.fullNamePlaceholder')}
             autoCapitalize="words"
             editable={!saving}
             error={error}
@@ -83,14 +81,9 @@ export default function Profile() {
               {session.user.email}
             </Text>
           ) : null}
-          {saved ? (
-            <Text variant="bodyStrong" color="success">
-              Saved
-            </Text>
-          ) : null}
 
-          <Button title="Save" onPress={onSave} loading={saving} size="lg" style={{ marginTop: theme.spacing.sm }} />
-          <Button title="Done" variant="ghost" onPress={() => router.back()} />
+          <Button title={t('common.save')} onPress={onSave} loading={saving} size="lg" style={{ marginTop: theme.spacing.sm }} />
+          <Button title={t('common.done')} variant="ghost" onPress={() => router.back()} />
         </View>
       </KeyboardAvoidingView>
     </Screen>

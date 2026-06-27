@@ -5,6 +5,7 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../src/lib/auth-context';
 import {
   getMyAthleteProfile,
@@ -26,26 +27,8 @@ import {
 } from '../src/schemas/athlete-profile';
 import { specialtySchema, type Specialty } from '../src/schemas/coach-profile';
 import { Icon, Screen, Text, Input, Button, Chip } from '../src/components/ui';
+import { forwardChevron } from '../src/lib/rtl';
 import { theme } from '../src/theme';
-
-function label(s: string): string {
-  return s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
-}
-
-// Short explanations shown to athletes so they pick the right level.
-const EXPERIENCE_HINT: Record<ExperienceLevel, string> = {
-  beginner: 'New to training, or less than ~1 year of consistent workouts.',
-  intermediate: '1–3 years of consistent training; comfortable with the main lifts.',
-  advanced: '3+ years of structured training and programming.',
-};
-
-const ACTIVITY_HINT: Record<ActivityLevel, string> = {
-  sedentary: 'Little or no exercise; mostly sitting (desk job).',
-  light: 'Light exercise 1–3 days a week.',
-  moderate: 'Moderate exercise 3–5 days a week.',
-  active: 'Hard exercise 6–7 days a week.',
-  very_active: 'Very hard daily training, or a physical job / two-a-days.',
-};
 
 function Field({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -62,15 +45,17 @@ function ChipGroup<T extends string>({
   options,
   selected,
   onToggle,
+  labelFor,
 }: {
   options: readonly T[];
   selected: T[];
   onToggle: (v: T) => void;
+  labelFor: (v: T) => string;
 }) {
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
       {options.map((o) => (
-        <Chip key={o} label={label(o)} active={selected.includes(o)} onPress={() => onToggle(o)} />
+        <Chip key={o} label={labelFor(o)} active={selected.includes(o)} onPress={() => onToggle(o)} />
       ))}
     </View>
   );
@@ -82,11 +67,13 @@ function OptionRows<T extends string>({
   hints,
   value,
   onChange,
+  labelFor,
 }: {
   options: readonly T[];
   hints: Record<T, string>;
   value: T | null;
   onChange: (v: T) => void;
+  labelFor: (v: T) => string;
 }) {
   return (
     <View style={{ gap: theme.spacing.sm }}>
@@ -96,6 +83,9 @@ function OptionRows<T extends string>({
           <Pressable
             key={o}
             onPress={() => onChange(o)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={labelFor(o)}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -113,7 +103,7 @@ function OptionRows<T extends string>({
               color={active ? theme.colors.primary : theme.colors.textMuted}
             />
             <View style={{ flex: 1 }}>
-              <Text variant="bodyStrong">{label(o)}</Text>
+              <Text variant="bodyStrong">{labelFor(o)}</Text>
               <Text variant="caption" muted>
                 {hints[o]}
               </Text>
@@ -136,6 +126,7 @@ function intOrNull(s: string): number | null {
 }
 
 export default function ProfileSetup() {
+  const { t } = useTranslation();
   const { role, session } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
@@ -213,6 +204,20 @@ export default function ProfileSetup() {
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
   }
 
+  // Hints are built here (the screen has `t`), not at module scope, so they localize.
+  const experienceHints: Record<ExperienceLevel, string> = {
+    beginner: t('profileSetup.expHint.beginner'),
+    intermediate: t('profileSetup.expHint.intermediate'),
+    advanced: t('profileSetup.expHint.advanced'),
+  };
+  const activityHints: Record<ActivityLevel, string> = {
+    sedentary: t('profileSetup.activityHint.sedentary'),
+    light: t('profileSetup.activityHint.light'),
+    moderate: t('profileSetup.activityHint.moderate'),
+    active: t('profileSetup.activityHint.active'),
+    very_active: t('profileSetup.activityHint.very_active'),
+  };
+
   async function onSave() {
     if (!userId) return;
     setError(null);
@@ -241,7 +246,7 @@ export default function ProfileSetup() {
       }
       router.back();
     } catch {
-      setError('Could not save. Please check your inputs and try again.');
+      setError(t('profileSetup.saveError'));
       setSaving(false);
     }
   }
@@ -251,74 +256,97 @@ export default function ProfileSetup() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.xl }} keyboardShouldPersistTaps="handled">
           <View>
-            <Text variant="h1">{isCoach ? 'Your coaching profile' : 'Your goals'}</Text>
+            <Text variant="h1">{isCoach ? t('profileSetup.coachTitle') : t('profileSetup.athleteTitle')}</Text>
             <Text variant="body" muted>
-              {isCoach
-                ? 'Tell clients about your coaching. They can see this on their home.'
-                : 'This helps your coach tailor your training & nutrition.'}
+              {isCoach ? t('profileSetup.coachIntro') : t('profileSetup.athleteIntro')}
             </Text>
           </View>
 
           {isCoach ? (
             <>
-              <Field title="Bio">
-                <Input value={bio} onChangeText={setBio} placeholder="A short intro for your clients" multiline style={{ minHeight: 80, textAlignVertical: 'top' }} />
+              <Field title={t('profileSetup.bio')}>
+                <Input value={bio} onChangeText={setBio} placeholder={t('profileSetup.bioPlaceholder')} multiline style={{ minHeight: 80, textAlignVertical: 'top' }} />
               </Field>
-              <Field title="Specialties">
-                <ChipGroup options={specialtySchema.options} selected={specialties} onToggle={(v) => toggle(specialties, setSpecialties, v)} />
+              <Field title={t('profileSetup.specialtiesField')}>
+                <ChipGroup
+                  options={specialtySchema.options}
+                  selected={specialties}
+                  onToggle={(v) => toggle(specialties, setSpecialties, v)}
+                  labelFor={(v) => t(`profileSetup.specialty.${v}`)}
+                />
               </Field>
-              <Field title="Years of experience">
-                <Input value={years} onChangeText={setYears} keyboardType="number-pad" placeholder="e.g. 5" />
+              <Field title={t('profileSetup.years')}>
+                <Input value={years} onChangeText={setYears} keyboardType="number-pad" placeholder={t('profileSetup.yearsPlaceholder')} />
               </Field>
-              <Field title="Certifications">
-                <Input value={certs} onChangeText={setCerts} placeholder="e.g. NASM CPT, Precision Nutrition" multiline style={{ minHeight: 60, textAlignVertical: 'top' }} />
+              <Field title={t('profileSetup.certs')}>
+                <Input value={certs} onChangeText={setCerts} placeholder={t('profileSetup.certsPlaceholder')} multiline style={{ minHeight: 60, textAlignVertical: 'top' }} />
               </Field>
             </>
           ) : (
             <>
-              <Field title="Primary goal">
-                <ChipGroup options={athleteGoalSchema.options} selected={goal ? [goal] : []} onToggle={(v) => setGoal(goal === v ? null : v)} />
-              </Field>
-              <Field title="Experience">
-                <OptionRows
-                  options={experienceLevelSchema.options}
-                  hints={EXPERIENCE_HINT}
-                  value={experience}
-                  onChange={setExperience}
+              <Field title={t('profileSetup.primaryGoal')}>
+                <ChipGroup
+                  options={athleteGoalSchema.options}
+                  selected={goal ? [goal] : []}
+                  onToggle={(v) => setGoal(goal === v ? null : v)}
+                  labelFor={(v) => t(`goals.${v}`)}
                 />
               </Field>
-              <Field title="Sex (for calorie estimates)">
-                <ChipGroup options={sexSchema.options} selected={sex ? [sex] : []} onToggle={(v) => setSex(sex === v ? null : v)} />
+              <Field title={t('profileSetup.experienceField')}>
+                <OptionRows
+                  options={experienceLevelSchema.options}
+                  hints={experienceHints}
+                  value={experience}
+                  onChange={setExperience}
+                  labelFor={(v) => t(`profileSetup.exp.${v}`)}
+                />
               </Field>
-              <Field title="Activity level">
+              <Field title={t('profileSetup.sexField')}>
+                <ChipGroup
+                  options={sexSchema.options}
+                  selected={sex ? [sex] : []}
+                  onToggle={(v) => setSex(sex === v ? null : v)}
+                  labelFor={(v) => t(`profileSetup.sex.${v}`)}
+                />
+              </Field>
+              <Field title={t('profileSetup.activityField')}>
                 <OptionRows
                   options={activityLevelSchema.options}
-                  hints={ACTIVITY_HINT}
+                  hints={activityHints}
                   value={activity}
                   onChange={setActivity}
+                  labelFor={(v) => t(`profileSetup.activity.${v}`)}
                 />
               </Field>
               <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-                <Field title="Height (cm)">
+                <Field title={t('profileSetup.height')}>
                   <Input value={heightCm} onChangeText={setHeightCm} keyboardType="number-pad" placeholder="178" />
                 </Field>
-                <Field title="Target weight (kg)">
+                <Field title={t('profileSetup.targetWeight')}>
                   <Input value={targetKg} onChangeText={setTargetKg} keyboardType="number-pad" placeholder="82" />
                 </Field>
               </View>
-              <Field title="Training days / week">
+              <Field title={t('profileSetup.trainingDays')}>
                 <ChipGroup
                   options={['0', '1', '2', '3', '4', '5', '6', '7'] as const}
                   selected={trainingDays ? [trainingDays] : []}
                   onToggle={(v) => setTrainingDays(trainingDays === v ? '' : v)}
+                  labelFor={(v) => v}
                 />
               </Field>
-              <Field title="Dietary preferences">
-                <ChipGroup options={dietaryTagSchema.options} selected={diet} onToggle={(v) => toggle(diet, setDiet, v)} />
+              <Field title={t('profileSetup.dietField')}>
+                <ChipGroup
+                  options={dietaryTagSchema.options}
+                  selected={diet}
+                  onToggle={(v) => toggle(diet, setDiet, v)}
+                  labelFor={(v) => t(`profileSetup.diet.${v}`)}
+                />
               </Field>
-              <Field title="Favourite & avoided foods">
+              <Field title={t('profileSetup.favFoods')}>
                 <Pressable
                   onPress={() => router.push('/food/preferences')}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('profileSetup.favFoodsTitle')}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -332,16 +360,16 @@ export default function ProfileSetup() {
                 >
                   <Icon name="heart" size={20} color={theme.colors.primary} />
                   <View style={{ flex: 1 }}>
-                    <Text variant="bodyStrong">Pick foods you love or avoid</Text>
+                    <Text variant="bodyStrong">{t('profileSetup.favFoodsTitle')}</Text>
                     <Text variant="caption" muted>
-                      Helps your coach build a plan you’ll actually stick to.
+                      {t('profileSetup.favFoodsSub')}
                     </Text>
                   </View>
-                  <Icon name="chevron-forward" size={20} color={theme.colors.textMuted} />
+                  <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
                 </Pressable>
               </Field>
-              <Field title="Injuries / notes">
-                <Input value={injuries} onChangeText={setInjuries} placeholder="Anything your coach should know" multiline style={{ minHeight: 70, textAlignVertical: 'top' }} />
+              <Field title={t('profileSetup.injuries')}>
+                <Input value={injuries} onChangeText={setInjuries} placeholder={t('profileSetup.injuriesPlaceholder')} multiline style={{ minHeight: 70, textAlignVertical: 'top' }} />
               </Field>
             </>
           )}
@@ -351,7 +379,7 @@ export default function ProfileSetup() {
               {error}
             </Text>
           ) : null}
-          <Button title="Save" onPress={onSave} loading={saving} size="lg" />
+          <Button title={t('common.save')} onPress={onSave} loading={saving} size="lg" />
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>

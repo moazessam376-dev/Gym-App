@@ -670,5 +670,73 @@
     "approvedBody": "You’re a coach now. Sign out and back in to load your coach tools.",
     "rejectedTitle": "Not approved",
     "rejectedBody": "Your application wasn’t approved this time. You can apply again below."
+  },
+  "profileSetup": {
+    "athleteTitle": "Your goals",
+    "athleteIntro": "This helps your coach tailor your training & nutrition.",
+    "coachTitle": "Your coaching profile",
+    "coachIntro": "Tell clients about your coaching. They can see this on their home.",
+    "bio": "Bio",
+    "bioPlaceholder": "A short intro for your clients",
+    "specialtiesField": "Specialties",
+    "years": "Years of experience",
+    "yearsPlaceholder": "e.g. 5",
+    "certs": "Certifications",
+    "certsPlaceholder": "e.g. NASM CPT, Precision Nutrition",
+    "primaryGoal": "Primary goal",
+    "experienceField": "Experience",
+    "sexField": "Sex (for calorie estimates)",
+    "activityField": "Activity level",
+    "height": "Height (cm)",
+    "targetWeight": "Target weight (kg)",
+    "trainingDays": "Training days / week",
+    "dietField": "Dietary preferences",
+    "favFoods": "Favourite & avoided foods",
+    "favFoodsTitle": "Pick foods you love or avoid",
+    "favFoodsSub": "Helps your coach build a plan you’ll actually stick to.",
+    "injuries": "Injuries / notes",
+    "injuriesPlaceholder": "Anything your coach should know",
+    "saveError": "Could not save. Please check your inputs and try again.",
+    "exp": { "beginner": "Beginner", "intermediate": "Intermediate", "advanced": "Advanced" },
+    "expHint": {
+      "beginner": "New to training, or less than ~1 year of consistent workouts.",
+      "intermediate": "1–3 years of consistent training; comfortable with the main lifts.",
+      "advanced": "3+ years of structured training and programming."
+    },
+    "activity": { "sedentary": "Sedentary", "light": "Light", "moderate": "Moderate", "active": "Active", "very_active": "Very active" },
+    "activityHint": {
+      "sedentary": "Little or no exercise; mostly sitting (desk job).",
+      "light": "Light exercise 1–3 days a week.",
+      "moderate": "Moderate exercise 3–5 days a week.",
+      "active": "Hard exercise 6–7 days a week.",
+      "very_active": "Very hard daily training, or a physical job / two-a-days."
+    },
+    "sex": { "male": "Male", "female": "Female" },
+    "diet": {
+      "vegetarian": "Vegetarian",
+      "vegan": "Vegan",
+      "halal": "Halal",
+      "kosher": "Kosher",
+      "pescatarian": "Pescatarian",
+      "dairy_free": "Dairy-free",
+      "gluten_free": "Gluten-free",
+      "nut_allergy": "Nut allergy",
+      "lactose_intolerant": "Lactose intolerant"
+    },
+    "specialty": {
+      "hypertrophy": "Hypertrophy",
+      "powerlifting": "Powerlifting",
+      "weight_loss": "Weight loss",
+      "nutrition": "Nutrition",
+      "strength": "Strength",
+      "bodybuilding": "Bodybuilding",
+      "general_fitness": "General fitness",
+      "sport_performance": "Sport performance",
+      "mobility": "Mobility",
+      "womens_training": "Women’s training"
+    }
+  },
+  "profile": {
+    "displayName": "Display name"
   }
 }

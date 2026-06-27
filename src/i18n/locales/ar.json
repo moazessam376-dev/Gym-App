@@ -698,5 +698,73 @@
     "approvedBody": "بقيت كوتش دلوقتي. سجّل خروج وادخل تاني عشان تحمّل أدوات الكوتش.",
     "rejectedTitle": "مش اتقبل",
     "rejectedBody": "طلبك مش اتقبل المرة دي. تقدر تقدّم تاني تحت."
+  },
+  "profileSetup": {
+    "athleteTitle": "أهدافك",
+    "athleteIntro": "ده بيساعد الكوتش يظبط تمارينك وأكلك على مقاسك.",
+    "coachTitle": "بروفايل التدريب بتاعك",
+    "coachIntro": "احكي للعملاء عن تدريبك. هيشوفوه في الصفحة الرئيسية.",
+    "bio": "نبذة",
+    "bioPlaceholder": "تعريف قصير لعملائك",
+    "specialtiesField": "التخصصات",
+    "years": "سنين الخبرة",
+    "yearsPlaceholder": "مثلاً 5",
+    "certs": "الشهادات",
+    "certsPlaceholder": "مثلاً NASM CPT، Precision Nutrition",
+    "primaryGoal": "الهدف الأساسي",
+    "experienceField": "الخبرة",
+    "sexField": "النوع (لحساب السعرات)",
+    "activityField": "مستوى النشاط",
+    "height": "الطول (سم)",
+    "targetWeight": "الوزن المستهدف (كجم)",
+    "trainingDays": "أيام التمرين / الأسبوع",
+    "dietField": "التفضيلات الغذائية",
+    "favFoods": "الأكلات المفضلة والمتجنبة",
+    "favFoodsTitle": "اختار أكلات بتحبها أو بتتجنبها",
+    "favFoodsSub": "بيساعد الكوتش يعمل خطة تقدر تكمّل عليها فعلاً.",
+    "injuries": "إصابات / ملاحظات",
+    "injuriesPlaceholder": "أي حاجة لازم الكوتش يعرفها",
+    "saveError": "مقدرناش نحفظ. راجع اللي كتبته وحاول تاني.",
+    "exp": { "beginner": "مبتدئ", "intermediate": "متوسط", "advanced": "متقدم" },
+    "expHint": {
+      "beginner": "جديد على التمرين، أو أقل من سنة تمرين منتظم.",
+      "intermediate": "من سنة لـ3 سنين تمرين منتظم؛ مرتاح مع التمارين الأساسية.",
+      "advanced": "أكتر من 3 سنين تمرين وبرمجة منظمة."
+    },
+    "activity": { "sedentary": "قليل الحركة", "light": "خفيف", "moderate": "متوسط", "active": "نشيط", "very_active": "نشيط جداً" },
+    "activityHint": {
+      "sedentary": "تمرين قليل أو معدوم؛ قاعد أغلب الوقت (شغل مكتب).",
+      "light": "تمرين خفيف 1–3 أيام في الأسبوع.",
+      "moderate": "تمرين متوسط 3–5 أيام في الأسبوع.",
+      "active": "تمرين قوي 6–7 أيام في الأسبوع.",
+      "very_active": "تمرين يومي قوي جداً، أو شغل بدني / تمرينين في اليوم."
+    },
+    "sex": { "male": "ذكر", "female": "أنثى" },
+    "diet": {
+      "vegetarian": "نباتي",
+      "vegan": "نباتي صرف",
+      "halal": "حلال",
+      "kosher": "كوشر",
+      "pescatarian": "سمكي نباتي",
+      "dairy_free": "خالي من الألبان",
+      "gluten_free": "خالي من الجلوتين",
+      "nut_allergy": "حساسية مكسرات",
+      "lactose_intolerant": "حساسية لاكتوز"
+    },
+    "specialty": {
+      "hypertrophy": "تضخيم العضلات",
+      "powerlifting": "رفع أثقال",
+      "weight_loss": "إنقاص الوزن",
+      "nutrition": "تغذية",
+      "strength": "قوة",
+      "bodybuilding": "كمال أجسام",
+      "general_fitness": "لياقة عامة",
+      "sport_performance": "أداء رياضي",
+      "mobility": "مرونة",
+      "womens_training": "تدريب السيدات"
+    }
+  },
+  "profile": {
+    "displayName": "الاسم المعروض"
   }
 }
