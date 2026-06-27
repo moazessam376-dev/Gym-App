@@ -61,6 +61,12 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
     `(tabs)/index.tsx`, a pure role-home delegator with no strings. Every user-facing screen is bilingual (EN/AR + RTL).
 - ✅ **E — Catalog expansion** — `0047` **APPLIED to prod 2026-06-27** (advisors clean; globals 49→111
   exercises, 30→105 foods; every food categorised). Live on the current app build — no app deploy needed.
+  - ✅ **Taxonomy refinement (founder feedback)** — `0048`+`0049` APPLIED to prod 2026-06-27 (advisors
+    clean). Retired the sparse `upper`/`lower` buckets (→ legs/push/pull) and added a dedicated **`arms`**
+    category (biceps/triceps/forearm, pulled out of push/pull); shoulders stay in push, rear-delts in pull.
+    Final: push 25 · pull 22 · legs 35 · arms 16 · core 15. TS `muscleGroupSchema` + en/ar muscle labels
+    updated (parity 985/985). Edge AI fns read `muscle_group` as free-form string → no redeploy.
+    Also fixed a latent RLS-harness PK collision (`0047` e1…0a/f1…0b clashed with seed customs → moved to ca…/cb…).
   - ✅ `0047_expand_catalogs.sql` — pure additive global seed (coach_id NULL), no schema/RLS change,
     idempotent (`on conflict (id) do nothing`). **+62 exercises** (push/pull/legs/upper/lower/core +
     Olympic; richer `primary_muscle`) and **+75 foods** incl. Egyptian staples (koshari, ful, taameya,
