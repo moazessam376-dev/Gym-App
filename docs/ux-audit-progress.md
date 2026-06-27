@@ -59,7 +59,8 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
     (`RootNavigator` got `useTranslation`; titles also feed the iOS back-button label).
   - ✅ **Slice D COMPLETE** — full-app sweep confirms the only `app/` screen without `useTranslation` is
     `(tabs)/index.tsx`, a pure role-home delegator with no strings. Every user-facing screen is bilingual (EN/AR + RTL).
-- 🔵 **E — Catalog expansion** — code done; **needs prod go-ahead to apply `0047`**
+- ✅ **E — Catalog expansion** — `0047` **APPLIED to prod 2026-06-27** (advisors clean; globals 49→111
+  exercises, 30→105 foods; every food categorised). Live on the current app build — no app deploy needed.
   - ✅ `0047_expand_catalogs.sql` — pure additive global seed (coach_id NULL), no schema/RLS change,
     idempotent (`on conflict (id) do nothing`). **+62 exercises** (push/pull/legs/upper/lower/core +
     Olympic; richer `primary_muscle`) and **+75 foods** incl. Egyptian staples (koshari, ful, taameya,
@@ -75,10 +76,9 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
 - ⬜ **H — First-run tour + guided goal wizard**
 
 ## Prod migrations pending go-ahead
-`0047` (catalog expansion — **ready, dry-run clean, awaiting apply**) · coach-feedback-notify trigger
-(Slice F) · coach_requests (G2) · serving sizes (G4).
-_(Note: Slice B's media-delete shipped as an Edge Function, **not** a migration — so there is no `0047`
-media migration; the catalog seed takes the `0047` slot.)_
+coach-feedback-notify trigger (Slice F) · coach_requests (G2) · serving sizes (G4).
+_(Done: `0047` catalog expansion applied 2026-06-27. Note: Slice B's media-delete shipped as an Edge
+Function, **not** a migration — there is no `0047` media migration; the catalog seed took the `0047` slot.)_
 
 ## Known limitations flagged for pilot
 - Arabic UI but **English food/exercise names** in the catalog (DB `name_ar` is post-pilot).
