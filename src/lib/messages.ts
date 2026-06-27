@@ -21,6 +21,14 @@ import {
 /** A lightweight quote of the message being replied to (same thread). */
 export type ReplyPreview = { id: string; body: string; sender_id: string };
 
+/** The workout note a note-card message mirrors (embedded on read; 0051). */
+export type WorkoutNoteRef = {
+  id: string;
+  category: 'challenge' | 'compliment';
+  exercise_name: string | null;
+  body: string;
+};
+
 export type Message = {
   id: string;
   sender_id: string;
@@ -35,6 +43,10 @@ export type Message = {
   reply_to: ReplyPreview | null;
   /** A voice-note `media` id (kind 'audio'), or null (Phase 18 voice notes). */
   media_id: string | null;
+  /** A mirrored workout note's id, or null — renders as a note card not a bubble (0051). */
+  workout_note_id: string | null;
+  /** Resolved note (category/exercise/body); null on realtime rows until refetch (0051). */
+  workout_note: WorkoutNoteRef | null;
 };
 
 export type Reaction = {
@@ -48,15 +60,20 @@ export type Reaction = {
 // NOT the constraint name — the constraint-name hint (messages_reply_to_id_fkey)
 // returns PGRST200 "Could not find a relationship between 'messages' and 'messages'".
 const MSG_COLS =
-  'id, sender_id, recipient_id, body, created_at, edited_at, reply_to_id, media_id, ' +
-  'reply_to:messages!reply_to_id(id, body, sender_id)';
+  'id, sender_id, recipient_id, body, created_at, edited_at, reply_to_id, media_id, workout_note_id, ' +
+  'reply_to:messages!reply_to_id(id, body, sender_id), ' +
+  'workout_note:workout_notes!workout_note_id(id, category, exercise_name, body)';
 
 // PostgREST types a to-one embed as either an object or a single-element array; this
 // normalizes the row into our flat Message shape.
 function mapRow(row: unknown): Message {
-  const r = row as Omit<Message, 'reply_to'> & { reply_to: ReplyPreview | ReplyPreview[] | null };
+  const r = row as Omit<Message, 'reply_to' | 'workout_note'> & {
+    reply_to: ReplyPreview | ReplyPreview[] | null;
+    workout_note: WorkoutNoteRef | WorkoutNoteRef[] | null;
+  };
   const reply = Array.isArray(r.reply_to) ? (r.reply_to[0] ?? null) : r.reply_to ?? null;
-  return { ...r, reply_to: reply };
+  const note = Array.isArray(r.workout_note) ? (r.workout_note[0] ?? null) : r.workout_note ?? null;
+  return { ...r, reply_to: reply, workout_note: note };
 }
 
 /** Default conversation page size (newest N, then page backwards by `before`). */
@@ -178,9 +195,14 @@ export function subscribeToIncoming(
   onInsert: (m: Message) => void,
   onEdit?: (m: Message) => void,
 ): RealtimeChannel {
-  // Raw realtime rows have the columns (incl. reply_to_id) but not the embedded
-  // reply_to quote — default it to null; the caller resolves the quote from state.
-  const coerce = (row: unknown): Message => ({ ...(row as Message), reply_to: (row as Message).reply_to ?? null });
+  // Raw realtime rows have the columns (incl. reply_to_id, workout_note_id) but not the
+  // embedded reply_to quote / workout_note — default them to null. A live note-card
+  // message still renders (body + note styling); category/exercise fill in on refetch.
+  const coerce = (row: unknown): Message => ({
+    ...(row as Message),
+    reply_to: (row as Message).reply_to ?? null,
+    workout_note: (row as Message).workout_note ?? null,
+  });
   return supabase
     .channel(`messages:to:${myUserId}`)
     .on(

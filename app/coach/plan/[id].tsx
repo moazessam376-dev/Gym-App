@@ -59,6 +59,7 @@ import {
   type Macros,
 } from '../../../src/lib/plan-ui';
 import { adjustPlan, getPlanInsight } from '../../../src/lib/coach-ai';
+import { listClientNotes, type WorkoutNote } from '../../../src/lib/workout-notes';
 import { Icon, useToast } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
@@ -87,6 +88,9 @@ export default function PlanEditor() {
   // A freshly cloned/blank template is UNCOMMITTED until the coach taps "Save to my
   // plans" (or assigns it). `kept` records that commitment for this editor session.
   const [kept, setKept] = useState(false);
+  // Athlete workout notes for THIS assigned plan's exercises, keyed by plan_exercise_id,
+  // so the coach sees the client's feedback inline while amending the plan (0051).
+  const [exNotes, setExNotes] = useState<Record<string, WorkoutNote[]>>({});
 
   const loadWeekDays = useCallback(async (wid: string) => {
     const ds = await listDays(wid);
@@ -111,6 +115,17 @@ export default function PlanEditor() {
       const p = await getPlan(id);
       setPlan(p);
       if (!p) return;
+      // Assigned plan → pull the client's workout notes and group by exercise so they
+      // render inline on each exercise row (the coach RLS already permits this read).
+      if (p.client_id) {
+        const cn = await listClientNotes(p.client_id, 100).catch(() => [] as WorkoutNote[]);
+        const grouped: Record<string, WorkoutNote[]> = {};
+        for (const n of cn) {
+          if (!n.plan_exercise_id) continue;
+          (grouped[n.plan_exercise_id] ??= []).push(n);
+        }
+        setExNotes(grouped);
+      }
       if (p.type === 'training') {
         const ws = await listWeeks(id);
         setWeeks(ws);
@@ -545,6 +560,7 @@ export default function PlanEditor() {
                   key={d.id}
                   day={d}
                   exercises={exByDay[d.id] ?? []}
+                  notesByExercise={exNotes}
                   canMoveUp={i > 0}
                   canMoveDown={i < days.length - 1}
                   onMoveUp={() => moveDay(d, 'up')}
@@ -774,6 +790,7 @@ function NoteEditor({
 function DayCard({
   day,
   exercises,
+  notesByExercise,
   canMoveUp,
   canMoveDown,
   onMoveUp,
@@ -786,6 +803,7 @@ function DayCard({
 }: {
   day: Day;
   exercises: ExerciseRow[];
+  notesByExercise: Record<string, WorkoutNote[]>;
   canMoveUp: boolean;
   canMoveDown: boolean;
   onMoveUp: () => void;
@@ -831,6 +849,15 @@ function DayCard({
                     .join('  ·  ') || t('planEditor.tapToSetDetails')}
                 </Text>
                 {e.note ? <Text style={styles.exNote}>“{e.note}”</Text> : null}
+                {(notesByExercise[e.id] ?? []).map((n) => {
+                  const tint = n.category === 'compliment' ? theme.colors.success : theme.colors.warning;
+                  return (
+                    <View key={n.id} style={styles.clientNoteRow}>
+                      <Icon name="clipboard" size={12} color={tint} />
+                      <Text style={[styles.clientNoteText, { color: tint }]}>{n.body}</Text>
+                    </View>
+                  );
+                })}
               </Pressable>
             ))}
         </View>
@@ -956,6 +983,9 @@ const styles = StyleSheet.create({
   exName: { fontSize: 15, fontFamily: f.bodySemiBold, color: c.text },
   exMeta: { fontSize: 13, fontFamily: f.bodyRegular, color: c.textMuted, marginTop: 1 },
   exNote: { fontSize: 13, fontFamily: f.bodyRegular, color: c.primary, fontStyle: 'italic', marginTop: 3 },
+  // The client's logged workout note shown inline on the exercise (0051).
+  clientNoteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: 4 },
+  clientNoteText: { flex: 1, fontSize: 13, fontFamily: f.bodyRegular },
   addInline: { paddingVertical: 10, marginTop: 4 },
   addInlineText: { color: c.primary, fontFamily: f.bodySemiBold, fontSize: 15 },
   addBox: { gap: 8, marginTop: 12 },

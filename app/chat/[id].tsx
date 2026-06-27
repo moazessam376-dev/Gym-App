@@ -39,6 +39,7 @@ import {
   type Message,
   type Reaction,
   type ReplyPreview,
+  type WorkoutNoteRef,
 } from '../../src/lib/messages';
 import {
   acknowledgeChatTerms,
@@ -184,6 +185,8 @@ function Bubble({
   mine,
   body,
   mediaId,
+  workoutNoteId,
+  note,
   at,
   edited,
   reply,
@@ -199,6 +202,10 @@ function Bubble({
   body: string;
   /** A voice-note media id (kind 'audio'), or null for a text message. */
   mediaId: string | null;
+  /** Set when this message mirrors a workout note → render a note card, not a bubble. */
+  workoutNoteId: string | null;
+  /** The resolved note (category/exercise); may be null on a live row until refetch. */
+  note: WorkoutNoteRef | null;
   at: string;
   edited: boolean;
   reply: ReplyPreview | null;
@@ -266,6 +273,8 @@ function Bubble({
   ).current;
 
   const authorLabel = reply ? (reply.sender_id === myId ? t('chat.you') : counterpartName) : '';
+  // Note cards are tinted by category (compliment = positive, challenge = amber).
+  const noteAccent = note?.category === 'compliment' ? theme.colors.success : theme.colors.warning;
 
   return (
     <View style={{ marginVertical: 3 }}>
@@ -286,29 +295,76 @@ function Bubble({
             resolves to min-content and collapses the bubble to one character per line. */}
         <View style={{ maxWidth: '82%' }}>
           {/* Long-press for actions; double-tap to ❤️; swipe right to reply — Phase 18 Slice 2. */}
-          <Pressable
-            onPress={handlePress}
-            onLongPress={onLongPress}
-            delayLongPress={300}
-            style={{
-              backgroundColor: mine ? theme.colors.primary : theme.colors.glass,
-              borderWidth: mine ? 0 : 1,
-              borderColor: theme.colors.glassBorder,
-              borderRadius: theme.radii.lg,
-              borderBottomRightRadius: mine ? 4 : theme.radii.lg,
-              borderBottomLeftRadius: mine ? theme.radii.lg : 4,
-              paddingHorizontal: theme.spacing.md,
-              paddingVertical: theme.spacing.sm,
-            }}
-          >
-            {reply ? <QuoteBox reply={reply} mine={mine} authorLabel={authorLabel} /> : null}
-            {mediaId ? <VoiceNoteBubble mediaId={mediaId} mine={mine} /> : null}
-            {body.length > 0 ? (
-              <Text variant="body" color={mine ? theme.colors.onPrimary : theme.colors.text}>
-                {body}
-              </Text>
-            ) : null}
-          </Pressable>
+          {workoutNoteId ? (
+            // Workout-note card — deliberately NOT a chat bubble: a bordered, accent-
+            // tinted note with the category + exercise, so it reads as a logged note.
+            <Pressable
+              onPress={handlePress}
+              onLongPress={onLongPress}
+              delayLongPress={300}
+              style={{
+                backgroundColor: theme.colors.surface,
+                borderWidth: 1,
+                borderColor: theme.colors.glassBorder,
+                borderLeftWidth: 3,
+                borderLeftColor: noteAccent,
+                borderRadius: theme.radii.md,
+                paddingHorizontal: theme.spacing.md,
+                paddingVertical: theme.spacing.sm,
+                gap: 4,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Icon name="clipboard" size={13} color={noteAccent} />
+                <Text
+                  variant="caption"
+                  style={{
+                    color: noteAccent,
+                    fontFamily: theme.fontFamily.bodyBold,
+                    fontSize: 11,
+                    letterSpacing: 0.5,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {note ? t(`workout.${note.category}`) : t('chat.note')}
+                </Text>
+                {note?.exercise_name ? (
+                  <Text variant="caption" muted numberOfLines={1} style={{ flex: 1 }}>
+                    {`· ${note.exercise_name}`}
+                  </Text>
+                ) : null}
+              </View>
+              {body.length > 0 ? (
+                <Text variant="body" color={theme.colors.text}>
+                  {body}
+                </Text>
+              ) : null}
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={handlePress}
+              onLongPress={onLongPress}
+              delayLongPress={300}
+              style={{
+                backgroundColor: mine ? theme.colors.primary : theme.colors.glass,
+                borderWidth: mine ? 0 : 1,
+                borderColor: theme.colors.glassBorder,
+                borderRadius: theme.radii.lg,
+                borderBottomRightRadius: mine ? 4 : theme.radii.lg,
+                borderBottomLeftRadius: mine ? theme.radii.lg : 4,
+                paddingHorizontal: theme.spacing.md,
+                paddingVertical: theme.spacing.sm,
+              }}
+            >
+              {reply ? <QuoteBox reply={reply} mine={mine} authorLabel={authorLabel} /> : null}
+              {mediaId ? <VoiceNoteBubble mediaId={mediaId} mine={mine} /> : null}
+              {body.length > 0 ? (
+                <Text variant="body" color={mine ? theme.colors.onPrimary : theme.colors.text}>
+                  {body}
+                </Text>
+              ) : null}
+            </Pressable>
+          )}
           <Animated.View
             pointerEvents="none"
             style={[
@@ -802,6 +858,8 @@ export default function ChatThread() {
                       mine={item.sender_id === myId}
                       body={item.body}
                       mediaId={item.media_id}
+                      workoutNoteId={item.workout_note_id}
+                      note={item.workout_note}
                       at={item.created_at}
                       edited={item.edited_at != null}
                       reply={item.reply_to}
