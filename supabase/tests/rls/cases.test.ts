@@ -3620,8 +3620,8 @@ describe('conversation previews + read-state (0058) — chat list aggregation (�
       c.query('select peer_id from public.conversation_read_state where user_id = $1', [CLIENT_A1.sub]),
     );
     expect(sibling.rows).toHaveLength(0);
-    const anon = await asAnon((c) => c.query('select peer_id from public.conversation_read_state'));
-    expect(anon.rows).toHaveLength(0);
+    // anon has no grant on this private table → denied at the grant level (stronger than RLS-0-rows).
+    await expect(asAnon((c) => c.query('select peer_id from public.conversation_read_state'))).rejects.toThrow();
   });
 
   it('mark_conversation_read writes the row as the caller (user_id forced to auth.uid())', async () => {
