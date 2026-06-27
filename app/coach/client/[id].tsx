@@ -4,7 +4,7 @@
 // logging (0016), adherence is workouts vs the athlete's training-days target (0017),
 // and the lean-mass delta from verified InBody readings (0026).
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
@@ -27,7 +27,7 @@ import {
 } from '../../../src/lib/nutrition';
 import { getStreak, listSessions, type WorkoutSession } from '../../../src/lib/sessions';
 import { readCache, writeCache } from '../../../src/lib/screen-cache';
-import { Icon, IconButton, Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented } from '../../../src/components/ui';
+import { Icon, IconButton, Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented, EmptyState } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 // Warm-cache snapshot so re-opening a client renders instantly (then refetches).
@@ -47,6 +47,9 @@ type ClientSnapshot = {
 };
 
 const STATUS_TONE = { draft: 'warning', published: 'success', archived: 'neutral' } as const;
+
+// The client screen is split into sub-tabs so ~10 cards aren't one long scroll.
+type ClientTab = 'overview' | 'plans' | 'progress' | 'notes';
 
 // Quick-add prompt chips so coaches get high-quality AI output without typing much.
 // i18n keys under clientDetail.chips.* — labels resolve via t() at render.
@@ -93,6 +96,7 @@ export default function ClientDetail() {
   const [streak, setStreak] = useState(cached?.streak ?? 0);
   const [sessions, setSessions] = useState<WorkoutSession[]>(cached?.sessions ?? []);
   const [loading, setLoading] = useState(cached === undefined);
+  const [tab, setTab] = useState<ClientTab>('overview');
 
   // Coach AI (Phase 13): plan-gen modal + plan-adjustment nudges. Coach-only.
   const [aiOpen, setAiOpen] = useState(false);
@@ -245,28 +249,37 @@ export default function ClientDetail() {
   return (
     <>
     <Screen gradient padded={false} edges={['bottom']}>
-      <FlatList
-        data={plans}
-        keyExtractor={(p) => p.id}
-        contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md }}
-        ListHeaderComponent={
-          <View style={{ gap: theme.spacing.lg, marginBottom: theme.spacing.sm }}>
-            {/* Identity */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-              <Avatar name={name ?? t('clientDetail.client')} size={56} />
-              <View style={{ flex: 1 }}>
-                <Text variant="h2">{name ?? t('clientDetail.client')}</Text>
-                <Text variant="caption" muted>
-                  {t('clientDetail.client')}
-                </Text>
-              </View>
-              <IconButton
-                name="chatbubble-ellipses"
-                accessibilityLabel={t('clientDetail.messageClient')}
-                onPress={() => router.push({ pathname: '/chat/[id]', params: { id, name: name ?? '' } })}
-              />
-            </View>
+      {/* Fixed header: identity + message + sub-tabs */}
+      <View style={{ paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.lg, gap: theme.spacing.md }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+          <Avatar name={name ?? t('clientDetail.client')} size={56} />
+          <View style={{ flex: 1 }}>
+            <Text variant="h2">{name ?? t('clientDetail.client')}</Text>
+            <Text variant="caption" muted>
+              {t('clientDetail.client')}
+            </Text>
+          </View>
+          <IconButton
+            name="chatbubble-ellipses"
+            accessibilityLabel={t('clientDetail.messageClient')}
+            onPress={() => router.push({ pathname: '/chat/[id]', params: { id, name: name ?? '' } })}
+          />
+        </View>
+        <Segmented
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'overview', label: t('clientDetail.tabs.overview') },
+            { value: 'plans', label: t('clientDetail.tabs.plans') },
+            { value: 'progress', label: t('clientDetail.tabs.progress') },
+            { value: 'notes', label: t('clientDetail.tabs.notes') },
+          ]}
+        />
+      </View>
 
+      <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
+        {tab === 'overview' ? (
+          <>
             {/* Progress snapshot (REAL — completion logging 0016 + verified InBody 0026) */}
             <GlassCard glowColor={theme.colors.primary}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
@@ -350,7 +363,11 @@ export default function ClientDetail() {
                 style={{ marginTop: theme.spacing.sm }}
               />
             </GlassCard>
+          </>
+        ) : null}
 
+        {tab === 'progress' ? (
+          <>
             {/* Nutrition adherence (real data, migration 0019) */}
             <GlassCard>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
@@ -467,34 +484,47 @@ export default function ClientDetail() {
                 }
               />
             </GlassCard>
+          </>
+        ) : null}
 
-            {/* Athlete feedback from logged workouts (migration 0021) */}
-            {notes.length > 0 ? (
-              <GlassCard>
-                <Text variant="label" muted style={{ marginBottom: theme.spacing.sm }}>
-                  {t('clientDetail.recentFeedback')}
-                </Text>
-                <View style={{ gap: theme.spacing.md }}>
-                  {notes.map((n) => (
-                    <View key={n.id} style={{ gap: 4 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
-                        <Badge
-                          label={n.category === 'challenge' ? t('workout.challenge') : t('workout.compliment')}
-                          tone={n.category === 'challenge' ? 'warning' : 'success'}
-                        />
-                        {n.exercise_name ? (
-                          <Text variant="caption" color="primary">
-                            {n.exercise_name}
-                          </Text>
-                        ) : null}
-                      </View>
-                      <Text variant="body">{n.body}</Text>
+        {/* Notes — athlete feedback from logged workouts (migration 0021) */}
+        {tab === 'notes' ? (
+          notes.length > 0 ? (
+            <GlassCard>
+              <Text variant="label" muted style={{ marginBottom: theme.spacing.sm }}>
+                {t('clientDetail.recentFeedback')}
+              </Text>
+              <View style={{ gap: theme.spacing.md }}>
+                {notes.map((n) => (
+                  <View key={n.id} style={{ gap: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
+                      <Badge
+                        label={n.category === 'challenge' ? t('workout.challenge') : t('workout.compliment')}
+                        tone={n.category === 'challenge' ? 'warning' : 'success'}
+                      />
+                      {n.exercise_name ? (
+                        <Text variant="caption" color="primary">
+                          {n.exercise_name}
+                        </Text>
+                      ) : null}
                     </View>
-                  ))}
-                </View>
-              </GlassCard>
-            ) : null}
+                    <Text variant="body">{n.body}</Text>
+                  </View>
+                ))}
+              </View>
+            </GlassCard>
+          ) : (
+            <EmptyState
+              icon="chatbox-ellipses-outline"
+              title={t('clientDetail.noNotesTitle')}
+              subtitle={t('clientDetail.noNotesSub')}
+            />
+          )
+        ) : null}
 
+        {/* Plans — assign from templates + this client's assigned plans */}
+        {tab === 'plans' ? (
+          <>
             <Button
               title={t('clientDetail.assignFromTemplates')}
               left={<Icon name="add" size={18} color={theme.colors.onPrimary} />}
@@ -506,38 +536,43 @@ export default function ClientDetail() {
             <Text variant="label" muted style={{ marginTop: theme.spacing.sm }}>
               {t('clientDetail.assignedPlans')}
             </Text>
-          </View>
-        }
-        ListEmptyComponent={
-          <Text variant="body" muted>
-            {t('clientDetail.noPlans')}
-          </Text>
-        }
-        renderItem={({ item }) => (
-          <GlassCard onPress={() => router.push({ pathname: '/coach/plan/[id]', params: { id: item.id } })}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: theme.radii.md,
-                  backgroundColor: theme.colors.glassStrong,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Icon name={item.type === 'training' ? 'barbell' : 'restaurant'} size={20} color={theme.colors.primary} />
-              </View>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text variant="bodyStrong">{item.title}</Text>
-                <Badge label={t(`planStatus.${item.status}`)} tone={STATUS_TONE[item.status]} />
-              </View>
-              <IconButton name="trash-outline" onPress={() => onDeletePlan(item)} />
-              <Icon name="chevron-forward" size={20} color={theme.colors.textMuted} />
-            </View>
-          </GlassCard>
-        )}
-      />
+
+            {plans.length === 0 ? (
+              <Text variant="body" muted>
+                {t('clientDetail.noPlans')}
+              </Text>
+            ) : (
+              plans.map((item) => (
+                <GlassCard
+                  key={item.id}
+                  onPress={() => router.push({ pathname: '/coach/plan/[id]', params: { id: item.id } })}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                    <View
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: theme.radii.md,
+                        backgroundColor: theme.colors.glassStrong,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Icon name={item.type === 'training' ? 'barbell' : 'restaurant'} size={20} color={theme.colors.primary} />
+                    </View>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text variant="bodyStrong">{item.title}</Text>
+                      <Badge label={t(`planStatus.${item.status}`)} tone={STATUS_TONE[item.status]} />
+                    </View>
+                    <IconButton name="trash-outline" onPress={() => onDeletePlan(item)} />
+                    <Icon name="chevron-forward" size={20} color={theme.colors.textMuted} />
+                  </View>
+                </GlassCard>
+              ))
+            )}
+          </>
+        ) : null}
+      </ScrollView>
     </Screen>
 
     {/* Plan-gen modal: pick training/nutrition + an optional steering prompt. The AI
