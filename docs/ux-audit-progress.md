@@ -59,13 +59,26 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
     (`RootNavigator` got `useTranslation`; titles also feed the iOS back-button label).
   - ✅ **Slice D COMPLETE** — full-app sweep confirms the only `app/` screen without `useTranslation` is
     `(tabs)/index.tsx`, a pure role-home delegator with no strings. Every user-facing screen is bilingual (EN/AR + RTL).
-- ⬜ **E — Catalog expansion** (migration 0048, needs prod go-ahead)
+- 🔵 **E — Catalog expansion** — code done; **needs prod go-ahead to apply `0047`**
+  - ✅ `0047_expand_catalogs.sql` — pure additive global seed (coach_id NULL), no schema/RLS change,
+    idempotent (`on conflict (id) do nothing`). **+62 exercises** (push/pull/legs/upper/lower/core +
+    Olympic; richer `primary_muscle`) and **+75 foods** incl. Egyptian staples (koshari, ful, taameya,
+    aish baladi, molokhia, mahshi, tahini, basbousa, konafa…) with `category` + integer macros/100g.
+  - ✅ Registered in `supabase/tests/rls/runner.ts`. No app change needed — `listExercises`/`listFoods`
+    already read these columns and the SELECT policies expose `coach_id IS NULL` globals to everyone.
+  - ✅ De-risked: rolled-back `begin…rollback` dry-run on prod schema = clean (enums/columns/constraints OK).
+  - ⏸ Dropped the optional `is_bodyweight` column — nothing reads it yet (dead schema); trivial follow-up
+    for Slice F's exercise picker if wanted.
+  - ⬜ **PENDING: apply `0047` to prod** (additive seed → advisors expected clean) + `get_advisors(security)`.
 - ⬜ **F — Coach workflow** (Message button, assign-with-context, AI plan-gen entry points, client-detail sub-tabs, plan-editor UI-kit; + the deferred coach-feedback notification)
 - ⬜ **G — Larger items** (G1 Ranks→Analytics merge + leaderboard in-page UX · G2 coach_requests funnel · G3 admin console · G4 nutrition barcode/serving sizes)
 - ⬜ **H — First-run tour + guided goal wizard**
 
 ## Prod migrations pending go-ahead
-0047 (media delete) · 0048 (catalog) · coach-feedback-notify trigger (Slice F) · coach_requests (G2) · serving sizes (G4).
+`0047` (catalog expansion — **ready, dry-run clean, awaiting apply**) · coach-feedback-notify trigger
+(Slice F) · coach_requests (G2) · serving sizes (G4).
+_(Note: Slice B's media-delete shipped as an Edge Function, **not** a migration — so there is no `0047`
+media migration; the catalog seed takes the `0047` slot.)_
 
 ## Known limitations flagged for pilot
 - Arabic UI but **English food/exercise names** in the catalog (DB `name_ar` is post-pilot).

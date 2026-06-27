@@ -68,6 +68,7 @@ const migrationFiles = [
   '0044_public_profiles.sql',
   '0045_public_leaderboards.sql',
   '0046_active_training_plan.sql',
+  '0047_expand_catalogs.sql',
 ];
 
 const baseUrl =
