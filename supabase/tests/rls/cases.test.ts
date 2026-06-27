@@ -3414,3 +3414,66 @@ describe('leaderboard period window + self-rank (0052, Slice G1)', () => {
     ).rejects.toThrow();
   });
 });
+
+describe('coach_requests (0053, Slice G2) — request-a-coach funnel (§2)', () => {
+  const COACH_A: Identity = { sub: '11111111-1111-1111-1111-111111111111', userRole: 'coach' };
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const REQUESTER: Identity = { sub: CLIENT_B1, userRole: 'client' }; // requested Coach A
+  const ADMIN: Identity = { sub: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userRole: 'admin' };
+  const REQ = 'c0a70000-0000-0000-0000-000000000001';
+
+  // ── Read scoping: addressed coach / requesting client / admin only ──────────
+  it('the addressed coach can read the request (with the snapshotted client_name)', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query('select id, client_name from public.coach_requests where id = $1', [REQ]),
+    );
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0].client_name).toBe('Client B1');
+  });
+
+  it('the requesting client can read their own request', async () => {
+    const r = await asUser(REQUESTER, (c) => c.query('select id from public.coach_requests where id = $1', [REQ]));
+    expect(r.rows).toHaveLength(1);
+  });
+
+  it('a DIFFERENT coach cannot read a request addressed to another coach (cross-tenant)', async () => {
+    const r = await asUser(COACH_B, (c) => c.query('select id from public.coach_requests where id = $1', [REQ]));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it('an unrelated client cannot read the request', async () => {
+    const r = await asUser(CLIENT_A1, (c) => c.query('select id from public.coach_requests where id = $1', [REQ]));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it('an admin can read any request', async () => {
+    const r = await asUser(ADMIN, (c) => c.query('select id from public.coach_requests where id = $1', [REQ]));
+    expect(r.rows).toHaveLength(1);
+  });
+
+  it('anon cannot read coach requests', async () => {
+    const r = await asAnon((c) => c.query('select id from public.coach_requests where id = $1', [REQ]));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  // ── Write scoping: accept/decline are NOT client-writable; cancel is owner-only ─
+  it('the addressed coach cannot flip status to accepted directly (service-role only)', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query("update public.coach_requests set status = 'accepted' where id = $1", [REQ]),
+    );
+    expect(r.rowCount).toBe(0); // no UPDATE policy matches a coach → 0 rows touched
+  });
+
+  it('the requesting client cannot self-accept their own request (with_check blocks it)', async () => {
+    await expect(
+      asUser(REQUESTER, (c) => c.query("update public.coach_requests set status = 'accepted' where id = $1", [REQ])),
+    ).rejects.toThrow();
+  });
+
+  it('the requesting client MAY cancel their own pending request', async () => {
+    const r = await asUser(REQUESTER, (c) =>
+      c.query("update public.coach_requests set status = 'cancelled' where id = $1", [REQ]),
+    );
+    expect(r.rowCount).toBe(1);
+  });
+});

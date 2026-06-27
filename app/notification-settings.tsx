@@ -24,6 +24,7 @@ const ROWS: { key: NotificationType; icon: IconName; labelKey: string }[] = [
   { key: 'plan_published', icon: 'document-text-outline', labelKey: 'notifications.prefs.planPublished' },
   { key: 'pr_achieved', icon: 'trophy-outline', labelKey: 'notifications.prefs.prAchieved' },
   { key: 'client_note', icon: 'clipboard-outline', labelKey: 'notifications.prefs.clientNote' },
+  { key: 'coach_request', icon: 'user-plus', labelKey: 'notifications.prefs.coachRequest' },
 ];
 
 export default function NotificationSettingsScreen() {

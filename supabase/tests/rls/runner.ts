@@ -74,6 +74,7 @@ const migrationFiles = [
   '0050_workout_note_notify.sql',
   '0051_workout_note_in_chat.sql',
   '0052_leaderboard_period_and_rank.sql',
+  '0053_coach_requests.sql',
 ];
 
 const baseUrl =

@@ -445,3 +445,12 @@ insert into public.body_metrics
   ('1ea0b007-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000007', now() - interval '200 days', 70000, 2500, 30000, 'coach_entered');
 
 alter table auth.users enable trigger on_auth_user_created;
+
+-- ── Slice G2: a pending coach request (cross-tenant read fixture) ─────────────
+-- Client B1 requests Coach A. Seeded directly (auth.uid() is null in seed → the
+-- BEFORE-INSERT guard is skipped), so client_id / client_name / status are set explicitly.
+-- The AFTER-INSERT notify trigger mints Coach A a notification (best-effort, harmless).
+insert into public.coach_requests (id, client_id, client_name, coach_id, message, status) values
+  ('c0a70000-0000-0000-0000-000000000001',
+   'bbbb0001-0000-0000-0000-000000000001', 'Client B1',
+   '11111111-1111-1111-1111-111111111111', 'I would love to train with you', 'pending');

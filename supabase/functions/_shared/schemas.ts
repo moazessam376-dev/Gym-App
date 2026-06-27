@@ -32,6 +32,14 @@ export const resolveAppealSchema = z.object({
   decision: z.enum(['approve', 'reject']),
 });
 
+// ── Coach request resolution (Slice G2) ─────────────────────────────────────
+// A coach accepts (links the client) or declines a request addressed to them.
+// resolve_coach_request is the only writer of accept/decline + the coach link.
+export const resolveCoachRequestSchema = z.object({
+  request_id: z.string().uuid(),
+  decision: z.enum(['accept', 'decline']),
+});
+
 // ── Native push fan-out (Phase 17 Slice 2, §3/§8) ───────────────────────────
 // push-send is invoked ONLY by the notifications AFTER INSERT trigger (0041) via
 // pg_net, carrying the service-role key as its bearer. The payload is just the id

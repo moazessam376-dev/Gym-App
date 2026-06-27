@@ -142,6 +142,7 @@ function RootNavigator() {
           their own <Stack.Screen options.title> override these — the nav key is the
           pre-mount fallback, kept localized so there's no English flash. */}
       <Stack.Screen name="coach/invite" options={{ headerShown: true, title: t('nav.inviteClient') }} />
+      <Stack.Screen name="coach/requests" options={{ headerShown: true, title: t('nav.coachRequests') }} />
       <Stack.Screen name="accept-invite" options={{ headerShown: true, title: t('nav.acceptInvite') }} />
       {/* Phase 3 plan screens. */}
       <Stack.Screen name="coach/client/[id]" options={{ headerShown: true, title: t('nav.clientPlans') }} />

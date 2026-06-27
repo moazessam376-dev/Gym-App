@@ -3,8 +3,9 @@ import { FlatList, RefreshControl, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useMyClients, useRefreshOnFocus } from '../../src/lib/queries/home';
+import { useIncomingCoachRequests } from '../../src/lib/queries/coach-requests';
 import { forwardChevron } from '../../src/lib/rtl';
-import { Icon, Screen, Text, Card, Avatar, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, Card, Avatar, Badge, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function ClientsTab() {
@@ -13,7 +14,12 @@ export default function ClientsTab() {
   // Shared cache: ['my-clients'] is warmed on app open and reused by Home + Chat,
   // so this tab is populated on first visit instead of fetching cold.
   const clientsQ = useMyClients();
-  useRefreshOnFocus(clientsQ.refetch);
+  const requestsQ = useIncomingCoachRequests();
+  const pendingRequests = requestsQ.data?.length ?? 0;
+  useRefreshOnFocus(() => {
+    clientsQ.refetch();
+    requestsQ.refetch();
+  });
 
   const clients = clientsQ.data ?? [];
   const loading = clientsQ.isPending;
@@ -39,6 +45,14 @@ export default function ClientsTab() {
         </View>
         {/* Coach day-to-day actions live here (moved out of the Account tab). */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+          <Card
+            onPress={() => router.push('/coach/requests')}
+            padded={false}
+            style={{ paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+          >
+            <Icon name="user-plus" size={16} color={theme.colors.primary} />
+            {pendingRequests > 0 ? <Badge label={String(pendingRequests)} tone="primary" solid /> : null}
+          </Card>
           <Card
             onPress={() => router.push('/coach/templates')}
             padded={false}

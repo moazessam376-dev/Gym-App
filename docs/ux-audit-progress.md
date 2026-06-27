@@ -97,7 +97,15 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
     info sheet** (`src/components/FfmiInfoSheet.tsx`) + a real error-retry. `0052` adds the period param to
     `public_athlete_leaderboard`/`public_coach_leaderboard` (p_sex kept first for positional back-compat)
     and the self-rank RPC; harness gets the migration + an L7 window-exclusion fixture + period/rank tests.
-  - ⬜ **G2** coach_requests funnel · **G3** admin console · **G4** nutrition barcode/serving sizes
+  - 🔵 **G2** Request-a-coach funnel — **code done, tsc + parity clean; migration `0053` dry-run clean,
+    AWAITING prod go-ahead (+ deploy `resolve-coach-request` Edge fn).** New `coach_requests` table
+    (client-created, server-set ownership; one-open partial-unique; owner/coach/admin read; client may
+    only cancel) + `resolve_coach_request` resolver (reuses 0006 `assign_client`; accept auto-declines
+    siblings) + a `coach_request` notification type. UI: "Request this coach" CTA + sheet on
+    `coach-profile/[id]`; coach inbox `app/coach/requests.tsx` (linked from the Clients-tab header w/ a
+    pending badge + the notification). Harness: `0053` in runner.ts, a cross-tenant fixture in seed.sql,
+    a read/write-scoping block in cases.test.ts.
+  - ⬜ **G3** admin console · **G4** nutrition barcode/serving sizes
 - ⬜ **H — First-run tour + guided goal wizard**
 
 ## Founder follow-ups (post-F, 2026-06-27)
@@ -110,8 +118,9 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
   Realtime-arriving note cards show body only until refetch (embed not in the realtime payload).
 
 ## Prod migrations pending go-ahead
-`0052` leaderboard period + self-rank (G1, **dry-run clean, ready**) · coach_requests (G2) ·
-admin console RPCs (G3) · serving sizes (G4).
+`0052` leaderboard period + self-rank (G1, **dry-run clean, ready**) · `0053` coach_requests
+(G2, **dry-run clean, ready** — also deploy `resolve-coach-request`) · admin console RPCs (G3) ·
+serving sizes (G4). _(Founder chose: build G2–G4 code first, then apply all migrations in order.)_
 _(Done & applied to prod 2026-06-27: `0047` catalog · `0048`/`0049` arms recategorize · `0050` workout-note
 notification · `0051` workout-note-in-chat. Slice B's media-delete shipped as an Edge Function, not a migration.)_
 

@@ -563,6 +563,28 @@
     "thisWeek": "This week",
     "thisWeekSub": "Clients ranked by sessions logged"
   },
+  "coachRequest": {
+    "cta": "Request this coach",
+    "requested": "Request sent — waiting for the coach",
+    "cancel": "Cancel request",
+    "sent": "Request sent",
+    "cancelled": "Request cancelled",
+    "alreadyRequested": "You already have a pending request to this coach",
+    "thisCoach": "this coach",
+    "sheetTitle": "Request {{name}}",
+    "sheetPrompt": "Add a short note (optional) — tell them about your goals.",
+    "notePlaceholder": "I'd love your help with…",
+    "send": "Send request",
+    "noMessage": "No message",
+    "inboxTitle": "Coaching requests",
+    "inboxSub": "Clients asking you to be their coach.",
+    "emptyTitle": "No requests yet",
+    "emptySub": "When a client requests you from your public profile, they'll show up here.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "accepted": "Client added",
+    "declined": "Request declined"
+  },
   "language": {
     "en": "English",
     "ar": "العربية",
@@ -602,6 +624,10 @@
       "title": "New client note",
       "body": "{{name}} left a note on their training"
     },
+    "coachRequest": {
+      "title": "New coaching request",
+      "body": "{{name}} wants you as their coach"
+    },
     "settingsTitle": "Notification settings",
     "settingsSub": "Choose what you get notified about.",
     "prefs": {
@@ -609,7 +635,8 @@
       "coachComment": "Coach feedback",
       "planPublished": "New plans",
       "prAchieved": "Personal records",
-      "clientNote": "Client notes"
+      "clientNote": "Client notes",
+      "coachRequest": "Coaching requests"
     }
   },
   "chat": {
@@ -1050,6 +1077,7 @@
   },
   "nav": {
     "inviteClient": "Invite a client",
+    "coachRequests": "Coaching requests",
     "acceptInvite": "Accept an invite",
     "clientPlans": "Client plans",
     "planTemplates": "Plan templates",

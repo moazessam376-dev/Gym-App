@@ -17,7 +17,8 @@ export type NotificationType =
   | 'coach_comment'
   | 'plan_published'
   | 'pr_achieved'
-  | 'client_note';
+  | 'client_note'
+  | 'coach_request';
 
 export type NotificationRow = {
   id: string;
@@ -103,6 +104,7 @@ const ICONS: Record<NotificationType, IconName> = {
   plan_published: 'document-text',
   pr_achieved: 'trophy',
   client_note: 'clipboard',
+  coach_request: 'user-plus',
 };
 
 // Per-type semantic accent (brand notification colors): chat = purple, coach note =
@@ -114,6 +116,7 @@ export const NOTIFICATION_COLORS: Record<NotificationType, string> = {
   plan_published: '#3FD9C0', // Signal cyan
   pr_achieved: '#3FD98A', // positive
   client_note: '#F5B544', // amber — an athlete's note to the coach
+  coach_request: '#5BC8E8', // sky — a client asking to join the coach
 };
 
 function str(params: Record<string, unknown>, key: string): string {
@@ -165,6 +168,12 @@ export function describeNotification(
         title: t('notifications.clientNote.title'),
         body: t('notifications.clientNote.body', { name: actor }),
       };
+    case 'coach_request':
+      return {
+        icon: ICONS.coach_request,
+        title: t('notifications.coachRequest.title'),
+        body: t('notifications.coachRequest.body', { name: actor }),
+      };
     default:
       return { icon: 'notifications', title: '', body: '' };
   }
@@ -188,6 +197,9 @@ export function notificationHref(row: NotificationRow): Href | null {
       return row.actor_id
         ? { pathname: '/coach/client/[id]', params: { id: row.actor_id, name: str(row.params, 'actor_name') } }
         : null;
+    case 'coach_request':
+      // Coach taps → their request inbox.
+      return '/coach/requests';
     default:
       return null;
   }
@@ -203,13 +215,14 @@ const DEFAULT_PREFS: NotificationPrefs = {
   plan_published: true,
   pr_achieved: true,
   client_note: true,
+  coach_request: true,
 };
 
 /** The caller's prefs (RLS-scoped). No row yet → everything ON (the default). */
 export async function getNotificationPrefs(): Promise<NotificationPrefs> {
   const { data, error } = await supabase
     .from('notification_prefs')
-    .select('message, coach_comment, plan_published, pr_achieved, client_note')
+    .select('message, coach_comment, plan_published, pr_achieved, client_note, coach_request')
     .maybeSingle();
   if (error) throw error;
   if (!data) return { ...DEFAULT_PREFS };
@@ -219,6 +232,7 @@ export async function getNotificationPrefs(): Promise<NotificationPrefs> {
     plan_published: data.plan_published,
     pr_achieved: data.pr_achieved,
     client_note: data.client_note,
+    coach_request: data.coach_request,
   };
 }
 

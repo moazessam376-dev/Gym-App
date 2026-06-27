@@ -188,6 +188,28 @@
     "thisWeek": "الأسبوع ده",
     "thisWeekSub": "العملاء مرتّبين حسب الجلسات اللي سجّلوها"
   },
+  "coachRequest": {
+    "cta": "اطلب الكوتش ده",
+    "requested": "الطلب اتبعت — مستني رد الكوتش",
+    "cancel": "إلغاء الطلب",
+    "sent": "الطلب اتبعت",
+    "cancelled": "الطلب اتلغى",
+    "alreadyRequested": "عندك طلب معلّق للكوتش ده بالفعل",
+    "thisCoach": "الكوتش ده",
+    "sheetTitle": "اطلب {{name}}",
+    "sheetPrompt": "اكتب رسالة قصيرة (اختياري) — قوله عن أهدافك.",
+    "notePlaceholder": "نفسي تساعدني في…",
+    "send": "ابعت الطلب",
+    "noMessage": "مفيش رسالة",
+    "inboxTitle": "طلبات التدريب",
+    "inboxSub": "عملاء بيطلبوك تبقى الكوتش بتاعهم.",
+    "emptyTitle": "لسه مفيش طلبات",
+    "emptySub": "لما عميل يطلبك من ملفك العام، هيظهر هنا.",
+    "accept": "اقبل",
+    "decline": "ارفض",
+    "accepted": "اتضاف العميل",
+    "declined": "الطلب اترفض"
+  },
   "language": {
     "en": "English",
     "ar": "العربية",
@@ -630,6 +652,10 @@
       "title": "ملاحظة من عميل",
       "body": "{{name}} ساب ملاحظة على تمرينه"
     },
+    "coachRequest": {
+      "title": "طلب تدريب جديد",
+      "body": "{{name}} عايزك تبقى الكوتش بتاعه"
+    },
     "settingsTitle": "إعدادات الإشعارات",
     "settingsSub": "اختار تتبلّغ بإيه.",
     "prefs": {
@@ -637,7 +663,8 @@
       "coachComment": "ملاحظات الكوتش",
       "planPublished": "الخطط الجديدة",
       "prAchieved": "الأرقام القياسية",
-      "clientNote": "ملاحظات العملاء"
+      "clientNote": "ملاحظات العملاء",
+      "coachRequest": "طلبات التدريب"
     }
   },
   "chat": {
@@ -1078,6 +1105,7 @@
   },
   "nav": {
     "inviteClient": "ادعُ عميل",
+    "coachRequests": "طلبات التدريب",
     "acceptInvite": "اقبل دعوة",
     "clientPlans": "خطط العميل",
     "planTemplates": "قوالب الخطط",
