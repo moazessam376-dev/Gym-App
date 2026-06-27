@@ -51,6 +51,15 @@ Topic detail for the Supabase schema workflow. **This file wins over a prompt.**
 - **A `SECURITY DEFINER` _trigger_ function gets the default PUBLIC execute grant**, so
   it's exposed as an anon/authenticated PostgREST RPC (advisor `0028`/`0029`). Add
   `revoke all on function … from public, anon, authenticated;` — the trigger still fires.
+- **A newly-`CREATE`d function in `public` gets an EXECUTE grant to `anon` BY NAME** (Supabase
+  default privileges), and **`revoke … from public` does NOT remove a by-name `anon` grant** —
+  so an RPC you meant for signed-in users still trips advisor **`0028`** (anon-executable). You
+  must `revoke execute on function … from anon;` **explicitly**. A `CREATE OR REPLACE` of an
+  **existing** fn preserves its current ACL and escapes this (why `0057`'s `public_athlete_my_rank`
+  was clean but `0058`'s two fresh fns weren't → `0059` revoked anon). The harness's plain Postgres
+  has no such default-privilege, so it can't catch this — **only prod `get_advisors(security)` does**,
+  so always re-check after creating a new RPC. (No data leaked meanwhile: anon → `auth.uid()` null
+  → the in-function fence returns 0 rows / a NOT NULL error — but anon shouldn't be on the surface.)
 - **The RLS harness runner has a hardcoded migration list** (`supabase/tests/rls/runner.ts`)
   — add each new `NNNN_*.sql` there or it won't be applied/tested.
 - **After any DDL apply to a real project, run `get_advisors(security)`** and clear new
