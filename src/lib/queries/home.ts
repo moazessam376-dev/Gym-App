@@ -338,13 +338,20 @@ export function useConversationPreviews() {
 
 // Subscribe once (at the app root) to incoming messages and invalidate the chat-list
 // previews + the coach Home unread tile, so the list re-sorts and the unread badge
-// updates live. Reuses the RLS-scoped incoming channel.
+// updates live. Uses a DISTINCT channel topic ('previews') so it never collides with the
+// open chat thread's 'to' channel (a shared topic throws "cannot add postgres_changes
+// callbacks after subscribe()").
 export function useConversationPreviewsRealtime(userId?: string) {
   useEffect(() => {
     if (!userId) return;
-    const channel = subscribeToIncoming(userId, () => {
-      queryClient.invalidateQueries({ queryKey: ['conversation-previews'] });
-    });
+    const channel = subscribeToIncoming(
+      userId,
+      () => {
+        queryClient.invalidateQueries({ queryKey: ['conversation-previews'] });
+      },
+      undefined,
+      'previews',
+    );
     return () => {
       supabase.removeChannel(channel);
     };
