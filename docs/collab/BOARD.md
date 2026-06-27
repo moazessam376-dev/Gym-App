@@ -19,7 +19,7 @@ integrated by Claude Code; `cc/*` are Claude-Code-authored. Status: `todo` →
 
 | Task | Owner | Branch | Spec | Status | PR |
 |------|-------|--------|------|--------|----|
-| Tab-switch black-frame fix | GLM 5-2 | `glm/tab-switch-black-screen` | dev-mode tab flash (`docs/pre-launch-checklist.md`, `CLAUDE.md §13`) | in-review | [#44](https://github.com/moazessam376-dev/Gym-App/pull/44) |
+| Tab-switch black-frame fix | GLM 5-2 | `glm/tab-switch-black-screen` | dev-mode tab flash (`docs/pre-launch-checklist.md`, `CLAUDE.md §13`) | **deferred** (no-op fix; needs Android/release-build repro — no device on hand) | [#44](https://github.com/moazessam376-dev/Gym-App/pull/44) (draft) |
 
 ## Up next (assign an owner before starting)
 
@@ -38,6 +38,13 @@ landed on `main`. The forward roadmap (re-sequenced) lives in
 ---
 
 ## Log (newest first)
+- **2026-06-27** — **Deferred PR #44** (tab-switch fix). Device test showed it doesn't work:
+  verified `freezeOnBlur: false` is a **no-op** (react-native-screens freezing is opt-in via
+  `enableFreeze()`, never called here → `ENABLE_FREEZE` stays `false`), and the `key` removal
+  only deleted the ZoomIn count-up (a regression). Real bug is most likely a **dev-only
+  first-paint artifact** — parked until it can be reproduced on a release/Android build (no
+  Android device on hand). Diagnosis recorded in `docs/pre-launch-checklist.md`; PR #44 set to
+  draft. Fed back to GLM.
 - **2026-06-27** — Integrated GLM's **tab-switch black-frame fix** (`freezeOnBlur: false`
   on the tabs layout + dropped the volatile `key` on the two `ZoomIn` hero views). GLM's
   patch arrived paste-mangled (unified-diff prefixes stripped) so it wouldn't `git apply`;

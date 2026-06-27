@@ -8,14 +8,21 @@
 > build** (or `npx expo start --no-dev --minify` for a quick production-JS approximation).
 
 ## Performance / UX
-- [ ] **Tab-switch render flash (Phase 14a).** In Expo Go dev mode, switching tabs shows a
-  brief "screen taking its place" render even though the data is prefetched and the tabs are
-  eager-mounted (`lazy: false`) under the boot splash. This is the react-native-screens
-  render-on-focus cost, heavily amplified by dev mode. **Verify it is imperceptible on a
-  release build.** If it still shows on a true release build, the next lever is
-  `freezeOnBlur: false` on the visible tabs in `app/(tabs)/_layout.tsx` (keeps inactive
-  tabs rendered so focus doesn't trigger an unfreeze re-render — small CPU cost, ~5 tabs).
-  Quick check: `npx expo start --no-dev --minify`.
+- [ ] **Tab-switch render flash (Phase 14a) — DEFERRED 2026-06-27 (needs a release / Android
+  build to even reproduce; no Android device on hand).** In Expo Go dev mode, switching tabs
+  shows a brief "screen taking its place" render even though the data is prefetched and the
+  tabs are eager-mounted (`lazy: false`) under the boot splash. Most likely a dev-only
+  first-paint artifact — **confirm on a release build first; it may simply not exist in
+  production.** Quick check: `npx expo start --no-dev --minify`.
+  - **`freezeOnBlur: false` is NOT the fix** — proven by a GLM attempt (PR #44,
+    `glm/tab-switch-black-screen`, parked as draft). react-native-screens freezing is opt-in via
+    `enableFreeze()`, which this app never calls (`ENABLE_FREEZE` defaults `false` in
+    react-native-screens 4.16.0), so `freezeOnBlur` toggles nothing and there is no "unfreeze
+    re-render" to prevent. That attempt also dropped `key={pct}`/`key={kcalLeft}` on the ZoomIn
+    heroes, which only deleted the count-up animation (a regression) without fixing the frame.
+    **Do not merge PR #44 as-is.**
+  - If it persists on a true release build, the real lever is **first-paint** (e.g. match the
+    scene/transition background, or a `lazyPlaceholder`), not screen freezing.
 - [ ] **Boot-splash hold duration.** Confirm the `prefetchHome` hold (`app/_layout.tsx`,
   6s timeout) feels right on a real device + real network, not just the dev machine.
 - [x] **RTL live-switch on Android — FIXED (2026-06-25).** Switching Arabic⇄English left the bottom
