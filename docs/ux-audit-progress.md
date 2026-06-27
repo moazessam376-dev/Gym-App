@@ -87,9 +87,10 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
   - ⏸ **F6** plan-editor UI-kit refactor — **DEFERRED (founder call, 2026-06-27)**. The 1012-line editor is
     already on-brand via theme tokens; a full kit migration is high-risk/low-value on the core coach screen,
     and a partial pass would leave it half-migrated. Revisit as its own reviewed PR post device-test.
-- 🔵 **G — Larger items**
-  - 🔵 **G1** Ranks→Analytics merge + leaderboard in-page UX — **code done, tsc + parity clean; migration
-    `0052` dry-run clean, AWAITING prod go-ahead.** Coach tabs 6→5: merged the *Ranks* tab + *Analytics*
+- ✅ **G — Larger items** (all four sub-slices code-complete; **migrations `0052`–`0055` APPLIED to prod
+  2026-06-27, advisors clean; edge fns `resolve-coach-request` / `admin-set-ban` / `food-barcode-lookup`
+  DEPLOYED**). NOT yet device-tested; G4 scanner needs a dev-client rebuild.
+  - ✅ **G1** Ranks→Analytics merge + leaderboard in-page UX — **`0052` APPLIED to prod.** Coach tabs 6→5: merged the *Ranks* tab + *Analytics*
     tab + Home top-performers card into one **Performance** tab (`app/(tabs)/performance.tsx`; deleted
     `leaderboard.tsx` + `analytics.tsx`; CoachHome now links to it). Public leaderboard (`app/leaderboards`)
     gained a **period** toggle (month/quarter/all-time — real backend window on the verified-reading date),
@@ -97,23 +98,21 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
     info sheet** (`src/components/FfmiInfoSheet.tsx`) + a real error-retry. `0052` adds the period param to
     `public_athlete_leaderboard`/`public_coach_leaderboard` (p_sex kept first for positional back-compat)
     and the self-rank RPC; harness gets the migration + an L7 window-exclusion fixture + period/rank tests.
-  - 🔵 **G2** Request-a-coach funnel — **code done, tsc + parity clean; migration `0053` dry-run clean,
-    AWAITING prod go-ahead (+ deploy `resolve-coach-request` Edge fn).** New `coach_requests` table
+  - ✅ **G2** Request-a-coach funnel — **`0053` APPLIED to prod + `resolve-coach-request` DEPLOYED.** New `coach_requests` table
     (client-created, server-set ownership; one-open partial-unique; owner/coach/admin read; client may
     only cancel) + `resolve_coach_request` resolver (reuses 0006 `assign_client`; accept auto-declines
     siblings) + a `coach_request` notification type. UI: "Request this coach" CTA + sheet on
     `coach-profile/[id]`; coach inbox `app/coach/requests.tsx` (linked from the Clients-tab header w/ a
     pending badge + the notification). Harness: `0053` in runner.ts, a cross-tenant fixture in seed.sql,
     a read/write-scoping block in cases.test.ts.
-  - 🔵 **G3** Admin console — **code done, tsc + parity clean; migration `0054` dry-run clean, AWAITING
-    prod go-ahead (+ deploy `admin-set-ban` Edge fn).** `AdminHome` is now a live dashboard (counts via
+  - ✅ **G3** Admin console — **`0054` APPLIED to prod + `admin-set-ban` DEPLOYED.** `AdminHome` is now a live dashboard (counts via
     the admin-gated `admin_dashboard_counts` RPC) + nav to Applications / Reports / a new **Users** screen
     (`app/admin/users.tsx`: name search via `admin_search_users`, ban/unban via `admin-set-ban`). RPCs are
     field-allowlist SECURITY DEFINER with an in-function admin fence (`current_app_role()` in a WHERE — a
     non-admin gets 0 rows). Harness: `0054` in runner.ts + an admin-fence block in cases.test.ts.
-  - 🔵 **G4** Nutrition barcode + serving sizes — **code done, tsc + parity clean; migration `0055`
-    dry-run clean, AWAITING prod go-ahead (+ deploy `food-barcode-lookup` Edge fn). NEW DEP `expo-camera`
-    → needs a dev-client rebuild before the scanner is device-testable (flagged).** `0055` adds
+  - ✅ **G4** Nutrition barcode + serving sizes — **`0055` APPLIED to prod + `food-barcode-lookup`
+    DEPLOYED. NEW DEP `expo-camera` → needs a dev-client rebuild before the scanner is device-testable
+    (flagged).** `0055` adds
     `barcode`/`serving_label`/`serving_grams` to `food_library` + a serving snapshot on
     `food_log_entries` (additive, advisors clean; quantity stays integer grams). Edge fn
     `food-barcode-lookup` proxies OpenFoodFacts (keyless; untrusted → Zod-bounded output; per-user
@@ -132,11 +131,9 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
   Realtime-arriving note cards show body only until refetch (embed not in the realtime payload).
 
 ## Prod migrations pending go-ahead
-`0052` leaderboard period + self-rank (G1, **dry-run clean, ready**) · `0053` coach_requests
-(G2, **dry-run clean, ready** — also deploy `resolve-coach-request`) · `0054` admin console RPCs
-(G3, **dry-run clean, ready** — also deploy `admin-set-ban`) · `0055` serving sizes + barcode
-(G4, **dry-run clean, ready** — also deploy `food-barcode-lookup`; new `expo-camera` dep needs a
-dev-client rebuild). _(Founder chose: build G2–G4 code first, then apply all migrations in order.)_
+_None for Slice G — `0052`–`0055` all **APPLIED to prod 2026-06-27** (advisors clean), and the 3 edge
+functions (`resolve-coach-request`, `admin-set-ban`, `food-barcode-lookup`) are **DEPLOYED**._ Remaining
+Slice H (first-run tour + guided goal wizard) is the only un-started program item.
 
 ## Founder follow-ups (post-G, 2026-06-27)
 - ✅ **Workout notes: delete + date** — an athlete's own Challenge/Compliment notes on the workout
