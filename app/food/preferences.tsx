@@ -5,6 +5,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { Redirect, useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { listFoods, type Food } from '../../src/lib/library';
 import { foodCategorySchema, type FoodCategory } from '../../src/schemas/library';
@@ -17,13 +18,10 @@ import type { FoodPrefKind } from '../../src/schemas/food-preference';
 import { Icon, Screen, Text, Input, Chip, GlassCard } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
-function label(s: string): string {
-  return s.replace(/\b\w/g, (m) => m.toUpperCase());
-}
-
 const CATEGORIES = foodCategorySchema.options;
 
 export default function FoodPreferences() {
+  const { t } = useTranslation();
   const { role, session } = useAuth();
   const userId = session?.user?.id;
 
@@ -106,17 +104,17 @@ export default function FoodPreferences() {
           ListHeaderComponent={
             <View style={{ gap: theme.spacing.md, marginBottom: theme.spacing.xs }}>
               <View>
-                <Text variant="h1">Food preferences</Text>
+                <Text variant="h1">{t('food.prefsTitle')}</Text>
                 <Text variant="body" muted>
-                  Mark foods you love or want to avoid. Your coach sees these when building your plan.
+                  {t('food.prefsIntro')}
                 </Text>
                 {likeCount + avoidCount > 0 ? (
                   <Text variant="caption" color="primary" style={{ marginTop: 4 }}>
-                    {likeCount} liked · {avoidCount} avoided
+                    {t('food.prefsCount', { liked: likeCount, avoided: avoidCount })}
                   </Text>
                 ) : null}
               </View>
-              <Input value={query} onChangeText={setQuery} placeholder="Search foods" />
+              <Input value={query} onChangeText={setQuery} placeholder={t('food.searchFoods')} />
               <FlatList
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -125,7 +123,7 @@ export default function FoodPreferences() {
                 contentContainerStyle={{ gap: theme.spacing.sm }}
                 renderItem={({ item }) => (
                   <Chip
-                    label={item === 'all' ? 'All' : label(item)}
+                    label={item === 'all' ? t('food.all') : t(`food.category.${item}`)}
                     active={cat === item}
                     onPress={() => setCat(item as FoodCategory | 'all')}
                   />
@@ -138,7 +136,7 @@ export default function FoodPreferences() {
               <ActivityIndicator style={{ marginTop: 24 }} color={theme.colors.primary} />
             ) : (
               <Text variant="body" muted>
-                No foods match.
+                {t('food.noFoodsMatch')}
               </Text>
             )
           }
@@ -150,19 +148,21 @@ export default function FoodPreferences() {
                   <View style={{ flex: 1 }}>
                     <Text variant="bodyStrong">{item.name}</Text>
                     <Text variant="caption" muted>
-                      {item.kcal_per_100g} kcal · {item.protein_g_per_100g}P / {item.carbs_g_per_100g}C / {item.fat_g_per_100g}F
+                      {t('food.macros', { kcal: item.kcal_per_100g, protein: item.protein_g_per_100g, carbs: item.carbs_g_per_100g, fat: item.fat_g_per_100g })}
                     </Text>
                   </View>
                   <PrefToggle
                     icon="heart"
                     active={stance === 'like'}
                     activeColor={theme.colors.primary}
+                    accessibilityLabel={t('food.likeFood', { food: item.name })}
                     onPress={() => choose(item.id, 'like')}
                   />
                   <PrefToggle
                     icon="ban"
                     active={stance === 'avoid'}
                     activeColor={theme.colors.danger}
+                    accessibilityLabel={t('food.avoidFood', { food: item.name })}
                     onPress={() => choose(item.id, 'avoid')}
                   />
                 </View>
@@ -180,16 +180,21 @@ function PrefToggle({
   active,
   activeColor,
   onPress,
+  accessibilityLabel,
 }: {
   icon: 'heart' | 'ban';
   active: boolean;
   activeColor: string;
   onPress: () => void;
+  accessibilityLabel: string;
 }) {
   return (
     <Pressable
       onPress={onPress}
       hitSlop={6}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={accessibilityLabel}
       style={{
         width: 40,
         height: 40,

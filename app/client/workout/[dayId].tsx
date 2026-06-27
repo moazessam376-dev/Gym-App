@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
 import { listExerciseRows, type ExerciseRow } from '../../../src/lib/plans';
 import { BLOCK_LABEL } from '../../../src/lib/plan-ui';
@@ -77,6 +78,7 @@ export default function WorkoutScreen() {
     planId?: string;
     name?: string;
   }>();
+  const { t } = useTranslation();
   const { role, session: auth } = useAuth();
   const router = useRouter();
   const userId = auth?.user?.id;
@@ -434,10 +436,10 @@ export default function WorkoutScreen() {
     // Don't pollute streak/adherence with an empty "done" session — confirm first.
     if (doneCount === 0) {
       const ok = await confirm(
-        'Mark as done?',
-        'You haven’t logged any sets yet. Mark this workout as done anyway?',
-        'Mark as done',
-        'Keep logging',
+        t('workout.confirmTitle'),
+        t('workout.confirmBody'),
+        t('workout.markDone'),
+        t('workout.keepLogging'),
       );
       if (!ok) return;
     }
@@ -465,7 +467,7 @@ export default function WorkoutScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: name ?? 'Workout' }} />
+      <Stack.Screen options={{ title: name ?? t('workout.title') }} />
       <Screen padded={false}>
         {/* Sticky progress header */}
         <View
@@ -482,9 +484,9 @@ export default function WorkoutScreen() {
             <Text variant="bodyStrong">{Math.round(progress * 100)}%</Text>
           </ProgressRing>
           <View style={{ flex: 1 }}>
-            <Text variant="title">{name ?? 'Workout'}</Text>
+            <Text variant="title">{name ?? t('workout.title')}</Text>
             <Text variant="caption" muted>
-              {doneCount}/{totalPlanned} sets complete
+              {t('workout.setsComplete', { done: doneCount, total: totalPlanned })}
             </Text>
           </View>
         </View>
@@ -509,8 +511,8 @@ export default function WorkoutScreen() {
                       <Text variant="title">{ex.exercise_name}</Text>
                       <Text variant="caption" muted>
                         {sets} × {ex.reps ?? '—'}
-                        {ex.rest_seconds ? ` · ${ex.rest_seconds}s rest` : ''}
-                        {best ? ` · best ${formatWeight(best, u)}` : ''}
+                        {ex.rest_seconds ? ` · ${t('workout.restShort', { sec: ex.rest_seconds })}` : ''}
+                        {best ? ` · ${t('workout.bestShort', { weight: formatWeight(best, u) })}` : ''}
                       </Text>
                     </View>
                     <Pressable
@@ -555,14 +557,14 @@ export default function WorkoutScreen() {
                   {/* Set rows: tap the number to complete; reps + weight required */}
                   {sets === 0 ? (
                     <Text variant="caption" muted>
-                      No sets prescribed
+                      {t('workout.noSets')}
                     </Text>
                   ) : (
                     <View style={{ gap: theme.spacing.sm }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                         <View style={{ width: 44 }} />
                         <Text variant="label" muted style={{ width: 72, textAlign: 'center' }}>
-                          REPS
+                          {t('workout.reps')}
                         </Text>
                         <Text variant="label" muted style={{ width: 72, textAlign: 'center' }}>
                           {u.toUpperCase()}
@@ -620,7 +622,7 @@ export default function WorkoutScreen() {
                       })}
                       {hasInvalid ? (
                         <Text variant="caption" color="danger">
-                          Enter your reps to log a set (weight is optional).
+                          {t('workout.invalidHint')}
                         </Text>
                       ) : null}
                     </View>
@@ -634,14 +636,14 @@ export default function WorkoutScreen() {
           {notes.length > 0 ? (
             <Card>
               <Text variant="label" muted style={{ marginBottom: theme.spacing.sm }}>
-                Notes to your coach
+                {t('workout.notesTitle')}
               </Text>
               <View style={{ gap: theme.spacing.sm }}>
                 {notes.map((n) => (
                   <View key={n.id} style={{ gap: 4 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
                       <Badge
-                        label={n.category === 'challenge' ? 'Challenge' : 'Compliment'}
+                        label={n.category === 'challenge' ? t('workout.challenge') : t('workout.compliment')}
                         tone={n.category === 'challenge' ? 'warning' : 'success'}
                       />
                       {n.exercise_name ? (
@@ -658,7 +660,7 @@ export default function WorkoutScreen() {
           ) : null}
 
           <Button
-            title="Leave a note for your coach"
+            title={t('workout.leaveNote')}
             variant="ghost"
             left={<Icon name="chatbubble-ellipses-outline" size={18} color={theme.colors.link} />}
             onPress={() => openComposer({ scope: 'session' })}
@@ -686,11 +688,11 @@ export default function WorkoutScreen() {
           >
             <Icon name="clock" size={20} color={theme.colors.primary} />
             <Text variant="bodyStrong" style={{ flex: 1 }}>
-              Rest · {fmtClock(restRemaining)}
+              {t('workout.restTimer', { time: fmtClock(restRemaining) })}
             </Text>
-            <Pressable onPress={skipRest} hitSlop={8}>
+            <Pressable onPress={skipRest} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('workout.skip')}>
               <Text variant="label" color="primary">
-                Skip
+                {t('workout.skip')}
               </Text>
             </Pressable>
           </View>
@@ -711,7 +713,7 @@ export default function WorkoutScreen() {
           }}
         >
           <Button
-            title={doneCount > 0 ? 'Finish workout' : 'Mark as done'}
+            title={doneCount > 0 ? t('workout.finish') : t('workout.markDone')}
             size="lg"
             loading={busy && celebrating}
             onPress={finish}
@@ -741,30 +743,30 @@ export default function WorkoutScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                 <Text variant="title" style={{ flex: 1 }}>
-                  {composer?.scope === 'exercise' ? composer.exName : 'Note to your coach'}
+                  {composer?.scope === 'exercise' ? composer.exName : t('workout.noteToCoach')}
                 </Text>
                 <Pressable onPress={closeComposer} hitSlop={8}>
                   <Icon name="close" size={24} color={theme.colors.textMuted} />
                 </Pressable>
               </View>
               <Text variant="caption" muted>
-                Tell your coach how it went — they’ll see it on your profile.
+                {t('workout.noteSub')}
               </Text>
               <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                <Chip label="Challenge" active={noteCat === 'challenge'} onPress={() => setNoteCat('challenge')} />
-                <Chip label="Compliment" active={noteCat === 'compliment'} onPress={() => setNoteCat('compliment')} />
+                <Chip label={t('workout.challenge')} active={noteCat === 'challenge'} onPress={() => setNoteCat('challenge')} />
+                <Chip label={t('workout.compliment')} active={noteCat === 'compliment'} onPress={() => setNoteCat('compliment')} />
               </View>
               <Input
                 value={noteBody}
                 onChangeText={setNoteBody}
-                placeholder="e.g. left shoulder felt tight on the last set"
+                placeholder={t('workout.notePlaceholder')}
                 multiline
                 style={{ minHeight: 90, maxHeight: 140, textAlignVertical: 'top' }}
               />
               <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                <Button title="Cancel" variant="ghost" fullWidth={false} onPress={closeComposer} />
+                <Button title={t('common.cancel')} variant="ghost" fullWidth={false} onPress={closeComposer} />
                 <View style={{ flex: 1 }}>
-                  <Button title="Save note" onPress={saveNote} loading={savingNote} />
+                  <Button title={t('workout.saveNote')} onPress={saveNote} loading={savingNote} />
                 </View>
               </View>
             </Pressable>
@@ -800,7 +802,7 @@ export default function WorkoutScreen() {
               <Icon name="checkmark" size={72} color={theme.colors.onPrimary} />
             </View>
             <Text variant="h1" color="white">
-              {fullyDone ? 'Workout complete' : 'Workout logged'}
+              {fullyDone ? t('workout.complete') : t('workout.logged')}
             </Text>
           </Animated.View>
         </View>
