@@ -869,7 +869,7 @@
     "keepLogging": "Keep logging"
   },
   "coach": {
-    "muscle": { "push": "Push", "pull": "Pull", "legs": "Legs", "upper": "Upper", "lower": "Lower", "core": "Core" },
+    "muscle": { "push": "Push", "pull": "Pull", "legs": "Legs", "arms": "Arms", "core": "Core" },
     "cancelCustomExercise": "Cancel custom",
     "createCustomExercise": "Create a custom exercise",
     "exerciseName": "Exercise name",

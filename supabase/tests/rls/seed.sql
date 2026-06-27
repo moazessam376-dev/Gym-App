@@ -73,12 +73,14 @@ insert into public.plans (id, coach_id, client_id, type, title, status) values
 
 -- Custom library entries: one per coach (proves cross-coach denial; globals are
 -- seeded by the migration and readable by all).
+-- Test-custom ids use a dedicated ca…/cb… namespace so they never collide with the
+-- global catalog seeds (e0…/f0… from 0010, e1…/f1… from 0047).
 insert into public.exercise_library (id, coach_id, name, muscle_group, primary_muscle) values
-  ('e1000000-0000-0000-0000-00000000000a',
+  ('ca000001-0000-0000-0000-00000000000a',
    '11111111-1111-1111-1111-111111111111', 'Coach A Special Press', 'push', 'chest');
 insert into public.food_library
   (id, coach_id, name, kcal_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g) values
-  ('f1000000-0000-0000-0000-00000000000b',
+  ('cb000001-0000-0000-0000-00000000000b',
    '22222222-2222-2222-2222-222222222222', 'Coach B Protein Bar', 350, 30, 40, 10);
 
 -- Each training plan has a Week 1 (0014); days hang off the week (week_id NOT NULL).

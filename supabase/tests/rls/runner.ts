@@ -69,6 +69,8 @@ const migrationFiles = [
   '0045_public_leaderboards.sql',
   '0046_active_training_plan.sql',
   '0047_expand_catalogs.sql',
+  '0048_muscle_group_arms.sql',
+  '0049_recategorize_exercises.sql',
 ];
 
 const baseUrl =

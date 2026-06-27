@@ -897,7 +897,7 @@
     "keepLogging": "كمّل تسجيل"
   },
   "coach": {
-    "muscle": { "push": "دفع", "pull": "سحب", "legs": "رجل", "upper": "علوي", "lower": "سفلي", "core": "بطن" },
+    "muscle": { "push": "دفع", "pull": "سحب", "legs": "رجل", "arms": "دراع", "core": "بطن" },
     "cancelCustomExercise": "إلغاء المخصص",
     "createCustomExercise": "اعمل تمرين مخصص",
     "exerciseName": "اسم التمرين",
