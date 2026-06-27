@@ -40,6 +40,14 @@ export const resolveCoachRequestSchema = z.object({
   decision: z.enum(['accept', 'decline']),
 });
 
+// ── Admin ban/unban from user search (Slice G3) ─────────────────────────────
+// Sets profiles.banned_at directly (client-immutable, service-role only). The Edge
+// Function re-checks the caller is an admin before applying.
+export const adminSetBanSchema = z.object({
+  user_id: z.string().uuid(),
+  banned: z.boolean(),
+});
+
 // ── Native push fan-out (Phase 17 Slice 2, §3/§8) ───────────────────────────
 // push-send is invoked ONLY by the notifications AFTER INSERT trigger (0041) via
 // pg_net, carrying the service-role key as its bearer. The payload is just the id

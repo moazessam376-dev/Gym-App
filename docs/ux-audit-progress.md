@@ -105,7 +105,13 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
     `coach-profile/[id]`; coach inbox `app/coach/requests.tsx` (linked from the Clients-tab header w/ a
     pending badge + the notification). Harness: `0053` in runner.ts, a cross-tenant fixture in seed.sql,
     a read/write-scoping block in cases.test.ts.
-  - ⬜ **G3** admin console · **G4** nutrition barcode/serving sizes
+  - 🔵 **G3** Admin console — **code done, tsc + parity clean; migration `0054` dry-run clean, AWAITING
+    prod go-ahead (+ deploy `admin-set-ban` Edge fn).** `AdminHome` is now a live dashboard (counts via
+    the admin-gated `admin_dashboard_counts` RPC) + nav to Applications / Reports / a new **Users** screen
+    (`app/admin/users.tsx`: name search via `admin_search_users`, ban/unban via `admin-set-ban`). RPCs are
+    field-allowlist SECURITY DEFINER with an in-function admin fence (`current_app_role()` in a WHERE — a
+    non-admin gets 0 rows). Harness: `0054` in runner.ts + an admin-fence block in cases.test.ts.
+  - ⬜ **G4** nutrition barcode/serving sizes
 - ⬜ **H — First-run tour + guided goal wizard**
 
 ## Founder follow-ups (post-F, 2026-06-27)
@@ -119,8 +125,9 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
 
 ## Prod migrations pending go-ahead
 `0052` leaderboard period + self-rank (G1, **dry-run clean, ready**) · `0053` coach_requests
-(G2, **dry-run clean, ready** — also deploy `resolve-coach-request`) · admin console RPCs (G3) ·
-serving sizes (G4). _(Founder chose: build G2–G4 code first, then apply all migrations in order.)_
+(G2, **dry-run clean, ready** — also deploy `resolve-coach-request`) · `0054` admin console RPCs
+(G3, **dry-run clean, ready** — also deploy `admin-set-ban`) · serving sizes (G4).
+_(Founder chose: build G2–G4 code first, then apply all migrations in order.)_
 _(Done & applied to prod 2026-06-27: `0047` catalog · `0048`/`0049` arms recategorize · `0050` workout-note
 notification · `0051` workout-note-in-chat. Slice B's media-delete shipped as an Edge Function, not a migration.)_
 

@@ -999,7 +999,39 @@
     "rejectBody": "Reject {{who}}’s application?",
     "approve": "Approve",
     "reject": "Reject",
-    "reviewError": "Could not complete the review. Please try again."
+    "reviewError": "Could not complete the review. Please try again.",
+    "reports": "Reports & appeals",
+    "reportsSub": "Reported messages, bans and appeals",
+    "users": "Users",
+    "usersSub": "Search users · ban or unban",
+    "counts": {
+      "pendingApps": "Pending apps",
+      "openReports": "Open reports",
+      "openAppeals": "Open appeals",
+      "coaches": "Coaches",
+      "clients": "Clients",
+      "signups7d": "New (7d)"
+    },
+    "searchPlaceholder": "Search by name…",
+    "searchHint": "Search for a user",
+    "searchHintSub": "Type a name to find a user to ban or unban.",
+    "noUsers": "No users found",
+    "noUsersSub": "Try a different name.",
+    "noName": "Unnamed user",
+    "banned": "Banned",
+    "ban": "Ban",
+    "unban": "Unban",
+    "banConfirmTitle": "Ban user",
+    "banConfirmMsg": "Ban {{name}}? They won’t be able to send messages until unbanned.",
+    "unbanConfirmTitle": "Unban user",
+    "unbanConfirmMsg": "Lift the ban on {{name}}?",
+    "bannedToast": "User banned",
+    "unbannedToast": "User unbanned"
+  },
+  "roles": {
+    "admin": "Admin",
+    "coach": "Coach",
+    "client": "Client"
   },
   "clientDetail": {
     "client": "Client",
@@ -1104,6 +1136,7 @@
     "settings": "Settings",
     "coachApplications": "Coach applications",
     "reportedMessages": "Reported messages",
+    "users": "Users",
     "communityGuidelines": "Community guidelines",
     "notifications": "Notifications",
     "publicProfile": "Public profile",

@@ -175,6 +175,7 @@ function RootNavigator() {
       <Stack.Screen name="settings" options={{ headerShown: true, title: t('nav.settings') }} />
       <Stack.Screen name="admin/applications" options={{ headerShown: true, title: t('nav.coachApplications') }} />
       <Stack.Screen name="admin/reports" options={{ headerShown: true, title: t('nav.reportedMessages') }} />
+      <Stack.Screen name="admin/users" options={{ headerShown: true, title: t('nav.users') }} />
       <Stack.Screen name="community-guidelines" options={{ headerShown: true, title: t('nav.communityGuidelines') }} />
       {/* Phase 17 notifications. */}
       <Stack.Screen name="notifications" options={{ headerShown: true, title: t('nav.notifications') }} />

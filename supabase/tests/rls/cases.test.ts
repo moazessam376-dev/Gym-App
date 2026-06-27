@@ -3477,3 +3477,41 @@ describe('coach_requests (0053, Slice G2) — request-a-coach funnel (§2)', () 
     expect(r.rowCount).toBe(1);
   });
 });
+
+describe('admin console RPCs (0054, Slice G3) — in-function admin fence', () => {
+  const ADMIN: Identity = { sub: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userRole: 'admin' };
+  const COACH_A: Identity = { sub: '11111111-1111-1111-1111-111111111111', userRole: 'coach' };
+
+  it('an admin gets a single counts row with non-negative integers', async () => {
+    const r = await asUser(ADMIN, (c) => c.query('select * from public.admin_dashboard_counts()'));
+    expect(r.rows).toHaveLength(1);
+    expect(Number(r.rows[0].coaches)).toBeGreaterThanOrEqual(2); // Coach A + Coach B (+ more)
+    expect(Number(r.rows[0].clients)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('a non-admin gets ZERO rows from the counts RPC (the WHERE fence denies)', async () => {
+    const coach = await asUser(COACH_A, (c) => c.query('select * from public.admin_dashboard_counts()'));
+    const client = await asUser(CLIENT_A1, (c) => c.query('select * from public.admin_dashboard_counts()'));
+    expect(coach.rows).toHaveLength(0);
+    expect(client.rows).toHaveLength(0);
+  });
+
+  it('admin user search matches by name and returns ONLY the allowlisted columns', async () => {
+    const r = await asUser(ADMIN, (c) => c.query("select * from public.admin_search_users('Coach', 50)"));
+    const ids = r.rows.map((x) => x.id);
+    expect(ids).toContain('11111111-1111-1111-1111-111111111111'); // Coach A
+    const cols = Object.keys(r.rows[0]).sort();
+    expect(cols).toEqual(['banned_at', 'created_at', 'full_name', 'id', 'role'].sort());
+    for (const banned of ['email', 'coach_id']) expect(cols).not.toContain(banned);
+  });
+
+  it('a non-admin gets ZERO rows from user search', async () => {
+    const r = await asUser(COACH_A, (c) => c.query("select * from public.admin_search_users('Coach', 50)"));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it('anon cannot execute either admin RPC (no execute grant)', async () => {
+    await expect(asAnon((c) => c.query('select * from public.admin_dashboard_counts()'))).rejects.toThrow();
+    await expect(asAnon((c) => c.query("select * from public.admin_search_users('a', 10)"))).rejects.toThrow();
+  });
+});

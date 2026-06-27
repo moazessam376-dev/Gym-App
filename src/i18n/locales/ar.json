@@ -1027,7 +1027,39 @@
     "rejectBody": "ترفض طلب {{who}}؟",
     "approve": "وافق",
     "reject": "ارفض",
-    "reviewError": "مقدرناش نكمّل المراجعة. حاول تاني."
+    "reviewError": "مقدرناش نكمّل المراجعة. حاول تاني.",
+    "reports": "البلاغات والتظلّمات",
+    "reportsSub": "الرسائل المبلّغ عنها والحظر والتظلّمات",
+    "users": "المستخدمين",
+    "usersSub": "ابحث عن مستخدمين · احظر أو ارفع الحظر",
+    "counts": {
+      "pendingApps": "طلبات منتظرة",
+      "openReports": "بلاغات مفتوحة",
+      "openAppeals": "تظلّمات مفتوحة",
+      "coaches": "كوتشيز",
+      "clients": "عملاء",
+      "signups7d": "جداد (٧ أيام)"
+    },
+    "searchPlaceholder": "ابحث بالاسم…",
+    "searchHint": "ابحث عن مستخدم",
+    "searchHintSub": "اكتب اسم عشان تلاقي مستخدم تحظره أو ترفع عنه الحظر.",
+    "noUsers": "مفيش مستخدمين",
+    "noUsersSub": "جرّب اسم تاني.",
+    "noName": "مستخدم بدون اسم",
+    "banned": "محظور",
+    "ban": "احظر",
+    "unban": "ارفع الحظر",
+    "banConfirmTitle": "حظر المستخدم",
+    "banConfirmMsg": "تحظر {{name}}؟ مش هيقدر يبعت رسايل لحد ما ترفع الحظر.",
+    "unbanConfirmTitle": "رفع الحظر",
+    "unbanConfirmMsg": "ترفع الحظر عن {{name}}؟",
+    "bannedToast": "اتحظر المستخدم",
+    "unbannedToast": "اترفع الحظر"
+  },
+  "roles": {
+    "admin": "أدمن",
+    "coach": "كوتش",
+    "client": "عميل"
   },
   "clientDetail": {
     "client": "عميل",
@@ -1132,6 +1164,7 @@
     "settings": "الإعدادات",
     "coachApplications": "طلبات الكوتشيز",
     "reportedMessages": "الرسائل المُبلّغ عنها",
+    "users": "المستخدمين",
     "communityGuidelines": "قواعد المجتمع",
     "notifications": "الإشعارات",
     "publicProfile": "البروفايل العام",
