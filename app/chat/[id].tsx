@@ -328,12 +328,14 @@ function Bubble({
                 >
                   {note ? t(`workout.${note.category}`) : t('chat.note')}
                 </Text>
-                {note?.exercise_name ? (
-                  <Text variant="caption" muted numberOfLines={1} style={{ flex: 1 }}>
-                    {`· ${note.exercise_name}`}
-                  </Text>
-                ) : null}
               </View>
+              {/* Exercise name on its own line so it stays visible even when the note
+                  body is short (a row-shared name collapses on a content-sized card). */}
+              {note?.exercise_name ? (
+                <Text variant="bodyStrong" numberOfLines={2} color={theme.colors.text}>
+                  {note.exercise_name}
+                </Text>
+              ) : null}
               {body.length > 0 ? (
                 <Text variant="body" color={theme.colors.text}>
                   {body}

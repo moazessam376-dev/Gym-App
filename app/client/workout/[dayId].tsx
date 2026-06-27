@@ -503,6 +503,9 @@ export default function WorkoutScreen() {
             const u = unitFor(ex.exercise_name);
             const best = bestLoadByEx.get(ex.exercise_name);
             const hasInvalid = Array.from({ length: sets }).some((_, i) => invalid.has(key(ex.id, i)));
+            // Notes this athlete has already left on THIS exercise (so the button shows
+            // a "done" state and the note is visible — no accidental duplicate).
+            const myNotes = notes.filter((n) => n.plan_exercise_id === ex.id);
             return (
               <Card key={ex.id}>
                 <View style={{ gap: theme.spacing.md }}>
@@ -519,8 +522,13 @@ export default function WorkoutScreen() {
                       onPress={() => openComposer({ scope: 'exercise', exId: ex.id, exName: ex.exercise_name })}
                       hitSlop={8}
                       style={{ paddingTop: 2 }}
+                      accessibilityLabel={t('workout.noteToCoach')}
                     >
-                      <Icon name="chatbubble-ellipses-outline" size={20} color={theme.colors.textMuted} />
+                      <Icon
+                        name={myNotes.length > 0 ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+                        size={20}
+                        color={myNotes.length > 0 ? theme.colors.primary : theme.colors.textMuted}
+                      />
                     </Pressable>
                   </View>
 
@@ -540,6 +548,34 @@ export default function WorkoutScreen() {
                       </Text>
                     </View>
                   ) : null}
+
+                  {/* The athlete's OWN notes on this exercise — shown so they can see
+                      what they already sent the coach and don't repeat it. */}
+                  {myNotes.map((n) => {
+                    const tint = n.category === 'compliment' ? theme.colors.success : theme.colors.warning;
+                    return (
+                      <View
+                        key={n.id}
+                        style={{
+                          flexDirection: 'row',
+                          gap: theme.spacing.sm,
+                          backgroundColor: theme.colors.surfaceElevated,
+                          borderRadius: theme.radii.sm,
+                          borderLeftWidth: 3,
+                          borderLeftColor: tint,
+                          padding: theme.spacing.md,
+                        }}
+                      >
+                        <Icon name="clipboard" size={16} color={tint} />
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Text variant="label" style={{ color: tint, fontSize: 10 }}>
+                            {t(`workout.${n.category}`)}
+                          </Text>
+                          <Text variant="caption">{n.body}</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
 
                   {/* Meta row: block tag + per-exercise kg/lb toggle */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
