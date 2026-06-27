@@ -240,6 +240,7 @@
   "templates": {
     "newPlan": "New plan (template or blank)",
     "yourPlans": "Your {{type}} plans",
+    "assigningTo": "Pick a template to assign to {{name}}",
     "emptyTitle": "No templates yet",
     "emptySub": "Create your first plan above.",
     "deleteTitle": "Delete plan?",
@@ -964,6 +965,7 @@
     "weightHistory": "Weight history",
     "addInbody": "Add InBody reading",
     "recentFeedback": "Recent feedback",
+    "messageClient": "Message",
     "assignFromTemplates": "Assign from templates",
     "assignedPlans": "Assigned plans",
     "noPlans": "No plans assigned yet.",

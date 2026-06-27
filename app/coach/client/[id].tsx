@@ -260,6 +260,11 @@ export default function ClientDetail() {
                   {t('clientDetail.client')}
                 </Text>
               </View>
+              <IconButton
+                name="chatbubble-ellipses"
+                accessibilityLabel={t('clientDetail.messageClient')}
+                onPress={() => router.push({ pathname: '/chat/[id]', params: { id, name: name ?? '' } })}
+              />
             </View>
 
             {/* Progress snapshot (REAL — completion logging 0016 + verified InBody 0026) */}
@@ -493,7 +498,9 @@ export default function ClientDetail() {
             <Button
               title={t('clientDetail.assignFromTemplates')}
               left={<Icon name="add" size={18} color={theme.colors.onPrimary} />}
-              onPress={() => router.push('/coach/templates')}
+              onPress={() =>
+                router.push({ pathname: '/coach/templates', params: { clientId: id, clientName: name ?? '' } })
+              }
             />
 
             <Text variant="label" muted style={{ marginTop: theme.spacing.sm }}>

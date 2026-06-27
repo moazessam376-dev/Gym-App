@@ -383,6 +383,7 @@
   "templates": {
     "newPlan": "خطة جديدة (قالب أو فاضية)",
     "yourPlans": "خطط {{type}} بتاعتك",
+    "assigningTo": "اختار قالب تسنده لـ {{name}}",
     "emptyTitle": "لسه مفيش قوالب",
     "emptySub": "اعمل أول خطة من فوق.",
     "deleteTitle": "تمسح الخطة؟",
@@ -992,6 +993,7 @@
     "weightHistory": "سجل الوزن",
     "addInbody": "أضف قياس InBody",
     "recentFeedback": "آخر الملاحظات",
+    "messageClient": "رسالة",
     "assignFromTemplates": "اسند من القوالب",
     "assignedPlans": "الخطط المسندة",
     "noPlans": "مفيش خطط مسندة لسه.",
