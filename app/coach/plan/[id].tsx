@@ -443,8 +443,8 @@ export default function PlanEditor() {
           {/* Fresh, uncommitted template → an explicit "Save to my plans" (the user's
               requested fix). Until tapped, leaving the editor discards the clone. */}
           {uncommitted ? (
-            <Pressable style={[styles.headerBtn, styles.publish]} onPress={onKeepTemplate} disabled={busy}>
-              <Text style={styles.headerBtnText}>{t('planEditor.saveToMyPlans')}</Text>
+            <Pressable style={[styles.headerBtn, styles.save]} onPress={onKeepTemplate} disabled={busy}>
+              <Text style={[styles.headerBtnText, styles.saveText]}>{t('planEditor.saveToMyPlans')}</Text>
             </Pressable>
           ) : null}
 
@@ -898,6 +898,8 @@ const styles = StyleSheet.create({
   statusText: { color: c.onPrimary, fontSize: 12, fontFamily: f.bodyBold, textTransform: 'capitalize' },
   headerBtn: { borderRadius: 10, paddingVertical: 13, alignItems: 'center', marginTop: 6 },
   assign: { backgroundColor: c.secondary },
+  save: { backgroundColor: c.primary }, // brand Signal cyan — the primary commit action
+  saveText: { color: c.onPrimary }, // dark text ON cyan (onPrimary is onyx, not white)
   publish: { backgroundColor: c.success },
   unpublish: { backgroundColor: c.warning },
   adjust: { backgroundColor: c.glass, borderWidth: 1, borderColor: c.glassBorder },
