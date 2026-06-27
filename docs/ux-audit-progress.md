@@ -76,15 +76,25 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
   - ✅ De-risked: rolled-back `begin…rollback` dry-run on prod schema = clean (enums/columns/constraints OK).
   - ⏸ Dropped the optional `is_bodyweight` column — nothing reads it yet (dead schema); trivial follow-up
     for Slice F's exercise picker if wanted.
-  - ⬜ **PENDING: apply `0047` to prod** (additive seed → advisors expected clean) + `get_advisors(security)`.
-- ⬜ **F — Coach workflow** (Message button, assign-with-context, AI plan-gen entry points, client-detail sub-tabs, plan-editor UI-kit; + the deferred coach-feedback notification)
+  - ✅ Applied `0047` to prod 2026-06-27 (advisors clean).
+- ✅ **F — Coach workflow**
+  - ✅ **F1** Message button on coach client-detail → DM that client (`/chat/[id]`).
+  - ✅ **F2** Assign-with-context: client-detail → templates in "assign mode" (tap a template = clone onto this client).
+  - ✅ **F4** Split client-detail into Overview / Plans / Progress / Notes sub-tabs (Segmented header).
+  - ✅ **F5** Coach-feedback notification: athlete workout note → `client_note` in-app notification to the coach.
+    **Migration `0050` APPLIED to prod 2026-06-27** (advisors clean; trigger fn EXECUTE-revoked, no new 0029).
+  - ✅ **F3** Surface AI plan-gen from new-plan → client-picker (`coach/ai-plan.tsx`) → existing generator (`?openAi=1`).
+  - ⏸ **F6** plan-editor UI-kit refactor — **DEFERRED (founder call, 2026-06-27)**. The 1012-line editor is
+    already on-brand via theme tokens; a full kit migration is high-risk/low-value on the core coach screen,
+    and a partial pass would leave it half-migrated. Revisit as its own reviewed PR post device-test.
 - ⬜ **G — Larger items** (G1 Ranks→Analytics merge + leaderboard in-page UX · G2 coach_requests funnel · G3 admin console · G4 nutrition barcode/serving sizes)
 - ⬜ **H — First-run tour + guided goal wizard**
 
 ## Prod migrations pending go-ahead
-coach-feedback-notify trigger (Slice F) · coach_requests (G2) · serving sizes (G4).
-_(Done: `0047` catalog expansion applied 2026-06-27. Note: Slice B's media-delete shipped as an Edge
-Function, **not** a migration — there is no `0047` media migration; the catalog seed took the `0047` slot.)_
+coach_requests (G2) · serving sizes (G4).
+_(Done & applied to prod 2026-06-27: `0047` catalog expansion · `0048`/`0049` muscle-group→arms recategorize ·
+`0050` workout-note→coach notification. Note: Slice B's media-delete shipped as an Edge Function, not a
+migration.)_
 
 ## Known limitations flagged for pilot
 - Arabic UI but **English food/exercise names** in the catalog (DB `name_ar` is post-pilot).
