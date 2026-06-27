@@ -641,5 +641,34 @@
     "passwordMin": "Password must be at least 8 characters.",
     "passwordsNoMatch": "Passwords do not match.",
     "resetFailed": "Could not reset your password. Request a new link and try again."
+  },
+  "onboarding": {
+    "finishing": "Finishing setup…",
+    "finishingBody": "We’re getting your account ready. If this doesn’t move along in a moment, sign out and back in."
+  },
+  "acceptInvite": {
+    "title": "Accept an invite",
+    "prompt": "Paste the token your coach shared with you.",
+    "submit": "Accept invite",
+    "invalidToken": "That doesn’t look like a valid invite token.",
+    "alreadyHasCoach": "You already have a coach. You can only be linked to one at a time.",
+    "failed": "This invite couldn’t be accepted. It may be used, expired, or for a different email.",
+    "connectedTitle": "You’re connected!",
+    "connectedBody": "Your coach can now see you on their roster.",
+    "goHome": "Go to home"
+  },
+  "becomeCoach": {
+    "intro": "Coaches build training & nutrition plans and manage clients. Tell us a bit about your coaching background (optional).",
+    "messagePlaceholder": "e.g. 5 years personal training, nutrition certified…",
+    "apply": "Apply to become a coach",
+    "applyAgain": "Apply again",
+    "sessionExpired": "Your session expired. Sign in again.",
+    "submitError": "Could not submit your application. Please try again.",
+    "pendingTitle": "Application pending",
+    "pendingBody": "An admin will review your request. You’ll switch to a coach account once approved.",
+    "approvedTitle": "Approved",
+    "approvedBody": "You’re a coach now. Sign out and back in to load your coach tools.",
+    "rejectedTitle": "Not approved",
+    "rejectedBody": "Your application wasn’t approved this time. You can apply again below."
   }
 }
