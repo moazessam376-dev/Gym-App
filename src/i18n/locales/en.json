@@ -12,6 +12,12 @@
     "error": "Something went wrong",
     "errorTitle": "Error",
     "checkInput": "Check your input",
+    "saved": "Saved",
+    "saveFailed": "Couldn’t save. Please try again.",
+    "unsavedTitle": "Discard changes?",
+    "unsavedMessage": "You have unsaved changes. Leave without saving?",
+    "discard": "Discard",
+    "keepEditing": "Keep editing",
     "training": "Training",
     "nutrition": "Nutrition"
   },
@@ -166,7 +172,8 @@
     },
     "archived": "archived",
     "active": "Active",
-    "makeActive": "Set as active"
+    "makeActive": "Set as active",
+    "madeActive": "Now your active plan"
   },
   "templates": {
     "newPlan": "New plan (template or blank)",

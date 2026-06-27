@@ -28,6 +28,7 @@ import { queryClient, subscribeAppStateFocus } from '../src/lib/query';
 import { prefetchHome, useNotificationsRealtime } from '../src/lib/queries/home';
 import { usePushNotifications } from '../src/lib/push';
 import { loadSavedLanguage } from '../src/i18n'; // side-effect: initializes i18next
+import { ToastProvider } from '../src/components/ui';
 import { theme } from '../src/theme';
 
 // Role-aware routing. The role comes from the verified JWT claim (server-issued
@@ -239,7 +240,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <RootNavigator />
+          <ToastProvider>
+            <RootNavigator />
+          </ToastProvider>
         </AuthProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

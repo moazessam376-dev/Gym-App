@@ -12,6 +12,12 @@
     "error": "حصل خطأ",
     "errorTitle": "خطأ",
     "checkInput": "راجع اللي كتبته",
+    "saved": "اتحفظ",
+    "saveFailed": "مش قادرين نحفظ. حاول تاني.",
+    "unsavedTitle": "تسيب من غير حفظ؟",
+    "unsavedMessage": "عندك تعديلات مش متحفوظة. تسيب من غير ما تحفظ؟",
+    "discard": "سيب",
+    "keepEditing": "كمّل تعديل",
     "training": "تمارين",
     "nutrition": "أكل"
   },
@@ -308,7 +314,8 @@
     },
     "archived": "مؤرشف",
     "active": "نشطة",
-    "makeActive": "خليها النشطة"
+    "makeActive": "خليها النشطة",
+    "madeActive": "دي خطتك النشطة دلوقتي"
   },
   "templates": {
     "newPlan": "خطة جديدة (قالب أو فاضية)",

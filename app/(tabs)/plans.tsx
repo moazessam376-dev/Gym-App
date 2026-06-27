@@ -12,7 +12,8 @@ import {
   useRefreshOnFocus,
 } from '../../src/lib/queries/home';
 import { setActiveTrainingPlan } from '../../src/lib/athlete-profile';
-import { Icon, Screen, Text, Card, Badge, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, Card, Badge, EmptyState, useToast } from '../../src/components/ui';
+import { haptics } from '../../src/lib/haptics';
 import { theme } from '../../src/theme';
 
 export default function PlansTab() {
@@ -20,6 +21,7 @@ export default function PlansTab() {
   const { session } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const userId = session?.user?.id;
 
   // Cached + warmed on app open, so the plan list is ready on first visit.
@@ -46,8 +48,11 @@ export default function PlansTab() {
         queryClient.invalidateQueries({ queryKey: ['active-training-plan', userId] }),
         queryClient.invalidateQueries({ queryKey: ['today-workout', userId] }),
       ]);
+      haptics.tap();
+      toast.show(t('plans.madeActive'));
     } catch {
-      // Best-effort; the badge stays on the previous choice on failure.
+      // The badge stays on the previous choice on failure — tell the user it didn't take.
+      toast.show(t('common.saveFailed'), 'error');
     }
   }
 
