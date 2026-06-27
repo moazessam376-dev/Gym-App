@@ -454,3 +454,10 @@ insert into public.coach_requests (id, client_id, client_name, coach_id, message
   ('c0a70000-0000-0000-0000-000000000001',
    'bbbb0001-0000-0000-0000-000000000001', 'Client B1',
    '11111111-1111-1111-1111-111111111111', 'I would love to train with you', 'pending');
+
+-- ── Slice "chat previews" (0058): a committed chat read-state row ─────────────
+-- Client A1 last read their thread with Coach A a day ago — so the 3 newer seeded
+-- Coach A → A1 messages still count as unread, and the cross-tenant denial test has a
+-- target row to be denied. Composite PK of existing profile ids → no new UUID.
+insert into public.conversation_read_state (user_id, peer_id, last_read_at) values
+  ('aaaa0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', now() - interval '1 day');

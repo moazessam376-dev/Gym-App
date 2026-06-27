@@ -1753,35 +1753,33 @@ describe('workout logging (0021) — exercise PRs + athlete→coach feedback not
 describe('workout note delete keeps the chat copy (0056) — FK SET NULL is not an edit', () => {
   const A1_SESSION = '5e550001-0000-0000-0000-000000000001';
 
+  // One transaction: the harness rolls back each asUser() call (helpers.ts), and the
+  // mirror message + the delete cascade must all be visible within the same write.
   it('deleting a note unlinks its mirrored chat message but preserves it (no edit_window, no edited_at)', async () => {
-    // 1. Author a note → the 0051 trigger best-effort mirrors it into the client↔coach chat.
-    const note = await asUser(CLIENT_A1, (c) =>
-      c.query(
+    await asUser(CLIENT_A1, async (c) => {
+      // 1. Author a note → the 0051 trigger mirrors it into the client↔coach chat.
+      const note = await c.query(
         "insert into public.workout_notes (user_id, session_id, category, body) values ($1, $2, 'challenge', 'delete-me note') returning id",
         [CLIENT_A1.sub, A1_SESSION],
-      ),
-    );
-    const noteId = note.rows[0].id;
+      );
+      const noteId = note.rows[0].id;
 
-    // The mirror message exists, linked to the note and not yet edited.
-    const mirror = await asUser(CLIENT_A1, (c) =>
-      c.query('select id, edited_at from public.messages where workout_note_id = $1', [noteId]),
-    );
-    expect(mirror.rows).toHaveLength(1);
-    const msgId = mirror.rows[0].id;
-    expect(mirror.rows[0].edited_at).toBeNull();
+      // The mirror message exists, linked to the note and not yet edited.
+      const mirror = await c.query('select id, edited_at from public.messages where workout_note_id = $1', [noteId]);
+      expect(mirror.rows).toHaveLength(1);
+      const msgId = mirror.rows[0].id;
+      expect(mirror.rows[0].edited_at).toBeNull();
 
-    // 2. Delete the note — the FK ON DELETE SET NULL cascade must NOT raise (edit_window)
-    //    nor stamp edited_at. Before 0056 this threw / marked the message edited.
-    await asUser(CLIENT_A1, (c) => c.query('delete from public.workout_notes where id = $1', [noteId]));
+      // 2. Delete the note — the FK ON DELETE SET NULL cascade must NOT raise (edit_window)
+      //    nor stamp edited_at. Before 0056 this threw / marked the message edited.
+      await c.query('delete from public.workout_notes where id = $1', [noteId]);
 
-    // 3. The note is gone; the chat copy survives, unlinked and unedited.
-    const after = await asUser(CLIENT_A1, (c) =>
-      c.query('select workout_note_id, edited_at from public.messages where id = $1', [msgId]),
-    );
-    expect(after.rows).toHaveLength(1);
-    expect(after.rows[0].workout_note_id).toBeNull();
-    expect(after.rows[0].edited_at).toBeNull();
+      // 3. The note is gone; the chat copy survives, unlinked and unedited.
+      const after = await c.query('select workout_note_id, edited_at from public.messages where id = $1', [msgId]);
+      expect(after.rows).toHaveLength(1);
+      expect(after.rows[0].workout_note_id).toBeNull();
+      expect(after.rows[0].edited_at).toBeNull();
+    });
   });
 });
 
@@ -3582,25 +3580,35 @@ describe('conversation previews + read-state (0058) — chat list aggregation (�
   const CLIENT_B1_ID: Identity = { sub: CLIENT_B1, userRole: 'client' };
 
   it('list_conversation_previews gives one row per counterpart with the unread count', async () => {
-    // Client A1 only converses with Coach A (seed: ab000001..ab000004).
+    // Client A1 only converses with Coach A (seed: ab000001..ab000004). The seeded
+    // read-state marker is a day old, so the 3 Coach A → A1 messages stay unread
+    // (ab000002 is A1's own → never unread).
     const r = await asUser(CLIENT_A1, (c) => c.query('select * from public.list_conversation_previews()'));
     expect(r.rows).toHaveLength(1);
     expect(r.rows[0].peer_id).toBe(COACH_A.sub);
-    // 3 Coach A → A1 messages (ab000001/3/4); ab000002 is A1's own → not unread. No read-state yet.
     expect(Number(r.rows[0].unread_count)).toBe(3);
   });
 
+  // The harness rolls back each asUser() call (helpers.ts withIdentity), so a write and the
+  // read that depends on it must share ONE transaction.
   it('mark_conversation_read clears the unread count for that conversation', async () => {
-    await asUser(CLIENT_A1, (c) => c.query('select public.mark_conversation_read($1)', [COACH_A.sub]));
-    const r = await asUser(CLIENT_A1, (c) =>
-      c.query('select unread_count from public.list_conversation_previews() where peer_id = $1', [COACH_A.sub]),
-    );
-    expect(Number(r.rows[0].unread_count)).toBe(0);
+    await asUser(CLIENT_A1, async (c) => {
+      const before = await c.query(
+        'select unread_count from public.list_conversation_previews() where peer_id = $1',
+        [COACH_A.sub],
+      );
+      expect(Number(before.rows[0].unread_count)).toBe(3);
+      await c.query('select public.mark_conversation_read($1)', [COACH_A.sub]); // upserts last_read = now()
+      const after = await c.query(
+        'select unread_count from public.list_conversation_previews() where peer_id = $1',
+        [COACH_A.sub],
+      );
+      expect(Number(after.rows[0].unread_count)).toBe(0);
+    });
   });
 
   it('a user cannot read another user’s conversation_read_state (cross-tenant)', async () => {
-    // A1 creates a read-state row for the A1↔Coach A conversation.
-    await asUser(CLIENT_A1, (c) => c.query('select public.mark_conversation_read($1)', [COACH_A.sub]));
+    // The seed commits one read-state row (A1 ↔ Coach A) so others have a target to be denied.
     const own = await asUser(CLIENT_A1, (c) => c.query('select peer_id from public.conversation_read_state'));
     expect(own.rows.length).toBeGreaterThanOrEqual(1);
 
@@ -3616,14 +3624,13 @@ describe('conversation previews + read-state (0058) — chat list aggregation (�
     expect(anon.rows).toHaveLength(0);
   });
 
-  it('the marker is forced to the caller — a client cannot mark-read on someone else’s behalf', async () => {
-    // mark_conversation_read always writes user_id = auth.uid(); calling it never
-    // creates a row owned by another user.
-    await asUser(CLIENT_B1_ID, (c) => c.query('select public.mark_conversation_read($1)', [COACH_B.sub]));
-    const a1View = await asUser(CLIENT_A1, (c) =>
-      c.query('select peer_id from public.conversation_read_state where user_id = $1', [CLIENT_B1]),
-    );
-    expect(a1View.rows).toHaveLength(0); // A1 can't even see B1's row; B1 owns only its own
+  it('mark_conversation_read writes the row as the caller (user_id forced to auth.uid())', async () => {
+    await asUser(CLIENT_B1_ID, async (c) => {
+      await c.query('select public.mark_conversation_read($1)', [COACH_B.sub]);
+      const r = await c.query('select user_id from public.conversation_read_state where peer_id = $1', [COACH_B.sub]);
+      expect(r.rows).toHaveLength(1);
+      expect(r.rows[0].user_id).toBe(CLIENT_B1); // never anyone else's id
+    });
   });
 
   it('anon cannot execute the conversation RPCs (0059 — execute revoked from anon)', async () => {
