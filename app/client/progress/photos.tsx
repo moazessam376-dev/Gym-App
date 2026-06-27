@@ -5,6 +5,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Pressable, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
 import { listMediaFor, type Media } from '../../../src/lib/media';
 import { captureAndUploadPhoto, type PickSource } from '../../../src/lib/upload';
@@ -39,6 +40,7 @@ function groupByDay(media: Media[]): DayGroup[] {
 }
 
 export default function ProgressPhotos() {
+  const { t } = useTranslation();
   const { role, session } = useAuth();
   const router = useRouter();
   const selfId = session?.user?.id;
@@ -78,9 +80,9 @@ export default function ProgressPhotos() {
     try {
       const res = await captureAndUploadPhoto({ source, kind: 'progress_photo' });
       if ('mediaId' in res) await load();
-      else if ('denied' in res) setNotice('Permission denied. Enable photo/camera access in Settings.');
+      else if ('denied' in res) setNotice(t('progress.permDenied'));
     } catch {
-      setNotice('Upload failed. Please try again.');
+      setNotice(t('progress.uploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -99,15 +101,15 @@ export default function ProgressPhotos() {
         contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: 120, gap: theme.spacing.lg }}
         ListHeaderComponent={
           <View style={{ gap: theme.spacing.md, marginBottom: theme.spacing.xs }}>
-            <Text variant="h2">Progress photos</Text>
+            <Text variant="h2">{t('progress.progressPhotos')}</Text>
             {!readOnly ? (
               <GlassCard style={{ gap: theme.spacing.sm }}>
                 <Text variant="caption" muted>
-                  Photos are private — stored encrypted and only visible to you and your coach.
+                  {t('progress.photosPrivate')}
                 </Text>
                 <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
                   <Button
-                    title="Camera"
+                    title={t('progress.camera')}
                     variant="secondary"
                     style={{ flex: 1 }}
                     disabled={uploading}
@@ -115,7 +117,7 @@ export default function ProgressPhotos() {
                     left={<Icon name="camera" size={18} color={theme.colors.text} />}
                   />
                   <Button
-                    title="Library"
+                    title={t('progress.library')}
                     variant="secondary"
                     style={{ flex: 1 }}
                     disabled={uploading}
@@ -127,7 +129,7 @@ export default function ProgressPhotos() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                     <ActivityIndicator color={theme.colors.primary} />
                     <Text variant="caption" muted>
-                      Uploading…
+                      {t('progress.uploading')}
                     </Text>
                   </View>
                 ) : null}
@@ -146,8 +148,8 @@ export default function ProgressPhotos() {
           ) : (
             <EmptyState
               icon="camera-outline"
-              title="No photos yet"
-              subtitle={readOnly ? 'This client hasn’t added progress photos yet.' : 'Add a photo to start your visual timeline.'}
+              title={t('progress.noPhotosTitle')}
+              subtitle={readOnly ? t('progress.noPhotosCoach') : t('progress.noPhotosOwn')}
             />
           )
         }

@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { Dimensions, Pressable, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteMedia } from '../../../src/lib/media';
 import { confirmDestructive } from '../../../src/lib/confirm';
@@ -16,6 +17,7 @@ import { Icon, Text, SignedImage } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 export default function MediaView() {
+  const { t } = useTranslation();
   const { mediaId, own } = useLocalSearchParams<{ mediaId?: string; own?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -28,9 +30,9 @@ export default function MediaView() {
   async function onDelete() {
     if (!mediaId || busy) return;
     const ok = await confirmDestructive(
-      'Delete this?',
-      'This permanently removes it and can’t be undone.',
-      'Delete',
+      t('progress.deleteTitle'),
+      t('progress.deleteBody'),
+      t('common.delete'),
     );
     if (!ok) return;
     setBusy(true);
@@ -40,7 +42,7 @@ export default function MediaView() {
       haptics.success();
       router.back();
     } catch {
-      setError('Could not delete. Please try again.');
+      setError(t('progress.deleteError'));
       setBusy(false);
     }
   }
@@ -70,7 +72,7 @@ export default function MediaView() {
       ) : (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Text variant="body" color={theme.colors.textMuted}>
-            Image unavailable.
+            {t('progress.imageUnavailable')}
           </Text>
         </View>
       )}
@@ -115,7 +117,7 @@ export default function MediaView() {
           color={theme.colors.textMuted}
           style={{ position: 'absolute', bottom: 24, alignSelf: 'center' }}
         >
-          Pinch to zoom
+          {t('progress.pinchZoom')}
         </Text>
       ) : null}
     </SafeAreaView>

@@ -4,6 +4,7 @@
 // last-message/unread aggregation yet (deferred) — rows are the pairing only.
 import { FlatList, RefreshControl, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { useMyClients, useMyCoach, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { Icon, Screen, Text, Avatar, GlassCard, EmptyState } from '../../src/components/ui';
@@ -12,6 +13,7 @@ import { theme } from '../../src/theme';
 type Conversation = { id: string; name: string };
 
 export default function MessagesTab() {
+  const { t } = useTranslation();
   const { session, role } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
@@ -24,9 +26,9 @@ export default function MessagesTab() {
 
   const items: Conversation[] =
     role === 'coach'
-      ? (clientsQ.data ?? []).map((c) => ({ id: c.id, name: c.full_name ?? c.invited_email ?? 'Client' }))
+      ? (clientsQ.data ?? []).map((c) => ({ id: c.id, name: c.full_name ?? c.invited_email ?? t('messages.client') }))
       : role === 'client' && coachQ.data
-        ? [{ id: coachQ.data.id, name: coachQ.data.full_name ?? 'Your coach' }]
+        ? [{ id: coachQ.data.id, name: coachQ.data.full_name ?? t('home.yourCoach') }]
         : [];
   const loading = role === 'coach' ? clientsQ.isPending : coachQ.isPending;
   const load = () => (role === 'coach' ? clientsQ.refetch() : coachQ.refetch());
@@ -34,7 +36,7 @@ export default function MessagesTab() {
   return (
     <Screen padded={false} gradient>
       <View style={{ paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.lg }}>
-        <Text variant="h1">Chat</Text>
+        <Text variant="h1">{t('messages.title')}</Text>
       </View>
       <FlatList
         data={items}
@@ -42,15 +44,20 @@ export default function MessagesTab() {
         contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md, flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor={theme.colors.primary} />}
         ListEmptyComponent={
-          loading ? null : (
+          loading ? null : role === 'client' ? (
+            // Coach-less client: turn the dead end into the accept-invite funnel.
             <EmptyState
               icon="chatbubbles-outline"
-              title={role === 'client' ? 'No coach yet' : 'No clients yet'}
-              subtitle={
-                role === 'client'
-                  ? 'Once you accept a coach invite, you can message them here.'
-                  : 'Invite clients to start chatting with them.'
-              }
+              title={t('messages.noCoachTitle')}
+              subtitle={t('messages.noCoachSub')}
+              actionLabel={t('home.acceptInvite')}
+              onAction={() => router.push('/accept-invite')}
+            />
+          ) : (
+            <EmptyState
+              icon="chatbubbles-outline"
+              title={t('messages.noClientsTitle')}
+              subtitle={t('messages.noClientsSub')}
             />
           )
         }
