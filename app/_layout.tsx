@@ -26,7 +26,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from '../src/lib/auth-context';
 import { queryClient, subscribeAppStateFocus } from '../src/lib/query';
-import { prefetchHome, useNotificationsRealtime } from '../src/lib/queries/home';
+import { prefetchHome, useNotificationsRealtime, useConversationPreviewsRealtime } from '../src/lib/queries/home';
 import { usePushNotifications } from '../src/lib/push';
 import { loadSavedLanguage } from '../src/i18n'; // side-effect: initializes i18next
 import { ToastProvider } from '../src/components/ui';
@@ -79,6 +79,9 @@ function RootNavigator() {
   // Live notifications for the signed-in user → the home-header bell badge stays
   // current without a manual refresh (Realtime is RLS-scoped to their own rows).
   useNotificationsRealtime(userId);
+
+  // Live chat list: a new message re-sorts the Chat tab + updates the unread badge.
+  useConversationPreviewsRealtime(userId);
 
   // Register this device for native push (once per user) + route a push tap to the
   // matching screen. No-op in Expo Go / web / simulator — active only on an EAS build.

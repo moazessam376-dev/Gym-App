@@ -27,7 +27,7 @@ import {
 } from '../../../src/lib/nutrition';
 import { getStreak, listSessions, type WorkoutSession } from '../../../src/lib/sessions';
 import { readCache, writeCache } from '../../../src/lib/screen-cache';
-import { Icon, IconButton, Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented, EmptyState } from '../../../src/components/ui';
+import { Icon, IconButton, Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented, EmptyState, LineChart } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 // Warm-cache snapshot so re-opening a client renders instantly (then refetches).
@@ -72,6 +72,38 @@ function MiniStat({ value, label }: { value: string; label: string }) {
       <Text variant="label" muted style={{ fontSize: 9 }}>
         {label}
       </Text>
+    </View>
+  );
+}
+
+// A dashboard tile: big mono value + unit + a signed since-baseline delta, colored
+// by whether the move is GOOD for that metric ('low' = lower-is-better like body fat,
+// 'high' = higher-is-better like muscle, 'neutral' = goal-dependent → uncolored).
+function BodyStat({
+  value,
+  unit,
+  delta,
+  good = 'neutral',
+}: {
+  value: string;
+  unit: string;
+  delta?: number | null;
+  good?: 'low' | 'high' | 'neutral';
+}) {
+  const isGood = delta == null || delta === 0 || good === 'neutral' ? null : good === 'low' ? delta < 0 : delta > 0;
+  const deltaColor = isGood == null ? theme.colors.textMuted : isGood ? theme.colors.success : theme.colors.danger;
+  return (
+    <View style={{ flex: 1, gap: 2 }}>
+      <Text style={{ fontFamily: theme.fontFamily.monoBold, fontSize: 24, color: theme.colors.text }}>{value}</Text>
+      <Text variant="label" muted style={{ fontSize: 9 }}>
+        {unit}
+      </Text>
+      {delta != null && delta !== 0 ? (
+        <Text variant="caption" color={deltaColor}>
+          {delta > 0 ? '+' : '−'}
+          {Math.abs(delta)}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -375,6 +407,74 @@ export default function ClientDetail() {
 
         {tab === 'progress' ? (
           <>
+            {/* Body-composition dashboard — the numbers, surfaced. Body comp + weight
+                history used to be buried behind tap-through nav rows; now a coach can
+                scan weight / body-fat / muscle + their since-baseline deltas at a glance
+                and spot root causes. Computed from the already-loaded `metrics` (no fetch). */}
+            {metrics.length > 0
+              ? (() => {
+                  const r1 = (n: number) => Math.round(n * 10) / 10;
+                  const withWeight = metrics.filter((m) => m.weight_grams != null);
+                  const withFat = metrics.filter((m) => m.body_fat_bp != null);
+                  const withMuscle = metrics.filter((m) => m.skeletal_muscle_mass_grams != null);
+                  const wNow = withWeight.length ? r1(withWeight[withWeight.length - 1]!.weight_grams / 1000) : null;
+                  const wDelta =
+                    withWeight.length >= 2
+                      ? r1((withWeight[withWeight.length - 1]!.weight_grams - withWeight[0]!.weight_grams) / 1000)
+                      : null;
+                  const fNow = withFat.length ? r1(withFat[withFat.length - 1]!.body_fat_bp! / 100) : null;
+                  const fDelta =
+                    withFat.length >= 2 ? r1((withFat[withFat.length - 1]!.body_fat_bp! - withFat[0]!.body_fat_bp!) / 100) : null;
+                  const mNow = withMuscle.length ? r1(withMuscle[withMuscle.length - 1]!.skeletal_muscle_mass_grams! / 1000) : null;
+                  const chart = withWeight.map((m) => ({ value: r1(m.weight_grams / 1000) }));
+                  const latestAt = metrics[metrics.length - 1]!.measured_at;
+                  const weightGood =
+                    goals?.primary_goal === 'lose_fat'
+                      ? ('low' as const)
+                      : goals?.primary_goal === 'build_muscle' || goals?.primary_goal === 'gain_strength'
+                        ? ('high' as const)
+                        : ('neutral' as const);
+                  return (
+                    <>
+                      <GlassCard>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+                          <Text variant="label" muted>
+                            {t('clientDetail.bodyCompDash')}
+                          </Text>
+                          <Text variant="caption" muted>
+                            {t('clientDetail.lastReading', {
+                              date: new Date(latestAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                            })}
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
+                          <BodyStat value={wNow != null ? wNow.toFixed(1) : '—'} unit={t('clientDetail.kg')} delta={wDelta} good={weightGood} />
+                          <BodyStat value={fNow != null ? fNow.toFixed(1) : '—'} unit={t('clientDetail.bodyFatPct')} delta={fDelta} good="low" />
+                          <BodyStat value={mNow != null ? mNow.toFixed(1) : '—'} unit={t('clientDetail.muscleKg')} delta={realLeanDeltaKg} good="high" />
+                        </View>
+                        {fNow == null && mNow == null ? (
+                          <Text variant="caption" muted style={{ marginTop: theme.spacing.sm }}>
+                            {t('clientDetail.bodyCompHint')}
+                          </Text>
+                        ) : null}
+                      </GlassCard>
+
+                      {chart.length >= 2 ? (
+                        <GlassCard>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.sm }}>
+                            <Text variant="label" muted>
+                              {t('clientDetail.weightHistory')}
+                            </Text>
+                            <Text variant="caption" muted>{`${wNow?.toFixed(1)} ${t('clientDetail.kg')}`}</Text>
+                          </View>
+                          <LineChart data={chart} height={140} unit={` ${t('clientDetail.kg')}`} />
+                        </GlassCard>
+                      ) : null}
+                    </>
+                  );
+                })()
+              : null}
+
             {/* Nutrition adherence (real data, migration 0019) */}
             <GlassCard>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>

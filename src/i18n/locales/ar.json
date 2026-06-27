@@ -257,11 +257,21 @@
     "performanceHub": "لوحة الأداء",
     "activeClients": "عملاء نشطين",
     "pendingInvites": "دعوات معلّقة",
-    "topPerformers": "الأفضل · تكوين الجسم",
+    "topPerformers": "الأفضل",
     "noReadingsTitle": "لسه مفيش قياسات موثّقة",
     "noReadingsSub": "سجّل قياس InBody من ملف العميل وهيظهر ترتيبهم هنا.",
-    "viewPerformance": "الأداء",
+    "viewPerformance": "شوف الأداء",
     "viewPerformanceSub": "المؤشرات والترتيب ونشاط الأسبوع",
+    "rosterAdherence": "التزام العملاء",
+    "unreadMessages": "غير مقروء",
+    "needsAttention": "محتاجين انتباه",
+    "allOnTrack": "الكل ماشي تمام",
+    "recentlyActive": "نشطين مؤخرًا",
+    "noActivityYet": "مفيش نشاط متسجّل الأسبوع ده لسه.",
+    "reasonNoSessions": "لسه مفيش تمارين",
+    "reasonInactive_one": "غايب يوم",
+    "reasonInactive_other": "غايب {{count}} يوم",
+    "reasonLowAdherence": "التزام {{pct}}%",
     "client": "عميل"
   },
   "nutrition": {
@@ -387,6 +397,7 @@
   "messages": {
     "title": "شات",
     "client": "عميل",
+    "noMessagesYet": "لسه مفيش رسايل",
     "noCoachTitle": "لسه مفيش كوتش",
     "noCoachSub": "أول ما تقبل دعوة كوتش، تقدر تكلّمه من هنا.",
     "noClientsTitle": "لسه مفيش عملاء",
@@ -400,7 +411,12 @@
     "pullRetry": "اسحب عشان تحاول تاني.",
     "emptyTitle": "لسه مفيش عملاء",
     "emptySub": "ادعِ أول عميل عشان تبدأ.",
-    "inviteAction": "ادعِ عميل"
+    "inviteAction": "ادعِ عميل",
+    "metaAdherence": "التزام {{pct}}%",
+    "activeToday": "نشط النهارده",
+    "activeDaysAgo_one": "آخر نشاط من يوم",
+    "activeDaysAgo_other": "آخر نشاط من {{count}} يوم",
+    "noSessions": "لسه مفيش تمارين"
   },
   "ranks": {
     "thisWeek": "الأسبوع ده",
@@ -696,7 +712,18 @@
     "disclaimerTitle": "قبل ما تبدأ الكلام",
     "disclaimerBody": "خليك محترم. التحرش أو التهديد أو الإساءة بيتحظر بيها حسابك كله — ولو الطرف التاني طلب، هندعم الإجراءات القانونية ونشارك اللي القانون بيسمح بيه.",
     "disclaimerAgree": "فاهم وموافق",
-    "readGuidelines": "اقرا قواعد المجتمع"
+    "readGuidelines": "اقرا قواعد المجتمع",
+    "searchPlaceholder": "دوّر في المحادثات",
+    "voiceMessage": "رسالة صوتية",
+    "noteMessage": "ملاحظة تمرين",
+    "sectionCoach": "الكوتش",
+    "sectionClients": "العملاء",
+    "time": {
+      "now": "دلوقتي",
+      "minutes": "{{count}}د",
+      "hours": "{{count}}س",
+      "days": "{{count}}ي"
+    }
   },
   "report": {
     "title": "بلّغ عن الرسالة",
@@ -1096,6 +1123,12 @@
     "nudgePlaceholder": "اختياري: وجّه الاقتراحات (مثلاً ركّز على الأكل)",
     "refreshSuggestions": "حدّث الاقتراحات",
     "suggestAdjustments": "اقترح تعديلات للخطة",
+    "bodyCompDash": "تكوين الجسم",
+    "lastReading": "آخر قياس {{date}}",
+    "kg": "كجم",
+    "bodyFatPct": "% دهون",
+    "muscleKg": "كجم عضل",
+    "bodyCompHint": "لسه الوزن بس اللي متسجّل. ضيف قياس InBody كامل عشان تتابع الدهون والعضل.",
     "nutrition": "الأكل",
     "todayKcal": "النهارده {{consumed}} / {{target}} سعرة",
     "logStreak": "أيام تسجيل متتالية",

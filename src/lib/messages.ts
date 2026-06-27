@@ -149,6 +149,39 @@ export async function listConversation(
   return (data ?? []).map(mapRow).reverse();
 }
 
+/** One row of the chat list: the latest message per counterpart + unread state (0058). */
+export type ConversationPreview = {
+  peer_id: string;
+  full_name: string | null;
+  avatar_media_id: string | null;
+  last_body: string;
+  last_at: string;
+  last_from_me: boolean;
+  is_voice: boolean;
+  is_note: boolean;
+  unread_count: number;
+};
+
+/**
+ * The signed-in user's conversations, newest-first, each with its last message +
+ * unread count (0058 SECURITY DEFINER RPC, fenced to the caller's own threads). One
+ * round-trip — never N calls to listConversation. Powers the Chat tab.
+ */
+export async function listConversationPreviews(): Promise<ConversationPreview[]> {
+  const { data, error } = await supabase.rpc('list_conversation_previews');
+  if (error) throw error;
+  return (data ?? []).map((r: ConversationPreview) => ({
+    ...r,
+    unread_count: Number(r.unread_count) || 0,
+  }));
+}
+
+/** Mark a conversation read up to now (clears its unread badge). Called when a thread opens. */
+export async function markConversationRead(peerId: string): Promise<void> {
+  const { error } = await supabase.rpc('mark_conversation_read', { p_peer: peerId });
+  if (error) throw error;
+}
+
 /**
  * Reactions on a set of messages. RLS limits rows to messages the caller is a party
  * to, so this only returns reactions on the caller's own threads. Empty in → empty out.

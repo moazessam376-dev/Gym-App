@@ -10,7 +10,7 @@ import { View, useWindowDimensions } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
-import { forwardChevron } from '../../src/lib/rtl';
+import { forwardChevron, textStart } from '../../src/lib/rtl';
 import {
   useAnalyticsInsight,
   useBodyMetricsBoard,
@@ -128,11 +128,11 @@ export default function PerformanceTab() {
       <View style={{ width: '100%', maxWidth: 1100, alignSelf: 'center', gap: theme.spacing.xl }}>
         {/* Header */}
         <View>
-          <Text variant="label" color="primary">
+          <Text variant="label" color="primary" style={textStart}>
             {t('performance.label')}
           </Text>
-          <Text variant="h1">{t('performance.title')}</Text>
-          <Text variant="caption" muted>
+          <Text variant="h1" style={textStart}>{t('performance.title')}</Text>
+          <Text variant="caption" muted style={textStart}>
             {t('performance.subtitle')}
           </Text>
         </View>

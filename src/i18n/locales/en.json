@@ -80,11 +80,21 @@
     "performanceHub": "PERFORMANCE HUB",
     "activeClients": "Active clients",
     "pendingInvites": "Pending invites",
-    "topPerformers": "Top performers · body composition",
+    "topPerformers": "Top performers",
     "noReadingsTitle": "No verified readings yet",
     "noReadingsSub": "Record an InBody reading from a client's profile and your ranked board appears here.",
-    "viewPerformance": "Performance",
+    "viewPerformance": "View performance",
     "viewPerformanceSub": "KPIs, rankings & weekly activity",
+    "rosterAdherence": "Roster adherence",
+    "unreadMessages": "Unread",
+    "needsAttention": "NEEDS ATTENTION",
+    "allOnTrack": "Everyone's on track",
+    "recentlyActive": "RECENTLY ACTIVE",
+    "noActivityYet": "No activity logged yet this week.",
+    "reasonNoSessions": "No sessions yet",
+    "reasonInactive_one": "Inactive {{count}} day",
+    "reasonInactive_other": "Inactive {{count}} days",
+    "reasonLowAdherence": "{{pct}}% adherence",
     "client": "Client"
   },
   "nutrition": {
@@ -202,6 +212,7 @@
   "messages": {
     "title": "Chat",
     "client": "Client",
+    "noMessagesYet": "No messages yet",
     "noCoachTitle": "No coach yet",
     "noCoachSub": "Once you accept a coach invite, you can message them here.",
     "noClientsTitle": "No clients yet",
@@ -215,7 +226,12 @@
     "pullRetry": "Pull to retry.",
     "emptyTitle": "No clients yet",
     "emptySub": "Invite your first client to get started.",
-    "inviteAction": "Invite a client"
+    "inviteAction": "Invite a client",
+    "metaAdherence": "{{pct}}% adherence",
+    "activeToday": "active today",
+    "activeDaysAgo_one": "active {{count}}d ago",
+    "activeDaysAgo_other": "active {{count}}d ago",
+    "noSessions": "no sessions yet"
   },
   "ranks": {
     "thisWeek": "This week",
@@ -668,7 +684,18 @@
     "disclaimerTitle": "Before you start chatting",
     "disclaimerBody": "Keep it respectful. Harassment, threats, or abuse get your whole account banned — and if the other person asks, we'll support legal action and share what the law allows.",
     "disclaimerAgree": "I understand & agree",
-    "readGuidelines": "Read our community guidelines"
+    "readGuidelines": "Read our community guidelines",
+    "searchPlaceholder": "Search conversations",
+    "voiceMessage": "Voice message",
+    "noteMessage": "Workout note",
+    "sectionCoach": "COACH",
+    "sectionClients": "CLIENTS",
+    "time": {
+      "now": "now",
+      "minutes": "{{count}}m",
+      "hours": "{{count}}h",
+      "days": "{{count}}d"
+    }
   },
   "report": {
     "title": "Report message",
@@ -1068,6 +1095,12 @@
     "nudgePlaceholder": "Optional: steer the suggestions (e.g. focus on nutrition)",
     "refreshSuggestions": "Refresh suggestions",
     "suggestAdjustments": "Suggest plan adjustments",
+    "bodyCompDash": "Body composition",
+    "lastReading": "Last reading {{date}}",
+    "kg": "KG",
+    "bodyFatPct": "% BODY FAT",
+    "muscleKg": "KG MUSCLE",
+    "bodyCompHint": "Only weight is logged so far. Add a full InBody reading for body-fat and muscle trends.",
     "nutrition": "Nutrition",
     "todayKcal": "Today {{consumed}} / {{target}} kcal",
     "logStreak": "LOG STREAK",

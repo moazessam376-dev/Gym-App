@@ -67,6 +67,53 @@ export function rosterAdherencePct(rows: AdherenceRow[], windowDays = ADHERENCE_
   return Math.round(sum / rows.length);
 }
 
+// ── "Needs attention": clients the coach should look at right now ────────────
+
+export type AttentionReason = 'no_sessions' | 'inactive' | 'low_adherence';
+export type AttentionRow = {
+  client_id: string;
+  full_name: string | null;
+  reason: AttentionReason;
+  value: number; // 'inactive' → days since last session; 'low_adherence' → the %
+};
+
+export const INACTIVE_DAYS = 5;
+const LOW_ADHERENCE_PCT = 50;
+
+/** Whole days between a YYYY-MM-DD date and today (device-local), or null. */
+function daysSinceLocal(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  const ms = Date.now() - new Date(`${dateStr}T00:00:00`).getTime();
+  return Math.floor(ms / 86_400_000);
+}
+
+/**
+ * Roster rows that need the coach's attention, worst-first: a client with no logged
+ * session, one who's gone quiet (≥ INACTIVE_DAYS since their last session), or one
+ * below the adherence floor. Powered by absence/lateness so it's populated even when
+ * the progress board is empty. Pure — derived from the already-loaded adherence rows.
+ */
+export function needsAttention(rows: AdherenceRow[], windowDays = ADHERENCE_WINDOW_DAYS): AttentionRow[] {
+  const out: AttentionRow[] = [];
+  for (const r of rows) {
+    if (r.last_session_date == null || r.sessions_completed === 0) {
+      out.push({ client_id: r.client_id, full_name: r.full_name, reason: 'no_sessions', value: 0 });
+      continue;
+    }
+    const days = daysSinceLocal(r.last_session_date);
+    if (days != null && days >= INACTIVE_DAYS) {
+      out.push({ client_id: r.client_id, full_name: r.full_name, reason: 'inactive', value: days });
+      continue;
+    }
+    const pct = adherenceScore(r, windowDays).overallPct;
+    if (pct != null && pct < LOW_ADHERENCE_PCT) {
+      out.push({ client_id: r.client_id, full_name: r.full_name, reason: 'low_adherence', value: pct });
+    }
+  }
+  const severity = (a: AttentionRow) => (a.reason === 'no_sessions' ? 2 : a.reason === 'inactive' ? 1 : 0);
+  return out.sort((a, b) => severity(b) - severity(a) || b.value - a.value);
+}
+
 // ── Goals I deliver (derived from the existing board, per-client) ───────────
 
 export type GoalDelivered = { goal: AthleteGoal | null; clients: number; avgScore: number };

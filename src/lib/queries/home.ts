@@ -55,6 +55,7 @@ import {
   getPlanEffectiveness,
 } from '@/lib/analytics';
 import { countMediaFor } from '@/lib/media';
+import { listConversationPreviews, subscribeToIncoming } from '@/lib/messages';
 import type { WeightUnit } from '@/lib/units';
 
 // ---- shared identity / relationship reads ----
@@ -329,6 +330,27 @@ export function useNotificationsRealtime(userId?: string) {
   }, [userId]);
 }
 
+// ---- chat: conversation previews (last message + unread) for the Chat tab ----
+
+export function useConversationPreviews() {
+  return useQuery({ queryKey: ['conversation-previews'], queryFn: listConversationPreviews });
+}
+
+// Subscribe once (at the app root) to incoming messages and invalidate the chat-list
+// previews + the coach Home unread tile, so the list re-sorts and the unread badge
+// updates live. Reuses the RLS-scoped incoming channel.
+export function useConversationPreviewsRealtime(userId?: string) {
+  useEffect(() => {
+    if (!userId) return;
+    const channel = subscribeToIncoming(userId, () => {
+      queryClient.invalidateQueries({ queryKey: ['conversation-previews'] });
+    });
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+}
+
 // ---- coach: KPI analytics tab (Phase 15) ----
 
 export function useCoachAdherence() {
@@ -373,6 +395,8 @@ export async function prefetchHome(userId: string, role: Role): Promise<void> {
   // The notification feed + unread badge live in the home header for every role.
   warm(['notifications', userId], () => listNotifications());
   warm(['notifications-unread', userId], () => getUnreadCount());
+  // The chat list (last message + unread per conversation) — both roles have a Chat tab.
+  warm(['conversation-previews'], () => listConversationPreviews());
   if (role === 'client') {
     const today = todayLocalDate();
     warm(['my-name', userId], () => getMyName(userId));

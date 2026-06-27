@@ -25,6 +25,7 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../../src/lib/supabase';
+import { queryClient } from '../../src/lib/query';
 import { useAuth } from '../../src/lib/auth-context';
 import {
   CONVERSATION_PAGE_SIZE,
@@ -32,6 +33,7 @@ import {
   editMessage,
   listConversation,
   listReactions,
+  markConversationRead,
   removeReaction,
   sendMessage,
   subscribeToIncoming,
@@ -528,6 +530,19 @@ export default function ChatThread() {
     [myId],
   );
 
+  // Mark this conversation read (clears its unread badge in the chat list). Best-effort.
+  const markRead = useCallback(() => {
+    if (!otherId) return;
+    markConversationRead(otherId)
+      .then(() => queryClient.invalidateQueries({ queryKey: ['conversation-previews'] }))
+      .catch(() => {});
+  }, [otherId]);
+
+  // Read on open. Incoming messages while the thread is open also re-mark read (below).
+  useEffect(() => {
+    markRead();
+  }, [markRead]);
+
   // Initial page + reactions + my ban state.
   useEffect(() => {
     if (!myId || !otherId) return;
@@ -590,6 +605,8 @@ export default function ChatThread() {
           }
           return [resolved, ...prev];
         });
+        // We're looking at this thread → keep it read (don't badge what's on screen).
+        markRead();
       },
       (m) => {
         if (m.sender_id === otherId)

@@ -245,6 +245,18 @@ export async function setNotificationPrefs(userId: string, prefs: NotificationPr
   if (error) throw error;
 }
 
+/** Ultra-compact timestamp parts for the chat list (now / Nm / Nh / Nd) — i18n-rendered. */
+export function compactTimeParts(iso: string): { key: string; count: number } {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diffMs / 60_000);
+  if (min < 1) return { key: 'chat.time.now', count: 0 };
+  if (min < 60) return { key: 'chat.time.minutes', count: min };
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return { key: 'chat.time.hours', count: hr };
+  const day = Math.floor(hr / 24);
+  return { key: 'chat.time.days', count: day };
+}
+
 /** Compact "x ago" parts for i18n rendering (count + plural-aware key). */
 export function relativeTimeParts(iso: string): { key: string; count: number } {
   const diffMs = Date.now() - new Date(iso).getTime();
