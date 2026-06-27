@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../src/lib/supabase';
 import { passwordSchema } from '../../src/schemas/auth';
 import { Screen, Text, Input, Button } from '../../src/components/ui';
@@ -13,6 +14,7 @@ import { Wordmark } from '../../src/components/brand';
 import { theme } from '../../src/theme';
 
 export default function ResetPassword() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -38,18 +40,18 @@ export default function ResetPassword() {
     setError(null);
     const parsed = passwordSchema.safeParse({ password });
     if (!parsed.success) {
-      setError('Password must be at least 8 characters.');
+      setError(t('auth.passwordMin'));
       return;
     }
     if (password !== confirm) {
-      setError('Passwords do not match.');
+      setError(t('auth.passwordsNoMatch'));
       return;
     }
     setLoading(true);
     const { error: authError } = await supabase.auth.updateUser({ password });
     if (authError) {
       setLoading(false);
-      setError('Could not reset your password. Request a new link and try again.');
+      setError(t('auth.resetFailed'));
       return;
     }
     // Sign out so the new password is used on the next sign-in (clean state).
@@ -63,7 +65,7 @@ export default function ResetPassword() {
       <Screen gradient>
         <View style={{ flex: 1, justifyContent: 'center' }}>
           <Text variant="body" muted style={{ textAlign: 'center' }}>
-            Loading…
+            {t('common.loading')}
           </Text>
         </View>
       </Screen>
@@ -76,14 +78,14 @@ export default function ResetPassword() {
         <View style={{ flex: 1, justifyContent: 'center', padding: theme.spacing.xl, gap: theme.spacing.lg }}>
           <Wordmark size={30} style={{ alignSelf: 'center', marginBottom: theme.spacing.sm }} />
           <View style={{ gap: theme.spacing.xs, marginBottom: theme.spacing.sm }}>
-            <Text variant="h1">Set a new password</Text>
+            <Text variant="h1">{t('auth.setNewPasswordTitle')}</Text>
             <Text variant="body" muted>
-              Choose a new password for your account.
+              {t('auth.setNewPasswordPrompt')}
             </Text>
           </View>
 
           <Input
-            label="New password"
+            label={t('auth.newPassword')}
             placeholder="••••••••"
             secureTextEntry
             autoCapitalize="none"
@@ -93,7 +95,7 @@ export default function ResetPassword() {
             editable={!loading}
           />
           <Input
-            label="Confirm password"
+            label={t('auth.confirmPassword')}
             placeholder="••••••••"
             secureTextEntry
             autoCapitalize="none"
@@ -103,7 +105,7 @@ export default function ResetPassword() {
             editable={!loading}
             error={error}
           />
-          <Button title="Update password" onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
+          <Button title={t('auth.updatePassword')} onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
         </View>
       </KeyboardAvoidingView>
     </Screen>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../src/lib/supabase';
 import { credentialsSchema } from '../../src/schemas/auth';
 import { Screen, Text, Input, Button } from '../../src/components/ui';
@@ -9,6 +10,7 @@ import { Wordmark } from '../../src/components/brand';
 import { theme } from '../../src/theme';
 
 export default function SignUp() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -22,12 +24,12 @@ export default function SignUp() {
     setInfo(null);
     const name = fullName.trim();
     if (name.length < 2) {
-      setError('Enter your name.');
+      setError(t('auth.enterName'));
       return;
     }
     const parsed = credentialsSchema.safeParse({ email: email.trim(), password });
     if (!parsed.success) {
-      setError('Enter a valid email and a password of at least 8 characters.');
+      setError(t('auth.invalidCredentials'));
       return;
     }
     setLoading(true);
@@ -41,14 +43,14 @@ export default function SignUp() {
     if (authError) {
       const msg = authError.message?.toLowerCase() ?? '';
       if (msg.includes('already') || msg.includes('registered')) {
-        setError('An account with this email already exists. Try signing in.');
+        setError(t('auth.accountExists'));
       } else {
-        setError('Could not create your account. Please try again.');
+        setError(t('auth.createFailed'));
       }
       return;
     }
     if (!data.session) {
-      setInfo('Account created. Check your email to confirm, then sign in.');
+      setInfo(t('auth.confirmEmail'));
       return;
     }
   }
@@ -60,13 +62,13 @@ export default function SignUp() {
           <View style={{ alignItems: 'center', gap: theme.spacing.xs, marginBottom: theme.spacing.md }}>
             <Wordmark size={44} />
             <Text variant="label" muted style={{ letterSpacing: 2 }}>
-              Create your account
+              {t('auth.createAccountTagline')}
             </Text>
           </View>
 
           <Input
-            label="Full name"
-            placeholder="Your name"
+            label={t('auth.fullName')}
+            placeholder={t('auth.fullNamePlaceholder')}
             autoCapitalize="words"
             autoComplete="name"
             value={fullName}
@@ -74,8 +76,8 @@ export default function SignUp() {
             editable={!loading}
           />
           <Input
-            label="Email"
-            placeholder="you@example.com"
+            label={t('auth.email')}
+            placeholder={t('auth.emailPlaceholder')}
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
@@ -84,8 +86,8 @@ export default function SignUp() {
             editable={!loading}
           />
           <Input
-            label="Password"
-            placeholder="Min 8 characters"
+            label={t('auth.password')}
+            placeholder={t('auth.passwordMinPlaceholder')}
             secureTextEntry
             autoCapitalize="none"
             autoComplete="new-password"
@@ -101,17 +103,21 @@ export default function SignUp() {
             </Text>
           ) : null}
 
-          <Button title="Sign up" onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
+          <Button title={t('auth.signUp')} onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
 
           <GoogleSignInButton onError={setError} disabled={loading} />
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: theme.spacing.sm }}>
             <Text variant="body" muted>
-              Already have an account?{' '}
+              {t('auth.haveAccount')}
             </Text>
-            <Pressable onPress={() => router.replace('/(auth)/sign-in')}>
+            <Pressable
+              onPress={() => router.replace('/(auth)/sign-in')}
+              accessibilityRole="button"
+              accessibilityLabel={t('auth.signIn')}
+            >
               <Text variant="bodyStrong" color="link">
-                Sign in
+                {t('auth.signIn')}
               </Text>
             </Pressable>
           </View>
