@@ -55,7 +55,10 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
     **coach/body-metric.tsx** (full InBody review screen incl. all medical-term labels).
     (new coach/admin/clientDetail/bodyMetric namespaces; `label()` removed from all 3 screens that used it; PROMPT_CHIPS → keys;
     `t`-shadow fixes in client detail; module-scope ExtrasCard/DateField/FoodRow got their own useTranslation).
-  - ⬜ **D4** nav titles (`app/_layout.tsx` Stack.Screen titles)
+  - ✅ **D4** nav titles — all ~35 `Stack.Screen` titles in `app/_layout.tsx` via a new `nav` namespace
+    (`RootNavigator` got `useTranslation`; titles also feed the iOS back-button label).
+  - ✅ **Slice D COMPLETE** — full-app sweep confirms the only `app/` screen without `useTranslation` is
+    `(tabs)/index.tsx`, a pure role-home delegator with no strings. Every user-facing screen is bilingual (EN/AR + RTL).
 - ⬜ **E — Catalog expansion** (migration 0048, needs prod go-ahead)
 - ⬜ **F — Coach workflow** (Message button, assign-with-context, AI plan-gen entry points, client-detail sub-tabs, plan-editor UI-kit; + the deferred coach-feedback notification)
 - ⬜ **G — Larger items** (G1 Ranks→Analytics merge + leaderboard in-page UX · G2 coach_requests funnel · G3 admin console · G4 nutrition barcode/serving sizes)

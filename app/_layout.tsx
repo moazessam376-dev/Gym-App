@@ -23,6 +23,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from '../src/lib/auth-context';
 import { queryClient, subscribeAppStateFocus } from '../src/lib/query';
 import { prefetchHome, useNotificationsRealtime } from '../src/lib/queries/home';
@@ -34,6 +35,7 @@ import { theme } from '../src/theme';
 // Role-aware routing. The role comes from the verified JWT claim (server-issued
 // by the access-token hook) — never from client input.
 function RootNavigator() {
+  const { t } = useTranslation();
   const { session, role, initializing, recovering } = useAuth();
   const segments = useSegments();
   const router = useRouter();
@@ -135,50 +137,52 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="onboarding" />
-      {/* Phase 2 sub-screens get a native header + back button. */}
-      <Stack.Screen name="coach/invite" options={{ headerShown: true, title: 'Invite a client' }} />
-      <Stack.Screen name="accept-invite" options={{ headerShown: true, title: 'Accept an invite' }} />
+      {/* Phase 2 sub-screens get a native header + back button. Titles localized via
+          the nav namespace (also feeds the iOS back-button label). Screens that set
+          their own <Stack.Screen options.title> override these — the nav key is the
+          pre-mount fallback, kept localized so there's no English flash. */}
+      <Stack.Screen name="coach/invite" options={{ headerShown: true, title: t('nav.inviteClient') }} />
+      <Stack.Screen name="accept-invite" options={{ headerShown: true, title: t('nav.acceptInvite') }} />
       {/* Phase 3 plan screens. */}
-      <Stack.Screen name="coach/client/[id]" options={{ headerShown: true, title: 'Client plans' }} />
-      <Stack.Screen name="coach/templates" options={{ headerShown: true, title: 'Plan templates' }} />
-      <Stack.Screen name="coach/new-plan" options={{ headerShown: true, title: 'New plan' }} />
-      <Stack.Screen name="coach/plan/[id]" options={{ headerShown: true, title: 'Plan' }} />
-      <Stack.Screen name="coach/exercise-picker" options={{ headerShown: true, title: 'Add exercise' }} />
-      <Stack.Screen name="coach/exercise/[id]" options={{ headerShown: true, title: 'Exercise' }} />
-      <Stack.Screen name="coach/food-picker" options={{ headerShown: true, title: 'Add food' }} />
-      <Stack.Screen name="coach/meal-item/[id]" options={{ headerShown: true, title: 'Food' }} />
-      <Stack.Screen name="coach/assign/[id]" options={{ headerShown: true, title: 'Assign to client' }} />
-      <Stack.Screen name="client/plan/[id]" options={{ headerShown: true, title: 'Plan' }} />
-      <Stack.Screen name="client/workout/[dayId]" options={{ headerShown: true, title: 'Workout' }} />
+      <Stack.Screen name="coach/client/[id]" options={{ headerShown: true, title: t('nav.clientPlans') }} />
+      <Stack.Screen name="coach/templates" options={{ headerShown: true, title: t('nav.planTemplates') }} />
+      <Stack.Screen name="coach/new-plan" options={{ headerShown: true, title: t('nav.newPlan') }} />
+      <Stack.Screen name="coach/plan/[id]" options={{ headerShown: true, title: t('nav.plan') }} />
+      <Stack.Screen name="coach/exercise-picker" options={{ headerShown: true, title: t('nav.addExercise') }} />
+      <Stack.Screen name="coach/exercise/[id]" options={{ headerShown: true, title: t('nav.exercise') }} />
+      <Stack.Screen name="coach/food-picker" options={{ headerShown: true, title: t('nav.addFood') }} />
+      <Stack.Screen name="coach/meal-item/[id]" options={{ headerShown: true, title: t('nav.food') }} />
+      <Stack.Screen name="coach/assign/[id]" options={{ headerShown: true, title: t('nav.assignToClient') }} />
+      <Stack.Screen name="client/plan/[id]" options={{ headerShown: true, title: t('nav.plan') }} />
+      <Stack.Screen name="client/workout/[dayId]" options={{ headerShown: true, title: t('nav.workout') }} />
       {/* Phase 11 progress & uploads. */}
-      <Stack.Screen name="client/progress/weight" options={{ headerShown: true, title: 'Weight' }} />
-      <Stack.Screen name="client/progress/photos" options={{ headerShown: true, title: 'Progress photos' }} />
-      <Stack.Screen name="client/progress/inbody" options={{ headerShown: true, title: 'InBody scans' }} />
+      <Stack.Screen name="client/progress/weight" options={{ headerShown: true, title: t('nav.weight') }} />
+      <Stack.Screen name="client/progress/photos" options={{ headerShown: true, title: t('nav.progressPhotos') }} />
+      <Stack.Screen name="client/progress/inbody" options={{ headerShown: true, title: t('nav.inbodyScans') }} />
       <Stack.Screen name="client/progress/view" options={{ headerShown: true, title: '', headerTransparent: true, headerTintColor: '#fff' }} />
       {/* Phase 12a body metrics / InBody. */}
-      <Stack.Screen name="client/progress/body-comp" options={{ headerShown: true, title: 'Body composition' }} />
-      <Stack.Screen name="coach/body-metric" options={{ headerShown: true, title: 'New InBody reading' }} />
-      <Stack.Screen name="food/add" options={{ headerShown: true, title: 'Log food' }} />
-      <Stack.Screen name="food/preferences" options={{ headerShown: true, title: 'Food preferences' }} />
-      <Stack.Screen name="chat/[id]" options={{ headerShown: true, title: 'Chat' }} />
+      <Stack.Screen name="client/progress/body-comp" options={{ headerShown: true, title: t('nav.bodyComposition') }} />
+      <Stack.Screen name="coach/body-metric" options={{ headerShown: true, title: t('nav.newInbodyReading') }} />
+      <Stack.Screen name="food/add" options={{ headerShown: true, title: t('nav.logFood') }} />
+      <Stack.Screen name="food/preferences" options={{ headerShown: true, title: t('nav.foodPreferences') }} />
+      <Stack.Screen name="chat/[id]" options={{ headerShown: true, title: t('nav.chat') }} />
       {/* Account & onboarding. */}
-      <Stack.Screen name="profile" options={{ headerShown: true, title: 'Edit profile' }} />
-      <Stack.Screen name="profile-setup" options={{ headerShown: true, title: 'Goals & profile' }} />
-      <Stack.Screen name="become-coach" options={{ headerShown: true, title: 'Become a coach' }} />
-      <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
-      <Stack.Screen name="admin/applications" options={{ headerShown: true, title: 'Coach applications' }} />
-      <Stack.Screen name="admin/reports" options={{ headerShown: true, title: 'Reported messages' }} />
-      {/* Title set in-screen (localized). */}
-      <Stack.Screen name="community-guidelines" options={{ headerShown: true, title: 'Community guidelines' }} />
-      {/* Phase 17 notifications. Titles are set in-screen (localized). */}
-      <Stack.Screen name="notifications" options={{ headerShown: true, title: 'Notifications' }} />
-      <Stack.Screen name="notification-settings" options={{ headerShown: true, title: 'Notifications' }} />
-      {/* Phase 19 public profiles. Titles are set in-screen (localized). */}
-      <Stack.Screen name="public-profile-edit" options={{ headerShown: true, title: 'Public profile' }} />
-      <Stack.Screen name="coach-profile/[id]" options={{ headerShown: true, title: 'Coach profile' }} />
-      <Stack.Screen name="athlete-profile/[id]" options={{ headerShown: true, title: 'Profile' }} />
-      <Stack.Screen name="discover/coaches" options={{ headerShown: true, title: 'Discover coaches' }} />
-      <Stack.Screen name="leaderboards/index" options={{ headerShown: true, title: 'Leaderboards' }} />
+      <Stack.Screen name="profile" options={{ headerShown: true, title: t('nav.editProfile') }} />
+      <Stack.Screen name="profile-setup" options={{ headerShown: true, title: t('nav.goalsProfile') }} />
+      <Stack.Screen name="become-coach" options={{ headerShown: true, title: t('nav.becomeCoach') }} />
+      <Stack.Screen name="settings" options={{ headerShown: true, title: t('nav.settings') }} />
+      <Stack.Screen name="admin/applications" options={{ headerShown: true, title: t('nav.coachApplications') }} />
+      <Stack.Screen name="admin/reports" options={{ headerShown: true, title: t('nav.reportedMessages') }} />
+      <Stack.Screen name="community-guidelines" options={{ headerShown: true, title: t('nav.communityGuidelines') }} />
+      {/* Phase 17 notifications. */}
+      <Stack.Screen name="notifications" options={{ headerShown: true, title: t('nav.notifications') }} />
+      <Stack.Screen name="notification-settings" options={{ headerShown: true, title: t('nav.notifications') }} />
+      {/* Phase 19 public profiles. */}
+      <Stack.Screen name="public-profile-edit" options={{ headerShown: true, title: t('nav.publicProfile') }} />
+      <Stack.Screen name="coach-profile/[id]" options={{ headerShown: true, title: t('nav.coachProfile') }} />
+      <Stack.Screen name="athlete-profile/[id]" options={{ headerShown: true, title: t('nav.profile') }} />
+      <Stack.Screen name="discover/coaches" options={{ headerShown: true, title: t('nav.discoverCoaches') }} />
+      <Stack.Screen name="leaderboards/index" options={{ headerShown: true, title: t('nav.leaderboards') }} />
     </Stack>
     {/* The navigator is mounted underneath (so routing + queries run and the cache
         warms); the splash overlays it until the prefetch settles, then fades to
