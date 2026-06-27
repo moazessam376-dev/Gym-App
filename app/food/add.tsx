@@ -9,9 +9,10 @@ import { useTranslation } from 'react-i18next';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuth } from '../../src/lib/auth-context';
 import { listFoods, type Food } from '../../src/lib/library';
-import { addFoodLog, entryMacros, recentFoods, todayLocalDate, type FoodLogEntry } from '../../src/lib/nutrition';
+import { addFoodLog, entryMacros, lookupBarcode, recentFoods, todayLocalDate, type FoodLogEntry } from '../../src/lib/nutrition';
 import { mealSlotSchema, type MealSlot } from '../../src/schemas/nutrition';
-import { Icon, Screen, Text, Input, Button, GlassCard, Segmented, Chip } from '../../src/components/ui';
+import { BarcodeScannerModal } from '../../src/components/BarcodeScannerModal';
+import { Icon, Screen, Text, Input, Button, GlassCard, Segmented, Chip, useToast } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 function intOr0(s: string): number {
@@ -32,6 +33,9 @@ type Picked = {
   protein_g_per_100g: number;
   carbs_g_per_100g: number;
   fat_g_per_100g: number;
+  // Serving info (migration 0055) — when present, the picked card offers a "1 serving" chip.
+  serving_label?: string | null;
+  serving_grams?: number | null;
 };
 
 // Tappable date control — native picker on iOS/Android, typed field on web (the
@@ -86,6 +90,7 @@ export default function AddFood() {
   const { t } = useTranslation();
   const { role, session } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const userId = session?.user?.id;
   const params = useLocalSearchParams<{ date?: string; slot?: string }>();
   const initialSlot = mealSlotSchema.safeParse(params.slot).success ? (params.slot as MealSlot) : 'breakfast';
@@ -101,6 +106,8 @@ export default function AddFood() {
   const [busy, setBusy] = useState(false);
   const [showCustom, setShowCustom] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   const [cName, setCName] = useState('');
   const [cKcal, setCKcal] = useState('');
@@ -156,6 +163,8 @@ export default function AddFood() {
         carbs_g_per_100g: picked.carbs_g_per_100g,
         fat_g_per_100g: picked.fat_g_per_100g,
         grams: g,
+        serving_label: picked.serving_label ?? null,
+        serving_grams: picked.serving_grams ?? null,
       });
       router.back();
     } catch {
@@ -180,6 +189,35 @@ export default function AddFood() {
       fat_g_per_100g: intOr0(cF),
     });
     setShowCustom(false);
+  }
+
+  async function onScanned(code: string) {
+    setScanOpen(false);
+    setScanning(true);
+    try {
+      const res = await lookupBarcode(code);
+      if (res.status === 'found') {
+        setPicked({
+          food_id: null, // a scanned product is logged as a one-off (not a library row)
+          food_name: res.food.name,
+          kcal_per_100g: res.food.kcal_per_100g,
+          protein_g_per_100g: res.food.protein_g_per_100g,
+          carbs_g_per_100g: res.food.carbs_g_per_100g,
+          fat_g_per_100g: res.food.fat_g_per_100g,
+          serving_label: res.food.serving_label,
+          serving_grams: res.food.serving_grams,
+        });
+        setGrams(String(res.food.serving_grams && res.food.serving_grams > 0 ? res.food.serving_grams : 100));
+      } else if (res.status === 'not_found') {
+        toast.show(t('food.scan.notFound'), 'error');
+      } else if (res.status === 'rate_limited') {
+        toast.show(t('food.scan.rateLimited'), 'error');
+      } else {
+        toast.show(t('food.scan.failed'), 'error');
+      }
+    } finally {
+      setScanning(false);
+    }
   }
 
   return (
@@ -209,6 +247,15 @@ export default function AddFood() {
                       {t('food.per100g', { kcal: picked.kcal_per_100g, protein: picked.protein_g_per_100g, carbs: picked.carbs_g_per_100g, fat: picked.fat_g_per_100g })}
                     </Text>
                   </View>
+                  {picked.serving_grams && picked.serving_grams > 0 ? (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
+                      <Chip
+                        label={t('food.oneServing', { label: picked.serving_label || t('food.serving'), grams: picked.serving_grams })}
+                        onPress={() => setGrams(String(picked.serving_grams))}
+                      />
+                      <Chip label={t('food.gramsChip', { grams: 100 })} onPress={() => setGrams('100')} />
+                    </View>
+                  ) : null}
                   <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: theme.spacing.sm }}>
                     <Input containerStyle={{ flex: 1 }} label={t('food.grams')} value={grams} onChangeText={setGrams} keyboardType="number-pad" placeholder={t('food.gramsPlaceholder')} />
                     <Button title={t('food.logIt')} fullWidth={false} onPress={onSave} loading={busy} />
@@ -254,6 +301,16 @@ export default function AddFood() {
                   ) : null}
 
                   <Input value={query} onChangeText={setQuery} placeholder={t('food.searchFoods')} />
+
+                  {Platform.OS !== 'web' ? (
+                    <Button
+                      title={scanning ? t('food.scan.looking') : t('food.scan.cta')}
+                      variant="ghost"
+                      onPress={() => setScanOpen(true)}
+                      loading={scanning}
+                      left={<Icon name="camera" size={18} color={theme.colors.primary} />}
+                    />
+                  ) : null}
 
                   <Button
                     title={showCustom ? t('common.cancel') : t('food.quickAdd')}
@@ -307,7 +364,7 @@ export default function AddFood() {
           renderItem={({ item }) =>
             picked ? null : (
               <GlassCard
-                onPress={() =>
+                onPress={() => {
                   setPicked({
                     food_id: item.id,
                     food_name: item.name,
@@ -315,8 +372,11 @@ export default function AddFood() {
                     protein_g_per_100g: item.protein_g_per_100g,
                     carbs_g_per_100g: item.carbs_g_per_100g,
                     fat_g_per_100g: item.fat_g_per_100g,
-                  })
-                }
+                    serving_label: item.serving_label,
+                    serving_grams: item.serving_grams,
+                  });
+                  if (item.serving_grams && item.serving_grams > 0) setGrams(String(item.serving_grams));
+                }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
                   <View style={{ flex: 1 }}>
@@ -333,6 +393,7 @@ export default function AddFood() {
           }
         />
       </KeyboardAvoidingView>
+      <BarcodeScannerModal visible={scanOpen} onScanned={onScanned} onClose={() => setScanOpen(false)} />
     </Screen>
   );
 }

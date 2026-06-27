@@ -36,5 +36,9 @@ export const createFoodSchema = z.object({
   carbs_g_per_100g: z.number().int().min(0).max(100),
   fat_g_per_100g: z.number().int().min(0).max(100),
   category: foodCategorySchema.nullable().optional(),
+  // Serving sizes + barcode (migration 0055). Grams stays integer (§3).
+  barcode: z.string().max(64).nullable().optional(),
+  serving_label: z.string().max(40).nullable().optional(),
+  serving_grams: z.number().int().min(0).max(5000).nullable().optional(),
 });
 export type CreateFood = z.infer<typeof createFoodSchema>;

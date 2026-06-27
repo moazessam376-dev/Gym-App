@@ -111,7 +111,15 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
     (`app/admin/users.tsx`: name search via `admin_search_users`, ban/unban via `admin-set-ban`). RPCs are
     field-allowlist SECURITY DEFINER with an in-function admin fence (`current_app_role()` in a WHERE — a
     non-admin gets 0 rows). Harness: `0054` in runner.ts + an admin-fence block in cases.test.ts.
-  - ⬜ **G4** nutrition barcode/serving sizes
+  - 🔵 **G4** Nutrition barcode + serving sizes — **code done, tsc + parity clean; migration `0055`
+    dry-run clean, AWAITING prod go-ahead (+ deploy `food-barcode-lookup` Edge fn). NEW DEP `expo-camera`
+    → needs a dev-client rebuild before the scanner is device-testable (flagged).** `0055` adds
+    `barcode`/`serving_label`/`serving_grams` to `food_library` + a serving snapshot on
+    `food_log_entries` (additive, advisors clean; quantity stays integer grams). Edge fn
+    `food-barcode-lookup` proxies OpenFoodFacts (keyless; untrusted → Zod-bounded output; per-user
+    rate-limited via the ai_usage_events ledger). UI: a "Scan barcode" button + `BarcodeScannerModal`
+    (error-boundary fallback when the native module is absent / web) and a "1 serving" quick-grams chip
+    in `app/food/add.tsx`. Harness: `0055` in runner.ts + a serving-snapshot owner-write test.
 - ⬜ **H — First-run tour + guided goal wizard**
 
 ## Founder follow-ups (post-F, 2026-06-27)
@@ -126,8 +134,15 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
 ## Prod migrations pending go-ahead
 `0052` leaderboard period + self-rank (G1, **dry-run clean, ready**) · `0053` coach_requests
 (G2, **dry-run clean, ready** — also deploy `resolve-coach-request`) · `0054` admin console RPCs
-(G3, **dry-run clean, ready** — also deploy `admin-set-ban`) · serving sizes (G4).
-_(Founder chose: build G2–G4 code first, then apply all migrations in order.)_
+(G3, **dry-run clean, ready** — also deploy `admin-set-ban`) · `0055` serving sizes + barcode
+(G4, **dry-run clean, ready** — also deploy `food-barcode-lookup`; new `expo-camera` dep needs a
+dev-client rebuild). _(Founder chose: build G2–G4 code first, then apply all migrations in order.)_
+
+## Founder follow-ups (post-G, 2026-06-27)
+- ✅ **Workout notes: delete + date** — an athlete's own Challenge/Compliment notes on the workout
+  screen (`app/client/workout/[dayId].tsx`) now show the date they were left and an **✕ to delete**
+  their own note (owner-scoped delete already existed in `workout_notes` RLS + `deleteWorkoutNote`;
+  no migration). Deleting removes it from the workout + the coach's feed (the 0051 chat mirror stays).
 _(Done & applied to prod 2026-06-27: `0047` catalog · `0048`/`0049` arms recategorize · `0050` workout-note
 notification · `0051` workout-note-in-chat. Slice B's media-delete shipped as an Edge Function, not a migration.)_
 

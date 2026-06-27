@@ -29,11 +29,15 @@ export type Food = {
   carbs_g_per_100g: number;
   fat_g_per_100g: number;
   category: FoodCategory | null;
+  // Serving sizes + barcode (migration 0055). Null when unknown.
+  barcode: string | null;
+  serving_label: string | null;
+  serving_grams: number | null;
 };
 
 const EXERCISE_COLS = 'id, coach_id, name, muscle_group, primary_muscle';
 const FOOD_COLS =
-  'id, coach_id, name, kcal_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g, category';
+  'id, coach_id, name, kcal_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g, category, barcode, serving_label, serving_grams';
 
 /** Exercises visible to the coach (globals + own customs), optionally filtered. */
 export async function listExercises(opts?: { muscleGroup?: MuscleGroup }): Promise<Exercise[]> {
@@ -82,6 +86,9 @@ export async function createFood(coachId: string, input: CreateFood): Promise<Fo
       carbs_g_per_100g: v.carbs_g_per_100g,
       fat_g_per_100g: v.fat_g_per_100g,
       category: v.category ?? null,
+      barcode: v.barcode ?? null,
+      serving_label: v.serving_label ?? null,
+      serving_grams: v.serving_grams ?? null,
     })
     .select(FOOD_COLS)
     .single();

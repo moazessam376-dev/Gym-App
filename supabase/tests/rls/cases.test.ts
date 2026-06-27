@@ -1428,6 +1428,21 @@ describe('food logging (0019) — diary, targets, daily roll-up, streak (§2)', 
     expect(stranger.rows).toHaveLength(0);
   });
 
+  // ── 0055 (Slice G4): the serving-snapshot columns are writable by the owner ──
+  it('an athlete can log a food carrying a serving snapshot (0055 columns)', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        `insert into public.food_log_entries
+           (user_id, log_date, meal_slot, food_name, kcal_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g, grams, serving_label, serving_grams)
+         values ($1, current_date, 'snack', 'Protein Bar', 350, 30, 40, 10, 60, '1 bar', 60)
+         returning serving_label, serving_grams`,
+        [CLIENT_A1.sub],
+      ),
+    );
+    expect(r.rows[0].serving_label).toBe('1 bar');
+    expect(Number(r.rows[0].serving_grams)).toBe(60);
+  });
+
   it('a client adds an off-plan entry (null plan_meal_item_id) owned by themselves', async () => {
     const r = await asUser(CLIENT_A1, (c) =>
       c.query(

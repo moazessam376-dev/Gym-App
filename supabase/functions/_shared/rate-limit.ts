@@ -15,7 +15,10 @@ export type AiUsageKind =
   | 'plan_nudge'
   | 'food_macro_fill'
   | 'exercise_swap'
-  | 'coach_analytics';
+  | 'coach_analytics'
+  // Not an AI call — reuses the ledger purely as a per-user rate-limit counter for the
+  // OpenFoodFacts barcode proxy (cost_micros stays null → no effect on cost analytics).
+  | 'food_barcode_lookup';
 
 /** True if the user is still UNDER the limit for this kind in the trailing window. */
 export async function withinLimit(

@@ -148,11 +148,47 @@ export async function addFoodLog(userId: string, input: CreateFoodLog): Promise<
       fat_g_per_100g: v.fat_g_per_100g,
       grams: v.grams,
       note: v.note ?? null,
+      serving_label: v.serving_label ?? null,
+      serving_grams: v.serving_grams ?? null,
     })
     .select(ENTRY_COLS)
     .single();
   if (error) throw error;
   return data as FoodLogEntry;
+}
+
+// ── Barcode lookup (Slice G4) ────────────────────────────────────────────────
+
+export type BarcodeFood = {
+  name: string;
+  kcal_per_100g: number;
+  protein_g_per_100g: number;
+  carbs_g_per_100g: number;
+  fat_g_per_100g: number;
+  serving_label: string | null;
+  serving_grams: number | null;
+  barcode: string;
+};
+
+export type BarcodeResult =
+  | { status: 'found'; food: BarcodeFood }
+  | { status: 'not_found' }
+  | { status: 'rate_limited' }
+  | { status: 'failed' };
+
+/**
+ * Look up a scanned barcode via the food-barcode-lookup Edge fn (OpenFoodFacts proxy).
+ * Returns a discriminated result so the UI can show "not found" vs. "try again" — never
+ * throws on a miss (only a transport error maps to 'failed').
+ */
+export async function lookupBarcode(barcode: string): Promise<BarcodeResult> {
+  const { data, error } = await supabase.functions.invoke('food-barcode-lookup', { body: { barcode } });
+  if (error) return { status: 'failed' };
+  const r = data as { status?: string; food?: BarcodeFood };
+  if (r?.status === 'found' && r.food) return { status: 'found', food: r.food };
+  if (r?.status === 'rate_limited') return { status: 'rate_limited' };
+  if (r?.status === 'not_found') return { status: 'not_found' };
+  return { status: 'failed' };
 }
 
 export async function updateFoodLog(entryId: string, input: UpdateFoodLog): Promise<void> {

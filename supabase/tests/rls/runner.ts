@@ -76,6 +76,7 @@ const migrationFiles = [
   '0052_leaderboard_period_and_rank.sql',
   '0053_coach_requests.sql',
   '0054_admin_console.sql',
+  '0055_food_serving_sizes.sql',
 ];
 
 const baseUrl =
