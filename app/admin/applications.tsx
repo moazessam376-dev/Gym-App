@@ -4,12 +4,14 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, View } from 'react-native';
 import { Redirect, useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { listPendingApplications, reviewApplication, type PendingApplication } from '../../src/lib/coach-applications';
 import { Screen, Text, Avatar, GlassCard, Button, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function AdminApplications() {
+  const { t } = useTranslation();
   const { role } = useAuth();
   const [apps, setApps] = useState<PendingApplication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,21 +41,21 @@ export default function AdminApplications() {
       await reviewApplication(app.id, approve);
       await load();
     } catch {
-      Alert.alert('Error', 'Could not complete the review. Please try again.');
+      Alert.alert(t('common.errorTitle'), t('admin.reviewError'));
     } finally {
       setBusyId(null);
     }
   }
 
   function confirm(app: PendingApplication, approve: boolean) {
-    const who = app.applicant_name ?? 'this applicant';
+    const who = app.applicant_name ?? t('admin.thisApplicant');
     Alert.alert(
-      approve ? 'Approve coach' : 'Reject application',
-      approve ? `Make ${who} a coach? They'll switch to a coach account.` : `Reject ${who}'s application?`,
+      approve ? t('admin.approveTitle') : t('admin.rejectTitle'),
+      approve ? t('admin.approveBody', { who }) : t('admin.rejectBody', { who }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: approve ? 'Approve' : 'Reject',
+          text: approve ? t('admin.approve') : t('admin.reject'),
           style: approve ? 'default' : 'destructive',
           onPress: () => decide(app, approve),
         },
@@ -76,18 +78,18 @@ export default function AdminApplications() {
         keyExtractor={(a) => a.id}
         contentContainerStyle={apps.length === 0 ? { flexGrow: 1, justifyContent: 'center' } : { padding: theme.spacing.lg, gap: theme.spacing.md }}
         ListEmptyComponent={
-          <EmptyState icon="clipboard-outline" title="No pending applications" subtitle="Coach requests will appear here for review." />
+          <EmptyState icon="clipboard-outline" title={t('admin.noPending')} subtitle={t('admin.noPendingSub')} />
         }
         renderItem={({ item }) => {
           const busy = busyId === item.id;
           return (
             <GlassCard>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-                <Avatar name={item.applicant_name ?? 'Applicant'} size={44} />
+                <Avatar name={item.applicant_name ?? t('admin.applicant')} size={44} />
                 <View style={{ flex: 1 }}>
-                  <Text variant="title">{item.applicant_name ?? 'Unnamed applicant'}</Text>
+                  <Text variant="title">{item.applicant_name ?? t('admin.unnamedApplicant')}</Text>
                   <Text variant="caption" muted>
-                    applied {new Date(item.created_at).toLocaleDateString()}
+                    {t('admin.applied', { date: new Date(item.created_at).toLocaleDateString() })}
                   </Text>
                 </View>
               </View>
@@ -97,8 +99,8 @@ export default function AdminApplications() {
                 </Text>
               ) : null}
               <View style={{ flexDirection: 'row', gap: theme.spacing.md, marginTop: theme.spacing.md }}>
-                <Button title="Reject" variant="ghost" onPress={() => confirm(item, false)} disabled={busy} style={{ flex: 1 }} />
-                <Button title="Approve" onPress={() => confirm(item, true)} loading={busy} style={{ flex: 1 }} />
+                <Button title={t('admin.reject')} variant="ghost" onPress={() => confirm(item, false)} disabled={busy} style={{ flex: 1 }} />
+                <Button title={t('admin.approve')} onPress={() => confirm(item, true)} loading={busy} style={{ flex: 1 }} />
               </View>
             </GlassCard>
           );

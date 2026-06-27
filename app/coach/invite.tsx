@@ -5,6 +5,7 @@
 import { useCallback, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Redirect, useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { createInvitationSchema } from '../../src/schemas/invitation';
 import { createInvitation, listMyInvitations, DUPLICATE_PENDING_INVITE, type Invitation } from '../../src/lib/invitations';
@@ -20,6 +21,7 @@ const STATUS_TONE: Record<Invitation['status'], BadgeTone> = {
 };
 
 export default function Invite() {
+  const { t } = useTranslation();
   const { role, session } = useAuth();
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -51,11 +53,11 @@ export default function Invite() {
 
     const parsed = createInvitationSchema.safeParse({ email: email.trim() });
     if (!parsed.success) {
-      setFieldError('Enter a valid email address.');
+      setFieldError(t('auth.invalidEmail'));
       return;
     }
     if (!session?.user?.id) {
-      setFormError('Your session expired. Sign in again.');
+      setFormError(t('becomeCoach.sessionExpired'));
       return;
     }
 
@@ -67,9 +69,9 @@ export default function Invite() {
       await load();
     } catch (e) {
       if (e instanceof Error && e.message === DUPLICATE_PENDING_INVITE) {
-        setFormError('You already have a pending invite for this email.');
+        setFormError(t('coach.duplicateInvite'));
       } else {
-        setFormError('Could not create the invitation. Please try again.');
+        setFormError(t('coach.createInviteError'));
       }
     } finally {
       setSubmitting(false);
@@ -87,40 +89,40 @@ export default function Invite() {
           ListHeaderComponent={
             <View style={{ gap: theme.spacing.md, marginBottom: theme.spacing.sm }}>
               <Input
-                label="Client email"
+                label={t('coach.clientEmail')}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="client@example.com"
+                placeholder={t('coach.clientEmailPlaceholder')}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
                 editable={!submitting}
                 error={fieldError ?? formError}
               />
-              <Button title="Create invitation" onPress={onSubmit} loading={submitting} size="lg" />
+              <Button title={t('coach.createInvitation')} onPress={onSubmit} loading={submitting} size="lg" />
 
               {lastToken ? (
                 <GlassCard glowColor={theme.colors.primary}>
                   <Text variant="label" color="primary">
-                    Share this token with your client
+                    {t('coach.shareToken')}
                   </Text>
                   <Text selectable style={{ fontFamily: MONO, fontSize: 15, color: theme.colors.text, marginTop: theme.spacing.sm }}>
                     {lastToken}
                   </Text>
                   <Text variant="caption" muted style={{ marginTop: theme.spacing.sm }}>
-                    They enter it on “Accept an invite”. Single-use, expires in 7 days.
+                    {t('coach.tokenHint')}
                   </Text>
                 </GlassCard>
               ) : null}
 
               <Text variant="label" muted style={{ marginTop: theme.spacing.sm }}>
-                Your invitations
+                {t('coach.yourInvitations')}
               </Text>
             </View>
           }
           ListEmptyComponent={
             <Text variant="body" muted>
-              No invitations yet.
+              {t('coach.noInvitations')}
             </Text>
           }
           renderItem={({ item }) => (
@@ -129,10 +131,10 @@ export default function Invite() {
                 <View style={{ flex: 1 }}>
                   <Text variant="bodyStrong">{item.email}</Text>
                   <Text variant="caption" muted>
-                    expires {new Date(item.expires_at).toLocaleDateString()}
+                    {t('coach.invExpires', { date: new Date(item.expires_at).toLocaleDateString() })}
                   </Text>
                 </View>
-                <Badge label={item.status} tone={STATUS_TONE[item.status]} />
+                <Badge label={t(`coach.invStatus.${item.status}`)} tone={STATUS_TONE[item.status]} />
               </View>
             </Card>
           )}

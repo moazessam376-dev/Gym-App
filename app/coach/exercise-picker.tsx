@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { createExercise, listExercises, type Exercise } from '../../src/lib/library';
 import { createExerciseRow, listExerciseRows } from '../../src/lib/plans';
@@ -13,6 +14,7 @@ import { theme } from '../../src/theme';
 const GROUPS = muscleGroupSchema.options;
 
 export default function ExercisePicker() {
+  const { t } = useTranslation();
   const { role, session } = useAuth();
   const router = useRouter();
   const { dayId } = useLocalSearchParams<{ dayId: string }>();
@@ -54,7 +56,7 @@ export default function ExercisePicker() {
   async function onPick(ex: Exercise) {
     if (!dayId || adding) return;
     if (inDay.has(ex.id)) {
-      setError(`${ex.name} is already in this day.`);
+      setError(t('coach.alreadyInDay', { name: ex.name }));
       return;
     }
     setError(null);
@@ -64,7 +66,7 @@ export default function ExercisePicker() {
       router.back();
     } catch (e) {
       if (__DEV__) console.warn('add library exercise failed', e);
-      setError('Could not add that exercise.');
+      setError(t('coach.addExerciseError'));
       setAdding(false);
     }
   }
@@ -73,7 +75,7 @@ export default function ExercisePicker() {
     setError(null);
     const parsed = createExerciseSchema.safeParse({ name: customName.trim(), muscle_group: customGroup });
     if (!parsed.success) {
-      setError('Enter an exercise name.');
+      setError(t('coach.enterExerciseName'));
       return;
     }
     if (!session?.user?.id) return;
@@ -84,7 +86,7 @@ export default function ExercisePicker() {
       router.back();
     } catch (e) {
       if (__DEV__) console.warn('create custom exercise failed', e);
-      setError('Could not create the exercise.');
+      setError(t('coach.createExerciseError'));
       setAdding(false);
     }
   }
@@ -106,18 +108,18 @@ export default function ExercisePicker() {
                 keyExtractor={(g) => g ?? 'all'}
                 contentContainerStyle={{ gap: theme.spacing.sm, paddingVertical: 2 }}
                 renderItem={({ item: g }) => (
-                  <Chip label={g ?? 'All'} active={filter === g} onPress={() => setFilter(g)} />
+                  <Chip label={g ? t(`coach.muscle.${g}`) : t('food.all')} active={filter === g} onPress={() => setFilter(g)} />
                 )}
               />
 
               <Button
-                title={showCustom ? 'Cancel custom' : 'Create a custom exercise'}
+                title={showCustom ? t('coach.cancelCustomExercise') : t('coach.createCustomExercise')}
                 variant="ghost"
                 onPress={() => setShowCustom((s) => !s)}
               />
               {showCustom ? (
                 <GlassCard style={{ gap: theme.spacing.md }}>
-                  <Input value={customName} onChangeText={setCustomName} placeholder="Exercise name" editable={!adding} />
+                  <Input value={customName} onChangeText={setCustomName} placeholder={t('coach.exerciseName')} editable={!adding} />
                   <FlatList
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -125,10 +127,10 @@ export default function ExercisePicker() {
                     keyExtractor={(g) => g}
                     contentContainerStyle={{ gap: theme.spacing.sm }}
                     renderItem={({ item: g }) => (
-                      <Chip label={g} active={customGroup === g} onPress={() => setCustomGroup(g)} />
+                      <Chip label={t(`coach.muscle.${g}`)} active={customGroup === g} onPress={() => setCustomGroup(g)} />
                     )}
                   />
-                  <Button title="Create & add" onPress={onCreateCustom} loading={adding} />
+                  <Button title={t('coach.createAndAdd')} onPress={onCreateCustom} loading={adding} />
                 </GlassCard>
               ) : null}
               {error ? (
@@ -143,7 +145,7 @@ export default function ExercisePicker() {
               <ActivityIndicator style={{ marginTop: 24 }} color={theme.colors.primary} />
             ) : (
               <Text variant="body" muted>
-                No exercises.
+                {t('coach.noExercises')}
               </Text>
             )
           }
@@ -154,11 +156,11 @@ export default function ExercisePicker() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
                   <View style={{ flex: 1 }}>
                     <Text variant="bodyStrong">{item.name}</Text>
-                    <Text variant="caption" muted style={{ textTransform: 'capitalize' }}>
-                      {item.muscle_group}
+                    <Text variant="caption" muted>
+                      {t(`coach.muscle.${item.muscle_group}`)}
                       {item.primary_muscle ? ` · ${item.primary_muscle}` : ''}
-                      {item.coach_id ? ' · custom' : ''}
-                      {added ? ' · in day' : ''}
+                      {item.coach_id ? ` · ${t('food.custom')}` : ''}
+                      {added ? ` · ${t('coach.inDay')}` : ''}
                     </Text>
                   </View>
                   <Icon
