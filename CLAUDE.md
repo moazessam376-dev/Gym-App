@@ -198,10 +198,14 @@ These are now the defaults — follow them in new work (full detail in
   bilingual switcher is in Account. RTL helpers in `src/lib/rtl.ts` (`forwardChevron()`, `textStart`).
   A **module-scope component used by a screen** (e.g. a card/row defined outside the screen fn) gets
   its **own** `useTranslation()` — it can't see the screen's `t` (and watch for a local `const t = …`
-  shadowing the hook). **Done so far:** Slice 1 (switcher + core screens) + Slice 2 (the whole plans
-  cluster). **Still English → Slice 3** (inventory + how-to in `/docs/phases/phase-16-arabic-rtl.md`):
-  pickers, food add/prefs, chat, auth, profile/onboarding, body-metrics, AdminHome, and `src/lib`
-  strings (`BLOCK_LABEL`, `goalProgress()` headlines).
+  shadowing the hook). **Full retrofit mechanics + the en/ar parity one-liner + the pre-claim coverage
+  sweep live in `.claude/rules/i18n.md`; Icon-name / brand-colour / native-module / save-semantics
+  conventions in `.claude/rules/ui.md`** — read both before UI work. **Coverage:** the core screens,
+  the plans cluster, AND the remaining screens (pickers, food add/prefs, chat, auth,
+  profile/onboarding, body-metrics, AdminHome, and `src/lib` strings) were all retrofitted by the
+  pre-pilot UX/IA program (**PR #42, merged to `main`**) — the app is broadly bilingual. Still run the
+  en/ar parity check before commit (see `i18n.md`); consult the Phase-16 inventory in
+  `/docs/phases/phase-16-arabic-rtl.md` for any residual English (e.g. DB-level `name_ar`).
 - **AI cost:** every model call records usage via `recordCost(...)` on success
   (`_shared/rate-limit.ts`); cost is integer micro-USD on `ai_usage_events` (§6 discipline).
 - **Brand/UI:** the primary CTA fill is **`theme.colors.primary` (Signal cyan) with
