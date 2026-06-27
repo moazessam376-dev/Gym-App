@@ -464,7 +464,7 @@ export default function PlanEditor() {
               onPress={onTogglePublish}
               disabled={busy}
             >
-              <Text style={styles.headerBtnText}>
+              <Text style={[styles.headerBtnText, styles.publishText]}>
                 {published ? t('planEditor.unpublish') : t('planEditor.publish')}
               </Text>
             </Pressable>
@@ -900,7 +900,8 @@ const styles = StyleSheet.create({
   assign: { backgroundColor: c.secondary },
   save: { backgroundColor: c.primary }, // brand Signal cyan — the primary commit action
   saveText: { color: c.onPrimary }, // dark text ON cyan (onPrimary is onyx, not white)
-  publish: { backgroundColor: c.success },
+  publish: { backgroundColor: c.primary }, // brand Signal cyan — the primary CTA, NOT success-green
+  publishText: { color: c.onPrimary }, // dark onyx text on cyan/amber (matches saveText; never white)
   unpublish: { backgroundColor: c.warning },
   adjust: { backgroundColor: c.glass, borderWidth: 1, borderColor: c.glassBorder },
   discard: { backgroundColor: c.glass, borderWidth: 1, borderColor: c.danger },
