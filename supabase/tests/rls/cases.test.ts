@@ -496,8 +496,8 @@ describe('plans v2 (0010) — templates, library, hierarchy, clone (§2)', () =>
   const WEEK_B1 = 'ee000003-0000-0000-0000-000000000003';
   const MEAL_A1_PUB_NUT = 'dd000004-0000-0000-0000-000000000004';
   const MEAL_A1_DRAFT = 'dd000002-0000-0000-0000-000000000002';
-  const CUSTOM_EX_A = 'e1000000-0000-0000-0000-00000000000a';
-  const CUSTOM_FOOD_B = 'f1000000-0000-0000-0000-00000000000b';
+  const CUSTOM_EX_A = 'ca000001-0000-0000-0000-00000000000a';
+  const CUSTOM_FOOD_B = 'cb000001-0000-0000-0000-00000000000b';
   const GLOBAL_EX = 'e0000000-0000-0000-0000-000000000001';
   const GLOBAL_FOOD = 'f0000000-0000-0000-0000-000000000001';
 
@@ -1428,6 +1428,21 @@ describe('food logging (0019) — diary, targets, daily roll-up, streak (§2)', 
     expect(stranger.rows).toHaveLength(0);
   });
 
+  // ── 0055 (Slice G4): the serving-snapshot columns are writable by the owner ──
+  it('an athlete can log a food carrying a serving snapshot (0055 columns)', async () => {
+    const r = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        `insert into public.food_log_entries
+           (user_id, log_date, meal_slot, food_name, kcal_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g, grams, serving_label, serving_grams)
+         values ($1, current_date, 'snack', 'Protein Bar', 350, 30, 40, 10, 60, '1 bar', 60)
+         returning serving_label, serving_grams`,
+        [CLIENT_A1.sub],
+      ),
+    );
+    expect(r.rows[0].serving_label).toBe('1 bar');
+    expect(Number(r.rows[0].serving_grams)).toBe(60);
+  });
+
   it('a client adds an off-plan entry (null plan_meal_item_id) owned by themselves', async () => {
     const r = await asUser(CLIENT_A1, (c) =>
       c.query(
@@ -1732,6 +1747,39 @@ describe('workout logging (0021) — exercise PRs + athlete→coach feedback not
 
     const anon = await asAnon((c) => c.query('select user_id from public.v_exercise_prs'));
     expect(anon.rows).toHaveLength(0);
+  });
+});
+
+describe('workout note delete keeps the chat copy (0056) — FK SET NULL is not an edit', () => {
+  const A1_SESSION = '5e550001-0000-0000-0000-000000000001';
+
+  // One transaction: the harness rolls back each asUser() call (helpers.ts), and the
+  // mirror message + the delete cascade must all be visible within the same write.
+  it('deleting a note unlinks its mirrored chat message but preserves it (no edit_window, no edited_at)', async () => {
+    await asUser(CLIENT_A1, async (c) => {
+      // 1. Author a note → the 0051 trigger mirrors it into the client↔coach chat.
+      const note = await c.query(
+        "insert into public.workout_notes (user_id, session_id, category, body) values ($1, $2, 'challenge', 'delete-me note') returning id",
+        [CLIENT_A1.sub, A1_SESSION],
+      );
+      const noteId = note.rows[0].id;
+
+      // The mirror message exists, linked to the note and not yet edited.
+      const mirror = await c.query('select id, edited_at from public.messages where workout_note_id = $1', [noteId]);
+      expect(mirror.rows).toHaveLength(1);
+      const msgId = mirror.rows[0].id;
+      expect(mirror.rows[0].edited_at).toBeNull();
+
+      // 2. Delete the note — the FK ON DELETE SET NULL cascade must NOT raise (edit_window)
+      //    nor stamp edited_at. Before 0056 this threw / marked the message edited.
+      await c.query('delete from public.workout_notes where id = $1', [noteId]);
+
+      // 3. The note is gone; the chat copy survives, unlinked and unedited.
+      const after = await c.query('select workout_note_id, edited_at from public.messages where id = $1', [msgId]);
+      expect(after.rows).toHaveLength(1);
+      expect(after.rows[0].workout_note_id).toBeNull();
+      expect(after.rows[0].edited_at).toBeNull();
+    });
   });
 });
 
@@ -3361,6 +3409,234 @@ describe('public leaderboards (0045, Phase 20) — opt-in physique/outcomes boar
     ).rejects.toThrow();
     await expect(
       asAnon((c) => c.query('select * from public.public_coach_leaderboard()')),
+    ).rejects.toThrow();
+  });
+});
+
+describe('leaderboard period window + self-rank (0052, Slice G1)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const L1: Identity = { sub: '1ea00000-0000-0000-0000-000000000001', userRole: 'client' }; // recent reading, FFMI ≈ 21.5
+  const L3: Identity = { sub: '1ea00000-0000-0000-0000-000000000003', userRole: 'client' }; // recent reading, FFMI ≈ 21.7
+  const L4: Identity = { sub: '1ea00000-0000-0000-0000-000000000004', userRole: 'client' }; // recent reading but NOT opted in
+  const L7: Identity = { sub: '1ea00000-0000-0000-0000-000000000007', userRole: 'client' }; // ONLY a 200-day-old reading
+
+  // ── period window: an athlete with only an old reading drops off month/quarter ──
+  it('the all-time board still includes an athlete whose only verified reading is 200 days old', async () => {
+    const r = await asUser(COACH_B, (c) =>
+      c.query("select athlete_id from public.public_athlete_leaderboard('male', 'all')"),
+    );
+    expect(r.rows.map((x) => x.athlete_id)).toContain(L7.sub);
+  });
+
+  it('the month and quarter windows drop the 200-day reading but keep the recent ones', async () => {
+    const month = await asUser(COACH_B, (c) =>
+      c.query("select athlete_id from public.public_athlete_leaderboard('male', 'month')"),
+    );
+    const quarter = await asUser(COACH_B, (c) =>
+      c.query("select athlete_id from public.public_athlete_leaderboard('male', 'quarter')"),
+    );
+    expect(month.rows.map((x) => x.athlete_id)).not.toContain(L7.sub);
+    expect(quarter.rows.map((x) => x.athlete_id)).not.toContain(L7.sub); // 200d > 90d
+    // L1/L3 have a 5-day-old reading → present in every window.
+    expect(month.rows.map((x) => x.athlete_id)).toEqual(expect.arrayContaining([L1.sub, L3.sub]));
+  });
+
+  // ── self-rank: returns ONLY the caller's own standing (their own data) ──────────
+  it('public_athlete_my_rank gives the caller their exact rank + board size', async () => {
+    const top = await asUser(L3, (c) => c.query("select * from public.public_athlete_my_rank('male', 'all')"));
+    const mid = await asUser(L1, (c) => c.query("select * from public.public_athlete_my_rank('male', 'all')"));
+    const low = await asUser(L7, (c) => c.query("select * from public.public_athlete_my_rank('male', 'all')"));
+    expect(Number(top.rows[0].rank)).toBe(1);
+    expect(Number(top.rows[0].total)).toBe(3); // {L1, L3, L7} are the only opted-in public males
+    expect(Number(mid.rows[0].rank)).toBe(2);
+    expect(Number(low.rows[0].rank)).toBe(3);
+  });
+
+  it('public_athlete_my_rank returns no row when the caller has no in-window reading', async () => {
+    const r = await asUser(L7, (c) => c.query("select * from public.public_athlete_my_rank('male', 'month')"));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  // 0057: a verified-but-NOT-opted-in athlete (L4) gets NO self-rank — same gate as
+  // the board — so they see the "opt in to compete" nudge instead of a bogus rank.
+  it('public_athlete_my_rank returns no row for a verified athlete who has not opted in (0057)', async () => {
+    const r = await asUser(L4, (c) => c.query("select * from public.public_athlete_my_rank('male', 'all')"));
+    expect(r.rows).toHaveLength(0);
+    // ...while an opted-in athlete with the same data still ranks.
+    const opted = await asUser(L1, (c) => c.query("select * from public.public_athlete_my_rank('male', 'all')"));
+    expect(Number(opted.rows[0].rank)).toBe(2);
+  });
+
+  it('anon cannot execute public_athlete_my_rank (no execute grant)', async () => {
+    await expect(
+      asAnon((c) => c.query("select * from public.public_athlete_my_rank('male', 'all')")),
+    ).rejects.toThrow();
+  });
+});
+
+describe('coach_requests (0053, Slice G2) — request-a-coach funnel (§2)', () => {
+  const COACH_A: Identity = { sub: '11111111-1111-1111-1111-111111111111', userRole: 'coach' };
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const REQUESTER: Identity = { sub: CLIENT_B1, userRole: 'client' }; // requested Coach A
+  const ADMIN: Identity = { sub: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userRole: 'admin' };
+  const REQ = 'c0a70000-0000-0000-0000-000000000001';
+
+  // ── Read scoping: addressed coach / requesting client / admin only ──────────
+  it('the addressed coach can read the request (with the snapshotted client_name)', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query('select id, client_name from public.coach_requests where id = $1', [REQ]),
+    );
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0].client_name).toBe('Client B1');
+  });
+
+  it('the requesting client can read their own request', async () => {
+    const r = await asUser(REQUESTER, (c) => c.query('select id from public.coach_requests where id = $1', [REQ]));
+    expect(r.rows).toHaveLength(1);
+  });
+
+  it('a DIFFERENT coach cannot read a request addressed to another coach (cross-tenant)', async () => {
+    const r = await asUser(COACH_B, (c) => c.query('select id from public.coach_requests where id = $1', [REQ]));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it('an unrelated client cannot read the request', async () => {
+    const r = await asUser(CLIENT_A1, (c) => c.query('select id from public.coach_requests where id = $1', [REQ]));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it('an admin can read any request', async () => {
+    const r = await asUser(ADMIN, (c) => c.query('select id from public.coach_requests where id = $1', [REQ]));
+    expect(r.rows).toHaveLength(1);
+  });
+
+  it('anon cannot read coach requests', async () => {
+    const r = await asAnon((c) => c.query('select id from public.coach_requests where id = $1', [REQ]));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  // ── Write scoping: accept/decline are NOT client-writable; cancel is owner-only ─
+  it('the addressed coach cannot flip status to accepted directly (service-role only)', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query("update public.coach_requests set status = 'accepted' where id = $1", [REQ]),
+    );
+    expect(r.rowCount).toBe(0); // no UPDATE policy matches a coach → 0 rows touched
+  });
+
+  it('the requesting client cannot self-accept their own request (with_check blocks it)', async () => {
+    await expect(
+      asUser(REQUESTER, (c) => c.query("update public.coach_requests set status = 'accepted' where id = $1", [REQ])),
+    ).rejects.toThrow();
+  });
+
+  it('the requesting client MAY cancel their own pending request', async () => {
+    const r = await asUser(REQUESTER, (c) =>
+      c.query("update public.coach_requests set status = 'cancelled' where id = $1", [REQ]),
+    );
+    expect(r.rowCount).toBe(1);
+  });
+});
+
+describe('admin console RPCs (0054, Slice G3) — in-function admin fence', () => {
+  const ADMIN: Identity = { sub: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userRole: 'admin' };
+  const COACH_A: Identity = { sub: '11111111-1111-1111-1111-111111111111', userRole: 'coach' };
+
+  it('an admin gets a single counts row with non-negative integers', async () => {
+    const r = await asUser(ADMIN, (c) => c.query('select * from public.admin_dashboard_counts()'));
+    expect(r.rows).toHaveLength(1);
+    expect(Number(r.rows[0].coaches)).toBeGreaterThanOrEqual(2); // Coach A + Coach B (+ more)
+    expect(Number(r.rows[0].clients)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('a non-admin gets ZERO rows from the counts RPC (the WHERE fence denies)', async () => {
+    const coach = await asUser(COACH_A, (c) => c.query('select * from public.admin_dashboard_counts()'));
+    const client = await asUser(CLIENT_A1, (c) => c.query('select * from public.admin_dashboard_counts()'));
+    expect(coach.rows).toHaveLength(0);
+    expect(client.rows).toHaveLength(0);
+  });
+
+  it('admin user search matches by name and returns ONLY the allowlisted columns', async () => {
+    const r = await asUser(ADMIN, (c) => c.query("select * from public.admin_search_users('Coach', 50)"));
+    const ids = r.rows.map((x) => x.id);
+    expect(ids).toContain('11111111-1111-1111-1111-111111111111'); // Coach A
+    const cols = Object.keys(r.rows[0]).sort();
+    expect(cols).toEqual(['banned_at', 'created_at', 'full_name', 'id', 'role'].sort());
+    for (const banned of ['email', 'coach_id']) expect(cols).not.toContain(banned);
+  });
+
+  it('a non-admin gets ZERO rows from user search', async () => {
+    const r = await asUser(COACH_A, (c) => c.query("select * from public.admin_search_users('Coach', 50)"));
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it('anon cannot execute either admin RPC (no execute grant)', async () => {
+    await expect(asAnon((c) => c.query('select * from public.admin_dashboard_counts()'))).rejects.toThrow();
+    await expect(asAnon((c) => c.query("select * from public.admin_search_users('a', 10)"))).rejects.toThrow();
+  });
+});
+
+describe('conversation previews + read-state (0058) — chat list aggregation (§2/§8)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_B1_ID: Identity = { sub: CLIENT_B1, userRole: 'client' };
+
+  it('list_conversation_previews gives one row per counterpart with the unread count', async () => {
+    // Client A1 only converses with Coach A (seed: ab000001..ab000004). The seeded
+    // read-state marker is a day old, so the 3 Coach A → A1 messages stay unread
+    // (ab000002 is A1's own → never unread).
+    const r = await asUser(CLIENT_A1, (c) => c.query('select * from public.list_conversation_previews()'));
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0].peer_id).toBe(COACH_A.sub);
+    expect(Number(r.rows[0].unread_count)).toBe(3);
+  });
+
+  // The harness rolls back each asUser() call (helpers.ts withIdentity), so a write and the
+  // read that depends on it must share ONE transaction.
+  it('mark_conversation_read clears the unread count for that conversation', async () => {
+    await asUser(CLIENT_A1, async (c) => {
+      const before = await c.query(
+        'select unread_count from public.list_conversation_previews() where peer_id = $1',
+        [COACH_A.sub],
+      );
+      expect(Number(before.rows[0].unread_count)).toBe(3);
+      await c.query('select public.mark_conversation_read($1)', [COACH_A.sub]); // upserts last_read = now()
+      const after = await c.query(
+        'select unread_count from public.list_conversation_previews() where peer_id = $1',
+        [COACH_A.sub],
+      );
+      expect(Number(after.rows[0].unread_count)).toBe(0);
+    });
+  });
+
+  it('a user cannot read another user’s conversation_read_state (cross-tenant)', async () => {
+    // The seed commits one read-state row (A1 ↔ Coach A) so others have a target to be denied.
+    const own = await asUser(CLIENT_A1, (c) => c.query('select peer_id from public.conversation_read_state'));
+    expect(own.rows.length).toBeGreaterThanOrEqual(1);
+
+    const otherCoach = await asUser(COACH_B, (c) =>
+      c.query('select peer_id from public.conversation_read_state where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(otherCoach.rows).toHaveLength(0);
+    const sibling = await asUser(CLIENT_B1_ID, (c) =>
+      c.query('select peer_id from public.conversation_read_state where user_id = $1', [CLIENT_A1.sub]),
+    );
+    expect(sibling.rows).toHaveLength(0);
+    // anon has no grant on this private table → denied at the grant level (stronger than RLS-0-rows).
+    await expect(asAnon((c) => c.query('select peer_id from public.conversation_read_state'))).rejects.toThrow();
+  });
+
+  it('mark_conversation_read writes the row as the caller (user_id forced to auth.uid())', async () => {
+    await asUser(CLIENT_B1_ID, async (c) => {
+      await c.query('select public.mark_conversation_read($1)', [COACH_B.sub]);
+      const r = await c.query('select user_id from public.conversation_read_state where peer_id = $1', [COACH_B.sub]);
+      expect(r.rows).toHaveLength(1);
+      expect(r.rows[0].user_id).toBe(CLIENT_B1); // never anyone else's id
+    });
+  });
+
+  it('anon cannot execute the conversation RPCs (0059 — execute revoked from anon)', async () => {
+    await expect(asAnon((c) => c.query('select * from public.list_conversation_previews()'))).rejects.toThrow();
+    await expect(
+      asAnon((c) => c.query('select public.mark_conversation_read($1)', [COACH_A.sub])),
     ).rejects.toThrow();
   });
 });

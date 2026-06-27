@@ -8,6 +8,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { createFood, listFoods, type Food } from '../../src/lib/library';
 import { foodCategorySchema, type FoodCategory } from '../../src/schemas/library';
@@ -23,9 +24,6 @@ function intOr0(s: string): number {
   const n = Number(s.trim());
   return Number.isInteger(n) && n >= 0 ? n : 0;
 }
-function label(s: string): string {
-  return s.replace(/\b\w/g, (m) => m.toUpperCase());
-}
 function firstName(c: Client): string {
   return (c.full_name ?? c.invited_email ?? 'Client').split(' ')[0];
 }
@@ -36,6 +34,7 @@ const CATEGORIES = foodCategorySchema.options;
 type PrefIndex = Map<string, { likes: string[]; avoids: string[] }>;
 
 export default function FoodPicker() {
+  const { t } = useTranslation();
   const { role, session } = useAuth();
   const router = useRouter();
   const { mealId, clientId } = useLocalSearchParams<{ mealId: string; clientId?: string }>();
@@ -131,7 +130,7 @@ export default function FoodPicker() {
   // the meal itself) — adding it again would be ambiguous.
   function pick(food: Food) {
     if (existing.some((it) => it.food_id === food.id)) {
-      setError(`${food.name} is already in this meal.`);
+      setError(t('coach.alreadyInMeal', { name: food.name }));
       return;
     }
     setError(null);
@@ -141,12 +140,12 @@ export default function FoodPicker() {
   async function onAdd() {
     if (!mealId || !selected) return;
     if (existing.some((it) => it.food_id === selected.id)) {
-      setError(`${selected.name} is already in this meal.`);
+      setError(t('coach.alreadyInMeal', { name: selected.name }));
       return;
     }
     const grm = intOr0(grams);
     if (grm <= 0) {
-      setError('Enter grams.');
+      setError(t('food.enterGrams'));
       return;
     }
     setBusy(true);
@@ -163,7 +162,7 @@ export default function FoodPicker() {
       });
       router.back();
     } catch {
-      setError('Could not add that food.');
+      setError(t('coach.addFoodError'));
       setBusy(false);
     }
   }
@@ -171,7 +170,7 @@ export default function FoodPicker() {
   async function onAutoFillMacros() {
     const nm = cName.trim();
     if (!nm || macroBusy) {
-      if (!nm) setError('Enter the food name first.');
+      if (!nm) setError(t('coach.enterFoodNameFirst'));
       return;
     }
     setError(null);
@@ -184,9 +183,9 @@ export default function FoodPicker() {
         setCC(String(res.macros.carbs_g_per_100g));
         setCF(String(res.macros.fat_g_per_100g));
       } else if (res.status === 'rate_limited') {
-        setError('Daily AI limit reached. Enter the macros manually.');
+        setError(t('coach.aiLimitMacros'));
       } else {
-        setError('Could not estimate macros. Enter them manually.');
+        setError(t('coach.macroEstimateError'));
       }
     } finally {
       setMacroBusy(false);
@@ -204,7 +203,7 @@ export default function FoodPicker() {
       category: cat === 'all' ? null : cat,
     });
     if (!parsed.success) {
-      setError('Enter a name and valid macro numbers.');
+      setError(t('coach.enterNameAndMacros'));
       return;
     }
     if (!session?.user?.id) return;
@@ -220,7 +219,7 @@ export default function FoodPicker() {
       setCF('');
       await load();
     } catch {
-      setError('Could not create the food.');
+      setError(t('coach.createFoodError'));
     } finally {
       setBusy(false);
     }
@@ -243,27 +242,27 @@ export default function FoodPicker() {
                   <View>
                     <Text variant="title">{selected.name}</Text>
                     <Text variant="caption" color="primary">
-                      {selected.kcal_per_100g} kcal · {selected.protein_g_per_100g}P / {selected.carbs_g_per_100g}C / {selected.fat_g_per_100g}F per 100g
+                      {t('food.per100g', { kcal: selected.kcal_per_100g, protein: selected.protein_g_per_100g, carbs: selected.carbs_g_per_100g, fat: selected.fat_g_per_100g })}
                     </Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <Input containerStyle={{ flex: 1 }} value={grams} onChangeText={setGrams} keyboardType="number-pad" placeholder="Grams" />
-                    <Button title="Add" fullWidth={false} onPress={onAdd} loading={busy} />
+                    <Input containerStyle={{ flex: 1 }} value={grams} onChangeText={setGrams} keyboardType="number-pad" placeholder={t('food.grams')} />
+                    <Button title={t('coach.add')} fullWidth={false} onPress={onAdd} loading={busy} />
                   </View>
                   {preview ? (
                     <Text variant="bodyStrong" color="primary">
-                      This serving: {preview.kcal} kcal · {preview.protein}P / {preview.carbs}C / {preview.fat}F
+                      {t('food.perServing', { kcal: preview.kcal, protein: preview.protein, carbs: preview.carbs, fat: preview.fat })}
                     </Text>
                   ) : null}
-                  <Pressable onPress={() => setSelected(null)}>
+                  <Pressable onPress={() => setSelected(null)} accessibilityRole="button" accessibilityLabel={t('food.chooseDifferent')}>
                     <Text variant="caption" color="link">
-                      Choose a different food
+                      {t('food.chooseDifferent')}
                     </Text>
                   </Pressable>
                 </GlassCard>
               ) : (
                 <>
-                  <Input value={query} onChangeText={setQuery} placeholder="Search foods" />
+                  <Input value={query} onChangeText={setQuery} placeholder={t('food.searchFoods')} />
 
                   {/* Category filter */}
                   <FlatList
@@ -274,7 +273,7 @@ export default function FoodPicker() {
                     contentContainerStyle={{ gap: theme.spacing.sm }}
                     renderItem={({ item }) => (
                       <Chip
-                        label={item === 'all' ? 'All' : label(item)}
+                        label={item === 'all' ? t('food.all') : t(`food.category.${item}`)}
                         active={cat === item}
                         onPress={() => setCat(item as FoodCategory | 'all')}
                       />
@@ -285,17 +284,17 @@ export default function FoodPicker() {
                   {clients.length > 0 ? (
                     <View style={{ gap: theme.spacing.xs }}>
                       <Text variant="label" muted>
-                        Personalise for
+                        {t('coach.personaliseFor')}
                       </Text>
                       <FlatList
                         horizontal
                         showsHorizontalScrollIndicator={false}
-                        data={[{ id: 'all', full_name: 'All clients', invited_email: null } as Client, ...clients]}
+                        data={[{ id: 'all', full_name: t('coach.allClients'), invited_email: null } as Client, ...clients]}
                         keyExtractor={(c) => c.id}
                         contentContainerStyle={{ gap: theme.spacing.sm }}
                         renderItem={({ item }) => (
                           <Chip
-                            label={item.id === 'all' ? 'All clients' : firstName(item)}
+                            label={item.id === 'all' ? t('coach.allClients') : firstName(item)}
                             active={clientFilter === item.id}
                             onPress={() => setClientFilter(item.id)}
                           />
@@ -305,7 +304,7 @@ export default function FoodPicker() {
                   ) : null}
 
                   <Button
-                    title={showCustom ? 'Cancel custom' : 'Create a custom food'}
+                    title={showCustom ? t('coach.cancelCustomFood') : t('coach.createCustomFood')}
                     variant="ghost"
                     onPress={() => setShowCustom((s) => !s)}
                   />
@@ -314,7 +313,7 @@ export default function FoodPicker() {
 
               {showCustom && !selected ? (
                 <GlassCard style={{ gap: theme.spacing.md }}>
-                  <Input value={cName} onChangeText={setCName} placeholder="Food name" />
+                  <Input value={cName} onChangeText={setCName} placeholder={t('food.foodName')} />
                   <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
                     <Input containerStyle={{ flex: 1 }} value={cKcal} onChangeText={setCKcal} keyboardType="number-pad" placeholder="kcal" style={{ textAlign: 'center' }} />
                     <Input containerStyle={{ flex: 1 }} value={cP} onChangeText={setCP} keyboardType="number-pad" placeholder="P" style={{ textAlign: 'center' }} />
@@ -322,16 +321,16 @@ export default function FoodPicker() {
                     <Input containerStyle={{ flex: 1 }} value={cF} onChangeText={setCF} keyboardType="number-pad" placeholder="F" style={{ textAlign: 'center' }} />
                   </View>
                   <Text variant="caption" muted>
-                    Per 100g.{cat !== 'all' ? ` Category: ${label(cat)}.` : ''}
+                    {t('food.per100gNote')}{cat !== 'all' ? t('coach.categoryNote', { category: t(`food.category.${cat}`) }) : ''}
                   </Text>
                   <Button
-                    title="Auto-fill macros with AI"
+                    title={t('coach.autoFillMacros')}
                     variant="ghost"
                     left={<Icon name="sparkles" size={16} color={theme.colors.primary} />}
                     onPress={onAutoFillMacros}
                     loading={macroBusy}
                   />
-                  <Button title="Create food" onPress={onCreateCustom} loading={busy} />
+                  <Button title={t('coach.createFood')} onPress={onCreateCustom} loading={busy} />
                 </GlassCard>
               ) : null}
               {error ? (
@@ -346,7 +345,7 @@ export default function FoodPicker() {
               <ActivityIndicator style={{ marginTop: 24 }} color={theme.colors.primary} />
             ) : selected ? null : (
               <Text variant="body" muted>
-                {query.trim() ? 'No foods match your search.' : 'No foods.'}
+                {query.trim() ? t('coach.noFoodsMatchSearch') : t('coach.noFoods')}
               </Text>
             )
           }
@@ -381,6 +380,7 @@ function FoodRow({
   clientFilter: string | 'all';
   onPick: () => void;
 }) {
+  const { t } = useTranslation();
   const [showNames, setShowNames] = useState(false);
   // Only show avatars for clients still on the roster (have a name entry).
   const likers = (pref?.likes ?? []).filter((id) => nameById.has(id));
@@ -398,13 +398,13 @@ function FoodRow({
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
             <Text variant="bodyStrong">{food.name}</Text>
-            {focusLikes ? <Badge label="Likes" tone="primary" /> : null}
-            {focusAvoids ? <Badge label="avoids" tone="danger" /> : null}
+            {focusLikes ? <Badge label={t('coach.likes')} tone="primary" /> : null}
+            {focusAvoids ? <Badge label={t('coach.avoids')} tone="danger" /> : null}
           </View>
           <Text variant="caption" muted>
-            {food.kcal_per_100g} kcal · {food.protein_g_per_100g}P / {food.carbs_g_per_100g}C / {food.fat_g_per_100g}F
-            {food.coach_id ? ' · custom' : ''}
-            {inMeal ? ' · in meal' : ''}
+            {t('food.macros', { kcal: food.kcal_per_100g, protein: food.protein_g_per_100g, carbs: food.carbs_g_per_100g, fat: food.fat_g_per_100g })}
+            {food.coach_id ? ` · ${t('food.custom')}` : ''}
+            {inMeal ? ` · ${t('coach.inMeal')}` : ''}
           </Text>
 
           {/* Liked-by avatars (tap to reveal names) */}
@@ -436,7 +436,7 @@ function FoodRow({
           {/* Avoid warning when not already focused on that client */}
           {avoiders.length > 0 && !focusAvoids ? (
             <Text variant="caption" color="danger" style={{ marginTop: 4 }}>
-              ⊘ {avoiders.map((id) => nameById.get(id)).join(', ')} avoid this
+              ⊘ {t('coach.avoidThis', { names: avoiders.map((id) => nameById.get(id)).join(', ') })}
             </Text>
           ) : null}
         </View>

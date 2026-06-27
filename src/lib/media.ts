@@ -99,6 +99,18 @@ export async function uploadMedia(args: {
   return finalizeUpload({ inbox_path: path, kind, progress_entry_id: progressEntryId });
 }
 
+/**
+ * Permanently delete one of the caller's OWN media objects (a progress photo or
+ * InBody scan) — bytes + row — via the media-delete Edge Function. Deletion can't be
+ * client-side: the buckets are locked and `media` is service-role-write-only (§7).
+ * The server enforces owner-only; a coach can view but not delete a client's media.
+ */
+export async function deleteMedia(mediaId: string): Promise<void> {
+  const body = signedUrlSchema.parse({ media_id: mediaId });
+  const { error } = await supabase.functions.invoke('media-delete', { body });
+  if (error) throw error;
+}
+
 /** A short-lived signed URL to view a media object (RLS-authorized server-side). */
 export async function getSignedUrl(mediaId: string): Promise<string> {
   const body = signedUrlSchema.parse({ media_id: mediaId });

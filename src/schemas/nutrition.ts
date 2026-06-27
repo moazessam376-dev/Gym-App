@@ -41,6 +41,9 @@ export const createFoodLogSchema = z.object({
   fat_g_per_100g: macro100,
   grams: z.number().int().min(0).max(5000),
   note: z.string().max(500).nullable().optional(),
+  // Serving snapshot (migration 0055) — optional; grams remains the source of truth.
+  serving_label: z.string().max(40).nullable().optional(),
+  serving_grams: z.number().int().min(0).max(5000).nullable().optional(),
 });
 export type CreateFoodLog = z.infer<typeof createFoodLogSchema>;
 

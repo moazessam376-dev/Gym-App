@@ -53,6 +53,12 @@
           "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone so you can send voice notes in chat."
         }
       ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use the camera so you can scan a food barcode."
+        }
+      ],
       "expo-web-browser"
     ],
     "extra": {

@@ -4,18 +4,19 @@
 // exposes the allowlisted fields (name/avatar/goal/achievements for an athlete), never the
 // sensitive profile data. Avatar uploads immediately (reusing the secure media pipeline);
 // the toggle + achievements persist on Save.
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 import { Redirect, Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../src/lib/auth-context';
 import { forwardChevron, textStart } from '../src/lib/rtl';
+import { useUnsavedGuard } from '../src/lib/useUnsavedGuard';
 import { getMyAvatarMediaId, setMyAvatar } from '../src/lib/profile';
 import { getMyCoachProfile, setCoachVisibility } from '../src/lib/coach-profile';
 import { getMyAthleteProfile, setAthleteVisibility } from '../src/lib/athlete-profile';
 import { pickAvatar, type PickSource } from '../src/lib/upload';
 import { ProfileAvatar } from '../src/components/ProfileAvatar';
-import { Icon, Screen, Text, Input, Button, GlassCard } from '../src/components/ui';
+import { Icon, Screen, Text, Input, Button, GlassCard, useToast } from '../src/components/ui';
 import { theme } from '../src/theme';
 
 const MAX_ACHIEVEMENTS = 20;
@@ -24,6 +25,7 @@ export default function PublicProfileEdit() {
   const { t } = useTranslation();
   const { role, session } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const userId = session?.user?.id;
   const isCoach = role === 'coach';
 
@@ -38,6 +40,22 @@ export default function PublicProfileEdit() {
   const [avatarMediaId, setAvatarMediaId] = useState<string | null>(null);
   const [avatarDirty, setAvatarDirty] = useState(false); // a new photo is picked but not yet saved
   const [avatarKey, setAvatarKey] = useState(0); // bump to re-mint the signed URL
+
+  // Unsaved-changes guard: any edit marks the form dirty. On a successful save we
+  // clear dirty + flag `leaving`, and an effect navigates back once dirty is false —
+  // so saving itself never trips the "discard changes?" prompt (the guard reads the
+  // re-rendered preventRemove=false before we pop).
+  const [dirty, setDirty] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  useUnsavedGuard(dirty, {
+    title: t('common.unsavedTitle'),
+    message: t('common.unsavedMessage'),
+    discard: t('common.discard'),
+    keep: t('common.keepEditing'),
+  });
+  useEffect(() => {
+    if (leaving && !dirty) router.back();
+  }, [leaving, dirty, router]);
 
   const name = session?.user?.email ?? '?';
 
@@ -84,6 +102,7 @@ export default function PublicProfileEdit() {
       if ('mediaId' in res) {
         setAvatarMediaId(res.mediaId);
         setAvatarDirty(true);
+        setDirty(true);
         setAvatarKey((k) => k + 1);
       } else if ('denied' in res) {
         setError(t('publicProfile.photoError'));
@@ -97,12 +116,15 @@ export default function PublicProfileEdit() {
 
   function updateAchievement(index: number, value: string) {
     setAchievements((prev) => prev.map((a, i) => (i === index ? value : a)));
+    setDirty(true);
   }
   function removeAchievement(index: number) {
     setAchievements((prev) => prev.filter((_, i) => i !== index));
+    setDirty(true);
   }
   function addAchievement() {
     setAchievements((prev) => (prev.length >= MAX_ACHIEVEMENTS ? prev : [...prev, '']));
+    setDirty(true);
   }
 
   async function onSave() {
@@ -126,9 +148,14 @@ export default function PublicProfileEdit() {
         });
       }
       setAchievements(cleaned);
-      router.back();
+      // Clear dirty + flag leaving so the effect pops AFTER the guard sees a clean form.
+      // The toast lives at the root, so it stays visible on the screen we return to.
+      setDirty(false);
+      setLeaving(true);
+      toast.show(t('common.saved'));
     } catch {
       setError(t('publicProfile.saveError'));
+      toast.show(t('common.saveFailed'), 'error');
       setSaving(false);
     }
   }
@@ -190,7 +217,10 @@ export default function PublicProfileEdit() {
               </Text>
               <Switch
                 value={isPublic}
-                onValueChange={setIsPublic}
+                onValueChange={(v) => {
+                  setIsPublic(v);
+                  setDirty(true);
+                }}
                 trackColor={{ true: theme.colors.primary, false: theme.colors.border }}
               />
             </View>
@@ -215,7 +245,10 @@ export default function PublicProfileEdit() {
               </Text>
               <Switch
                 value={isPublic && leaderboardOptIn}
-                onValueChange={setLeaderboardOptIn}
+                onValueChange={(v) => {
+                  setLeaderboardOptIn(v);
+                  setDirty(true);
+                }}
                 disabled={!isPublic}
                 trackColor={{ true: theme.colors.primary, false: theme.colors.border }}
               />

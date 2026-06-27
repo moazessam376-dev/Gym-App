@@ -8,6 +8,8 @@ export const notificationPrefsSchema = z.object({
   coach_comment: z.boolean(),
   plan_published: z.boolean(),
   pr_achieved: z.boolean(),
+  client_note: z.boolean(),
+  coach_request: z.boolean(),
 });
 
 export type NotificationPrefsInput = z.infer<typeof notificationPrefsSchema>;

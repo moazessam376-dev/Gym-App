@@ -73,12 +73,14 @@ insert into public.plans (id, coach_id, client_id, type, title, status) values
 
 -- Custom library entries: one per coach (proves cross-coach denial; globals are
 -- seeded by the migration and readable by all).
+-- Test-custom ids use a dedicated ca…/cb… namespace so they never collide with the
+-- global catalog seeds (e0…/f0… from 0010, e1…/f1… from 0047).
 insert into public.exercise_library (id, coach_id, name, muscle_group, primary_muscle) values
-  ('e1000000-0000-0000-0000-00000000000a',
+  ('ca000001-0000-0000-0000-00000000000a',
    '11111111-1111-1111-1111-111111111111', 'Coach A Special Press', 'push', 'chest');
 insert into public.food_library
   (id, coach_id, name, kcal_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g) values
-  ('f1000000-0000-0000-0000-00000000000b',
+  ('cb000001-0000-0000-0000-00000000000b',
    '22222222-2222-2222-2222-222222222222', 'Coach B Protein Bar', 350, 30, 40, 10);
 
 -- Each training plan has a Week 1 (0014); days hang off the week (week_id NOT NULL).
@@ -391,7 +393,8 @@ insert into auth.users (id, email) values
   ('1ea00000-0000-0000-0000-000000000003', 'lead3@example.test'),
   ('1ea00000-0000-0000-0000-000000000004', 'lead4@example.test'),
   ('1ea00000-0000-0000-0000-000000000005', 'lead5@example.test'),
-  ('1ea00000-0000-0000-0000-000000000006', 'lead6@example.test');
+  ('1ea00000-0000-0000-0000-000000000006', 'lead6@example.test'),
+  ('1ea00000-0000-0000-0000-000000000007', 'lead7@example.test');
 
 -- L1..L3 are Coach L's clients (feed the coach board); L4..L6 are coachless
 -- (athlete-board negatives only). L6 is inserted already-banned (the profiles
@@ -403,7 +406,10 @@ insert into public.profiles (id, role, coach_id, full_name, banned_at) values
   ('1ea00000-0000-0000-0000-000000000003', 'client', '1ea00000-0000-0000-0000-0000000000c1', 'Lead Three', null),
   ('1ea00000-0000-0000-0000-000000000004', 'client', null, 'Lead Four', null),
   ('1ea00000-0000-0000-0000-000000000005', 'client', null, 'Lead Five', null),
-  ('1ea00000-0000-0000-0000-000000000006', 'client', null, 'Lead Six',  now());
+  ('1ea00000-0000-0000-0000-000000000006', 'client', null, 'Lead Six',  now()),
+  -- L7: opted-in public male whose only verified reading is 200 days old → on the
+  -- all-time / quarter board (0052 window) but OFF the month board.
+  ('1ea00000-0000-0000-0000-000000000007', 'client', null, 'Lead Seven', null);
 
 insert into public.coach_profile (user_id, bio, specialties, years_experience, is_public, leaderboard_opt_in, onboarded_at) values
   ('1ea00000-0000-0000-0000-0000000000c1', 'League coach', '{bodybuilding}', 8, true, true, now());
@@ -414,7 +420,8 @@ insert into public.athlete_profile (user_id, primary_goal, sex, height_cm, is_pu
   ('1ea00000-0000-0000-0000-000000000003', 'build_muscle', 'male',   175, true,  true,  now()),
   ('1ea00000-0000-0000-0000-000000000004', 'build_muscle', 'male',   176, true,  false, now()), -- not opted in
   ('1ea00000-0000-0000-0000-000000000005', 'lose_fat',     'female', 168, false, true,  now()), -- private
-  ('1ea00000-0000-0000-0000-000000000006', 'build_muscle', 'male',   177, true,  true,  now()); -- banned
+  ('1ea00000-0000-0000-0000-000000000006', 'build_muscle', 'male',   177, true,  true,  now()), -- banned
+  ('1ea00000-0000-0000-0000-000000000007', 'build_muscle', 'male',   178, true,  true,  now()); -- only an old (200d) reading
 
 -- Verified InBody readings. L1/L2/L3 get a baseline + an improved latest (body fat
 -- down or skeletal muscle up) → counted as tracked + improved for Coach L. L4/L5/L6
@@ -433,6 +440,24 @@ insert into public.body_metrics
   -- L4/L5/L6 — single verified reading each (excluded by opt-in / privacy / ban, not by data)
   ('1ea0b004-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000004', now() - interval '5 days',  82000, 1500, 37000, 'coach_entered'),
   ('1ea0b005-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000005', now() - interval '5 days',  58000, 2400, 23000, 'coach_entered'),
-  ('1ea0b006-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000006', now() - interval '5 days',  80000, 1400, 38500, 'coach_entered');
+  ('1ea0b006-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000006', now() - interval '5 days',  80000, 1400, 38500, 'coach_entered'),
+  -- L7: single reading 200 days ago (FFMI ≈ 16.6) → present all-time, gone from the 30/90-day windows.
+  ('1ea0b007-0000-0000-0000-000000000001', '1ea00000-0000-0000-0000-000000000007', now() - interval '200 days', 70000, 2500, 30000, 'coach_entered');
 
 alter table auth.users enable trigger on_auth_user_created;
+
+-- ── Slice G2: a pending coach request (cross-tenant read fixture) ─────────────
+-- Client B1 requests Coach A. Seeded directly (auth.uid() is null in seed → the
+-- BEFORE-INSERT guard is skipped), so client_id / client_name / status are set explicitly.
+-- The AFTER-INSERT notify trigger mints Coach A a notification (best-effort, harmless).
+insert into public.coach_requests (id, client_id, client_name, coach_id, message, status) values
+  ('c0a70000-0000-0000-0000-000000000001',
+   'bbbb0001-0000-0000-0000-000000000001', 'Client B1',
+   '11111111-1111-1111-1111-111111111111', 'I would love to train with you', 'pending');
+
+-- ── Slice "chat previews" (0058): a committed chat read-state row ─────────────
+-- Client A1 last read their thread with Coach A a day ago — so the 3 newer seeded
+-- Coach A → A1 messages still count as unread, and the cross-tenant denial test has a
+-- target row to be denied. Composite PK of existing profile ids → no new UUID.
+insert into public.conversation_read_state (user_id, peer_id, last_read_at) values
+  ('aaaa0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', now() - interval '1 day');

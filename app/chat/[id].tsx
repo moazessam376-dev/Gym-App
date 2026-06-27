@@ -25,6 +25,7 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../../src/lib/supabase';
+import { queryClient } from '../../src/lib/query';
 import { useAuth } from '../../src/lib/auth-context';
 import {
   CONVERSATION_PAGE_SIZE,
@@ -32,6 +33,7 @@ import {
   editMessage,
   listConversation,
   listReactions,
+  markConversationRead,
   removeReaction,
   sendMessage,
   subscribeToIncoming,
@@ -39,6 +41,7 @@ import {
   type Message,
   type Reaction,
   type ReplyPreview,
+  type WorkoutNoteRef,
 } from '../../src/lib/messages';
 import {
   acknowledgeChatTerms,
@@ -184,6 +187,8 @@ function Bubble({
   mine,
   body,
   mediaId,
+  workoutNoteId,
+  note,
   at,
   edited,
   reply,
@@ -199,6 +204,10 @@ function Bubble({
   body: string;
   /** A voice-note media id (kind 'audio'), or null for a text message. */
   mediaId: string | null;
+  /** Set when this message mirrors a workout note → render a note card, not a bubble. */
+  workoutNoteId: string | null;
+  /** The resolved note (category/exercise); may be null on a live row until refetch. */
+  note: WorkoutNoteRef | null;
   at: string;
   edited: boolean;
   reply: ReplyPreview | null;
@@ -247,7 +256,11 @@ function Bubble({
   const pan = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, g) =>
-        !!onReplyRef.current && g.dx > 12 && g.dx > Math.abs(g.dy) * 1.6,
+        // Claim any horizontal-dominant rightward drag. Was 1.6× (too strict — a
+        // slightly diagonal swipe got cancelled); now just dx > |dy| so diagonal
+        // swipe-to-reply works like Telegram, while true vertical scrolls (dy ≫ dx)
+        // still pass through to the list.
+        !!onReplyRef.current && g.dx > 10 && g.dx > Math.abs(g.dy),
       onPanResponderMove: (_, g) => {
         translateX.value = Math.min(Math.max(g.dx, 0), 72);
       },
@@ -262,6 +275,8 @@ function Bubble({
   ).current;
 
   const authorLabel = reply ? (reply.sender_id === myId ? t('chat.you') : counterpartName) : '';
+  // Note cards are tinted by category (compliment = positive, challenge = amber).
+  const noteAccent = note?.category === 'compliment' ? theme.colors.success : theme.colors.warning;
 
   return (
     <View style={{ marginVertical: 3 }}>
@@ -282,29 +297,78 @@ function Bubble({
             resolves to min-content and collapses the bubble to one character per line. */}
         <View style={{ maxWidth: '82%' }}>
           {/* Long-press for actions; double-tap to ❤️; swipe right to reply — Phase 18 Slice 2. */}
-          <Pressable
-            onPress={handlePress}
-            onLongPress={onLongPress}
-            delayLongPress={300}
-            style={{
-              backgroundColor: mine ? theme.colors.primary : theme.colors.glass,
-              borderWidth: mine ? 0 : 1,
-              borderColor: theme.colors.glassBorder,
-              borderRadius: theme.radii.lg,
-              borderBottomRightRadius: mine ? 4 : theme.radii.lg,
-              borderBottomLeftRadius: mine ? theme.radii.lg : 4,
-              paddingHorizontal: theme.spacing.md,
-              paddingVertical: theme.spacing.sm,
-            }}
-          >
-            {reply ? <QuoteBox reply={reply} mine={mine} authorLabel={authorLabel} /> : null}
-            {mediaId ? <VoiceNoteBubble mediaId={mediaId} mine={mine} /> : null}
-            {body.length > 0 ? (
-              <Text variant="body" color={mine ? theme.colors.onPrimary : theme.colors.text}>
-                {body}
-              </Text>
-            ) : null}
-          </Pressable>
+          {workoutNoteId ? (
+            // Workout-note card — deliberately NOT a chat bubble: a bordered, accent-
+            // tinted note with the category + exercise, so it reads as a logged note.
+            <Pressable
+              onPress={handlePress}
+              onLongPress={onLongPress}
+              delayLongPress={300}
+              style={{
+                backgroundColor: theme.colors.surface,
+                borderWidth: 1,
+                borderColor: theme.colors.glassBorder,
+                borderLeftWidth: 3,
+                borderLeftColor: noteAccent,
+                borderRadius: theme.radii.md,
+                paddingHorizontal: theme.spacing.md,
+                paddingVertical: theme.spacing.sm,
+                gap: 4,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Icon name="clipboard" size={13} color={noteAccent} />
+                <Text
+                  variant="caption"
+                  style={{
+                    color: noteAccent,
+                    fontFamily: theme.fontFamily.bodyBold,
+                    fontSize: 11,
+                    letterSpacing: 0.5,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {note ? t(`workout.${note.category}`) : t('chat.note')}
+                </Text>
+              </View>
+              {/* Exercise name on its own line so it stays visible even when the note
+                  body is short (a row-shared name collapses on a content-sized card). */}
+              {note?.exercise_name ? (
+                <Text variant="bodyStrong" numberOfLines={2} color={theme.colors.text}>
+                  {note.exercise_name}
+                </Text>
+              ) : null}
+              {body.length > 0 ? (
+                <Text variant="body" color={theme.colors.text}>
+                  {body}
+                </Text>
+              ) : null}
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={handlePress}
+              onLongPress={onLongPress}
+              delayLongPress={300}
+              style={{
+                backgroundColor: mine ? theme.colors.primary : theme.colors.glass,
+                borderWidth: mine ? 0 : 1,
+                borderColor: theme.colors.glassBorder,
+                borderRadius: theme.radii.lg,
+                borderBottomRightRadius: mine ? 4 : theme.radii.lg,
+                borderBottomLeftRadius: mine ? theme.radii.lg : 4,
+                paddingHorizontal: theme.spacing.md,
+                paddingVertical: theme.spacing.sm,
+              }}
+            >
+              {reply ? <QuoteBox reply={reply} mine={mine} authorLabel={authorLabel} /> : null}
+              {mediaId ? <VoiceNoteBubble mediaId={mediaId} mine={mine} /> : null}
+              {body.length > 0 ? (
+                <Text variant="body" color={mine ? theme.colors.onPrimary : theme.colors.text}>
+                  {body}
+                </Text>
+              ) : null}
+            </Pressable>
+          )}
           <Animated.View
             pointerEvents="none"
             style={[
@@ -466,6 +530,19 @@ export default function ChatThread() {
     [myId],
   );
 
+  // Mark this conversation read (clears its unread badge in the chat list). Best-effort.
+  const markRead = useCallback(() => {
+    if (!otherId) return;
+    markConversationRead(otherId)
+      .then(() => queryClient.invalidateQueries({ queryKey: ['conversation-previews'] }))
+      .catch(() => {});
+  }, [otherId]);
+
+  // Read on open. Incoming messages while the thread is open also re-mark read (below).
+  useEffect(() => {
+    markRead();
+  }, [markRead]);
+
   // Initial page + reactions + my ban state.
   useEffect(() => {
     if (!myId || !otherId) return;
@@ -528,6 +605,8 @@ export default function ChatThread() {
           }
           return [resolved, ...prev];
         });
+        // We're looking at this thread → keep it read (don't badge what's on screen).
+        markRead();
       },
       (m) => {
         if (m.sender_id === otherId)
@@ -767,6 +846,10 @@ export default function ChatThread() {
               keyExtractor={(m) => m.id}
               contentContainerStyle={{ padding: theme.spacing.lg }}
               keyboardDismissMode="interactive"
+              // "handled" (not the default "never") so a tap/drag while the keyboard is
+              // up reaches the bubble — fixes double-tap-to-react dismissing the keyboard
+              // and lets swipe-to-reply work without first lowering the keyboard.
+              keyboardShouldPersistTaps="handled"
               onEndReached={loadOlder}
               onEndReachedThreshold={0.3}
               ListFooterComponent={
@@ -794,6 +877,8 @@ export default function ChatThread() {
                       mine={item.sender_id === myId}
                       body={item.body}
                       mediaId={item.media_id}
+                      workoutNoteId={item.workout_note_id}
+                      note={item.workout_note}
                       at={item.created_at}
                       edited={item.edited_at != null}
                       reply={item.reply_to}

@@ -1,0 +1,12 @@
+-- 0048_muscle_group_arms.sql
+-- Add an `arms` value to the muscle_group enum so biceps/triceps/forearm work gets
+-- its own picker category (it was scattered across push/pull). The actual row
+-- re-categorisation lives in 0049 — Postgres forbids USING a newly added enum value
+-- in the SAME transaction that adds it ("unsafe use of new value"), and both the RLS
+-- harness and Supabase apply each migration file as its own transaction, so the
+-- ADD VALUE must commit first (idempotent via IF NOT EXISTS).
+--
+-- `upper`/`lower` are retired from the app in 0049 (rows remapped + the TS enum drops
+-- them), but they stay as harmless unused enum labels — removing an enum value would
+-- require recreating the whole type, which isn't worth it.
+alter type public.muscle_group add value if not exists 'arms';

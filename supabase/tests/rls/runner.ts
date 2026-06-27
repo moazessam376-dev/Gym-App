@@ -67,6 +67,20 @@ const migrationFiles = [
   '0043_voice_notes.sql',
   '0044_public_profiles.sql',
   '0045_public_leaderboards.sql',
+  '0046_active_training_plan.sql',
+  '0047_expand_catalogs.sql',
+  '0048_muscle_group_arms.sql',
+  '0049_recategorize_exercises.sql',
+  '0050_workout_note_notify.sql',
+  '0051_workout_note_in_chat.sql',
+  '0052_leaderboard_period_and_rank.sql',
+  '0053_coach_requests.sql',
+  '0054_admin_console.sql',
+  '0055_food_serving_sizes.sql',
+  '0056_workout_note_delete_keeps_chat.sql',
+  '0057_my_rank_opt_in_gate.sql',
+  '0058_conversation_previews.sql',
+  '0059_harden_conversation_rpcs.sql',
 ];
 
 const baseUrl =

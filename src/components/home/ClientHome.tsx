@@ -135,6 +135,11 @@ export default function ClientHome() {
               {streakQ.isPending ? '—' : streak}
             </Text>
           </View>
+          {/* Ranking surfacing (Phase 20): one-tap to the public leaderboards, which
+              were previously buried under Account → Community. */}
+          <Pressable onPress={() => router.push('/leaderboards')} hitSlop={8}>
+            <Icon name="trophy-outline" size={24} color={theme.colors.text} />
+          </Pressable>
           <NotificationBell />
           <Pressable onPress={() => router.push('/(tabs)/account')}>
             <Avatar name={name ?? 'Athlete'} size={44} />
@@ -283,6 +288,40 @@ export default function ClientHome() {
                 {coachName}
               </Text>
               <Icon name="chatbubble-ellipses" size={22} color={theme.colors.primary} />
+            </View>
+          </Card>
+        </View>
+      ) : coachQ.isSuccess ? (
+        // Coach-less state — the single highest-impact client fix. Without this, a
+        // brand-new (invited) client lands on Home with no path forward. Primary path
+        // is accepting a coach's invite (the pilot funnel); finding a coach is secondary.
+        <View style={{ gap: theme.spacing.sm }}>
+          <Text variant="label" muted style={textStart}>
+            {t('home.yourCoach')}
+          </Text>
+          <Card style={{ borderColor: theme.colors.primary }}>
+            <View style={{ gap: theme.spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                <Icon name="person-add" size={22} color={theme.colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyStrong" style={textStart}>
+                    {t('home.connectCoachTitle')}
+                  </Text>
+                  <Text variant="caption" muted style={textStart}>
+                    {t('home.connectCoachSub')}
+                  </Text>
+                </View>
+              </View>
+              <Button
+                title={t('home.acceptInvite')}
+                onPress={() => router.push('/accept-invite')}
+                left={<Icon name="mail" size={18} color={theme.colors.onPrimary} />}
+              />
+              <Button
+                title={t('home.findCoach')}
+                variant="ghost"
+                onPress={() => router.push('/discover/coaches')}
+              />
             </View>
           </Card>
         </View>

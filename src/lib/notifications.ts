@@ -12,7 +12,13 @@ import { supabase } from './supabase';
 import type { IconName } from '../components/ui/Icon';
 import { notificationPrefsSchema } from '../schemas/notification';
 
-export type NotificationType = 'message' | 'coach_comment' | 'plan_published' | 'pr_achieved';
+export type NotificationType =
+  | 'message'
+  | 'coach_comment'
+  | 'plan_published'
+  | 'pr_achieved'
+  | 'client_note'
+  | 'coach_request';
 
 export type NotificationRow = {
   id: string;
@@ -97,6 +103,8 @@ const ICONS: Record<NotificationType, IconName> = {
   coach_comment: 'chatbox-ellipses',
   plan_published: 'document-text',
   pr_achieved: 'trophy',
+  client_note: 'clipboard',
+  coach_request: 'user-plus',
 };
 
 // Per-type semantic accent (brand notification colors): chat = purple, coach note =
@@ -107,6 +115,8 @@ export const NOTIFICATION_COLORS: Record<NotificationType, string> = {
   coach_comment: '#6B8AFF', // cobalt
   plan_published: '#3FD9C0', // Signal cyan
   pr_achieved: '#3FD98A', // positive
+  client_note: '#F5B544', // amber — an athlete's note to the coach
+  coach_request: '#5BC8E8', // sky — a client asking to join the coach
 };
 
 function str(params: Record<string, unknown>, key: string): string {
@@ -152,6 +162,18 @@ export function describeNotification(
         title: t('notifications.pr.title'),
         body: t('notifications.pr.body', { exercise: str(row.params, 'exercise_name') }),
       };
+    case 'client_note':
+      return {
+        icon: ICONS.client_note,
+        title: t('notifications.clientNote.title'),
+        body: t('notifications.clientNote.body', { name: actor }),
+      };
+    case 'coach_request':
+      return {
+        icon: ICONS.coach_request,
+        title: t('notifications.coachRequest.title'),
+        body: t('notifications.coachRequest.body', { name: actor }),
+      };
     default:
       return { icon: 'notifications', title: '', body: '' };
   }
@@ -170,6 +192,14 @@ export function notificationHref(row: NotificationRow): Href | null {
       return row.entity_id ? { pathname: '/client/plan/[id]', params: { id: row.entity_id } } : null;
     case 'pr_achieved':
       return '/(tabs)/progress';
+    case 'client_note':
+      // Coach taps → that client's detail (the note shows in "Recent feedback").
+      return row.actor_id
+        ? { pathname: '/coach/client/[id]', params: { id: row.actor_id, name: str(row.params, 'actor_name') } }
+        : null;
+    case 'coach_request':
+      // Coach taps → their request inbox.
+      return '/coach/requests';
     default:
       return null;
   }
@@ -184,13 +214,15 @@ const DEFAULT_PREFS: NotificationPrefs = {
   coach_comment: true,
   plan_published: true,
   pr_achieved: true,
+  client_note: true,
+  coach_request: true,
 };
 
 /** The caller's prefs (RLS-scoped). No row yet → everything ON (the default). */
 export async function getNotificationPrefs(): Promise<NotificationPrefs> {
   const { data, error } = await supabase
     .from('notification_prefs')
-    .select('message, coach_comment, plan_published, pr_achieved')
+    .select('message, coach_comment, plan_published, pr_achieved, client_note, coach_request')
     .maybeSingle();
   if (error) throw error;
   if (!data) return { ...DEFAULT_PREFS };
@@ -199,6 +231,8 @@ export async function getNotificationPrefs(): Promise<NotificationPrefs> {
     coach_comment: data.coach_comment,
     plan_published: data.plan_published,
     pr_achieved: data.pr_achieved,
+    client_note: data.client_note,
+    coach_request: data.coach_request,
   };
 }
 
@@ -209,6 +243,18 @@ export async function setNotificationPrefs(userId: string, prefs: NotificationPr
     .from('notification_prefs')
     .upsert({ user_id: userId, ...v }, { onConflict: 'user_id' });
   if (error) throw error;
+}
+
+/** Ultra-compact timestamp parts for the chat list (now / Nm / Nh / Nd) — i18n-rendered. */
+export function compactTimeParts(iso: string): { key: string; count: number } {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diffMs / 60_000);
+  if (min < 1) return { key: 'chat.time.now', count: 0 };
+  if (min < 60) return { key: 'chat.time.minutes', count: min };
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return { key: 'chat.time.hours', count: hr };
+  const day = Math.floor(hr / 24);
+  return { key: 'chat.time.days', count: day };
 }
 
 /** Compact "x ago" parts for i18n rendering (count + plural-aware key). */

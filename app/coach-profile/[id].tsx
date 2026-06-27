@@ -3,14 +3,21 @@
 // avatar, bio, specialties, certifications, achievements, and the AGGREGATE "goals this
 // coach helps achieve" highlights (counts only, never a client identity). Authenticated
 // members only in V1.
+import { useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { textStart } from '../../src/lib/rtl';
+import { useAuth } from '../../src/lib/auth-context';
 import { usePublicCoachProfile, useCoachPublicHighlights } from '../../src/lib/queries/profiles';
+import { useMyCoach } from '../../src/lib/queries/home';
+import { useMyCoachRequests } from '../../src/lib/queries/coach-requests';
+import { createCoachRequest, cancelCoachRequest, DUPLICATE_PENDING_REQUEST } from '../../src/lib/coach-requests';
+import { queryClient } from '../../src/lib/query';
 import type { CoachHighlight } from '../../src/lib/public-profiles';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
-import { Icon, Screen, Text, GlassCard, Chip, EmptyState } from '../../src/components/ui';
+import { RequestCoachSheet } from '../../src/components/RequestCoachSheet';
+import { Icon, Screen, Text, GlassCard, Chip, EmptyState, Button, useToast } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 function label(s: string): string {
@@ -42,8 +49,54 @@ function HighlightRow({ h }: { h: CoachHighlight }) {
 export default function CoachProfileScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { role, session } = useAuth();
+  const userId = session?.user?.id;
+  const toast = useToast();
   const profileQ = usePublicCoachProfile(id);
   const highlightsQ = useCoachPublicHighlights(id);
+
+  // "Request this coach" funnel (G2) — only for a signed-in client. We need their coach
+  // status (unassigned can request) and any existing request to THIS coach.
+  const isClient = role === 'client';
+  const myCoachQ = useMyCoach(isClient ? userId : undefined);
+  const myRequestsQ = useMyCoachRequests(isClient);
+  const pendingToThisCoach = (myRequestsQ.data ?? []).find((r) => r.coach_id === id && r.status === 'pending') ?? null;
+  const unassigned = isClient && !myCoachQ.isLoading && !myCoachQ.data;
+
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const onRequest = async (note: string) => {
+    if (!id) return;
+    setBusy(true);
+    try {
+      await createCoachRequest(id, note);
+      setSheetOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ['my-coach-requests'] });
+      toast.show(t('coachRequest.sent'));
+    } catch (e) {
+      const msg = e instanceof Error && e.message === DUPLICATE_PENDING_REQUEST
+        ? t('coachRequest.alreadyRequested')
+        : t('common.error');
+      toast.show(msg, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onCancel = async () => {
+    if (!pendingToThisCoach) return;
+    setBusy(true);
+    try {
+      await cancelCoachRequest(pendingToThisCoach.id);
+      await queryClient.invalidateQueries({ queryKey: ['my-coach-requests'] });
+      toast.show(t('coachRequest.cancelled'));
+    } catch {
+      toast.show(t('common.error'), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const header = <Stack.Screen options={{ title: t('publicProfile.coachTitle') }} />;
 
@@ -85,6 +138,23 @@ export default function CoachProfileScreen() {
           </Text>
         ) : null}
       </View>
+
+      {/* Request-a-coach CTA — only for an unassigned signed-in client (G2). */}
+      {isClient ? (
+        pendingToThisCoach ? (
+          <GlassCard style={{ gap: theme.spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+              <Icon name="check-circle" size={18} color={theme.colors.success} />
+              <Text variant="bodyStrong" style={[textStart, { flex: 1 }]}>
+                {t('coachRequest.requested')}
+              </Text>
+            </View>
+            <Button title={t('coachRequest.cancel')} variant="ghost" onPress={onCancel} loading={busy} />
+          </GlassCard>
+        ) : unassigned ? (
+          <Button title={t('coachRequest.cta')} onPress={() => setSheetOpen(true)} />
+        ) : null
+      ) : null}
 
       {p.bio ? (
         <GlassCard>
@@ -156,6 +226,14 @@ export default function CoachProfileScreen() {
           )}
         </GlassCard>
       </View>
+
+      <RequestCoachSheet
+        visible={sheetOpen}
+        busy={busy}
+        coachName={p.full_name}
+        onSubmit={onRequest}
+        onClose={() => setSheetOpen(false)}
+      />
     </Screen>
   );
 }

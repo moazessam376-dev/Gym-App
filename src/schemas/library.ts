@@ -4,7 +4,9 @@
 // OWN custom entries, never a global or another coach's.
 import { z } from 'zod';
 
-export const muscleGroupSchema = z.enum(['push', 'pull', 'legs', 'upper', 'lower', 'core']);
+// PPL + Arms + Core. `upper`/`lower` were retired (migration 0049 remaps their rows);
+// the DB enum still carries them as unused labels, but the app never offers them.
+export const muscleGroupSchema = z.enum(['push', 'pull', 'legs', 'arms', 'core']);
 export type MuscleGroup = z.infer<typeof muscleGroupSchema>;
 
 // Food grouping for the picker (migration 0020). Nullable on a row = uncategorised.
@@ -34,5 +36,9 @@ export const createFoodSchema = z.object({
   carbs_g_per_100g: z.number().int().min(0).max(100),
   fat_g_per_100g: z.number().int().min(0).max(100),
   category: foodCategorySchema.nullable().optional(),
+  // Serving sizes + barcode (migration 0055). Grams stays integer (§3).
+  barcode: z.string().max(64).nullable().optional(),
+  serving_label: z.string().max(40).nullable().optional(),
+  serving_grams: z.number().int().min(0).max(5000).nullable().optional(),
 });
 export type CreateFood = z.infer<typeof createFoodSchema>;

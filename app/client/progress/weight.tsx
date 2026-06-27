@@ -5,6 +5,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
 import { upsertTodayWeight, deleteWeightEntry, listProgressWeights, type WeightEntry } from '../../../src/lib/progress';
 import { getAthleteProfileFor, setWeightUnit } from '../../../src/lib/athlete-profile';
@@ -28,6 +29,7 @@ function longDate(iso: string): string {
 }
 
 export default function WeightProgress() {
+  const { t } = useTranslation();
   const { role, session } = useAuth();
   const selfId = session?.user?.id;
   const { clientId } = useLocalSearchParams<{ clientId?: string }>();
@@ -78,7 +80,7 @@ export default function WeightProgress() {
     latest && first && latest.id !== first.id
       ? (gramsToDisplay(latest.weight_grams - first.weight_grams, unit) ?? 0)
       : null;
-  const deltaLabel = delta != null ? `${delta > 0 ? '+' : ''}${delta} ${unit} since start` : null;
+  const deltaLabel = delta != null ? t('progress.sinceStart', { delta: `${delta > 0 ? '+' : ''}${delta}`, unit }) : null;
 
   // Today's entry (local calendar day) — saving again edits it rather than adding.
   const todaysEntry = useMemo(() => {
@@ -108,7 +110,7 @@ export default function WeightProgress() {
     if (!ownerId) return;
     const grams = displayToGrams(value, unit);
     if (grams == null || grams <= 0) {
-      setError('Enter a valid weight.');
+      setError(t('progress.invalidWeight'));
       return;
     }
     setBusy(true);
@@ -118,7 +120,7 @@ export default function WeightProgress() {
       setValue('');
       await load();
     } catch {
-      setError('Could not save that entry. Please try again.');
+      setError(t('progress.saveEntryError'));
     } finally {
       setBusy(false);
     }
@@ -145,7 +147,7 @@ export default function WeightProgress() {
             <View style={{ gap: theme.spacing.md, marginBottom: theme.spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.md }}>
                 <Text variant="h2" style={{ flex: 1 }}>
-                  Weight
+                  {t('progress.weight')}
                 </Text>
                 <Segmented
                   style={{ width: 132 }}
@@ -163,7 +165,7 @@ export default function WeightProgress() {
                 {latest ? (
                   <View style={{ gap: 2 }}>
                     <Text variant="label" muted>
-                      Latest
+                      {t('progress.latest')}
                     </Text>
                     <Text variant="display" color="primary">
                       {formatWeight(latest.weight_grams, unit)}
@@ -176,7 +178,7 @@ export default function WeightProgress() {
                   </View>
                 ) : (
                   <Text variant="body" muted>
-                    No weigh-ins yet.
+                    {t('progress.noWeighins')}
                   </Text>
                 )}
                 {chartData.length >= 2 ? <LineChart data={chartData} unit={` ${unit}`} /> : null}
@@ -186,7 +188,7 @@ export default function WeightProgress() {
               {!readOnly ? (
                 <GlassCard style={{ gap: theme.spacing.md }}>
                   <Text variant="label" muted>
-                    {todaysEntry ? 'Update today’s weight' : 'Log today’s weight'}
+                    {todaysEntry ? t('progress.updateToday') : t('progress.logToday')}
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: theme.spacing.sm }}>
                     <Input
@@ -194,14 +196,14 @@ export default function WeightProgress() {
                       value={value}
                       onChangeText={setValue}
                       keyboardType="decimal-pad"
-                      placeholder={todaysEntry ? formatWeight(todaysEntry.weight_grams, unit) : `Weight in ${unit}`}
+                      placeholder={todaysEntry ? formatWeight(todaysEntry.weight_grams, unit) : t('progress.weightInUnit', { unit })}
                       error={error}
                     />
-                    <Button title={todaysEntry ? 'Update' : 'Save'} fullWidth={false} onPress={onLog} loading={busy} />
+                    <Button title={todaysEntry ? t('progress.update') : t('common.save')} fullWidth={false} onPress={onLog} loading={busy} />
                   </View>
                   {todaysEntry ? (
                     <Text variant="caption" muted>
-                      Logged {formatWeight(todaysEntry.weight_grams, unit)} today — saving replaces it.
+                      {t('progress.loggedToday', { weight: formatWeight(todaysEntry.weight_grams, unit) })}
                     </Text>
                   ) : null}
                 </GlassCard>
@@ -209,7 +211,7 @@ export default function WeightProgress() {
 
               {history.length > 0 ? (
                 <Text variant="label" muted style={{ marginTop: theme.spacing.xs }}>
-                  History
+                  {t('progress.history')}
                 </Text>
               ) : null}
             </View>
@@ -220,8 +222,8 @@ export default function WeightProgress() {
             ) : (
               <EmptyState
                 icon="trending-up-outline"
-                title="No weigh-ins yet"
-                subtitle={readOnly ? 'This client hasn’t logged any weight yet.' : 'Log your weight above to start your trend.'}
+                title={t('progress.noWeighinsTitle')}
+                subtitle={readOnly ? t('progress.noWeighinsCoach') : t('progress.noWeighinsOwn')}
               />
             )
           }

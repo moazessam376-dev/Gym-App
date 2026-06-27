@@ -198,23 +198,27 @@ export default function Nutrition() {
       {/* Header + date strip */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text variant="h1">{t('nutrition.title')}</Text>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-            borderWidth: 1,
-            borderRadius: theme.radii.full,
-            paddingHorizontal: theme.spacing.md,
-            paddingVertical: 6,
-          }}
-        >
-          <Icon name="flame" size={16} color={theme.colors.primary} />
-          <Text variant="mono" color="primary">
-            {streak}
-          </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+          {/* Food preferences moved here from the Account tab — it's a nutrition setting. */}
+          <IconButton name="heart-outline" onPress={() => router.push('/food/preferences')} />
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+              borderWidth: 1,
+              borderRadius: theme.radii.full,
+              paddingHorizontal: theme.spacing.md,
+              paddingVertical: 6,
+            }}
+          >
+            <Icon name="flame" size={16} color={theme.colors.primary} />
+            <Text variant="mono" color="primary">
+              {streak}
+            </Text>
+          </View>
         </View>
       </View>
 

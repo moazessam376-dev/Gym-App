@@ -4,30 +4,22 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Redirect, useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../src/lib/auth-context';
 import { applyToBecomeCoach, getMyApplication, type CoachApplication } from '../src/lib/coach-applications';
 import { Screen, Text, Input, Button, GlassCard, Badge, type BadgeTone } from '../src/components/ui';
 import { theme } from '../src/theme';
 
-const STATUS_COPY: Record<CoachApplication['status'], { title: string; body: string; tone: BadgeTone }> = {
-  pending: {
-    title: 'Application pending',
-    body: 'An admin will review your request. You’ll switch to a coach account once approved.',
-    tone: 'warning',
-  },
-  approved: {
-    title: 'Approved',
-    body: 'You’re a coach now. Sign out and back in to load your coach tools.',
-    tone: 'success',
-  },
-  rejected: {
-    title: 'Not approved',
-    body: 'Your application wasn’t approved this time. You can apply again below.',
-    tone: 'danger',
-  },
+// Tone is presentation-only (not translated); the title/body come from the
+// becomeCoach.<status>Title / <status>Body keys, resolved with t() in render.
+const STATUS_TONE: Record<CoachApplication['status'], BadgeTone> = {
+  pending: 'warning',
+  approved: 'success',
+  rejected: 'danger',
 };
 
 export default function BecomeCoach() {
+  const { t } = useTranslation();
   const { role, session } = useAuth();
   const userId = session?.user?.id;
 
@@ -59,7 +51,7 @@ export default function BecomeCoach() {
   async function onApply() {
     setError(null);
     if (!userId) {
-      setError('Your session expired. Sign in again.');
+      setError(t('becomeCoach.sessionExpired'));
       return;
     }
     setSubmitting(true);
@@ -68,7 +60,7 @@ export default function BecomeCoach() {
       setMessage('');
       await load();
     } catch {
-      setError('Could not submit your application. Please try again.');
+      setError(t('becomeCoach.submitError'));
     } finally {
       setSubmitting(false);
     }
@@ -90,9 +82,9 @@ export default function BecomeCoach() {
         <View style={{ flex: 1, justifyContent: 'center', padding: theme.spacing.xl, gap: theme.spacing.lg }}>
           {application ? (
             <GlassCard>
-              <Badge label={STATUS_COPY[application.status].title} tone={STATUS_COPY[application.status].tone} />
+              <Badge label={t(`becomeCoach.${application.status}Title`)} tone={STATUS_TONE[application.status]} />
               <Text variant="body" muted style={{ marginTop: theme.spacing.sm }}>
-                {STATUS_COPY[application.status].body}
+                {t(`becomeCoach.${application.status}Body`)}
               </Text>
             </GlassCard>
           ) : null}
@@ -100,20 +92,19 @@ export default function BecomeCoach() {
           {!blocking ? (
             <>
               <Text variant="body" muted>
-                Coaches build training & nutrition plans and manage clients. Tell us a bit about your
-                coaching background (optional).
+                {t('becomeCoach.intro')}
               </Text>
               <Input
                 value={message}
                 onChangeText={setMessage}
-                placeholder="e.g. 5 years personal training, nutrition certified…"
+                placeholder={t('becomeCoach.messagePlaceholder')}
                 multiline
                 editable={!submitting}
                 error={error}
                 style={{ minHeight: 90, textAlignVertical: 'top' }}
               />
               <Button
-                title={application?.status === 'rejected' ? 'Apply again' : 'Apply to become a coach'}
+                title={application?.status === 'rejected' ? t('becomeCoach.applyAgain') : t('becomeCoach.apply')}
                 onPress={onApply}
                 loading={submitting}
                 size="lg"

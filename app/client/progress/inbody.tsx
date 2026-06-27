@@ -9,6 +9,7 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
 import { countInbodyToday, listMediaFor, type Media } from '../../../src/lib/media';
 import {
@@ -31,15 +32,8 @@ function longDate(iso: string): string {
   });
 }
 
-// Coach-facing messages for the AI read outcomes that don't navigate onward.
-const COACH_OCR_MESSAGE: Partial<Record<OcrStatus, string>> = {
-  not_readable: 'Couldn’t read this as an InBody sheet — enter the numbers manually.',
-  unsupported_type: 'This is a PDF — enter the numbers manually (auto-read supports photos).',
-  rate_limited: 'AI read limit reached for now. Please try again shortly.',
-  failed: 'Couldn’t read this scan. Try again, or enter the numbers manually.',
-};
-
 function CommentList({ comments }: { comments: MetricComment[] }) {
+  const { t } = useTranslation();
   if (comments.length === 0) return null;
   return (
     <View style={{ gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
@@ -49,7 +43,7 @@ function CommentList({ comments }: { comments: MetricComment[] }) {
           <View style={{ flex: 1 }}>
             <Text variant="body">{c.body}</Text>
             <Text variant="label" muted style={{ fontSize: 10, marginTop: 2 }}>
-              COACH ·{' '}
+              {t('progress.coachTag')} ·{' '}
               {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </Text>
           </View>
@@ -60,6 +54,7 @@ function CommentList({ comments }: { comments: MetricComment[] }) {
 }
 
 export default function InBodyScans() {
+  const { t } = useTranslation();
   const { role, session } = useAuth();
   const router = useRouter();
   const selfId = session?.user?.id;
@@ -117,15 +112,29 @@ export default function InBodyScans() {
       const res = await captureAndUploadPhoto({ source, kind: 'inbody' });
       if ('mediaId' in res) await load();
       else if ('limited' in res) {
-        setNotice('You’ve already submitted today’s InBody. Come back tomorrow for your next one.');
+        setNotice(t('progress.alreadyToday'));
         await load();
-      } else if ('denied' in res) setNotice('Permission denied. Enable photo/camera access in Settings.');
+      } else if ('denied' in res) setNotice(t('progress.permDenied'));
     } catch {
-      setNotice('Upload failed. Please try again.');
+      setNotice(t('progress.uploadFailed'));
     } finally {
       setUploading(false);
     }
   }
+
+  // Coach-facing messages for the AI read outcomes that don't navigate onward.
+  const ocrMessage = (status: OcrStatus): string => {
+    switch (status) {
+      case 'not_readable':
+        return t('progress.ocr.notReadable');
+      case 'unsupported_type':
+        return t('progress.ocr.unsupportedType');
+      case 'rate_limited':
+        return t('progress.ocr.rateLimited');
+      default:
+        return t('progress.ocr.failed');
+    }
+  };
 
   // Coach: trigger the AI read, then go straight to the confirm screen with the result.
   async function readWithAi(mediaId: string) {
@@ -140,10 +149,10 @@ export default function InBodyScans() {
           params: { metricId: res.metric_id, clientId: ownerId ?? '', clientName: clientName ?? '' },
         });
       } else {
-        setNotice(COACH_OCR_MESSAGE[res.status] ?? 'Couldn’t read this scan.');
+        setNotice(ocrMessage(res.status));
       }
     } catch {
-      setNotice(COACH_OCR_MESSAGE.failed!);
+      setNotice(t('progress.ocr.failed'));
     } finally {
       setOcrBusyId(null);
     }
@@ -166,24 +175,24 @@ export default function InBodyScans() {
         contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: 120, gap: theme.spacing.md }}
         ListHeaderComponent={
           <View style={{ gap: theme.spacing.md, marginBottom: theme.spacing.xs }}>
-            <Text variant="h2">InBody scans</Text>
+            <Text variant="h2">{t('progress.inbodyScans')}</Text>
             {!isCoachView ? (
               <GlassCard style={{ gap: theme.spacing.sm }}>
                 {submittedToday ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                     <Icon name="checkmark-circle" size={18} color={theme.colors.success} />
                     <Text variant="caption" muted style={{ flex: 1 }}>
-                      You’ve submitted today’s InBody — your coach will review it. Come back tomorrow for your next one.
+                      {t('progress.submittedToday')}
                     </Text>
                   </View>
                 ) : (
                   <>
                     <Text variant="caption" muted>
-                      Submit your latest InBody result sheet (one per day). Your coach reads and reviews it.
+                      {t('progress.submitInbody')}
                     </Text>
                     <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
                       <Button
-                        title="Camera"
+                        title={t('progress.camera')}
                         variant="secondary"
                         style={{ flex: 1 }}
                         disabled={uploading}
@@ -191,7 +200,7 @@ export default function InBodyScans() {
                         left={<Icon name="camera" size={18} color={theme.colors.text} />}
                       />
                       <Button
-                        title="Library"
+                        title={t('progress.library')}
                         variant="secondary"
                         style={{ flex: 1 }}
                         disabled={uploading}
@@ -203,7 +212,7 @@ export default function InBodyScans() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                         <ActivityIndicator color={theme.colors.primary} />
                         <Text variant="caption" muted>
-                          Uploading…
+                          {t('progress.uploading')}
                         </Text>
                       </View>
                     ) : null}
@@ -224,8 +233,8 @@ export default function InBodyScans() {
           ) : (
             <EmptyState
               icon="document-text-outline"
-              title="No scans yet"
-              subtitle={isCoachView ? 'This client hasn’t added an InBody scan yet.' : 'Add your first InBody scan to track body composition.'}
+              title={t('progress.noScansTitle')}
+              subtitle={isCoachView ? t('progress.noScansCoach') : t('progress.noScansOwn')}
             />
           )
         }
@@ -234,7 +243,7 @@ export default function InBodyScans() {
           const scanComments = comments[item.id] ?? [];
           return (
             <GlassCard padded={false} style={{ overflow: 'hidden' }}>
-              <Pressable onPress={() => router.push({ pathname: '/client/progress/view', params: { mediaId: item.id } })}>
+              <Pressable onPress={() => router.push({ pathname: '/client/progress/view', params: { mediaId: item.id, own: isCoachView ? '0' : '1' } })}>
                 <SignedImage mediaId={item.id} style={{ width: '100%', height: 200 }} resizeMode="cover" />
                 <View style={{ padding: theme.spacing.md, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                   <Icon name="document-text" size={18} color={theme.colors.primary} />
@@ -257,7 +266,7 @@ export default function InBodyScans() {
                 {isCoachView ? (
                   link?.verified ? (
                     <Button
-                      title="Reviewed · open"
+                      title={t('progress.reviewedOpen')}
                       variant="secondary"
                       fullWidth={false}
                       onPress={() => openConfirm(link.metric_id)}
@@ -265,14 +274,14 @@ export default function InBodyScans() {
                     />
                   ) : link ? (
                     <Button
-                      title="Review reading"
+                      title={t('progress.reviewReading')}
                       fullWidth={false}
                       onPress={() => openConfirm(link.metric_id)}
                       left={<Icon name="reader" size={16} color={theme.colors.onPrimary} />}
                     />
                   ) : (
                     <Button
-                      title="Read with AI"
+                      title={t('progress.readWithAi')}
                       variant="secondary"
                       fullWidth={false}
                       loading={ocrBusyId === item.id}
@@ -285,14 +294,14 @@ export default function InBodyScans() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                     <Icon name="checkmark-circle" size={18} color={theme.colors.success} />
                     <Text variant="caption" color="success">
-                      Reviewed by your coach
+                      {t('progress.reviewedByCoach')}
                     </Text>
                   </View>
                 ) : (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                     <Icon name="hourglass-outline" size={18} color={theme.colors.warning} />
                     <Text variant="caption" muted>
-                      Submitted — awaiting coach review
+                      {t('progress.awaitingReview')}
                     </Text>
                   </View>
                 )}

@@ -4,6 +4,7 @@ import { spacing } from './spacing';
 import { radii } from './radii';
 import { fontFamily, textVariants } from './typography';
 import { gradients, glow } from './effects';
+import { motion } from './motion';
 
 export const theme = {
   colors: darkColors,
@@ -14,6 +15,7 @@ export const theme = {
   textVariants,
   gradients,
   glow,
+  motion,
 } as const;
 
 export type Theme = typeof theme;
@@ -26,3 +28,4 @@ export { fontFamily, textVariants } from './typography';
 export type { TextVariant } from './typography';
 export { gradients, glow } from './effects';
 export type { GradientKey } from './effects';
+export { motion } from './motion';

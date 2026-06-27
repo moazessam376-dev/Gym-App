@@ -32,6 +32,41 @@ export const resolveAppealSchema = z.object({
   decision: z.enum(['approve', 'reject']),
 });
 
+// ── Coach request resolution (Slice G2) ─────────────────────────────────────
+// A coach accepts (links the client) or declines a request addressed to them.
+// resolve_coach_request is the only writer of accept/decline + the coach link.
+export const resolveCoachRequestSchema = z.object({
+  request_id: z.string().uuid(),
+  decision: z.enum(['accept', 'decline']),
+});
+
+// ── Admin ban/unban from user search (Slice G3) ─────────────────────────────
+// Sets profiles.banned_at directly (client-immutable, service-role only). The Edge
+// Function re-checks the caller is an admin before applying.
+export const adminSetBanSchema = z.object({
+  user_id: z.string().uuid(),
+  banned: z.boolean(),
+});
+
+// ── Food barcode lookup (Slice G4) ──────────────────────────────────────────
+// Input: a numeric barcode (EAN/UPC, 6–14 digits). Output: the food mapped from the
+// untrusted OpenFoodFacts response, re-validated + bounded before it leaves the proxy
+// (§4/§9). z.coerce tolerates the loosely-typed external JSON; integer macros per 100 g.
+export const barcodeLookupSchema = z.object({
+  barcode: z.string().regex(/^\d{6,14}$/),
+});
+
+export const barcodeFoodSchema = z.object({
+  name: z.string().min(1).max(120),
+  kcal_per_100g: z.coerce.number().int().min(0).max(2000),
+  protein_g_per_100g: z.coerce.number().int().min(0).max(300),
+  carbs_g_per_100g: z.coerce.number().int().min(0).max(300),
+  fat_g_per_100g: z.coerce.number().int().min(0).max(300),
+  serving_label: z.string().max(40).nullable().optional(),
+  serving_grams: z.coerce.number().int().min(0).max(5000).nullable().optional(),
+  barcode: z.string(),
+});
+
 // ── Native push fan-out (Phase 17 Slice 2, §3/§8) ───────────────────────────
 // push-send is invoked ONLY by the notifications AFTER INSERT trigger (0041) via
 // pg_net, carrying the service-role key as its bearer. The payload is just the id

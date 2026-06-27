@@ -5,6 +5,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
 import { listBodyMetrics, type BodyMetric } from '../../../src/lib/body-metrics';
 import { Screen, Text, GlassCard, Segmented, LineChart, EmptyState } from '../../../src/components/ui';
@@ -21,10 +22,11 @@ function longDate(iso: string): string {
 const kg = (g: number | null | undefined) => (g == null ? null : Math.round((g / 1000) * 10) / 10);
 const pct = (bp: number | null | undefined) => (bp == null ? null : Math.round((bp / 100) * 10) / 10);
 
+// Label comes from t(`progress.field.${field}`); only the unit + accessor live here.
 const FIELD = {
-  weight: { label: 'Weight', unit: ' kg', pick: (m: BodyMetric) => kg(m.weight_grams) },
-  fat: { label: 'Body fat', unit: '%', pick: (m: BodyMetric) => pct(m.body_fat_bp) },
-  muscle: { label: 'Muscle', unit: ' kg', pick: (m: BodyMetric) => kg(m.skeletal_muscle_mass_grams) },
+  weight: { unit: ' kg', pick: (m: BodyMetric) => kg(m.weight_grams) },
+  fat: { unit: '%', pick: (m: BodyMetric) => pct(m.body_fat_bp) },
+  muscle: { unit: ' kg', pick: (m: BodyMetric) => kg(m.skeletal_muscle_mass_grams) },
 } as const;
 
 function Stat({ label, value, delta, lowerIsBetter }: { label: string; value: string; delta: number | null; lowerIsBetter?: boolean }) {
@@ -52,6 +54,7 @@ function Stat({ label, value, delta, lowerIsBetter }: { label: string; value: st
 }
 
 export default function BodyComp() {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const selfId = session?.user?.id;
   const { clientId } = useLocalSearchParams<{ clientId?: string }>();
@@ -106,17 +109,17 @@ export default function BodyComp() {
         contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: 120, gap: theme.spacing.sm }}
         ListHeaderComponent={
           <View style={{ gap: theme.spacing.md, marginBottom: theme.spacing.xs }}>
-            <Text variant="h2">Body composition</Text>
+            <Text variant="h2">{t('progress.bodyComposition')}</Text>
 
             {latest ? (
               <GlassCard glowColor={theme.colors.primary} style={{ gap: theme.spacing.md }}>
                 <View style={{ flexDirection: 'row' }}>
-                  <Stat label="Weight" value={kg(latest.weight_grams) != null ? `${kg(latest.weight_grams)}kg` : '—'} delta={delta((m) => kg(m.weight_grams))} />
-                  <Stat label="Body fat" value={pct(latest.body_fat_bp) != null ? `${pct(latest.body_fat_bp)}%` : '—'} delta={delta((m) => pct(m.body_fat_bp))} lowerIsBetter />
-                  <Stat label="Muscle" value={kg(latest.skeletal_muscle_mass_grams) != null ? `${kg(latest.skeletal_muscle_mass_grams)}kg` : '—'} delta={delta((m) => kg(m.skeletal_muscle_mass_grams))} lowerIsBetter={false} />
+                  <Stat label={t('progress.field.weight')} value={kg(latest.weight_grams) != null ? `${kg(latest.weight_grams)}kg` : '—'} delta={delta((m) => kg(m.weight_grams))} />
+                  <Stat label={t('progress.field.fat')} value={pct(latest.body_fat_bp) != null ? `${pct(latest.body_fat_bp)}%` : '—'} delta={delta((m) => pct(m.body_fat_bp))} lowerIsBetter />
+                  <Stat label={t('progress.field.muscle')} value={kg(latest.skeletal_muscle_mass_grams) != null ? `${kg(latest.skeletal_muscle_mass_grams)}kg` : '—'} delta={delta((m) => kg(m.skeletal_muscle_mass_grams))} lowerIsBetter={false} />
                 </View>
                 <Text variant="caption" muted style={{ textAlign: 'center' }}>
-                  Latest: {longDate(latest.measured_at)} · coach-verified
+                  {t('progress.latestVerified', { date: longDate(latest.measured_at) })}
                 </Text>
               </GlassCard>
             ) : null}
@@ -125,9 +128,9 @@ export default function BodyComp() {
               <GlassCard style={{ gap: theme.spacing.md }}>
                 <Segmented
                   options={[
-                    { label: 'Body fat', value: 'fat' },
-                    { label: 'Weight', value: 'weight' },
-                    { label: 'Muscle', value: 'muscle' },
+                    { label: t('progress.field.fat'), value: 'fat' },
+                    { label: t('progress.field.weight'), value: 'weight' },
+                    { label: t('progress.field.muscle'), value: 'muscle' },
                   ]}
                   value={field}
                   onChange={(v) => setField(v as Field)}
@@ -136,7 +139,7 @@ export default function BodyComp() {
                   <LineChart data={chartData} unit={FIELD[field].unit} />
                 ) : (
                   <Text variant="caption" muted style={{ textAlign: 'center', paddingVertical: theme.spacing.lg }}>
-                    Need at least two readings of {FIELD[field].label.toLowerCase()} to show a trend.
+                    {t('progress.needTwoReadings', { field: t(`progress.field.${field}`).toLowerCase() })}
                   </Text>
                 )}
               </GlassCard>
@@ -144,7 +147,7 @@ export default function BodyComp() {
 
             {history.length > 0 ? (
               <Text variant="label" muted style={{ marginTop: theme.spacing.xs }}>
-                History
+                {t('progress.history')}
               </Text>
             ) : null}
           </View>
@@ -155,8 +158,8 @@ export default function BodyComp() {
           ) : (
             <EmptyState
               icon="body-outline"
-              title="No InBody readings yet"
-              subtitle="When your coach records an InBody scan, your body-composition trend appears here."
+              title={t('progress.noInbodyTitle')}
+              subtitle={t('progress.noInbodySub')}
             />
           )
         }
@@ -167,8 +170,8 @@ export default function BodyComp() {
                 <Text variant="bodyStrong">{longDate(item.measured_at)}</Text>
                 <Text variant="caption" muted>
                   {kg(item.weight_grams)}kg
-                  {item.body_fat_bp != null ? ` · ${pct(item.body_fat_bp)}% fat` : ''}
-                  {item.skeletal_muscle_mass_grams != null ? ` · ${kg(item.skeletal_muscle_mass_grams)}kg muscle` : ''}
+                  {item.body_fat_bp != null ? t('progress.itemFat', { pct: pct(item.body_fat_bp) }) : ''}
+                  {item.skeletal_muscle_mass_grams != null ? t('progress.itemMuscle', { kg: kg(item.skeletal_muscle_mass_grams) }) : ''}
                 </Text>
               </View>
             </View>

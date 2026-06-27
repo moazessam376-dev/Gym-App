@@ -18,16 +18,19 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { usePreventRemove } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
-import { confirmDestructive } from '../../../src/lib/confirm';
+import { confirm, confirmDestructive } from '../../../src/lib/confirm';
+import { haptics } from '../../../src/lib/haptics';
 import {
   createDay,
   createMeal,
   createWeek,
   deleteDay,
   deleteMeal,
+  deletePlan,
   deleteWeek,
   duplicateWeek,
   getPlan,
@@ -56,14 +59,17 @@ import {
   type Macros,
 } from '../../../src/lib/plan-ui';
 import { adjustPlan, getPlanInsight } from '../../../src/lib/coach-ai';
-import { Icon } from '../../../src/components/ui';
+import { listClientNotes, type WorkoutNote } from '../../../src/lib/workout-notes';
+import { Icon, useToast } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 export default function PlanEditor() {
   const { t } = useTranslation();
   const { role } = useAuth();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const navigation = useNavigation();
+  const toast = useToast();
+  const { id, fresh } = useLocalSearchParams<{ id: string; fresh?: string }>();
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [weeks, setWeeks] = useState<Week[]>([]);
@@ -79,6 +85,12 @@ export default function PlanEditor() {
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [adjustPrompt, setAdjustPrompt] = useState('');
   const [adjustBusy, setAdjustBusy] = useState(false);
+  // A freshly cloned/blank template is UNCOMMITTED until the coach taps "Save to my
+  // plans" (or assigns it). `kept` records that commitment for this editor session.
+  const [kept, setKept] = useState(false);
+  // Athlete workout notes for THIS assigned plan's exercises, keyed by plan_exercise_id,
+  // so the coach sees the client's feedback inline while amending the plan (0051).
+  const [exNotes, setExNotes] = useState<Record<string, WorkoutNote[]>>({});
 
   const loadWeekDays = useCallback(async (wid: string) => {
     const ds = await listDays(wid);
@@ -103,6 +115,17 @@ export default function PlanEditor() {
       const p = await getPlan(id);
       setPlan(p);
       if (!p) return;
+      // Assigned plan → pull the client's workout notes and group by exercise so they
+      // render inline on each exercise row (the coach RLS already permits this read).
+      if (p.client_id) {
+        const cn = await listClientNotes(p.client_id, 100).catch(() => [] as WorkoutNote[]);
+        const grouped: Record<string, WorkoutNote[]> = {};
+        for (const n of cn) {
+          if (!n.plan_exercise_id) continue;
+          (grouped[n.plan_exercise_id] ??= []).push(n);
+        }
+        setExNotes(grouped);
+      }
       if (p.type === 'training') {
         const ws = await listWeeks(id);
         setWeeks(ws);
@@ -143,6 +166,28 @@ export default function PlanEditor() {
     },
     [loadWeekDays],
   );
+
+  // Don't silently keep a freshly-created template the coach never committed to. While
+  // it's uncommitted, leaving prompts Discard / Keep-editing; Discard deletes the clone
+  // so it never lands in "your plans". Tapping "Save to my plans" (or assigning) clears
+  // this. Templates opened from the list carry no `fresh` flag, so they edit normally.
+  const uncommitted = fresh === '1' && plan?.client_id === null && !kept;
+  usePreventRemove(uncommitted, ({ data }) => {
+    confirm(
+      t('planEditor.keepTitle'),
+      t('planEditor.keepBody'),
+      t('planEditor.discardDraft'),
+      t('common.keepEditing'),
+    ).then(async (discard) => {
+      if (!discard) return; // keep editing → stay
+      try {
+        if (plan) await deletePlan(plan.id);
+      } catch {
+        /* best-effort; leaving anyway */
+      }
+      navigation.dispatch(data.action);
+    });
+  });
 
   if (role && role !== 'coach') return <Redirect href="/" />;
   if (loading) {
@@ -278,6 +323,14 @@ export default function PlanEditor() {
     }
   }
 
+  // Commit a fresh template to "your plans" — it's already in the DB, so this just
+  // clears the discard-on-leave guard and confirms it to the coach.
+  function onKeepTemplate() {
+    setKept(true);
+    haptics.tap();
+    toast.show(t('planEditor.savedToMyPlans'));
+  }
+
   async function onTogglePublish() {
     if (!plan) return;
     setBusy(true);
@@ -288,6 +341,27 @@ export default function PlanEditor() {
       Alert.alert(t('common.errorTitle'), t('planEditor.statusError'));
     } finally {
       setBusy(false);
+    }
+  }
+
+  // Throw away a draft (e.g. a bad AI generation) instead of leaving it orphaned.
+  // Drafts are never visible to the client, so this is safe; published plans use
+  // the unpublish path instead. RLS plans_delete allows the authoring coach.
+  async function onDiscardDraft() {
+    if (!plan) return;
+    const ok = await confirmDestructive(
+      t('planEditor.discardTitle'),
+      t('planEditor.discardBody'),
+      t('planEditor.discardDraft'),
+    );
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await deletePlan(plan.id);
+      router.back();
+    } catch {
+      setBusy(false);
+      Alert.alert(t('common.errorTitle'), t('planEditor.deleteError'));
     }
   }
 
@@ -375,10 +449,27 @@ export default function PlanEditor() {
           </View>
           <Text style={styles.type}>{t(`common.${plan.type}`)}</Text>
 
+          {/* Make the draft→published boundary explicit: an assigned draft is the
+              coach's WIP and isn't visible to the client until Published. */}
+          {!isTemplate && plan.status === 'draft' ? (
+            <Text style={styles.draftHint}>{t('planEditor.draftHint')}</Text>
+          ) : null}
+
+          {/* Fresh, uncommitted template → an explicit "Save to my plans" (the user's
+              requested fix). Until tapped, leaving the editor discards the clone. */}
+          {uncommitted ? (
+            <Pressable style={[styles.headerBtn, styles.save]} onPress={onKeepTemplate} disabled={busy}>
+              <Text style={[styles.headerBtnText, styles.saveText]}>{t('planEditor.saveToMyPlans')}</Text>
+            </Pressable>
+          ) : null}
+
           {isTemplate ? (
             <Pressable
               style={[styles.headerBtn, styles.assign]}
-              onPress={() => router.push({ pathname: '/coach/assign/[id]', params: { id: plan.id } })}
+              onPress={() => {
+                setKept(true); // assigning commits the template too
+                router.push({ pathname: '/coach/assign/[id]', params: { id: plan.id } });
+              }}
             >
               <Text style={styles.headerBtnText}>{t('planEditor.assignToClient')}</Text>
             </Pressable>
@@ -388,7 +479,7 @@ export default function PlanEditor() {
               onPress={onTogglePublish}
               disabled={busy}
             >
-              <Text style={styles.headerBtnText}>
+              <Text style={[styles.headerBtnText, styles.publishText]}>
                 {published ? t('planEditor.unpublish') : t('planEditor.publish')}
               </Text>
             </Pressable>
@@ -398,6 +489,14 @@ export default function PlanEditor() {
           {plan.status === 'draft' ? (
             <Pressable style={[styles.headerBtn, styles.adjust]} onPress={openAdjust} disabled={busy}>
               <Text style={styles.headerBtnText}>{t('planEditor.adjustWithAi')}</Text>
+            </Pressable>
+          ) : null}
+
+          {/* Discard — only for an assigned draft (never a template, never published).
+              Explicit alternative to silently leaving an orphaned draft behind. */}
+          {!isTemplate && plan.status === 'draft' ? (
+            <Pressable style={[styles.headerBtn, styles.discard]} onPress={onDiscardDraft} disabled={busy}>
+              <Text style={styles.discardText}>{t('planEditor.discardDraft')}</Text>
             </Pressable>
           ) : null}
 
@@ -461,6 +560,7 @@ export default function PlanEditor() {
                   key={d.id}
                   day={d}
                   exercises={exByDay[d.id] ?? []}
+                  notesByExercise={exNotes}
                   canMoveUp={i > 0}
                   canMoveDown={i < days.length - 1}
                   onMoveUp={() => moveDay(d, 'up')}
@@ -690,6 +790,7 @@ function NoteEditor({
 function DayCard({
   day,
   exercises,
+  notesByExercise,
   canMoveUp,
   canMoveDown,
   onMoveUp,
@@ -702,6 +803,7 @@ function DayCard({
 }: {
   day: Day;
   exercises: ExerciseRow[];
+  notesByExercise: Record<string, WorkoutNote[]>;
   canMoveUp: boolean;
   canMoveDown: boolean;
   onMoveUp: () => void;
@@ -747,6 +849,15 @@ function DayCard({
                     .join('  ·  ') || t('planEditor.tapToSetDetails')}
                 </Text>
                 {e.note ? <Text style={styles.exNote}>“{e.note}”</Text> : null}
+                {(notesByExercise[e.id] ?? []).map((n) => {
+                  const tint = n.category === 'compliment' ? theme.colors.success : theme.colors.warning;
+                  return (
+                    <View key={n.id} style={styles.clientNoteRow}>
+                      <Icon name="clipboard" size={12} color={tint} />
+                      <Text style={[styles.clientNoteText, { color: tint }]}>{n.body}</Text>
+                    </View>
+                  );
+                })}
               </Pressable>
             ))}
         </View>
@@ -814,10 +925,16 @@ const styles = StyleSheet.create({
   statusText: { color: c.onPrimary, fontSize: 12, fontFamily: f.bodyBold, textTransform: 'capitalize' },
   headerBtn: { borderRadius: 10, paddingVertical: 13, alignItems: 'center', marginTop: 6 },
   assign: { backgroundColor: c.secondary },
-  publish: { backgroundColor: c.success },
+  save: { backgroundColor: c.primary }, // brand Signal cyan — the primary commit action
+  saveText: { color: c.onPrimary }, // dark text ON cyan (onPrimary is onyx, not white)
+  publish: { backgroundColor: c.primary }, // brand Signal cyan — the primary CTA, NOT success-green
+  publishText: { color: c.onPrimary }, // dark onyx text on cyan/amber (matches saveText; never white)
   unpublish: { backgroundColor: c.warning },
   adjust: { backgroundColor: c.glass, borderWidth: 1, borderColor: c.glassBorder },
+  discard: { backgroundColor: c.glass, borderWidth: 1, borderColor: c.danger },
   headerBtnText: { color: c.white, fontSize: 15, fontFamily: f.bodySemiBold },
+  draftHint: { color: c.textMuted, fontSize: 13, fontFamily: f.bodyRegular, marginTop: 2 },
+  discardText: { color: c.danger, fontSize: 15, fontFamily: f.bodySemiBold },
   sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: c.overlay },
   sheet: { backgroundColor: c.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20, paddingBottom: 28, gap: 12 },
   sheetTitle: { color: c.text, fontSize: 18, fontFamily: f.displaySemiBold, flex: 1 },
@@ -866,6 +983,9 @@ const styles = StyleSheet.create({
   exName: { fontSize: 15, fontFamily: f.bodySemiBold, color: c.text },
   exMeta: { fontSize: 13, fontFamily: f.bodyRegular, color: c.textMuted, marginTop: 1 },
   exNote: { fontSize: 13, fontFamily: f.bodyRegular, color: c.primary, fontStyle: 'italic', marginTop: 3 },
+  // The client's logged workout note shown inline on the exercise (0051).
+  clientNoteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: 4 },
+  clientNoteText: { flex: 1, fontSize: 13, fontFamily: f.bodyRegular },
   addInline: { paddingVertical: 10, marginTop: 4 },
   addInlineText: { color: c.primary, fontFamily: f.bodySemiBold, fontSize: 15 },
   addBox: { gap: 8, marginTop: 12 },

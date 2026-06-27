@@ -43,6 +43,12 @@ Topic detail for CLAUDE.md §2 ("deny by default"). **This file wins over a prom
   `Number(...)` in the `supabase.rpc(...)` wrapper (`src/lib/*`) before the UI does math or
   `.toFixed()` — e.g. `listTopAthletes` maps `ffmi: Number(r.ffmi)`. Integer columns come
   back as numbers; only `numeric`/`decimal` need this.
+- **A PostgREST embed of a new FK is hinted by the FK *column* name, not the constraint** —
+  `workout_note:workout_notes!workout_note_id(…)` (like the self-referential `reply_to:messages!reply_to_id`).
+  The embed respects the embedded table's RLS (a coach reading a client note message resolves it
+  via `is_coach_of`), so no new read path is opened. **Realtime payloads carry the raw columns but
+  NOT embeds** — a live row's embedded relation is absent; default it to `null` in the realtime
+  coerce and let the next full fetch fill it in (chat note cards show body-only until refetch).
 
 ## Test gate
 - The harness in `supabase/tests/rls/` MUST stay green (CLAUDE.md §11). Any new

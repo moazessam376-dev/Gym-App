@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { acceptInvitationSchema } from '../src/schemas/invitation';
 import { acceptInvitation } from '../src/lib/invitations';
 import { Icon, Screen, Text, Input, Button } from '../src/components/ui';
@@ -15,6 +16,7 @@ import { theme } from '../src/theme';
 const MONO = theme.fontFamily.monoBold; // JetBrains Mono — brand mono for codes
 
 export default function AcceptInvite() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [token, setToken] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -25,7 +27,7 @@ export default function AcceptInvite() {
     setError(null);
     const parsed = acceptInvitationSchema.safeParse({ token: token.trim() });
     if (!parsed.success) {
-      setError('That doesn’t look like a valid invite token.');
+      setError(t('acceptInvite.invalidToken'));
       return;
     }
     setSubmitting(true);
@@ -34,12 +36,12 @@ export default function AcceptInvite() {
       if (result.ok) {
         setDone(true);
       } else if (result.reason === 'already_has_coach') {
-        setError('You already have a coach. You can only be linked to one at a time.');
+        setError(t('acceptInvite.alreadyHasCoach'));
       } else {
-        setError('This invite couldn’t be accepted. It may be used, expired, or for a different email.');
+        setError(t('acceptInvite.failed'));
       }
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError(t('common.error'));
     } finally {
       setSubmitting(false);
     }
@@ -62,12 +64,12 @@ export default function AcceptInvite() {
             <Icon name="checkmark" size={40} color={theme.colors.bg} />
           </View>
           <Text variant="h1" align="center">
-            You’re connected!
+            {t('acceptInvite.connectedTitle')}
           </Text>
           <Text variant="body" muted align="center">
-            Your coach can now see you on their roster.
+            {t('acceptInvite.connectedBody')}
           </Text>
-          <Button title="Go to home" onPress={() => router.replace('/(tabs)')} style={{ marginTop: theme.spacing.lg, alignSelf: 'stretch' }} />
+          <Button title={t('acceptInvite.goHome')} onPress={() => router.replace('/(tabs)')} style={{ marginTop: theme.spacing.lg, alignSelf: 'stretch' }} />
         </View>
       </Screen>
     );
@@ -77,9 +79,9 @@ export default function AcceptInvite() {
     <Screen gradient padded={false} edges={['bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1, justifyContent: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
-          <Text variant="h1">Accept an invite</Text>
+          <Text variant="h1">{t('acceptInvite.title')}</Text>
           <Text variant="body" muted>
-            Paste the token your coach shared with you.
+            {t('acceptInvite.prompt')}
           </Text>
           <Input
             value={token}
@@ -91,7 +93,7 @@ export default function AcceptInvite() {
             error={error}
             style={{ fontFamily: MONO, fontSize: 14 }}
           />
-          <Button title="Accept invite" onPress={onSubmit} loading={submitting} size="lg" style={{ marginTop: theme.spacing.xs }} />
+          <Button title={t('acceptInvite.submit')} onPress={onSubmit} loading={submitting} size="lg" style={{ marginTop: theme.spacing.xs }} />
         </View>
       </KeyboardAvoidingView>
     </Screen>

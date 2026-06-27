@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../src/lib/supabase';
 import { credentialsSchema } from '../../src/schemas/auth';
 import { Screen, Text, Input, Button } from '../../src/components/ui';
@@ -9,6 +10,7 @@ import { Wordmark } from '../../src/components/brand';
 import { theme } from '../../src/theme';
 
 export default function SignIn() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,7 +21,7 @@ export default function SignIn() {
     setError(null);
     const parsed = credentialsSchema.safeParse({ email: email.trim(), password });
     if (!parsed.success) {
-      setError('Enter a valid email and a password of at least 8 characters.');
+      setError(t('auth.invalidCredentials'));
       return;
     }
     setLoading(true);
@@ -27,7 +29,7 @@ export default function SignIn() {
     setLoading(false);
     if (authError) {
       // Generic message — never echo provider/DB internals to the client (§4).
-      setError('Invalid email or password.');
+      setError(t('auth.invalidEmailPassword'));
       return;
     }
     // Success: AuthProvider's onAuthStateChange flips the session and the root
@@ -41,13 +43,13 @@ export default function SignIn() {
           <View style={{ alignItems: 'center', gap: theme.spacing.xs, marginBottom: theme.spacing.md }}>
             <Wordmark size={44} />
             <Text variant="label" muted style={{ letterSpacing: 2 }}>
-              Earned, not given
+              {t('auth.tagline')}
             </Text>
           </View>
 
           <Input
-            label="Email"
-            placeholder="you@example.com"
+            label={t('auth.email')}
+            placeholder={t('auth.emailPlaceholder')}
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
@@ -56,7 +58,7 @@ export default function SignIn() {
             editable={!loading}
           />
           <Input
-            label="Password"
+            label={t('auth.password')}
             placeholder="••••••••"
             secureTextEntry
             autoCapitalize="none"
@@ -67,23 +69,32 @@ export default function SignIn() {
             error={error}
           />
 
-          <Button title="Sign in" onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
+          <Button title={t('auth.signIn')} onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
 
           <GoogleSignInButton onError={setError} disabled={loading} />
 
-          <Pressable onPress={() => router.push('/(auth)/forgot-password')} style={{ alignSelf: 'center' }}>
+          <Pressable
+            onPress={() => router.push('/(auth)/forgot-password')}
+            style={{ alignSelf: 'center' }}
+            accessibilityRole="button"
+            accessibilityLabel={t('auth.forgotPassword')}
+          >
             <Text variant="body" color="link">
-              Forgot password?
+              {t('auth.forgotPassword')}
             </Text>
           </Pressable>
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: theme.spacing.sm }}>
             <Text variant="body" muted>
-              Don&apos;t have an account?{' '}
+              {t('auth.noAccount')}
             </Text>
-            <Pressable onPress={() => router.replace('/(auth)/sign-up')}>
+            <Pressable
+              onPress={() => router.replace('/(auth)/sign-up')}
+              accessibilityRole="button"
+              accessibilityLabel={t('auth.signUp')}
+            >
               <Text variant="bodyStrong" color="link">
-                Sign up
+                {t('auth.signUp')}
               </Text>
             </Pressable>
           </View>

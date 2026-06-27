@@ -39,6 +39,8 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // Subtle cross-shift when switching tabs (not a hard cut). Tuned in theme.motion.
+        animation: theme.motion.tab,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarStyle: {
@@ -94,18 +96,9 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="leaderboard"
+        name="performance"
         options={{
-          title: t('tabs.ranks'),
-          href: showFor(isCoach),
-          lazy: eager(isCoach),
-          tabBarIcon: tabIcon('trophy'),
-        }}
-      />
-      <Tabs.Screen
-        name="analytics"
-        options={{
-          title: t('tabs.analytics'),
+          title: t('tabs.performance'),
           href: showFor(isCoach),
           lazy: eager(isCoach),
           tabBarIcon: tabIcon('bar-chart'),

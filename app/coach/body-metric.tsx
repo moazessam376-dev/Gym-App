@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import {
   addBodyMetric,
@@ -24,6 +25,8 @@ import {
   type Segment,
 } from '../../src/lib/body-metrics';
 import { requestInBodyInsights } from '../../src/lib/inbody-ocr';
+import { confirmDestructive } from '../../src/lib/confirm';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Icon, Screen, Text, Input, Button, GlassCard, SignedImage } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
@@ -64,6 +67,7 @@ function segText(s?: Segment | null): string | null {
 // The "Additional InBody data" card — read-only context captured by the OCR (segmental,
 // history, scores, water ratios). Renders only the fields the sheet actually had.
 function ExtrasCard({ extras }: { extras: BodyMetricExtras }) {
+  const { t } = useTranslation();
   if (!extras) return null;
   const lean = segText(extras.segmental_lean_kg);
   const fat = segText(extras.segmental_fat_kg);
@@ -89,23 +93,23 @@ function ExtrasCard({ extras }: { extras: BodyMetricExtras }) {
   return (
     <GlassCard style={{ gap: theme.spacing.sm }}>
       <Text variant="label" muted>
-        Additional InBody data (from the scan)
+        {t('bodyMetric.extrasTitle')}
       </Text>
-      <Row label="InBody score" value={extras.inbody_score} />
-      <Row label="Fat-free mass" value={extras.fat_free_mass_kg} unit="kg" />
-      <Row label="Total body water" value={extras.total_body_water_kg} unit="kg" />
-      <Row label="ECW : TBW ratio" value={extras.ecw_tbw_ratio} />
-      <Row label="Phase angle" value={extras.phase_angle_deg} unit="°" />
-      <Row label="Protein" value={extras.protein_kg} unit="kg" />
-      <Row label="Minerals" value={extras.minerals_kg} unit="kg" />
-      <Row label="Target weight" value={extras.target_weight_kg} unit="kg" />
-      <Row label="Weight control" value={extras.weight_control_kg} unit="kg" />
-      <Row label="Fat control" value={extras.fat_control_kg} unit="kg" />
-      <Row label="Muscle control" value={extras.muscle_control_kg} unit="kg" />
+      <Row label={t('bodyMetric.inbodyScore')} value={extras.inbody_score} />
+      <Row label={t('bodyMetric.fatFreeMass')} value={extras.fat_free_mass_kg} unit="kg" />
+      <Row label={t('bodyMetric.totalBodyWater')} value={extras.total_body_water_kg} unit="kg" />
+      <Row label={t('bodyMetric.ecwTbw')} value={extras.ecw_tbw_ratio} />
+      <Row label={t('bodyMetric.phaseAngle')} value={extras.phase_angle_deg} unit="°" />
+      <Row label={t('bodyMetric.protein')} value={extras.protein_kg} unit="kg" />
+      <Row label={t('bodyMetric.minerals')} value={extras.minerals_kg} unit="kg" />
+      <Row label={t('bodyMetric.targetWeight')} value={extras.target_weight_kg} unit="kg" />
+      <Row label={t('bodyMetric.weightControl')} value={extras.weight_control_kg} unit="kg" />
+      <Row label={t('bodyMetric.fatControl')} value={extras.fat_control_kg} unit="kg" />
+      <Row label={t('bodyMetric.muscleControl')} value={extras.muscle_control_kg} unit="kg" />
       {lean ? (
         <View style={{ gap: 2 }}>
           <Text variant="caption" muted>
-            Segmental lean (RA·LA·Trunk·RL·LL, kg)
+            {t('bodyMetric.segLean')}
           </Text>
           <Text variant="caption">{lean}</Text>
         </View>
@@ -113,7 +117,7 @@ function ExtrasCard({ extras }: { extras: BodyMetricExtras }) {
       {fat ? (
         <View style={{ gap: 2 }}>
           <Text variant="caption" muted>
-            Segmental fat (RA·LA·Trunk·RL·LL, kg)
+            {t('bodyMetric.segFat')}
           </Text>
           <Text variant="caption">{fat}</Text>
         </View>
@@ -121,7 +125,7 @@ function ExtrasCard({ extras }: { extras: BodyMetricExtras }) {
       {history.length > 0 ? (
         <View style={{ gap: 2, marginTop: theme.spacing.xs }}>
           <Text variant="caption" muted>
-            On-sheet history (date · wt · muscle · fat%)
+            {t('bodyMetric.onSheetHistory')}
           </Text>
           {history.slice(0, 8).map((h, i) => (
             <Text key={i} variant="caption">
@@ -139,7 +143,53 @@ function ExtrasCard({ extras }: { extras: BodyMetricExtras }) {
   );
 }
 
+// Date field: a tappable native date picker on iOS/Android (no more error-prone
+// YYYY-MM-DD typing); web keeps a typed field (the native picker has no web support).
+// The native module ships with the next dev-client build — until then web works and
+// the rest of the screen is unaffected.
+function DateField({ label, value, onChange }: { label: string; value: string; onChange: (d: string) => void }) {
+  const { t } = useTranslation();
+  const [show, setShow] = useState(false);
+  if (Platform.OS === 'web') {
+    return <Input label={label} value={value} onChangeText={onChange} placeholder="YYYY-MM-DD" autoCapitalize="none" />;
+  }
+  const valid = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const current = valid ? new Date(`${value}T00:00:00`) : new Date();
+  return (
+    <View style={{ gap: 6 }}>
+      <Text variant="label" muted>
+        {label}
+      </Text>
+      <Pressable
+        onPress={() => setShow(true)}
+        style={{
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          borderRadius: theme.radii.md,
+          backgroundColor: theme.colors.surfaceElevated,
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: 14,
+        }}
+      >
+        <Text variant="body">{valid ? value : t('bodyMetric.selectDate')}</Text>
+      </Pressable>
+      {show ? (
+        <DateTimePicker
+          value={current}
+          mode="date"
+          maximumDate={new Date()}
+          onChange={(_e, d) => {
+            setShow(false);
+            if (d) onChange(d.toISOString().slice(0, 10));
+          }}
+        />
+      ) : null}
+    </View>
+  );
+}
+
 export default function BodyMetricScreen() {
+  const { t } = useTranslation();
   const { role, session } = useAuth();
   const router = useRouter();
   const selfId = session?.user?.id;
@@ -196,7 +246,7 @@ export default function BodyMetricScreen() {
         setInsight(ins?.analysis ?? null);
         setComments(cs);
       } catch {
-        if (active) setError('Could not load this reading.');
+        if (active) setError(t('bodyMetric.loadError'));
       } finally {
         if (active) setLoadingMetric(false);
       }
@@ -212,7 +262,7 @@ export default function BodyMetricScreen() {
     setError(null);
     const w = num(weight);
     if (w == null || w <= 0) {
-      setError('Enter the weight (kg) from the sheet.');
+      setError(t('bodyMetric.weightRequired'));
       return;
     }
     const bf = num(bodyFat);
@@ -245,26 +295,32 @@ export default function BodyMetricScreen() {
           bmr_kcal: bm == null ? null : Math.round(bm),
         });
       } else {
-        setError('Missing client.');
+        setError(t('bodyMetric.missingClient'));
         setBusy(false);
         return;
       }
       router.back();
     } catch {
-      setError('Could not save that reading. Please try again.');
+      setError(t('bodyMetric.saveError'));
       setBusy(false);
     }
   }
 
   async function onDiscard() {
     if (!metricId) return;
+    const ok = await confirmDestructive(
+      t('bodyMetric.discardTitle'),
+      t('bodyMetric.discardBody'),
+      t('bodyMetric.discard'),
+    );
+    if (!ok) return;
     setError(null);
     setBusy(true);
     try {
       await deleteBodyMetric(metricId);
       router.back();
     } catch {
-      setError('Could not discard that reading. Please try again.');
+      setError(t('bodyMetric.discardError'));
       setBusy(false);
     }
   }
@@ -276,10 +332,10 @@ export default function BodyMetricScreen() {
     try {
       const r = await requestInBodyInsights(metricId);
       if (r.status === 'analyzed' && r.analysis) setInsight(r.analysis);
-      else if (r.status === 'rate_limited') setInsightNotice('AI analysis limit reached for now. Try again shortly.');
-      else setInsightNotice('Couldn’t generate an analysis. Please try again.');
+      else if (r.status === 'rate_limited') setInsightNotice(t('bodyMetric.aiLimit'));
+      else setInsightNotice(t('bodyMetric.aiFailed'));
     } catch {
-      setInsightNotice('Couldn’t generate an analysis. Please try again.');
+      setInsightNotice(t('bodyMetric.aiFailed'));
     } finally {
       setInsightBusy(false);
     }
@@ -325,10 +381,10 @@ export default function BodyMetricScreen() {
           contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: 120, gap: theme.spacing.md }}
           keyboardShouldPersistTaps="handled"
         >
-          <Text variant="h2">{confirmMode ? 'Review InBody reading' : 'New InBody reading'}</Text>
+          <Text variant="h2">{confirmMode ? t('bodyMetric.reviewTitle') : t('bodyMetric.newTitle')}</Text>
           {clientName ? (
             <Text variant="caption" muted>
-              For {clientName}
+              {t('bodyMetric.forClient', { name: clientName })}
             </Text>
           ) : null}
 
@@ -341,7 +397,7 @@ export default function BodyMetricScreen() {
                 <View style={{ padding: theme.spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: theme.spacing.xs }}>
                   <Icon name="expand-outline" size={14} color={theme.colors.textMuted} />
                   <Text variant="label" muted style={{ fontSize: 10 }}>
-                    TAP TO ZOOM
+                    {t('bodyMetric.tapToZoom')}
                   </Text>
                 </View>
               </GlassCard>
@@ -350,26 +406,24 @@ export default function BodyMetricScreen() {
 
           <GlassCard style={{ gap: theme.spacing.md }}>
             <Text variant="caption" muted>
-              {confirmMode
-                ? 'Auto-read from the scan above. Check each value against the sheet and correct anything wrong before confirming. Only weight is required.'
-                : 'Enter the values from the client’s InBody sheet. Only weight is required.'}
+              {confirmMode ? t('bodyMetric.reviewIntro') : t('bodyMetric.newIntro')}
             </Text>
 
-            <Input label="Test date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" autoCapitalize="none" />
-            <Input label="Weight (kg)" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder="e.g. 92.5" error={error} />
-            <Input label="Body fat (%)" value={bodyFat} onChangeText={setBodyFat} keyboardType="decimal-pad" placeholder="e.g. 25.6" />
-            <Input label="Skeletal muscle mass (kg)" value={muscle} onChangeText={setMuscle} keyboardType="decimal-pad" placeholder="e.g. 39.2" />
+            <DateField label={t('bodyMetric.testDate')} value={date} onChange={setDate} />
+            <Input label={t('bodyMetric.weightKg')} value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder={t('bodyMetric.weightPlaceholder')} error={error} />
+            <Input label={t('bodyMetric.bodyFat')} value={bodyFat} onChangeText={setBodyFat} keyboardType="decimal-pad" placeholder={t('bodyMetric.bodyFatPlaceholder')} />
+            <Input label={t('bodyMetric.muscle')} value={muscle} onChangeText={setMuscle} keyboardType="decimal-pad" placeholder={t('bodyMetric.musclePlaceholder')} />
             <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-              <Input containerStyle={{ flex: 1 }} label="Visceral fat" value={visceral} onChangeText={setVisceral} keyboardType="number-pad" placeholder="level" />
-              <Input containerStyle={{ flex: 1 }} label="BMR (kcal)" value={bmr} onChangeText={setBmr} keyboardType="number-pad" placeholder="e.g. 1857" />
+              <Input containerStyle={{ flex: 1 }} label={t('bodyMetric.visceral')} value={visceral} onChangeText={setVisceral} keyboardType="number-pad" placeholder={t('bodyMetric.visceralPlaceholder')} />
+              <Input containerStyle={{ flex: 1 }} label={t('bodyMetric.bmr')} value={bmr} onChangeText={setBmr} keyboardType="number-pad" placeholder={t('bodyMetric.bmrPlaceholder')} />
             </View>
           </GlassCard>
 
           {confirmMode ? <ExtrasCard extras={extras} /> : null}
 
-          <Button title={confirmMode ? 'Confirm verified reading' : 'Save verified reading'} onPress={onSave} loading={busy} />
+          <Button title={confirmMode ? t('bodyMetric.confirmReading') : t('bodyMetric.saveReading')} onPress={onSave} loading={busy} />
           {confirmMode ? (
-            <Button title="Discard scan reading" variant="ghost" onPress={onDiscard} disabled={busy} />
+            <Button title={t('bodyMetric.discardReading')} variant="ghost" onPress={onDiscard} disabled={busy} />
           ) : null}
 
           {/* Coach-only AI analysis (decision-support; the client never sees it). */}
@@ -378,7 +432,7 @@ export default function BodyMetricScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                 <Icon name="sparkles" size={16} color={theme.colors.primary} />
                 <Text variant="label" muted style={{ flex: 1 }}>
-                  AI analysis (coach only)
+                  {t('bodyMetric.aiAnalysisTitle')}
                 </Text>
               </View>
               {insight ? (
@@ -387,11 +441,11 @@ export default function BodyMetricScreen() {
                 </Text>
               ) : (
                 <Text variant="caption" muted>
-                  Generate a goal-relative analysis of this reading and the client’s trend.
+                  {t('bodyMetric.aiAnalysisIntro')}
                 </Text>
               )}
               <Button
-                title={insight ? 'Regenerate analysis' : 'Generate AI analysis'}
+                title={insight ? t('bodyMetric.regenerate') : t('bodyMetric.generateAnalysis')}
                 variant="secondary"
                 fullWidth={false}
                 loading={insightBusy}
@@ -409,11 +463,11 @@ export default function BodyMetricScreen() {
           {confirmMode ? (
             <GlassCard style={{ gap: theme.spacing.sm }}>
               <Text variant="label" muted>
-                Comments for the client
+                {t('bodyMetric.commentsTitle')}
               </Text>
               {comments.length === 0 ? (
                 <Text variant="caption" muted>
-                  No comments yet. Leave feedback the client will see on this reading.
+                  {t('bodyMetric.noComments')}
                 </Text>
               ) : (
                 comments.map((c) => (
@@ -435,15 +489,15 @@ export default function BodyMetricScreen() {
               <Input
                 value={commentText}
                 onChangeText={setCommentText}
-                placeholder="Write a comment for the client…"
+                placeholder={t('bodyMetric.commentPlaceholder')}
                 multiline
               />
-              <Button title="Post comment" fullWidth={false} loading={commentBusy} disabled={commentText.trim() === ''} onPress={postComment} />
+              <Button title={t('bodyMetric.postComment')} fullWidth={false} loading={commentBusy} disabled={commentText.trim() === ''} onPress={postComment} />
             </GlassCard>
           ) : null}
 
           <Text variant="caption" muted style={{ textAlign: 'center' }}>
-            Saved as coach-verified — this is what progress and ranks read.
+            {t('bodyMetric.savedFooter')}
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

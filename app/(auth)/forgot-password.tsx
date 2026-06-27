@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { createURL } from 'expo-linking';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../src/lib/supabase';
 import { emailSchema } from '../../src/schemas/auth';
 import { Screen, Text, Input, Button } from '../../src/components/ui';
@@ -14,6 +15,7 @@ import { Wordmark } from '../../src/components/brand';
 import { theme } from '../../src/theme';
 
 export default function ForgotPassword() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export default function ForgotPassword() {
     setError(null);
     const parsed = emailSchema.safeParse({ email: email.trim() });
     if (!parsed.success) {
-      setError('Enter a valid email address.');
+      setError(t('auth.invalidEmail'));
       return;
     }
     setLoading(true);
@@ -47,21 +49,19 @@ export default function ForgotPassword() {
         <View style={{ flex: 1, justifyContent: 'center', padding: theme.spacing.xl, gap: theme.spacing.lg }}>
           <Wordmark size={30} style={{ alignSelf: 'center', marginBottom: theme.spacing.sm }} />
           <View style={{ gap: theme.spacing.xs, marginBottom: theme.spacing.sm }}>
-            <Text variant="h1">Reset your password</Text>
+            <Text variant="h1">{t('auth.resetTitle')}</Text>
             <Text variant="body" muted>
-              {sent
-                ? 'If that email is registered, a reset link is on its way. Check your inbox.'
-                : 'Enter your account email and we’ll send you a reset link.'}
+              {sent ? t('auth.resetSent') : t('auth.resetPrompt')}
             </Text>
           </View>
 
           {sent ? (
-            <Button title="Back to sign in" onPress={() => router.replace('/(auth)/sign-in')} size="lg" />
+            <Button title={t('auth.backToSignIn')} onPress={() => router.replace('/(auth)/sign-in')} size="lg" />
           ) : (
             <>
               <Input
-                label="Email"
-                placeholder="you@example.com"
+                label={t('auth.email')}
+                placeholder={t('auth.emailPlaceholder')}
                 autoCapitalize="none"
                 autoComplete="email"
                 keyboardType="email-address"
@@ -70,11 +70,15 @@ export default function ForgotPassword() {
                 editable={!loading}
                 error={error}
               />
-              <Button title="Send reset link" onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
+              <Button title={t('auth.sendResetLink')} onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
               <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: theme.spacing.sm }}>
-                <Pressable onPress={() => router.replace('/(auth)/sign-in')}>
+                <Pressable
+                  onPress={() => router.replace('/(auth)/sign-in')}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('auth.backToSignIn')}
+                >
                   <Text variant="bodyStrong" color="link">
-                    Back to sign in
+                    {t('auth.backToSignIn')}
                   </Text>
                 </Pressable>
               </View>

@@ -1,19 +1,21 @@
-// Coach → Analytics tab (Phase 15, the anchor). A code-driven KPI dashboard: roster
-// adherence, top athletes by goal-relative progress, plan effectiveness, and the goals
-// the coach reliably delivers — all from DETERMINISTIC, coach-fenced RPCs (0031). AI is
-// thin and last: a single card that NARRATES the computed numbers (coach-only storage).
-// Built web/desktop-responsive — a centered max-width column that becomes a 2-column
-// grid on wide screens (coaches will live in this on web). Coach-only; others redirect.
+// Coach → Performance tab (Slice G1). Merges what used to be three surfaces — the Home
+// top-performers card, the "Ranks" tab, and the "Analytics" tab — into one place, taking
+// the coach from 6 tabs to 5. It carries the Phase-15 KPI dashboard (roster adherence, top
+// athletes by goal-relative progress, plan effectiveness, goals delivered, the thin AI
+// narration) and adds a "This week" engagement board (clients ranked by sessions logged,
+// the old Ranks tab). All from deterministic, coach-fenced RPCs (0031); AI is thin and last.
+// Built web/desktop-responsive. Coach-only; others redirect.
 import { useState } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
-import { forwardChevron } from '../../src/lib/rtl';
+import { forwardChevron, textStart } from '../../src/lib/rtl';
 import {
   useAnalyticsInsight,
   useBodyMetricsBoard,
   useCoachAdherence,
+  useCoachLeaderboard,
   useCoachPlanEffectiveness,
   useMyClients,
   useRefreshOnFocus,
@@ -57,7 +59,7 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
   );
 }
 
-export default function AnalyticsTab() {
+export default function PerformanceTab() {
   const { t } = useTranslation();
   const { role, session } = useAuth();
   const router = useRouter();
@@ -72,6 +74,7 @@ export default function AnalyticsTab() {
   const boardQ = useBodyMetricsBoard();
   const effQ = useCoachPlanEffectiveness();
   const insightQ = useAnalyticsInsight();
+  const weekQ = useCoachLeaderboard();
 
   const [busy, setBusy] = useState(false);
   const [genMsg, setGenMsg] = useState<string | null>(null);
@@ -82,6 +85,7 @@ export default function AnalyticsTab() {
     boardQ.refetch();
     effQ.refetch();
     insightQ.refetch();
+    weekQ.refetch();
   });
 
   // Coach-only surface — clients/admin never see this tab (hidden in the bar) but guard
@@ -95,6 +99,7 @@ export default function AnalyticsTab() {
   const board = boardQ.data ?? [];
   const eff = effQ.data ?? [];
   const insight = insightQ.data ?? null;
+  const week = (weekQ.data ?? []).slice(0, 8);
 
   const avgAdherence = rosterAdherencePct(roster);
   // Only declare "no clients" once the (deployed, reliable) client list has loaded —
@@ -123,12 +128,12 @@ export default function AnalyticsTab() {
       <View style={{ width: '100%', maxWidth: 1100, alignSelf: 'center', gap: theme.spacing.xl }}>
         {/* Header */}
         <View>
-          <Text variant="label" color="primary">
-            {t('analytics.label')}
+          <Text variant="label" color="primary" style={textStart}>
+            {t('performance.label')}
           </Text>
-          <Text variant="h1">{t('analytics.title')}</Text>
-          <Text variant="caption" muted>
-            {t('analytics.subtitle')}
+          <Text variant="h1" style={textStart}>{t('performance.title')}</Text>
+          <Text variant="caption" muted style={textStart}>
+            {t('performance.subtitle')}
           </Text>
         </View>
 
@@ -153,6 +158,42 @@ export default function AnalyticsTab() {
                         : theme.colors.danger
                 }
               />
+            </View>
+
+            {/* This week — engagement board (the former Ranks tab). Clients ranked by
+                sessions logged this week; full-width above the KPI grid. */}
+            <View style={{ gap: theme.spacing.md }}>
+              <SectionHeader title={t('performance.thisWeek')} subtitle={t('performance.thisWeekSub')} />
+              {week.length === 0 ? (
+                <EmptyState icon="trophy-outline" title={t('ranks.emptyTitle')} subtitle={t('ranks.emptySub')} />
+              ) : (
+                week.map((r) => (
+                  <GlassCard
+                    key={r.client_id}
+                    glowColor={r.rank === 1 ? theme.colors.primary : undefined}
+                    onPress={() =>
+                      router.push({ pathname: '/coach/client/[id]', params: { id: r.client_id, name: r.full_name ?? '' } })
+                    }
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                      <Text
+                        color={r.rank <= 3 ? theme.colors.primary : theme.colors.textMuted}
+                        style={{ width: 20, fontFamily: theme.fontFamily.monoBold, fontSize: 15 }}
+                      >
+                        {r.rank}
+                      </Text>
+                      <Avatar name={r.full_name ?? t('home.client')} size={40} />
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text variant="bodyStrong">{r.full_name ?? t('home.client')}</Text>
+                        <Text variant="caption" muted>
+                          {t('ranks.setsLogged', { count: r.sets_done })}
+                        </Text>
+                      </View>
+                      <Badge label={String(r.sessions_done)} tone="primary" solid={r.rank === 1} />
+                    </View>
+                  </GlassCard>
+                ))
+              )}
             </View>
 
             {/* 2-up grid on wide screens, stacked on phone */}

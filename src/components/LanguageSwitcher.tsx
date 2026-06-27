@@ -16,7 +16,7 @@ import {
   type Language,
 } from '@/i18n';
 import { confirm } from '@/lib/confirm';
-import { restartApp } from '@/lib/restart';
+import { isExpoGo, restartApp } from '@/lib/restart';
 import { Text, Segmented } from '@/components/ui';
 import { theme } from '@/theme';
 
@@ -32,15 +32,19 @@ export function LanguageSwitcher() {
     // BEFORE switching so a cancel leaves everything exactly as it was.
     const needsReload = isRTLLanguage(lng) !== isRTLLanguage(current);
     if (needsReload) {
+      // Expo Go can't recreate the native Activity, so a forceRTL flip there only
+      // applies after the user fully closes and reopens the app — tell them that
+      // honestly instead of promising an auto-restart that can't change direction.
+      const expoGo = isExpoGo();
       const ok = await confirm(
         t('language.restartTitle'),
-        t('language.restartBody'),
-        t('language.restartConfirm'),
+        expoGo ? t('language.restartBodyManual') : t('language.restartBody'),
+        expoGo ? t('common.done') : t('language.restartConfirm'),
         t('common.cancel'),
       );
       if (!ok) return;
       await setLanguage(lng);
-      await restartApp();
+      if (!expoGo) await restartApp();
       return;
     }
     await setLanguage(lng);

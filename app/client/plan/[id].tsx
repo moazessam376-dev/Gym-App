@@ -2,7 +2,7 @@
 // only if it's a non-draft plan assigned to this client. Training: Weeks → Days →
 // block-grouped exercises with the coach's cues. Nutrition: meals → foods + macros.
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
@@ -22,7 +22,7 @@ import {
   type Week,
 } from '../../../src/lib/plans';
 import { addMacros, BLOCK_LABEL, BLOCK_ORDER, EMPTY_MACROS, sumMacros, type Macros } from '../../../src/lib/plan-ui';
-import { Icon, Screen, Text, Card, GlassCard, Badge, Button } from '../../../src/components/ui';
+import { Icon, Screen, ScreenLoader, Text, Card, GlassCard, Badge, Button } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 function CoachNote({ text }: { text: string }) {
@@ -106,11 +106,7 @@ export default function ClientPlanView() {
 
   if (role && role !== 'client') return <Redirect href="/" />;
   if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
+    return <ScreenLoader style={{ backgroundColor: theme.colors.bg }} />;
   }
   if (!plan) {
     return (
