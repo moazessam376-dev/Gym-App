@@ -204,6 +204,17 @@ These are now the defaults — follow them in new work (full detail in
   strings (`BLOCK_LABEL`, `goalProgress()` headlines).
 - **AI cost:** every model call records usage via `recordCost(...)` on success
   (`_shared/rate-limit.ts`); cost is integer micro-USD on `ai_usage_events` (§6 discipline).
+- **Brand/UI:** the primary CTA fill is **`theme.colors.primary` (Signal cyan) with
+  `theme.colors.onPrimary` (onyx) text — NEVER success-green and NEVER white text.** This has
+  been flagged twice (the "Save to my plans" and "Publish to client" buttons both shipped
+  green); `colors.success` is for status/positive only, not actions. Icon names must come from
+  the curated `src/components/ui/Icon.tsx` map (a wrong guess is a TS2820 build error). A
+  scrolling list whose rows have tap/gesture children **and** a text input above it needs
+  `keyboardShouldPersistTaps="handled"` — otherwise the first tap/drag while the keyboard is up
+  is swallowed to dismiss it (broke chat double-tap-react + swipe-to-reply). On a content-sized
+  card (RN/RN-Web), a `flex:1` child shares width with siblings and **collapses when the card is
+  narrow** — put must-show text (e.g. a note's exercise name) on its own line, not a shared row.
+  _(Fuller UI + i18n rules land in `.claude/rules/ui.md` / `i18n.md` via the pre-pilot learnings PR.)_
 
 **Deferred work** (not lost — tracked, with the "why", in `/docs/pre-launch-checklist.md` and
 project memory): the tab-switch render flash is a dev-mode artifact to confirm on a release
