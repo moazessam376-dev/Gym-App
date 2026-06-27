@@ -49,6 +49,18 @@ Topic detail for CLAUDE.md §2 ("deny by default"). **This file wins over a prom
   via `is_coach_of`), so no new read path is opened. **Realtime payloads carry the raw columns but
   NOT embeds** — a live row's embedded relation is absent; default it to `null` in the realtime
   coerce and let the next full fetch fill it in (chat note cards show body-only until refetch).
+- **`public.media` is service-role-write-only AND its storage buckets have no
+  `storage.objects` policies — so owner deletion is an Edge Function, not an RLS DELETE
+  policy.** The table ships with **no INSERT/UPDATE/DELETE policy by design** (0013): every
+  write goes through `media-finalize`/`media-delete` as the service role. The private
+  buckets likewise have no object policies, so a client literally **cannot** remove the
+  bytes. Adding a `media_delete` RLS policy would let the row be deleted but **leave the
+  private object orphaned** — wrong. The owner-delete path is the **`media-delete` Edge
+  Function**: read the row under the **caller's** RLS, require `owner_id = caller` (a coach
+  can *read* a client's media but not delete it → 403), then service-role `storage.remove`
+  the bytes **first**, then delete the row. Every FK to `media(id)` is `ON DELETE SET NULL`
+  (`body_metrics`, voice notes, avatars), so the row delete never breaks a link. Don't
+  reach for a migration here — the fix is a function.
 
 ## Test gate
 - The harness in `supabase/tests/rls/` MUST stay green (CLAUDE.md §11). Any new
