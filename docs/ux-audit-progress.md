@@ -90,11 +90,19 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
 - ⬜ **G — Larger items** (G1 Ranks→Analytics merge + leaderboard in-page UX · G2 coach_requests funnel · G3 admin console · G4 nutrition barcode/serving sizes)
 - ⬜ **H — First-run tour + guided goal wizard**
 
+## Founder follow-ups (post-F, 2026-06-27)
+- ✅ **Plan-editor brand fix** — "Publish to client" was success-green; now Signal-cyan + onyx text.
+- ✅ **Chat gesture/keyboard fixes** — double-tap-to-react no longer drops the keyboard; swipe-to-reply
+  accepts diagonal drags + works with the keyboard up (`keyboardShouldPersistTaps="handled"`).
+- ✅ **Notes in chat + plan editor** — `0051` **APPLIED to prod** (advisors clean). An athlete workout note
+  now mirrors into the client↔coach chat as a note card AND shows inline on the exercise in the plan editor.
+  Kept the F4 Notes tab + F5 client_note notification (→ **double-notify per note**; dedupe is a ~3-line change).
+  Realtime-arriving note cards show body only until refetch (embed not in the realtime payload).
+
 ## Prod migrations pending go-ahead
 coach_requests (G2) · serving sizes (G4).
-_(Done & applied to prod 2026-06-27: `0047` catalog expansion · `0048`/`0049` muscle-group→arms recategorize ·
-`0050` workout-note→coach notification. Note: Slice B's media-delete shipped as an Edge Function, not a
-migration.)_
+_(Done & applied to prod 2026-06-27: `0047` catalog · `0048`/`0049` arms recategorize · `0050` workout-note
+notification · `0051` workout-note-in-chat. Slice B's media-delete shipped as an Edge Function, not a migration.)_
 
 ## Known limitations flagged for pilot
 - Arabic UI but **English food/exercise names** in the catalog (DB `name_ar` is post-pilot).
