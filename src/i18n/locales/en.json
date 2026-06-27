@@ -6,6 +6,8 @@
     "delete": "Delete",
     "edit": "Edit",
     "done": "Done",
+    "next": "Next",
+    "back": "Back",
     "remove": "Remove",
     "retry": "Retry",
     "loading": "Loading…",
@@ -21,6 +23,30 @@
     "keepEditing": "Keep editing",
     "training": "Training",
     "nutrition": "Nutrition"
+  },
+  "tour": {
+    "skip": "Skip",
+    "getStarted": "Get started",
+    "client": {
+      "welcomeTitle": "Welcome to Raptor",
+      "welcomeBody": "Your training, nutrition, and progress — coached, in one place.",
+      "trainTitle": "Follow your plan",
+      "trainBody": "Log every set as you train. Raptor tracks your PRs, streak, and what's next.",
+      "trackTitle": "Track everything",
+      "trackBody": "Log food (or scan a barcode), then watch weight, InBody, and your league rank move.",
+      "coachTitle": "Stay close to your coach",
+      "coachBody": "Message, send voice notes, and get feedback on your workouts — right here."
+    },
+    "coach": {
+      "welcomeTitle": "Welcome to Raptor",
+      "welcomeBody": "Coach more clients with less busywork — your whole roster in one place.",
+      "clientsTitle": "Your roster, at a glance",
+      "clientsBody": "See who needs attention, who's on track, and message anyone in a tap.",
+      "plansTitle": "Build plans fast",
+      "plansBody": "Create training & nutrition plans — or draft them with AI — and assign in seconds.",
+      "performanceTitle": "Coach by the numbers",
+      "performanceBody": "Adherence, top performers, and what's working — on the Performance tab."
+    }
   },
   "goals": {
     "lose_fat": "Fat loss",
@@ -832,6 +858,13 @@
   "profileSetup": {
     "athleteTitle": "Your goals",
     "athleteIntro": "This helps your coach tailor your training & nutrition.",
+    "stepOf": "Step {{n}} of {{total}}",
+    "step": {
+      "goal": "Your goal",
+      "about": "About you",
+      "targets": "Your targets",
+      "preferences": "Preferences"
+    },
     "coachTitle": "Your coaching profile",
     "coachIntro": "Tell clients about your coaching. They can see this on their home.",
     "bio": "Bio",

@@ -30,6 +30,7 @@ import { prefetchHome, useNotificationsRealtime, useConversationPreviewsRealtime
 import { usePushNotifications } from '../src/lib/push';
 import { loadSavedLanguage } from '../src/i18n'; // side-effect: initializes i18next
 import { ToastProvider } from '../src/components/ui';
+import { FirstRunTour } from '../src/components/FirstRunTour';
 import { theme } from '../src/theme';
 
 // Role-aware routing. The role comes from the verified JWT claim (server-issued
@@ -194,6 +195,9 @@ function RootNavigator() {
         warms); the splash overlays it until the prefetch settles, then fades to
         reveal a fully-populated app. */}
     {booting ? <BootSplash /> : null}
+    {/* First-run welcome tour — shows once per role per device, only after the boot
+        splash settles (so it never overlaps it). Self-gates on a local pref. */}
+    {!booting && session && role ? <FirstRunTour role={role} /> : null}
     </View>
   );
 }

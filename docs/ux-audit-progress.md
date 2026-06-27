@@ -119,7 +119,13 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
     rate-limited via the ai_usage_events ledger). UI: a "Scan barcode" button + `BarcodeScannerModal`
     (error-boundary fallback when the native module is absent / web) and a "1 serving" quick-grams chip
     in `app/food/add.tsx`. Harness: `0055` in runner.ts + a serving-snapshot owner-write test.
-- ⬜ **H — First-run tour + guided goal wizard**
+- ✅ **H — First-run tour + guided goal wizard** (2026-06-27, no backend). **H1** paginates the
+  athlete `profile-setup` into a guided **4-step wizard** (Goal → About you → Targets → Preferences)
+  with tappable progress dots (an editor can jump straight to a field; step 1 requires a goal). The
+  coach flow stays a single form. **H2** adds a once-per-role-per-device **first-run welcome tour**
+  (`src/components/FirstRunTour.tsx`, role-aware slides) rendered by the root navigator after the boot
+  splash; the "seen" flag lives in local prefs (`src/lib/prefs.ts`, SecureStore/localStorage). tsc +
+  en/ar parity clean; no migration.
 
 ## Founder follow-ups (post-F, 2026-06-27)
 - ✅ **Plan-editor brand fix** — "Publish to client" was success-green; now Signal-cyan + onyx text.
@@ -132,8 +138,8 @@ ClientHome trophy→leaderboards; plan delete; plan-editor draft discard; multi-
 
 ## Prod migrations pending go-ahead
 _None for Slice G — `0052`–`0055` all **APPLIED to prod 2026-06-27** (advisors clean), and the 3 edge
-functions (`resolve-coach-request`, `admin-set-ban`, `food-barcode-lookup`) are **DEPLOYED**._ Remaining
-Slice H (first-run tour + guided goal wizard) is the only un-started program item.
+functions (`resolve-coach-request`, `admin-set-ban`, `food-barcode-lookup`) are **DEPLOYED**._
+**All program slices A–H are now built.** Post-G fix pack (`0056`–`0059`) also applied to prod.
 
 ## Founder follow-ups (post-G, 2026-06-27)
 - ✅ **Workout notes: delete + date** — an athlete's own Challenge/Compliment notes on the workout
