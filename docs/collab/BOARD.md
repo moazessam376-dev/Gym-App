@@ -58,9 +58,11 @@ landed on `main`. The forward roadmap (re-sequenced) lives in
   @handle + bio + "N tracked · M improved" + verified badge + specialty i18n. tsc + en/ar parity
   green; pushed to `cc/security-hardening`. **Migrations 0061–0070 APPLIED to prod 2026-06-28 (founder
   go-ahead; advisors clean — only the accepted 0029 DEFINER-RPC set + email_blocklist INFO
-  deny-by-default + the 2 pre-existing platform WARNs).** STILL PENDING: redeploy the 3 edge fns
-  (account-delete C-1, media-finalize M-3, push-send H-2) — those fixes live in fn code, not the DB.
-  Also addressed GLM's reverse-review (M1 specialty i18n keys, M3/M4 i18n, signup-cooldown, S1/S2 seed).
+  deny-by-default + the 2 pre-existing platform WARNs).** Edge fns DEPLOYED to prod 2026-06-28:
+  account-delete v1 (C-1, fresh — was never shipped), media-finalize v6 (M-3), push-send v4 (H-2,
+  dormant until PUSH_SHARED_SECRET set); buckets.sql audio MIME re-applied via MCP (M-4). **Track C
+  fully live.** Also addressed GLM's reverse-review (M1 specialty i18n keys, M3/M4 i18n, signup-cooldown,
+  S1/S2 seed). PENDING: seed run (needs the service-role key, not on disk per §3 — founder supplies it).
 - **2026-06-27** — Reconciled the **pre-pilot UX/IA refactor** track onto the board (it
   predates this workflow). On `raptor-ux-ia-refactor` / **PR #42**, off the pre-PR-#43 main:
   Slice A (workout blockers + coach-less Home CTA), B (media delete via the `media-delete`
