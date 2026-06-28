@@ -98,3 +98,36 @@ Topic detail for the Supabase schema workflow. **This file wins over a prompt.**
   cascade/`SECURITY DEFINER` RPC can. When a deletion will SET NULL a link you still need, **delete
   the linked row FIRST**, before the cascade nulls it (0060's delete-everywhere removes the mirror
   message, then the note — order reversed, the `where workout_note_id = …` finds nothing).
+- **Changing a function's RETURN SHAPE (its `returns table (…)` columns) needs `DROP FUNCTION …;
+  CREATE FUNCTION …`, NOT `create or replace`** — Postgres rejects a `create or replace` that
+  alters the return type ("cannot change return type of existing function"). The drop+create makes
+  it a *fresh* fn, so re-apply the FULL grant block (`revoke all … from public, anon;` +
+  `grant execute … to authenticated, service_role;`) — `revoke all … from anon` also clears the
+  anon-by-name grant, so it stays advisor-`0028`-clean (0070 added `handle`/outcome columns to
+  `get_public_*`/`list_public_coaches` this way). A body-only change (same columns) stays
+  `create or replace` (ACL preserved).
+- **Adding a column to a public-read RPC BREAKS its harness column-set assertion.** Several
+  `cases.test.ts` tests assert `Object.keys(row).sort()).toEqual([…])` for the field-allowlist RPCs
+  (`get_public_coach_profile`, `get_public_athlete_profile`, …) — the column list *is* the security
+  contract. Add the new column to that expected array in the SAME change, or CI's `rls` job fails
+  (cost a round-trip on 0070's `handle`). Only CI catches it (test:rls is CI-only).
+
+## Edge Function deploys (via MCP `deploy_edge_function`)
+- **Don't assume a repo function is deployed — `list_edge_functions` first.** `account-delete`
+  (Phase 14d) existed in the repo but was NEVER deployed; `get_edge_function('account-delete')`
+  404s until you deploy it. The deployed set ≠ `supabase/functions/`.
+- **File layout that works** (mirror an existing deployed fn): `files` = `source/index.ts`
+  (entrypoint_path `source/index.ts`) + `_shared/clients.ts` / `_shared/schemas.ts` /
+  `_shared/http.ts` (siblings, NOT under source/) + `deno.json` (import_map_path `deno.json`). The
+  entrypoint's `../_shared/x.ts` imports resolve because index.ts sits in `source/` and `_shared/`
+  is one level up. Set `verify_jwt: true` (push-send too — its gate needs the gateway verify).
+- **Each function bundles its OWN `_shared` (CLAUDE.md §11) → deploy the CURRENT repo copy.** The
+  deployed `push-send` carried a STALE `schemas.ts` (missing the audio/avatar `MEDIA_KINDS`); always
+  re-read `supabase/functions/_shared/*` at deploy time, don't trust the live bundle.
+- **Escape large/regex-heavy files with node, not by hand:** `node -e 'const fs=require("fs");
+  process.stdout.write(JSON.stringify([{name:"source/index.ts",content:fs.readFileSync("…/index.ts",
+  "utf8")}, …]))'` → paste the output as `files`. Hand-escaping `\d`/`\/`/`\.` in a Zod regex into
+  JSON silently corrupts the deploy.
+- **A DB fix that lives in fn code is NOT live until the fn is redeployed** (the §11 drift). Applying
+  the migration is half of it: C-1 (account-delete ban gate) + M-3 (media-finalize caps) only took
+  effect after redeploy; the DB-enforced fixes (M-2/M-5/M-6/M-7) were live on `apply_migration`.

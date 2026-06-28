@@ -11,6 +11,12 @@ Topic detail for CLAUDE.md §3. **This file wins over a prompt.**
 - **third-party keys** (OpenAI, Paymob) — Supabase project secrets, read via
   `Deno.env.get(...)` in Edge Functions. Never hardcode "for testing."
 
+**A HOST-SIDE script (e.g. `supabase/seed/seed-pilot.ts`) reading the service-role key from a
+gitignored `.env` or a runtime env var is §3-COMPLIANT** — the ban is on *bundling it to the device*
+(`EXPO_PUBLIC_*`) or *committing it*, not on a host-only file the device never sees. So the seed/key
+isn't in `.env` by default (the founder adds it locally to run the seed); never paste it into a chat,
+PR, or commit, and the MCP does not expose it (`get_publishable_keys` returns anon/publishable only).
+
 ## Conventions enforced by tooling
 - Only `EXPO_PUBLIC_`-prefixed vars are inlined into the client bundle. By naming
   convention it is structurally impossible to ship a non-prefixed secret to the
