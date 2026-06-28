@@ -48,6 +48,11 @@ export default function AthleteProfileScreen() {
       <View style={{ alignItems: 'center', gap: theme.spacing.sm }}>
         <ProfileAvatar name={p.full_name} avatarMediaId={p.avatar_media_id} size={104} />
         <Text variant="h2">{p.full_name ?? ''}</Text>
+        {p.handle ? (
+          <Text variant="caption" muted>
+            @{p.handle}
+          </Text>
+        ) : null}
         {p.primary_goal ? (
           <Badge label={t(`goals.${p.primary_goal}`, { defaultValue: p.primary_goal })} tone="secondary" solid />
         ) : null}

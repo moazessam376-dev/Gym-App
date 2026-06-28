@@ -3687,3 +3687,109 @@ describe('conversation previews + read-state (0058) — chat list aggregation (�
     ).rejects.toThrow();
   });
 });
+
+describe('security hardening (0061–0067)', () => {
+  it('M-5 — accept_invitation refuses a client who already has a coach (atomic no-steal)', async () => {
+    const INVITEE_ID = 'da010001-0000-0000-0000-000000000001';
+    const EMAIL = 'm5.invitee@example.test';
+    const TOKEN_A = 'da010002-0000-0000-0000-000000000002';
+    const TOKEN_B = 'da010003-0000-0000-0000-000000000003';
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [INVITEE_ID, EMAIL]);
+      await c.query('insert into public.invitations (coach_id, email, token) values ($1, $2, $3)', [
+        COACH_A.sub,
+        EMAIL,
+        TOKEN_A,
+      ]);
+      await c.query('insert into public.invitations (coach_id, email, token) values ($1, $2, $3)', [
+        COACH_B_ID,
+        EMAIL,
+        TOKEN_B,
+      ]);
+      await c.query('set local role service_role');
+      // First accept links coach A.
+      const r1 = await c.query('select public.accept_invitation($1, $2, $3) as coach', [
+        TOKEN_A,
+        INVITEE_ID,
+        EMAIL,
+      ]);
+      expect(r1.rows[0].coach).toBe(COACH_A.sub);
+      // A second accept (different coach, same client) must be rejected — no steal.
+      await c.query('savepoint sp');
+      await expect(
+        c.query('select public.accept_invitation($1, $2, $3)', [TOKEN_B, INVITEE_ID, EMAIL]),
+      ).rejects.toThrow();
+      await c.query('rollback to savepoint sp');
+      await c.query('reset role');
+      const prof = await c.query('select coach_id from public.profiles where id = $1', [INVITEE_ID]);
+      expect(prof.rows[0].coach_id).toBe(COACH_A.sub); // unchanged
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('M-2 — first-contact DM needs a chat acknowledgment (server-enforced disclaimer)', async () => {
+    const U1 = 'da020001-0000-0000-0000-000000000001';
+    const U2 = 'da020002-0000-0000-0000-000000000002';
+    const claims = JSON.stringify({ sub: U1, role: 'authenticated', user_role: 'client' });
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2), ($3, $4)', [
+        U1,
+        'm2.u1@example.test',
+        U2,
+        'm2.u2@example.test',
+      ]);
+      // No prior thread, no acknowledgment → blocked.
+      await c.query('savepoint sp');
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [claims]);
+      await expect(
+        c.query('insert into public.messages (recipient_id, body) values ($1, $2)', [U2, 'hi']),
+      ).rejects.toThrow();
+      await c.query('rollback to savepoint sp');
+      // Record the acknowledgment (server path), then the same send succeeds.
+      await c.query('insert into public.chat_acknowledgments (user_id, peer_id) values ($1, $2)', [U1, U2]);
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [claims]);
+      const ok = await c.query(
+        'insert into public.messages (recipient_id, body) values ($1, $2) returning id',
+        [U2, 'hi'],
+      );
+      expect(ok.rows).toHaveLength(1);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('H-1 — moderation FKs are ON DELETE SET NULL (audit trail survives user deletion)', async () => {
+    const r = await asService((c) =>
+      c.query(
+        `select conname, confdeltype from pg_constraint
+          where conname in ('message_reports_reported_user_id_fkey', 'ban_appeals_user_id_fkey')
+          order by conname`,
+      ),
+    );
+    expect(r.rows).toHaveLength(2);
+    for (const row of r.rows) expect(row.confdeltype).toBe('n'); // 'n' = SET NULL
+  });
+
+  it('C-1 — a blocklisted email cannot register (case-insensitive handle_new_user guard)', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query("insert into public.email_blocklist (email_lc) values ('blocked@example.test')");
+      await expect(
+        c.query("insert into auth.users (id, email) values (gen_random_uuid(), 'Blocked@Example.test')"),
+      ).rejects.toThrow();
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+});

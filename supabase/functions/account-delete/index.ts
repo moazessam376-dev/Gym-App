@@ -30,6 +30,26 @@ Deno.serve(async (req: Request) => {
   const svc = serviceClient();
 
   try {
+    // 0. SECURITY C-1: a BANNED account may not self-erase. The ban is send-only (a
+    //    banned user can still authenticate + call Edge Functions), so without this gate
+    //    they could delete their account → Supabase frees the email → re-register clean =
+    //    ban evasion, and the delete would also cascade-away the moderation trail. Refuse;
+    //    they must use the appeal flow. Belt-and-suspenders: record the email in the
+    //    blocklist (0067) so it can't be reused even if the ban is later changed.
+    const { data: prof } = await svc
+      .from('profiles')
+      .select('banned_at')
+      .eq('id', caller.id)
+      .single();
+    if (prof?.banned_at) {
+      if (caller.email) {
+        await svc
+          .from('email_blocklist')
+          .upsert({ email_lc: caller.email.toLowerCase(), reason: 'banned' }, { onConflict: 'email_lc' });
+      }
+      return json({ error: 'forbidden' }, 403);
+    }
+
     // 1. Delete the caller's stored files (rows cascade with the profile; bytes don't).
     const { data: media } = await svc
       .from('media')

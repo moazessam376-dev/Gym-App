@@ -257,7 +257,10 @@
     "activeToday": "active today",
     "activeDaysAgo_one": "active {{count}}d ago",
     "activeDaysAgo_other": "active {{count}}d ago",
-    "noSessions": "no sessions yet"
+    "noSessions": "no sessions yet",
+    "filterAll": "All",
+    "filterAttention": "Needs attention",
+    "filterOnTrack": "On track"
   },
   "ranks": {
     "thisWeek": "This week",
@@ -479,6 +482,7 @@
     "sectionManage": "Manage",
     "sectionPreferences": "Preferences",
     "setYourName": "Set your name",
+    "profile": "Profile",
     "editProfile": "Edit profile",
     "notifications": "Notifications",
     "coachingProfile": "Coaching profile",
@@ -555,7 +559,21 @@
     "yearsExp_other": "{{count}} yrs experience",
     "emptyTitle": "No public coaches yet",
     "emptySub": "Check back soon — coaches are setting up their profiles.",
-    "loadError": "Could not load coaches"
+    "loadError": "Could not load coaches",
+    "verified": "Verified",
+    "outcome": "{{tracked}} clients tracked · {{improved}} improved"
+  },
+  "specialty": {
+    "hypertrophy": "Hypertrophy",
+    "powerlifting": "Powerlifting",
+    "bodybuilding": "Bodybuilding",
+    "strength": "Strength",
+    "fat_loss": "Fat loss",
+    "weight_loss": "Weight loss",
+    "general_fitness": "General fitness",
+    "sports_performance": "Sports performance",
+    "mobility": "Mobility",
+    "nutrition": "Nutrition"
   },
   "leaderboards": {
     "title": "Leaderboards",
@@ -928,7 +946,23 @@
     }
   },
   "profile": {
-    "displayName": "Display name"
+    "displayName": "Display name",
+    "identity": "Identity",
+    "handle": "Username",
+    "handlePlaceholder": "username",
+    "handleHint": "Your unique @username. Changeable once every 14 days.",
+    "handleChecking": "Checking…",
+    "handleAvailable": "Available",
+    "handleTaken": "Already taken",
+    "handleReserved": "Not available",
+    "handleInvalid": "3–20 characters: letters, numbers, . or _",
+    "handleCooldown": "You can change your username once every 14 days.",
+    "handleSaveError": "Couldn't save — that username may be taken.",
+    "email": "Email",
+    "more": "More",
+    "sectionGoals": "Goals & body",
+    "sectionCoaching": "Coaching profile",
+    "sectionPublic": "Public presence"
   },
   "food": {
     "grams": "Grams",

@@ -16,12 +16,16 @@
 --   media       : sanitized, servable objects. Read via short-lived signed URL
 --                 (media-signed-url). Written only by media-finalize.
 
+-- NOTE (M-4): the audio/* types are required by voice notes (0043 added them to the
+-- public.media table CHECK but NOT here) — without them the live buckets reject every
+-- voice-note upload at the storage layer. RE-APPLY this file via MCP/dashboard after any
+-- change; it is not run by the migration harness.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values
   ('media-inbox', 'media-inbox', false, 10485760,
-   array['image/jpeg', 'image/png', 'application/pdf']),
+   array['image/jpeg', 'image/png', 'application/pdf', 'audio/mp4', 'audio/mpeg', 'audio/wav']),
   ('media', 'media', false, 10485760,
-   array['image/jpeg', 'image/png', 'application/pdf'])
+   array['image/jpeg', 'image/png', 'application/pdf', 'audio/mp4', 'audio/mpeg', 'audio/wav'])
 on conflict (id) do update
   set public = excluded.public,
       file_size_limit = excluded.file_size_limit,

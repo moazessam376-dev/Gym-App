@@ -11,6 +11,7 @@ import type { Specialty } from '../schemas/coach-profile';
 export type PublicCoachProfile = {
   coach_id: string;
   full_name: string | null;
+  handle: string | null;
   avatar_media_id: string | null;
   bio: string | null;
   specialties: Specialty[];
@@ -22,6 +23,7 @@ export type PublicCoachProfile = {
 export type PublicAthleteProfile = {
   athlete_id: string;
   full_name: string | null;
+  handle: string | null;
   avatar_media_id: string | null;
   primary_goal: AthleteGoal | null;
   public_achievements: string[];
@@ -30,10 +32,14 @@ export type PublicAthleteProfile = {
 export type PublicCoachListItem = {
   coach_id: string;
   full_name: string | null;
+  handle: string | null;
   avatar_media_id: string | null;
   specialties: Specialty[];
   years_experience: number | null;
   bio: string | null;
+  // Anonymized outcome proof (U-4): clients with ≥2 verified readings, and how many improved.
+  tracked_clients: number;
+  improved_clients: number;
 };
 
 // Aggregate, ANONYMIZED proof for a coach's public page. One row per goal category the

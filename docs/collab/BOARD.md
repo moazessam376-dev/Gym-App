@@ -19,8 +19,7 @@ integrated by Claude Code; `cc/*` are Claude-Code-authored. Status: `todo` →
 
 | Task | Owner | Branch | Spec | Status | PR |
 |------|-------|--------|------|--------|----|
-| Pre-pilot UX/IA refactor (Slices A–H) | Claude Code | `raptor-ux-ia-refactor` | `~/.claude/plans/staged-floating-lampson.md` · `docs/ux-audit-progress.md` | in-progress | [#42](https://github.com/moazessam376-dev/Gym-App/pull/42) |
-| Pre-pilot learnings → rule files | Claude Code | `cc/pre-pilot-learnings` | `.claude/rules/{i18n,ui}.md` + `rls.md` media note | in-review | — |
+| Pilot hardening (GLM review): security + coach IA + seed + profile/@handle/discover | Claude Code | `cc/security-hardening` | `~/.claude/plans/silly-puzzling-starfish.md` · `GYM_APP_PILOT_REVIEW.md` | in-progress | — |
 
 ## Up next (assign an owner before starting)
 
@@ -39,6 +38,26 @@ landed on `main`. The forward roadmap (re-sequenced) lives in
 ---
 
 ## Log (newest first)
+- **2026-06-28** — **Pilot hardening** from the GLM 5-2 review (`GYM_APP_PILOT_REVIEW.md`),
+  all claims re-verified against the code first (plan: `silly-puzzling-starfish.md`). On
+  `cc/security-hardening` (off the `fix/workout-note-hide-vs-delete` base, which carries 0060):
+  **Track C security** — migrations `0061`–`0068` (H-1 audit FK set-null, M-5 accept-invite
+  atomic, M-2 disclaimer gate + M-6 edit-pin + M-7 caps in 0063, M-7 food 0064, L-2 coach-req
+  cap, L-9 search caps, C-1 email blocklist, H-2 push shared-secret) + Edge/client/config
+  (account-delete ban gate, media-finalize per-kind caps, buckets audio MIME, push-send 2nd
+  factor + config.toml, sign-up enumeration). All in runner.ts + harness tests; tsc/parity
+  green; **NOT applied to prod** (founder: after CI + PR review). **Track A1 coach IA** —
+  Clients demoted from the bar (Home·Performance·Chat·Account), `clients.tsx` reframed as a
+  goal-aware KPI roster (attention-first + filter chips), CoachHome trophy, Leaderboards out
+  of Account. **Track B seed** — `supabase/seed/seed-pilot.ts` (241 users; run gated on the
+  0004 hook + go-ahead). **Track A2 profile hub** — `/profile` = identity + @handle + email +
+  links to goals/coaching + public-presence; Account collapsed to one Profile row (fixes U-5 + U-7).
+  **Track A3 full @handle** — `0069` (handle column + unique + 14-day cooldown trigger + reserved
+  blocklist + generate_handle + check_handle_available RPC + signup gen) + `0070` (surfaces @handle on
+  get_public_*/list_public_coaches + adds coach outcome counts). **Track A4 discover** — cards show
+  @handle + bio + "N tracked · M improved" + verified badge + specialty i18n. All 10 migrations
+  0061–0070 read-only-validated via MCP; tsc + en/ar parity green; **prod apply held for after CI + PR
+  review.** Committed + pushed to `cc/security-hardening`.
 - **2026-06-27** — Reconciled the **pre-pilot UX/IA refactor** track onto the board (it
   predates this workflow). On `raptor-ux-ia-refactor` / **PR #42**, off the pre-PR-#43 main:
   Slice A (workout blockers + coach-less Home CTA), B (media delete via the `media-delete`

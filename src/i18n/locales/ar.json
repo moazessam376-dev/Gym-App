@@ -76,6 +76,7 @@
     "sectionManage": "الإدارة",
     "sectionPreferences": "التفضيلات",
     "setYourName": "اكتب اسمك",
+    "profile": "البروفايل",
     "editProfile": "تعديل الملف",
     "notifications": "الإشعارات",
     "coachingProfile": "ملف الكوتش",
@@ -164,7 +165,21 @@
     "yearsExp_other": "{{count}} سنة خبرة",
     "emptyTitle": "لسه مفيش كوتشيز عامة",
     "emptySub": "تعالى تاني قريب — الكوتشيز بيجهّزوا ملفاتهم.",
-    "loadError": "مش قادرين نحمّل الكوتشيز"
+    "loadError": "مش قادرين نحمّل الكوتشيز",
+    "verified": "موثّق",
+    "outcome": "{{tracked}} عميل متتابع · {{improved}} اتحسّن"
+  },
+  "specialty": {
+    "hypertrophy": "تضخيم العضلات",
+    "powerlifting": "باور ليفتنج",
+    "bodybuilding": "كمال أجسام",
+    "strength": "قوة",
+    "fat_loss": "حرق دهون",
+    "weight_loss": "إنقاص وزن",
+    "general_fitness": "لياقة عامة",
+    "sports_performance": "أداء رياضي",
+    "mobility": "مرونة",
+    "nutrition": "تغذية"
   },
   "leaderboards": {
     "title": "لوحات المتصدرين",
@@ -442,7 +457,10 @@
     "activeToday": "نشط النهارده",
     "activeDaysAgo_one": "آخر نشاط من يوم",
     "activeDaysAgo_other": "آخر نشاط من {{count}} يوم",
-    "noSessions": "لسه مفيش تمارين"
+    "noSessions": "لسه مفيش تمارين",
+    "filterAll": "الكل",
+    "filterAttention": "محتاجين متابعة",
+    "filterOnTrack": "ماشيين تمام"
   },
   "ranks": {
     "thisWeek": "الأسبوع ده",
@@ -956,7 +974,23 @@
     }
   },
   "profile": {
-    "displayName": "الاسم المعروض"
+    "displayName": "الاسم المعروض",
+    "identity": "الهوية",
+    "handle": "اسم المستخدم",
+    "handlePlaceholder": "اسم المستخدم",
+    "handleHint": "اسم المستخدم @ بتاعك المميّز. تقدر تغيّره مرة كل ١٤ يوم.",
+    "handleChecking": "بنتأكد…",
+    "handleAvailable": "متاح",
+    "handleTaken": "متاخد خلاص",
+    "handleReserved": "مش متاح",
+    "handleInvalid": "من ٣ لـ ٢٠ حرف: حروف وأرقام و . أو _",
+    "handleCooldown": "تقدر تغيّر اسم المستخدم مرة كل ١٤ يوم.",
+    "handleSaveError": "محصلش حفظ — يمكن الاسم متاخد.",
+    "email": "الإيميل",
+    "more": "المزيد",
+    "sectionGoals": "الأهداف والجسم",
+    "sectionCoaching": "ملف الكوتش",
+    "sectionPublic": "الظهور العام"
   },
   "food": {
     "grams": "جرام",

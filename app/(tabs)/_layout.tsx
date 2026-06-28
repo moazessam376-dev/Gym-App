@@ -90,8 +90,11 @@ export default function TabsLayout() {
         name="clients"
         options={{
           title: t('tabs.clients'),
-          href: showFor(isCoach),
-          lazy: eager(isCoach),
+          // Demoted from the coach bottom bar (U-1): the route stays reachable via the
+          // CoachHome "Active Clients" KPI tile + deep links, but it no longer competes
+          // with Chat for a bar slot (it looked like the Chat tab). Coach bar is now
+          // Home · Performance · Chat · Account.
+          href: null,
           tabBarIcon: tabIcon('users'),
         }}
       />

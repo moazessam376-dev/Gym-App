@@ -82,6 +82,16 @@ const migrationFiles = [
   '0058_conversation_previews.sql',
   '0059_harden_conversation_rpcs.sql',
   '0060_workout_note_hide_and_delete_everywhere.sql',
+  '0061_audit_trail_fk_setnull.sql',
+  '0062_accept_invitation_atomic.sql',
+  '0063_chat_trigger_hardening.sql',
+  '0064_foodlog_rate_limit.sql',
+  '0065_coach_request_cap.sql',
+  '0066_search_length_caps.sql',
+  '0067_email_blocklist.sql',
+  '0068_push_shared_secret.sql',
+  '0069_profile_handle.sql',
+  '0070_public_read_handle_and_outcomes.sql',
 ];
 
 const baseUrl =

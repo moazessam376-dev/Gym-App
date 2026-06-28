@@ -1,0 +1,16 @@
+# Supabase project config.
+#
+# This project deploys via the Supabase MCP (not the CLI), so this file primarily
+# DOCUMENTS deploy-time requirements that aren't otherwise pinned in the repo. If you
+# ever deploy with the CLI, these settings apply; unlisted functions keep the platform
+# default (verify_jwt = true).
+
+project_id = "ugpxcuocfemhvxhnsvic"
+
+# Security H-2: push-send is trigger-invoked and authorizes on the service-role JWT role
+# claim, so the gateway MUST verify the signature. verify_jwt = true is the platform
+# default, but it is pinned here as a HARD requirement — never deploy push-send with
+# verify_jwt off. push-send additionally enforces a Vault shared-secret second factor
+# (0068 / PUSH_SHARED_SECRET) that is independent of this gate.
+[functions.push-send]
+verify_jwt = true

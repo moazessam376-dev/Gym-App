@@ -115,3 +115,34 @@
 - [ ] **Account delete:** device-test the `account-delete` Edge Function end-to-end (storage objects
   removed + auth user + cascades gone). When `transactions` lands (Phase 23) it must FK
   `on delete set null` and the function must anonymize payer/payee (never hard-delete financial rows).
+
+## Security review (GLM pilot review, 2026-06-28)
+
+**Fixed** in the `cc/security-hardening` track (migrations `0061`–`0068` + Edge fns + config) —
+verify after prod apply with `get_advisors(security)`:
+- C-1 ban-evasion (account-delete refuses a banned caller + email blocklist `0067`); H-1 audit-trail
+  cascade→set-null (`0061`); H-2 push shared-secret 2nd factor (`0068` + config.toml verify_jwt pin);
+  M-2 server-side chat disclaimer gate (`0063`); M-3 media-finalize per-kind upload caps; M-4 audio
+  MIME in `buckets.sql` (re-apply out-of-band); M-5 accept_invitation atomic no-steal (`0062`);
+  M-6 message-update edit-pin (`0063`); M-7 message/food rate-limit tighten + per-recipient cap
+  (`0063`/`0064`); M-8 sign-up enumeration removed; L-2 coach-request cap (`0065`); L-9 search
+  length caps (`0066`).
+
+**Accepted / known limitations (no code change — revisit if abuse appears):**
+- [ ] **H-3 — device-token reassignment** is by-design device handoff; the Expo token is not
+  API-readable (`device_tokens_select` is own-row only). Residual risk accepted.
+- [ ] **L-1 — no per-coach invitation cap** (creation only inserts a row; confirmed NO server-side
+  email send, so no amplification; gated to the vetted `coach` role). Add a trigger cap if abused.
+- [ ] **L-4 — coach-leaderboard Sybil** (a coach could fake 3+ clients + self-verify body_metrics to
+  inflate "improved"). Expensive attack on a vanity board; add a min-elapsed-time between
+  baseline/latest readings + a floor on `coach_public_highlights` if it appears.
+- [ ] **L-7 — `is_public_profile` boolean oracle** (returns false for non-public AND non-existent
+  ids; UUIDs unguessable; intentionally used by the 0053 trigger). Accepted.
+- [ ] **L-8 — wildcard CORS** (`Access-Control-Allow-Origin: *`) is safe with bearer-token auth + no
+  `Allow-Credentials`. Tighten only if cookie auth is ever added.
+- [ ] **L-10 — web token storage** falls back to `localStorage` (no Keychain in a browser) → XSS-
+  readable on the web build only; native pilot unaffected. Mitigate with CSP if web becomes primary.
+- **M-8 follow-up:** also enable Supabase Auth's "Prevent user enumeration" setting (dashboard) so
+  the *server* response is identical for new vs existing emails (the client is now generic).
+- **Push activation (H-2):** when push goes live, set Vault `push_shared_secret` AND the push-send
+  env `PUSH_SHARED_SECRET` to the same value, and keep `verify_jwt = true`.

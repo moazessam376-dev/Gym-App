@@ -78,32 +78,23 @@ export default function AccountTab() {
       </Card>
 
       <View style={{ gap: theme.spacing.sm }}>
+        {/* One Profile hub (U-5): identity + @handle + links to the goals/coaching +
+            public-presence editors. Replaces the old three confusing rows (Edit Profile /
+            Goals&Profile / Public Profile) — which also removes the dead admin row + the
+            ambiguous role-branched label (U-7). */}
         <SectionLabel>{t('account.sectionProfile')}</SectionLabel>
-        <LinkRow icon="person-outline" label={t('account.editProfile')} onPress={go('/profile')} />
-        <LinkRow
-          icon={role === 'coach' ? 'ribbon-outline' : 'flag-outline'}
-          label={role === 'coach' ? t('account.coachingProfile') : t('account.goalsProfile')}
-          onPress={go('/profile-setup')}
-        />
+        <LinkRow icon="person-outline" label={t('account.profile')} onPress={go('/profile')} />
 
         {role === 'coach' || role === 'client' ? (
           <>
             <SectionLabel>{t('account.sectionCommunity')}</SectionLabel>
             <LinkRow
-              icon="globe-outline"
-              label={t('account.publicProfile')}
-              onPress={go('/public-profile-edit')}
-            />
-            <LinkRow
               icon="compass-outline"
               label={t('account.discoverCoaches')}
               onPress={go('/discover/coaches')}
             />
-            <LinkRow
-              icon="trophy-outline"
-              label={t('account.leaderboards')}
-              onPress={go('/leaderboards')}
-            />
+            {/* Public profile now lives in the Profile hub; Leaderboards is a one-tap trophy
+                in the Home header (U-3). Both removed here to de-junk Account. */}
           </>
         ) : null}
 
