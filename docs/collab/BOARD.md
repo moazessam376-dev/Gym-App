@@ -55,9 +55,12 @@ landed on `main`. The forward roadmap (re-sequenced) lives in
   **Track A3 full @handle** — `0069` (handle column + unique + 14-day cooldown trigger + reserved
   blocklist + generate_handle + check_handle_available RPC + signup gen) + `0070` (surfaces @handle on
   get_public_*/list_public_coaches + adds coach outcome counts). **Track A4 discover** — cards show
-  @handle + bio + "N tracked · M improved" + verified badge + specialty i18n. All 10 migrations
-  0061–0070 read-only-validated via MCP; tsc + en/ar parity green; **prod apply held for after CI + PR
-  review.** Committed + pushed to `cc/security-hardening`.
+  @handle + bio + "N tracked · M improved" + verified badge + specialty i18n. tsc + en/ar parity
+  green; pushed to `cc/security-hardening`. **Migrations 0061–0070 APPLIED to prod 2026-06-28 (founder
+  go-ahead; advisors clean — only the accepted 0029 DEFINER-RPC set + email_blocklist INFO
+  deny-by-default + the 2 pre-existing platform WARNs).** STILL PENDING: redeploy the 3 edge fns
+  (account-delete C-1, media-finalize M-3, push-send H-2) — those fixes live in fn code, not the DB.
+  Also addressed GLM's reverse-review (M1 specialty i18n keys, M3/M4 i18n, signup-cooldown, S1/S2 seed).
 - **2026-06-27** — Reconciled the **pre-pilot UX/IA refactor** track onto the board (it
   predates this workflow). On `raptor-ux-ia-refactor` / **PR #42**, off the pre-PR-#43 main:
   Slice A (workout blockers + coach-less Home CTA), B (media delete via the `media-delete`
