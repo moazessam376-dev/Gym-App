@@ -3212,7 +3212,7 @@ describe('public profiles (0044, Phase 19) — opt-in portfolio via field-allowl
     expect(r.rows[0].avatar_media_id).toBe(COACH_A_AVATAR);
     // The allowlist is the column set — sensitive/foreign columns simply aren't there.
     expect(Object.keys(r.rows[0]).sort()).toEqual(
-      ['achievements', 'avatar_media_id', 'bio', 'certifications', 'coach_id', 'full_name', 'specialties', 'years_experience'].sort(),
+      ['achievements', 'avatar_media_id', 'bio', 'certifications', 'coach_id', 'full_name', 'handle', 'specialties', 'years_experience'].sort(),
     );
   });
 
@@ -3238,7 +3238,7 @@ describe('public profiles (0044, Phase 19) — opt-in portfolio via field-allowl
     expect(r.rows[0].public_achievements).toContain('Down 5kg in 12 weeks');
     const cols = Object.keys(r.rows[0]);
     expect(cols.sort()).toEqual(
-      ['athlete_id', 'avatar_media_id', 'full_name', 'primary_goal', 'public_achievements'].sort(),
+      ['athlete_id', 'avatar_media_id', 'full_name', 'handle', 'primary_goal', 'public_achievements'].sort(),
     );
     // Explicitly assert the sensitive columns can never be returned by this RPC.
     for (const banned of ['birth_date', 'height_cm', 'injuries_notes', 'sex', 'coach_id', 'target_weight_grams']) {
@@ -3732,33 +3732,34 @@ describe('security hardening (0061–0067)', () => {
   });
 
   it('M-2 — first-contact DM needs a chat acknowledgment (server-enforced disclaimer)', async () => {
-    const U1 = 'da020001-0000-0000-0000-000000000001';
-    const U2 = 'da020002-0000-0000-0000-000000000002';
-    const claims = JSON.stringify({ sub: U1, role: 'authenticated', user_role: 'client' });
+    // The disclaimer gate is the FIRST message within an established coach↔client pair
+    // (messages_insert RLS already requires that relationship). Use Coach A + a fresh
+    // client of theirs, with no prior thread and no acknowledgment.
+    const NEWC = 'da020001-0000-0000-0000-000000000001';
+    const coachClaims = JSON.stringify({ sub: COACH_A.sub, role: 'authenticated', user_role: 'coach' });
     const c = await pool.connect();
     try {
       await c.query('begin');
-      await c.query('insert into auth.users (id, email) values ($1, $2), ($3, $4)', [
-        U1,
-        'm2.u1@example.test',
-        U2,
-        'm2.u2@example.test',
-      ]);
-      // No prior thread, no acknowledgment → blocked.
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [NEWC, 'm2.newclient@example.test']);
+      // Assign the fresh client to Coach A (service role — immutables allows coach_id).
+      await c.query('set local role service_role');
+      await c.query('update public.profiles set coach_id = $1 where id = $2', [COACH_A.sub, NEWC]);
+      await c.query('reset role');
+      // First contact, no acknowledgment → blocked by the disclaimer gate.
       await c.query('savepoint sp');
       await c.query('set local role authenticated');
-      await c.query("select set_config('request.jwt.claims', $1, true)", [claims]);
+      await c.query("select set_config('request.jwt.claims', $1, true)", [coachClaims]);
       await expect(
-        c.query('insert into public.messages (recipient_id, body) values ($1, $2)', [U2, 'hi']),
-      ).rejects.toThrow();
+        c.query('insert into public.messages (recipient_id, body) values ($1, $2)', [NEWC, 'hi']),
+      ).rejects.toThrow(/disclaimer_required/);
       await c.query('rollback to savepoint sp');
-      // Record the acknowledgment (server path), then the same send succeeds.
-      await c.query('insert into public.chat_acknowledgments (user_id, peer_id) values ($1, $2)', [U1, U2]);
+      // Record the acknowledgment (Coach A → the client), then the same send succeeds.
+      await c.query('insert into public.chat_acknowledgments (user_id, peer_id) values ($1, $2)', [COACH_A.sub, NEWC]);
       await c.query('set local role authenticated');
-      await c.query("select set_config('request.jwt.claims', $1, true)", [claims]);
+      await c.query("select set_config('request.jwt.claims', $1, true)", [coachClaims]);
       const ok = await c.query(
         'insert into public.messages (recipient_id, body) values ($1, $2) returning id',
-        [U2, 'hi'],
+        [NEWC, 'hi'],
       );
       expect(ok.rows).toHaveLength(1);
     } finally {
