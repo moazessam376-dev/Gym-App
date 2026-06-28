@@ -53,14 +53,21 @@ export default function Profile() {
   const load = useCallback(async () => {
     if (!userId) return;
     try {
-      const [n, h, a] = await Promise.all([getMyName(userId), getMyHandle(userId), getMyAvatarMediaId(userId)]);
+      const [n, a] = await Promise.all([getMyName(userId), getMyAvatarMediaId(userId)]);
       setName(n ?? '');
       setOrigName((n ?? '').trim());
-      setHandle(h ?? '');
-      setOrigHandle((h ?? '').toLowerCase());
       setAvatarMediaId(a);
     } catch {
-      /* leave blank */
+      /* leave name/avatar blank */
+    }
+    // Handle is fetched separately + tolerantly: before migration 0069 reaches the project
+    // the column doesn't exist, and we don't want that to blank out name/avatar editing.
+    try {
+      const h = await getMyHandle(userId);
+      setHandle(h ?? '');
+      setOrigHandle((h ?? '').toLowerCase());
+    } catch {
+      /* handle not available yet (pre-0069) */
     }
   }, [userId]);
 
