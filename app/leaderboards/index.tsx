@@ -12,10 +12,16 @@ import { Stack, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { textStart } from '../../src/lib/rtl';
-import { useTopAthletes, useTopCoaches, useMyLeagueStanding, useMyAthleteRank } from '../../src/lib/queries/leaderboards';
+import {
+  useTopAthletes,
+  useTopCoaches,
+  useMyLeagueStanding,
+  useMyAthleteRank,
+  useMyCoachRank,
+} from '../../src/lib/queries/leaderboards';
 import { useRefreshOnFocus } from '../../src/lib/queries/home';
 import { ffmiTier, type TierId, type LeagueStanding } from '../../src/lib/leagues';
-import type { AthleteBoardRow, CoachBoardRow, LeaderboardPeriod, MyAthleteRank } from '../../src/lib/leaderboards';
+import type { AthleteBoardRow, CoachBoardRow, LeaderboardPeriod, MyAthleteRank, MyCoachRank } from '../../src/lib/leaderboards';
 import type { Sex } from '../../src/schemas/athlete-profile';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
 import { FfmiInfoSheet } from '../../src/components/FfmiInfoSheet';
@@ -24,8 +30,10 @@ import { theme } from '../../src/theme';
 
 type Board = 'athletes' | 'coaches';
 
-function goalLabel(s: string): string {
-  return s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
+/** Signed median score → "+1.5" / "−0.8" / "—" (the coach board rank key, brand cyan). */
+function medianLabel(m: number | null): string {
+  if (m == null) return '—';
+  return `${m >= 0 ? '+' : '−'}${Math.abs(m).toFixed(1)}`;
 }
 
 /** Tier pill (Bronze…Apex) — tier-colored mono on a tier-soft fill (brand chip). */
@@ -134,11 +142,16 @@ function AthleteRow({ row, rank, sex, onPress }: { row: AthleteBoardRow; rank: n
           <Text variant="title" style={textStart}>
             {row.full_name ?? ''}
           </Text>
+          {row.handle ? (
+            <Text variant="caption" muted style={textStart}>
+              @{row.handle}
+            </Text>
+          ) : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
             <TierBadge tier={tier} />
             {row.primary_goal ? (
               <Text variant="caption" muted>
-                {goalLabel(row.primary_goal)}
+                {t(`goals.${row.primary_goal}`, { defaultValue: row.primary_goal })}
               </Text>
             ) : null}
           </View>
@@ -158,7 +171,6 @@ function AthleteRow({ row, rank, sex, onPress }: { row: AthleteBoardRow; rank: n
 
 function CoachRow({ row, rank, onPress }: { row: CoachBoardRow; rank: number; onPress: () => void }) {
   const { t } = useTranslation();
-  const rate = row.tracked_clients > 0 ? Math.round((row.improved_clients / row.tracked_clients) * 100) : 0;
   return (
     <GlassCard onPress={onPress} style={rank === 1 ? { borderColor: theme.colors.primary } : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
@@ -175,12 +187,14 @@ function CoachRow({ row, rank, onPress }: { row: CoachBoardRow; rank: number; on
             })}
           </Text>
         </View>
+        {/* Rank key = median goal-progress (real magnitude), cyan-on-brand — not the old
+            success-green "% improved" vanity number. */}
         <View style={{ alignItems: 'flex-end' }}>
-          <Text variant="display" color={theme.colors.success} style={{ fontSize: 22, lineHeight: 26 }}>
-            {rate}%
+          <Text variant="display" color={theme.colors.primary} style={{ fontSize: 22, lineHeight: 26 }}>
+            {medianLabel(row.median_goal_progress)}
           </Text>
           <Text variant="label" muted>
-            {t('leaderboards.successRate')}
+            {t('leaderboards.medianProgress')}
           </Text>
         </View>
       </View>
@@ -188,11 +202,65 @@ function CoachRow({ row, rank, onPress }: { row: CoachBoardRow; rank: number; on
   );
 }
 
+/** The coach viewer's own standing, pinned above the coach board (E4 — parity with athletes). */
+function MyCoachStandingCard({ rank, onManage }: { rank: MyCoachRank | null; onManage: () => void }) {
+  const { t } = useTranslation();
+  if (rank) {
+    return (
+      <GlassCard glowColor={theme.colors.primary}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+          <View style={{ width: 28, alignItems: 'center' }}>
+            <Text color={theme.colors.primary} style={{ fontFamily: theme.fontFamily.monoBold, fontSize: 16 }}>
+              {rank.rank}
+            </Text>
+          </View>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text variant="title" style={textStart}>
+              {t('leaderboards.you')}
+            </Text>
+            <Text variant="caption" muted style={textStart}>
+              {t('leaderboards.rankOf', { rank: rank.rank, total: rank.total })} ·{' '}
+              {t('leaderboards.clientsImproved', { improved: rank.improved_clients, tracked: rank.tracked_clients })}
+            </Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text variant="display" color={theme.colors.primary} style={{ fontSize: 22, lineHeight: 26 }}>
+              {medianLabel(rank.median_goal_progress)}
+            </Text>
+            <Text variant="label" muted>
+              {t('leaderboards.medianProgress')}
+            </Text>
+          </View>
+        </View>
+      </GlassCard>
+    );
+  }
+  return (
+    <Pressable onPress={onManage} accessibilityRole="button">
+      <GlassCard>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+          <Icon name="trophy-outline" size={22} color={theme.colors.primary} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="bodyStrong" style={textStart}>
+              {t('leaderboards.you')}
+            </Text>
+            <Text variant="caption" muted style={textStart}>
+              {t('leaderboards.coachNudge')}
+            </Text>
+          </View>
+          <Icon name="chevron-forward" size={18} color={theme.colors.textMuted} />
+        </View>
+      </GlassCard>
+    </Pressable>
+  );
+}
+
 export default function Leaderboards() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, role } = useAuth();
   const userId = session?.user?.id;
+  const isCoach = role === 'coach';
 
   const standingQ = useMyLeagueStanding(userId);
   const mySex = standingQ.data?.sex ?? null;
@@ -209,6 +277,7 @@ export default function Leaderboards() {
   const athletesQ = useTopAthletes(effectiveSex, period);
   const coachesQ = useTopCoaches(period);
   const myRankQ = useMyAthleteRank(effectiveSex, period);
+  const myCoachRankQ = useMyCoachRank(period, board === 'coaches' && isCoach);
   useRefreshOnFocus(board === 'athletes' ? athletesQ.refetch : coachesQ.refetch);
 
   const activeQ = board === 'athletes' ? athletesQ : coachesQ;
@@ -281,6 +350,9 @@ export default function Leaderboards() {
           sex={effectiveSex}
           onManage={() => router.push('/public-profile-edit')}
         />
+      ) : null}
+      {board === 'coaches' && isCoach ? (
+        <MyCoachStandingCard rank={myCoachRankQ.data ?? null} onManage={() => router.push('/public-profile-edit')} />
       ) : null}
     </View>
   );

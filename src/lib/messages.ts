@@ -47,6 +47,10 @@ export type Message = {
   workout_note_id: string | null;
   /** Resolved note (category/exercise/body); null on realtime rows until refetch (0051). */
   workout_note: WorkoutNoteRef | null;
+  /** Denormalized note context (E6/0080) — present on realtime rows too (no embed needed). */
+  workout_note_exercise: string | null;
+  workout_note_day: string | null;
+  workout_note_date: string | null;
 };
 
 export type Reaction = {
@@ -61,6 +65,7 @@ export type Reaction = {
 // returns PGRST200 "Could not find a relationship between 'messages' and 'messages'".
 const MSG_COLS =
   'id, sender_id, recipient_id, body, created_at, edited_at, reply_to_id, media_id, workout_note_id, ' +
+  'workout_note_exercise, workout_note_day, workout_note_date, ' +
   'reply_to:messages!reply_to_id(id, body, sender_id), ' +
   'workout_note:workout_notes!workout_note_id(id, category, exercise_name, body)';
 

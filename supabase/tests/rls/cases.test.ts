@@ -3060,22 +3060,56 @@ describe('device tokens (0040, Phase 17 Slice 2) — push registry, owner-only, 
     }
   });
 
-  // ── device hand-off: re-registering a token reassigns it to the new owner ─────
-  it('re-registering the same token as a different user reassigns ownership (shared device)', async () => {
+  // ── the same owner re-registering updates platform/locale (idempotent upsert) ──
+  it('the same owner re-registering a token updates platform/locale', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await actAs(c, CLIENT_A1);
+      await c.query('select public.register_device_token($1, $2, $3)', [TOKEN_A1, 'android', 'en']);
+      await c.query('select public.register_device_token($1, $2, $3)', [TOKEN_A1, 'ios', 'ar']);
+      await actAs(c, 'service');
+      const row = await c.query(
+        'select user_id, platform, locale from public.device_tokens where token = $1',
+        [TOKEN_A1],
+      );
+      expect(row.rows).toHaveLength(1);
+      expect(row.rows[0].user_id).toBe(CLIENT_A1.sub);
+      expect(row.rows[0].platform).toBe('ios');
+      expect(row.rows[0].locale).toBe('ar');
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  // ── H-3: a token owned by another user is NOT reassigned (push-token hijack block) ─
+  it('re-registering a token owned by another user does NOT reassign it (H-3)', async () => {
     const c = await pool.connect();
     try {
       await c.query('begin');
       await actAs(c, CLIENT_A1);
       await c.query('select public.register_device_token($1, $2, $3)', [TOKEN_SHARED, 'android', 'en']);
+      // CLIENT_A2 (an attacker who learned the token string) tries to claim it.
       await actAs(c, CLIENT_A2_ID);
       await c.query('select public.register_device_token($1, $2, $3)', [TOKEN_SHARED, 'ios', 'ar']);
-      const a2 = await c.query('select user_id, platform from public.device_tokens where token = $1', [TOKEN_SHARED]);
+      // Ownership is unchanged: still CLIENT_A1, still android/en (the hijack no-ops).
+      await actAs(c, 'service');
+      const row = await c.query(
+        'select user_id, platform, locale from public.device_tokens where token = $1',
+        [TOKEN_SHARED],
+      );
+      expect(row.rows).toHaveLength(1);
+      expect(row.rows[0].user_id).toBe(CLIENT_A1.sub);
+      expect(row.rows[0].platform).toBe('android');
+      expect(row.rows[0].locale).toBe('en');
+      // The original owner still sees their token; the attacker sees nothing.
       await actAs(c, CLIENT_A1);
       const a1 = await c.query('select token from public.device_tokens where token = $1', [TOKEN_SHARED]);
-      expect(a1.rows).toHaveLength(0); // previous owner no longer receives this device's pushes
-      expect(a2.rows).toHaveLength(1);
-      expect(a2.rows[0].user_id).toBe(CLIENT_A2);
-      expect(a2.rows[0].platform).toBe('ios');
+      await actAs(c, CLIENT_A2_ID);
+      const a2 = await c.query('select token from public.device_tokens where token = $1', [TOKEN_SHARED]);
+      expect(a1.rows).toHaveLength(1); // owner keeps it
+      expect(a2.rows).toHaveLength(0); // attacker cannot see or claim it
     } finally {
       await c.query('rollback').catch(() => {});
       c.release();
@@ -3115,6 +3149,152 @@ describe('device tokens (0040, Phase 17 Slice 2) — push registry, owner-only, 
       await c.query('rollback').catch(() => {});
       c.release();
     }
+  });
+});
+
+describe('app achievements (0073, E1) — minted trophies, owner-only raw read, public RPC (§2)', () => {
+  const CLIENT_A2_ID: Identity = { sub: CLIENT_A2, userRole: 'client' };
+  type TC = Awaited<ReturnType<typeof pool.connect>>;
+  async function actAs(c: TC, who: Identity | 'anon' | 'service'): Promise<void> {
+    await c.query('reset role');
+    if (who === 'service') {
+      await c.query('set local role service_role');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+    } else if (who === 'anon') {
+      await c.query('set local role anon');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+    } else {
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: who.sub, role: 'authenticated', user_role: who.userRole }),
+      ]);
+    }
+  }
+
+  it('minting is service-role only — clients cannot mint or write the table directly', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query("select public.mint_achievement($1, 'first_workout')", [CLIENT_A1.sub])),
+    ).rejects.toThrow();
+    await expect(
+      asAnon((c) => c.query("select public.mint_achievement($1, 'first_workout')", [CLIENT_A1.sub])),
+    ).rejects.toThrow();
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("insert into public.app_achievements (user_id, achievement_key) values ($1, 'forged')", [CLIENT_A1.sub]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('a user reads only their own raw trophies; another tenant and anon see none', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await actAs(c, 'service');
+      await c.query("select public.mint_achievement($1, 'workouts_10')", [CLIENT_A1.sub]);
+      await actAs(c, CLIENT_A1);
+      const owner = await c.query('select achievement_key from public.app_achievements');
+      await actAs(c, CLIENT_A2_ID);
+      const other = await c.query('select achievement_key from public.app_achievements');
+      await actAs(c, 'anon');
+      const anon = await c.query('select achievement_key from public.app_achievements');
+      expect(owner.rows.some((r) => r.achievement_key === 'workouts_10')).toBe(true);
+      expect(other.rows).toHaveLength(0);
+      expect(anon.rows).toHaveLength(0);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('get_public_app_achievements: public shows non-body trophies; body-derived gated behind the share toggle', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await actAs(c, 'service');
+      await c.query("select public.mint_achievement($1, 'workouts_50')", [CLIENT_A1.sub]); // non-body
+      await c.query("select public.mint_achievement($1, 'body_fat_drop_5')", [CLIENT_A1.sub]); // body-derived
+      await c.query(
+        'update public.athlete_profile set is_public = false, share_body_metrics_publicly = false where user_id = $1',
+        [CLIENT_A1.sub],
+      );
+      await actAs(c, CLIENT_A2_ID);
+      const whenPrivate = await c.query('select achievement_key from public.get_public_app_achievements($1)', [CLIENT_A1.sub]);
+      await actAs(c, 'service');
+      await c.query('update public.athlete_profile set is_public = true where user_id = $1', [CLIENT_A1.sub]);
+      await actAs(c, CLIENT_A2_ID);
+      const publicNoShare = await c.query('select achievement_key from public.get_public_app_achievements($1)', [CLIENT_A1.sub]);
+      await actAs(c, 'service');
+      await c.query('update public.athlete_profile set share_body_metrics_publicly = true where user_id = $1', [CLIENT_A1.sub]);
+      await actAs(c, CLIENT_A2_ID);
+      const publicShare = await c.query('select achievement_key from public.get_public_app_achievements($1)', [CLIENT_A1.sub]);
+
+      const keys = (r: { rows: { achievement_key: string }[] }) => r.rows.map((x) => x.achievement_key);
+      expect(whenPrivate.rows).toHaveLength(0); // private profile → nothing public
+      expect(keys(publicNoShare)).toContain('workouts_50'); // non-body shown when public
+      expect(keys(publicNoShare)).not.toContain('body_fat_drop_5'); // body-derived hidden without share toggle
+      expect(keys(publicShare)).toContain('workouts_50');
+      expect(keys(publicShare)).toContain('body_fat_drop_5'); // now shown
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('anon cannot call the public achievements RPC (execute revoked from anon)', async () => {
+    await expect(
+      asAnon((c) => c.query('select * from public.get_public_app_achievements($1)', [CLIENT_A1.sub])),
+    ).rejects.toThrow();
+  });
+
+  it('client_goal_progress is INTERNAL — authenticated and anon cannot call it', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query('select public.client_goal_progress($1)', [CLIENT_A1.sub])),
+    ).rejects.toThrow();
+    await expect(
+      asAnon((c) => c.query('select public.client_goal_progress($1)', [CLIENT_A1.sub])),
+    ).rejects.toThrow();
+  });
+});
+
+describe('coach transformations (0077, E3) — coach-curated, consent-gated showcase (§2)', () => {
+  it('a coach features only their OWN client; not another coach’s, and cannot forge ownership', async () => {
+    const ok = await asUser(COACH_A, (c) =>
+      c.query("insert into public.coach_transformations (coach_id, client_id, caption) values ($1, $2, '16 weeks')", [COACH_A.sub, CLIENT_A1.sub]),
+    );
+    expect(ok.rowCount).toBe(1);
+    await expect(
+      asUser(COACH_A, (c) => c.query('insert into public.coach_transformations (coach_id, client_id) values ($1, $2)', [COACH_A.sub, CLIENT_B1])),
+    ).rejects.toThrow(); // not COACH_A's client
+    await expect(
+      asUser(COACH_A, (c) => c.query('insert into public.coach_transformations (coach_id, client_id) values ($1, $2)', [COACH_B_ID, CLIENT_A1.sub])),
+    ).rejects.toThrow(); // can't forge another coach's row
+  });
+
+  it('the featured client reads rows about them; another tenant and anon see none', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role service_role');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+      await c.query('insert into public.coach_transformations (coach_id, client_id) values ($1, $2)', [COACH_A.sub, CLIENT_A1.sub]);
+      const asId = (id: string, role: string) => c.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: id, role: 'authenticated', user_role: role })]);
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(CLIENT_A1.sub, 'client');
+      const a1 = await c.query('select id from public.coach_transformations');
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(CLIENT_A2, 'client');
+      const a2 = await c.query('select id from public.coach_transformations');
+      await c.query('reset role'); await c.query('set local role anon'); await c.query("select set_config('request.jwt.claims', '{}', true)");
+      const anon = await c.query('select id from public.coach_transformations');
+      expect(a1.rows.length).toBeGreaterThanOrEqual(1);
+      expect(a2.rows).toHaveLength(0);
+      expect(anon.rows).toHaveLength(0);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('anon cannot call get_coach_transformations (execute revoked from anon)', async () => {
+    await expect(asAnon((c) => c.query('select * from public.get_coach_transformations($1)', [COACH_A.sub]))).rejects.toThrow();
   });
 });
 

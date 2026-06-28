@@ -92,6 +92,17 @@ const migrationFiles = [
   '0068_push_shared_secret.sql',
   '0069_profile_handle.sql',
   '0070_public_read_handle_and_outcomes.sql',
+  '0071_fix_device_token_hijack.sql',
+  '0072_progress_helpers.sql',
+  '0073_app_achievements.sql',
+  '0074_self_achievement_caps.sql',
+  '0075_athlete_public_enrichment.sql',
+  '0076_leaderboard_reframe.sql',
+  '0077_coach_transformations.sql',
+  '0078_transformation_media_kind.sql',
+  '0079_coach_profile_enrichment.sql',
+  '0080_chat_note_context.sql',
+  '0081_coach_performance_trends.sql',
 ];
 
 const baseUrl =

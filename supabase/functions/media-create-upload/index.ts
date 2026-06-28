@@ -17,6 +17,8 @@ const EXT: Record<string, string> = {
   'audio/mp4': 'm4a',
   'audio/mpeg': 'mp3',
   'audio/wav': 'wav',
+  'audio/webm': 'webm',
+  'audio/ogg': 'ogg',
 };
 
 Deno.serve(async (req: Request) => {

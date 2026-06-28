@@ -16,6 +16,7 @@ import {
   useBodyMetricsBoard,
   useCoachAdherence,
   useCoachLeaderboard,
+  useCoachPerformanceTrends,
   useCoachPlanEffectiveness,
   useMyClients,
   useRefreshOnFocus,
@@ -31,7 +32,8 @@ import {
   type GoalDelivered,
 } from '../../src/lib/analytics';
 import type { AthleteGoal } from '../../src/schemas/athlete-profile';
-import { Icon, Screen, Text, GlassCard, KpiTile, DeltaChip, Avatar, Badge, Button, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, GlassCard, KpiTile, DeltaChip, Sparkline, Avatar, Badge, Button, EmptyState } from '../../src/components/ui';
+import { RosterMatrix } from '../../src/components/coach/RosterMatrix';
 import { theme } from '../../src/theme';
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -75,6 +77,7 @@ export default function PerformanceTab() {
   const effQ = useCoachPlanEffectiveness();
   const insightQ = useAnalyticsInsight();
   const weekQ = useCoachLeaderboard();
+  const trendsQ = useCoachPerformanceTrends();
 
   const [busy, setBusy] = useState(false);
   const [genMsg, setGenMsg] = useState<string | null>(null);
@@ -86,6 +89,7 @@ export default function PerformanceTab() {
     effQ.refetch();
     insightQ.refetch();
     weekQ.refetch();
+    trendsQ.refetch();
   });
 
   // Coach-only surface — clients/admin never see this tab (hidden in the bar) but guard
@@ -100,6 +104,14 @@ export default function PerformanceTab() {
   const eff = effQ.data ?? [];
   const insight = insightQ.data ?? null;
   const week = (weekQ.data ?? []).slice(0, 8);
+
+  const trends = trendsQ.data ?? [];
+  const sessionsSeries = trends.map((w) => w.sessions_logged);
+  const activeSeries = trends.map((w) => w.active_clients);
+  // Week-over-week delta = last completed week vs the one before (the trailing 2 of the series).
+  const wow = (s: number[]) => (s.length >= 2 ? s[s.length - 1]! - s[s.length - 2]! : null);
+  const sessionsWow = wow(sessionsSeries);
+  const activeWow = wow(activeSeries);
 
   const avgAdherence = rosterAdherencePct(roster);
   // Only declare "no clients" once the (deployed, reliable) client list has loaded —
@@ -159,6 +171,53 @@ export default function PerformanceTab() {
                 }
               />
             </View>
+
+            {/* Roster activity trend (E5) — real weekly sparklines + week-over-week deltas. */}
+            {trends.length >= 2 && sessionsSeries.some((n) => n > 0) ? (
+              <GlassCard style={{ gap: theme.spacing.md }}>
+                <Text variant="label" muted style={textStart}>
+                  {t('performance.activityTrend')}
+                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ gap: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <Text variant="bodyStrong">{sessionsSeries[sessionsSeries.length - 1]}</Text>
+                      {sessionsWow != null ? <DeltaChip value={sessionsWow} suffix="" /> : null}
+                    </View>
+                    <Text variant="caption" muted>
+                      {t('performance.sessionsThisWeek')}
+                    </Text>
+                  </View>
+                  <Sparkline data={sessionsSeries} width={140} height={40} />
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ gap: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <Text variant="bodyStrong">{activeSeries[activeSeries.length - 1]}</Text>
+                      {activeWow != null ? <DeltaChip value={activeWow} suffix="" /> : null}
+                    </View>
+                    <Text variant="caption" muted>
+                      {t('performance.activeThisWeek')}
+                    </Text>
+                  </View>
+                  <Sparkline data={activeSeries} width={140} height={40} color={theme.colors.secondary} />
+                </View>
+              </GlassCard>
+            ) : null}
+
+            {/* Roster health matrix (E5) — dense clients×metrics grid, color-coded. */}
+            {roster.length > 0 ? (
+              <View style={{ gap: theme.spacing.md }}>
+                <SectionHeader title={t('performance.rosterHealth')} subtitle={t('performance.rosterHealthSub')} />
+                <GlassCard>
+                  <RosterMatrix
+                    rows={roster}
+                    board={board}
+                    onRowPress={(id) => router.push({ pathname: '/coach/client/[id]', params: { id } })}
+                  />
+                </GlassCard>
+              </View>
+            ) : null}
 
             {/* This week — engagement board (the former Ranks tab). Clients ranked by
                 sessions logged this week; full-width above the KPI grid. */}

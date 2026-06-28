@@ -83,8 +83,11 @@ export const pushSendSchema = z.object({
 export const MEDIA_MIME_TYPES = [
   'image/jpeg', 'image/png', 'application/pdf',
   'audio/mp4', 'audio/mpeg', 'audio/wav',
+  'audio/webm', 'audio/ogg', // web voice notes (E7)
 ] as const;
-export const MEDIA_KINDS = ['progress_photo', 'inbody', 'other', 'audio', 'avatar'] as const;
+// transformation (E3): coach-curated before/after showcase photos — same JPEG/PNG pipeline
+// as avatar/progress_photo; public-readable only while tied to a consented coach_transformations row.
+export const MEDIA_KINDS = ['progress_photo', 'inbody', 'other', 'audio', 'avatar', 'transformation'] as const;
 const MEDIA_MAX_BYTES = 10 * 1024 * 1024; // 10 MB (§7)
 
 // Request a signed upload URL into the locked inbox. No media row yet.
@@ -96,7 +99,7 @@ export const createUploadSchema = z.object({
 // Finalize: the inbox_path must be `{ownerUuid}/{uuid}.{ext}` (no traversal); the
 // function re-checks the owner segment against the verified caller.
 export const finalizeSchema = z.object({
-  inbox_path: z.string().regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|pdf|m4a|mp3|wav)$/i),
+  inbox_path: z.string().regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|pdf|m4a|mp3|wav|webm|ogg)$/i),
   kind: z.enum(MEDIA_KINDS),
   progress_entry_id: z.string().uuid().optional(),
 });

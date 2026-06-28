@@ -32,6 +32,8 @@ export type AthleteProfile = {
   is_public: boolean;
   public_achievements: string[];
   leaderboard_opt_in: boolean;
+  share_body_metrics_publicly: boolean;
+  allow_transformation_sharing: boolean;
   active_training_plan_id: string | null;
   onboarded_at: string | null;
   created_at: string;
@@ -39,7 +41,7 @@ export type AthleteProfile = {
 };
 
 const COLS =
-  'user_id, primary_goal, experience_level, sex, birth_date, height_cm, target_weight_grams, activity_level, training_days, dietary_tags, injuries_notes, weight_unit, is_public, public_achievements, leaderboard_opt_in, active_training_plan_id, onboarded_at, created_at, updated_at';
+  'user_id, primary_goal, experience_level, sex, birth_date, height_cm, target_weight_grams, activity_level, training_days, dietary_tags, injuries_notes, weight_unit, is_public, public_achievements, leaderboard_opt_in, share_body_metrics_publicly, allow_transformation_sharing, active_training_plan_id, onboarded_at, created_at, updated_at';
 
 /** The signed-in client's own profile (null if not started). */
 export async function getMyAthleteProfile(userId: string): Promise<AthleteProfile | null> {
@@ -108,7 +110,13 @@ export async function setActiveTrainingPlan(userId: string, planId: string | nul
  */
 export async function setAthleteVisibility(
   userId: string,
-  input: { is_public?: boolean; public_achievements?: string[]; leaderboard_opt_in?: boolean },
+  input: {
+    is_public?: boolean;
+    public_achievements?: string[];
+    leaderboard_opt_in?: boolean;
+    share_body_metrics_publicly?: boolean;
+    allow_transformation_sharing?: boolean;
+  },
 ): Promise<void> {
   const v = upsertAthleteProfileSchema.parse(input);
   const { error } = await supabase

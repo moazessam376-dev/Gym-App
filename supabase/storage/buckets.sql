@@ -20,12 +20,14 @@
 -- public.media table CHECK but NOT here) — without them the live buckets reject every
 -- voice-note upload at the storage layer. RE-APPLY this file via MCP/dashboard after any
 -- change; it is not run by the migration harness.
+-- NOTE (E7): audio/webm + audio/ogg added for WEB voice notes (MediaRecorder records webm/opus).
+-- Re-apply this file via MCP/dashboard so the live buckets accept them.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values
   ('media-inbox', 'media-inbox', false, 10485760,
-   array['image/jpeg', 'image/png', 'application/pdf', 'audio/mp4', 'audio/mpeg', 'audio/wav']),
+   array['image/jpeg', 'image/png', 'application/pdf', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/ogg']),
   ('media', 'media', false, 10485760,
-   array['image/jpeg', 'image/png', 'application/pdf', 'audio/mp4', 'audio/mpeg', 'audio/wav'])
+   array['image/jpeg', 'image/png', 'application/pdf', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/ogg'])
 on conflict (id) do update
   set public = excluded.public,
       file_size_limit = excluded.file_size_limit,

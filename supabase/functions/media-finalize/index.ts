@@ -26,7 +26,9 @@ type Mime =
   | 'application/pdf'
   | 'audio/mp4'
   | 'audio/mpeg'
-  | 'audio/wav';
+  | 'audio/wav'
+  | 'audio/webm'
+  | 'audio/ogg';
 
 /** Detect the real content type from leading bytes — never trust extension/MIME. */
 function detectType(b: Uint8Array): Mime | null {
@@ -57,6 +59,10 @@ function detectType(b: Uint8Array): Mime | null {
   ) {
     return 'audio/wav';
   }
+  // WebM (EBML header 1A 45 DF A3) — the web MediaRecorder default (E7).
+  if (b.length >= 4 && b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return 'audio/webm';
+  // OGG ('OggS') — web MediaRecorder fallback where webm isn't supported.
+  if (b.length >= 4 && b[0] === 0x4f && b[1] === 0x67 && b[2] === 0x67 && b[3] === 0x53) return 'audio/ogg';
   return null;
 }
 
@@ -67,9 +73,11 @@ const EXT: Record<Mime, string> = {
   'audio/mp4': 'm4a',
   'audio/mpeg': 'mp3',
   'audio/wav': 'wav',
+  'audio/webm': 'webm',
+  'audio/ogg': 'ogg',
 };
 
-const AUDIO_MIMES = new Set<Mime>(['audio/mp4', 'audio/mpeg', 'audio/wav']);
+const AUDIO_MIMES = new Set<Mime>(['audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/ogg']);
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -113,6 +121,7 @@ Deno.serve(async (req: Request) => {
       avatar: { max: 5, windowMs: 60 * 60 * 1000 },
       audio: { max: 10, windowMs: 60 * 60 * 1000 },
       other: { max: 20, windowMs: 60 * 60 * 1000 },
+      transformation: { max: 20, windowMs: 60 * 60 * 1000 }, // E3 coach showcase photos
     };
     const rule = RATE[kind];
     if (rule) {

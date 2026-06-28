@@ -5,6 +5,7 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   getCoachPublicHighlights,
+  getCoachTransformations,
   getPublicAthleteProfile,
   getPublicCoachProfile,
   listPublicCoaches,
@@ -22,6 +23,14 @@ export function useCoachPublicHighlights(coachId?: string) {
   return useQuery({
     queryKey: ['coach-public-highlights', coachId],
     queryFn: () => getCoachPublicHighlights(coachId!),
+    enabled: !!coachId,
+  });
+}
+
+export function useCoachTransformations(coachId?: string) {
+  return useQuery({
+    queryKey: ['coach-transformations', coachId],
+    queryFn: () => getCoachTransformations(coachId!),
     enabled: !!coachId,
   });
 }
