@@ -63,6 +63,14 @@ function str(params: Record<string, unknown> | null, key: string): string {
   return typeof v === 'string' ? v : '';
 }
 
+/** Constant-time string compare (avoids leaking the shared secret via timing). */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 /**
  * Read the `role` claim from a JWT WITHOUT verifying its signature — verify_jwt is
  * on, so the Supabase gateway has already validated the signature before the request
@@ -117,12 +125,24 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
 
-  // Trusted-path gate: only a service-role caller (the 0041 trigger, carrying the
-  // Vault service-role key) may fan out push. The gateway already validated the
-  // signature (verify_jwt), so we authorize on the role claim.
+  // Trusted-path gate (defense in depth, §2/§3):
+  //   1. service-role JWT role claim — the gateway already verified the signature
+  //      (verify_jwt=true, pinned in supabase/config.toml), so we authorize on the claim.
+  //   2. H-2: a Vault-stored shared secret the 0041 trigger sends as `x-push-secret`. This
+  //      is a second factor INDEPENDENT of verify_jwt — even if verify_jwt were ever
+  //      misconfigured off, a forged service-role JWT can't pass without the secret. It is
+  //      enforced only when PUSH_SHARED_SECRET is configured (a no-op until push is
+  //      activated), so existing behavior is unchanged until both ends are set.
   const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
   if (jwtRole(bearer) !== 'service_role') {
     return json({ error: 'unauthorized' }, 401);
+  }
+  const expectedSecret = Deno.env.get('PUSH_SHARED_SECRET');
+  if (expectedSecret) {
+    const presented = req.headers.get('x-push-secret') ?? '';
+    if (!timingSafeEqual(presented, expectedSecret)) {
+      return json({ error: 'unauthorized' }, 401);
+    }
   }
 
   let raw: unknown;

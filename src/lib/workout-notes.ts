@@ -39,12 +39,17 @@ export async function createWorkoutNote(userId: string, input: CreateWorkoutNote
   return data as WorkoutNote;
 }
 
-/** Notes attached to one session (athlete's own, or a coach reading their client's). */
+/**
+ * Notes attached to one session, for the ATHLETE's own exercise view. Hidden notes
+ * (those the athlete chose to "hide from my log", 0060) are filtered out here — the
+ * coach still sees them in chat + the Notes tab (`listClientNotes`, unfiltered).
+ */
 export async function listSessionNotes(sessionId: string): Promise<WorkoutNote[]> {
   const { data, error } = await supabase
     .from('workout_notes')
     .select(COLS)
     .eq('session_id', sessionId)
+    .is('hidden_at', null)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as WorkoutNote[];
@@ -64,5 +69,28 @@ export async function listClientNotes(clientId: string, limit = 20): Promise<Wor
 
 export async function deleteWorkoutNote(id: string): Promise<void> {
   const { error } = await supabase.from('workout_notes').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/**
+ * "Hide from my log" (0060): drop the note from the athlete's OWN exercise view only.
+ * The row lives on, so the coach's chat note card + Notes tab are untouched. RLS fences
+ * the update to the owner (workout_notes owner UPDATE policy).
+ */
+export async function hideWorkoutNote(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('workout_notes')
+    .update({ hidden_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+/**
+ * "Delete for everyone" (0060): remove the note AND retract its mirrored chat message
+ * (the coach loses the note card too). Goes through a SECURITY DEFINER RPC fenced to
+ * the caller's own rows — a client has no direct DELETE on `messages`.
+ */
+export async function deleteWorkoutNoteForEveryone(id: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_workout_note_everywhere', { p_id: id });
   if (error) throw error;
 }

@@ -132,6 +132,11 @@ export default function CoachProfileScreen() {
       <View style={{ alignItems: 'center', gap: theme.spacing.sm }}>
         <ProfileAvatar name={p.full_name} avatarMediaId={p.avatar_media_id} size={104} />
         <Text variant="h2">{p.full_name ?? ''}</Text>
+        {p.handle ? (
+          <Text variant="caption" muted>
+            @{p.handle}
+          </Text>
+        ) : null}
         {p.years_experience != null ? (
           <Text variant="caption" muted>
             {t('publicProfile.yearsExperience', { count: p.years_experience })}
@@ -171,7 +176,7 @@ export default function CoachProfileScreen() {
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
             {p.specialties.map((s) => (
-              <Chip key={s} label={label(s)} />
+              <Chip key={s} label={t(`specialty.${s}`, { defaultValue: label(s) })} />
             ))}
           </View>
         </View>

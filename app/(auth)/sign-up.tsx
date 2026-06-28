@@ -40,13 +40,11 @@ export default function SignUp() {
       options: { data: { full_name: name } },
     });
     setLoading(false);
+    // Generic outcome regardless of whether the email already exists (M-8: no account
+    // enumeration). Pair this with Supabase Auth's "Prevent user enumeration" setting so
+    // the server response is indistinguishable for new vs existing addresses.
     if (authError) {
-      const msg = authError.message?.toLowerCase() ?? '';
-      if (msg.includes('already') || msg.includes('registered')) {
-        setError(t('auth.accountExists'));
-      } else {
-        setError(t('auth.createFailed'));
-      }
+      setError(t('auth.createFailed'));
       return;
     }
     if (!data.session) {

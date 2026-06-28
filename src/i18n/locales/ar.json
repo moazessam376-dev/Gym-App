@@ -76,6 +76,7 @@
     "sectionManage": "الإدارة",
     "sectionPreferences": "التفضيلات",
     "setYourName": "اكتب اسمك",
+    "profile": "البروفايل",
     "editProfile": "تعديل الملف",
     "notifications": "الإشعارات",
     "coachingProfile": "ملف الكوتش",
@@ -94,7 +95,9 @@
     "language": "اللغة",
     "dangerZone": "منطقة الخطر",
     "deleteAccount": "امسح الحساب",
-    "deleteFailed": "مش قادرين نمسح حسابك. حاول تاني."
+    "deleteFailed": "مش قادرين نمسح حسابك. حاول تاني.",
+    "deleteConfirmBody1": "ده هيمسح حسابك وكل بياناتك نهائيًا — التمارين والأكل والتقدم والصور والرسايل. مفيش رجوع.",
+    "deleteConfirmBody2": "متأكد تمامًا؟ مفيش أي طريقة تسترجع حسابك بعد كده."
   },
   "settings": {
     "title": "الإعدادات"
@@ -164,7 +167,21 @@
     "yearsExp_other": "{{count}} سنة خبرة",
     "emptyTitle": "لسه مفيش كوتشيز عامة",
     "emptySub": "تعالى تاني قريب — الكوتشيز بيجهّزوا ملفاتهم.",
-    "loadError": "مش قادرين نحمّل الكوتشيز"
+    "loadError": "مش قادرين نحمّل الكوتشيز",
+    "verified": "موثّق",
+    "outcome": "{{tracked}} عميل متتابع · {{improved}} اتحسّن"
+  },
+  "specialty": {
+    "hypertrophy": "تضخيم العضلات",
+    "powerlifting": "باور ليفتنج",
+    "weight_loss": "إنقاص وزن",
+    "nutrition": "تغذية",
+    "strength": "قوة",
+    "bodybuilding": "كمال أجسام",
+    "general_fitness": "لياقة عامة",
+    "sport_performance": "أداء رياضي",
+    "mobility": "مرونة",
+    "womens_training": "تدريب السيدات"
   },
   "leaderboards": {
     "title": "لوحات المتصدرين",
@@ -442,7 +459,10 @@
     "activeToday": "نشط النهارده",
     "activeDaysAgo_one": "آخر نشاط من يوم",
     "activeDaysAgo_other": "آخر نشاط من {{count}} يوم",
-    "noSessions": "لسه مفيش تمارين"
+    "noSessions": "لسه مفيش تمارين",
+    "filterAll": "الكل",
+    "filterAttention": "محتاجين متابعة",
+    "filterOnTrack": "ماشيين تمام"
   },
   "ranks": {
     "thisWeek": "الأسبوع ده",
@@ -956,7 +976,23 @@
     }
   },
   "profile": {
-    "displayName": "الاسم المعروض"
+    "displayName": "الاسم المعروض",
+    "identity": "الهوية",
+    "handle": "اسم المستخدم",
+    "handlePlaceholder": "اسم المستخدم",
+    "handleHint": "اسم المستخدم @ بتاعك المميّز. تقدر تغيّره مرة كل ١٤ يوم.",
+    "handleChecking": "بنتأكد…",
+    "handleAvailable": "متاح",
+    "handleTaken": "متاخد خلاص",
+    "handleReserved": "مش متاح",
+    "handleInvalid": "من ٣ لـ ٢٠ حرف: حروف وأرقام و . أو _",
+    "handleCooldown": "تقدر تغيّر اسم المستخدم مرة كل ١٤ يوم.",
+    "handleSaveError": "محصلش حفظ — يمكن الاسم متاخد.",
+    "email": "الإيميل",
+    "more": "المزيد",
+    "sectionGoals": "الأهداف والجسم",
+    "sectionCoaching": "ملف الكوتش",
+    "sectionPublic": "الظهور العام"
   },
   "food": {
     "grams": "جرام",
@@ -1029,6 +1065,11 @@
     "deleteNote": "امسح الملاحظة",
     "deleteNoteTitle": "تمسح الملاحظة دي؟",
     "deleteNoteMsg": "ده هيشيل الملاحظة من تمرينك ومن فيد الكوتش بتاعك.",
+    "noteRemoveTitle": "تشيل الملاحظة دي",
+    "hideFromLog": "إخفاء من سجلي",
+    "hideFromLogHint": "هتتشال من تمرينك بس. الكوتش لسه شايفها في الشات.",
+    "deleteForEveryone": "امسحها للكل",
+    "deleteForEveryoneHint": "كمان هتتشال من الشات بينك وبين الكوتش.",
     "leaveNote": "اكتب ملاحظة للكوتش",
     "noteToCoach": "ملاحظة للكوتش",
     "noteSub": "قول للكوتش التمرين كان عامل إزاي — هيشوفها في بروفايلك.",

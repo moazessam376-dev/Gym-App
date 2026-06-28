@@ -933,8 +933,8 @@ describe('messages (0012) — coach⇄client DMs, server-set sender, rate limit 
   });
 
   it('rate-limits a burst of sends from one sender', async () => {
-    // 20/10s cap; the 21st in the same transaction trips it (now() is constant
-    // within the txn, so all rows fall inside the window).
+    // 10/10s cap (tightened in 0063); the 11th in the same transaction trips it (now()
+    // is constant within the txn, so all rows fall inside the window).
     await expect(
       asUser(COACH_A, async (c) => {
         for (let i = 0; i < 21; i++) {
@@ -1779,6 +1779,53 @@ describe('workout note delete keeps the chat copy (0056) — FK SET NULL is not 
       expect(after.rows).toHaveLength(1);
       expect(after.rows[0].workout_note_id).toBeNull();
       expect(after.rows[0].edited_at).toBeNull();
+    });
+  });
+});
+
+describe('workout note: hide vs delete-for-everyone (0060)', () => {
+  const A1_SESSION = '5e550001-0000-0000-0000-000000000001';
+
+  // One transaction (the harness rolls back each asUser() call): the mirror message
+  // is created by the note-insert trigger, so author + act + assert must share a txn.
+  it('"hide from my log" sets hidden_at but keeps the mirrored chat message linked', async () => {
+    await asUser(CLIENT_A1, async (c) => {
+      const note = await c.query(
+        "insert into public.workout_notes (user_id, session_id, category, body) values ($1, $2, 'challenge', 'hide-me note') returning id",
+        [CLIENT_A1.sub, A1_SESSION],
+      );
+      const noteId = note.rows[0].id;
+      expect(
+        (await c.query('select id from public.messages where workout_note_id = $1', [noteId])).rows,
+      ).toHaveLength(1);
+
+      // Hide is a plain owner UPDATE (workout_notes owner UPDATE policy).
+      await c.query('update public.workout_notes set hidden_at = now() where id = $1', [noteId]);
+
+      const note2 = await c.query('select hidden_at from public.workout_notes where id = $1', [noteId]);
+      expect(note2.rows[0].hidden_at).not.toBeNull();
+      // The chat copy is untouched and still a note card (workout_note_id intact).
+      expect(
+        (await c.query('select id from public.messages where workout_note_id = $1', [noteId])).rows,
+      ).toHaveLength(1);
+    });
+  });
+
+  it('delete_workout_note_everywhere removes the note AND retracts its mirrored chat message', async () => {
+    await asUser(CLIENT_A1, async (c) => {
+      const note = await c.query(
+        "insert into public.workout_notes (user_id, session_id, category, body) values ($1, $2, 'challenge', 'nuke-me note') returning id",
+        [CLIENT_A1.sub, A1_SESSION],
+      );
+      const noteId = note.rows[0].id;
+      const mirror = await c.query('select id from public.messages where workout_note_id = $1', [noteId]);
+      expect(mirror.rows).toHaveLength(1);
+      const msgId = mirror.rows[0].id;
+
+      await c.query('select public.delete_workout_note_everywhere($1)', [noteId]);
+
+      expect((await c.query('select id from public.workout_notes where id = $1', [noteId])).rows).toHaveLength(0);
+      expect((await c.query('select id from public.messages where id = $1', [msgId])).rows).toHaveLength(0);
     });
   });
 });
@@ -3165,7 +3212,7 @@ describe('public profiles (0044, Phase 19) — opt-in portfolio via field-allowl
     expect(r.rows[0].avatar_media_id).toBe(COACH_A_AVATAR);
     // The allowlist is the column set — sensitive/foreign columns simply aren't there.
     expect(Object.keys(r.rows[0]).sort()).toEqual(
-      ['achievements', 'avatar_media_id', 'bio', 'certifications', 'coach_id', 'full_name', 'specialties', 'years_experience'].sort(),
+      ['achievements', 'avatar_media_id', 'bio', 'certifications', 'coach_id', 'full_name', 'handle', 'specialties', 'years_experience'].sort(),
     );
   });
 
@@ -3191,7 +3238,7 @@ describe('public profiles (0044, Phase 19) — opt-in portfolio via field-allowl
     expect(r.rows[0].public_achievements).toContain('Down 5kg in 12 weeks');
     const cols = Object.keys(r.rows[0]);
     expect(cols.sort()).toEqual(
-      ['athlete_id', 'avatar_media_id', 'full_name', 'primary_goal', 'public_achievements'].sort(),
+      ['athlete_id', 'avatar_media_id', 'full_name', 'handle', 'primary_goal', 'public_achievements'].sort(),
     );
     // Explicitly assert the sensitive columns can never be returned by this RPC.
     for (const banned of ['birth_date', 'height_cm', 'injuries_notes', 'sex', 'coach_id', 'target_weight_grams']) {
@@ -3637,6 +3684,176 @@ describe('conversation previews + read-state (0058) — chat list aggregation (�
     await expect(asAnon((c) => c.query('select * from public.list_conversation_previews()'))).rejects.toThrow();
     await expect(
       asAnon((c) => c.query('select public.mark_conversation_read($1)', [COACH_A.sub])),
+    ).rejects.toThrow();
+  });
+});
+
+describe('security hardening (0061–0067)', () => {
+  it('M-5 — accept_invitation refuses a client who already has a coach (atomic no-steal)', async () => {
+    const INVITEE_ID = 'da010001-0000-0000-0000-000000000001';
+    const EMAIL = 'm5.invitee@example.test';
+    const TOKEN_A = 'da010002-0000-0000-0000-000000000002';
+    const TOKEN_B = 'da010003-0000-0000-0000-000000000003';
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [INVITEE_ID, EMAIL]);
+      await c.query('insert into public.invitations (coach_id, email, token) values ($1, $2, $3)', [
+        COACH_A.sub,
+        EMAIL,
+        TOKEN_A,
+      ]);
+      await c.query('insert into public.invitations (coach_id, email, token) values ($1, $2, $3)', [
+        COACH_B_ID,
+        EMAIL,
+        TOKEN_B,
+      ]);
+      await c.query('set local role service_role');
+      // First accept links coach A.
+      const r1 = await c.query('select public.accept_invitation($1, $2, $3) as coach', [
+        TOKEN_A,
+        INVITEE_ID,
+        EMAIL,
+      ]);
+      expect(r1.rows[0].coach).toBe(COACH_A.sub);
+      // A second accept (different coach, same client) must be rejected — no steal.
+      await c.query('savepoint sp');
+      await expect(
+        c.query('select public.accept_invitation($1, $2, $3)', [TOKEN_B, INVITEE_ID, EMAIL]),
+      ).rejects.toThrow();
+      await c.query('rollback to savepoint sp');
+      await c.query('reset role');
+      const prof = await c.query('select coach_id from public.profiles where id = $1', [INVITEE_ID]);
+      expect(prof.rows[0].coach_id).toBe(COACH_A.sub); // unchanged
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('M-2 — first-contact DM needs a chat acknowledgment (server-enforced disclaimer)', async () => {
+    // The disclaimer gate is the FIRST message within an established coach↔client pair
+    // (messages_insert RLS already requires that relationship). Use Coach A + a fresh
+    // client of theirs, with no prior thread and no acknowledgment.
+    const NEWC = 'da020001-0000-0000-0000-000000000001';
+    const coachClaims = JSON.stringify({ sub: COACH_A.sub, role: 'authenticated', user_role: 'coach' });
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [NEWC, 'm2.newclient@example.test']);
+      // Assign the fresh client to Coach A (service role — immutables allows coach_id).
+      await c.query('set local role service_role');
+      await c.query('update public.profiles set coach_id = $1 where id = $2', [COACH_A.sub, NEWC]);
+      await c.query('reset role');
+      // First contact, no acknowledgment → blocked by the disclaimer gate.
+      await c.query('savepoint sp');
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [coachClaims]);
+      await expect(
+        c.query('insert into public.messages (recipient_id, body) values ($1, $2)', [NEWC, 'hi']),
+      ).rejects.toThrow(/disclaimer_required/);
+      await c.query('rollback to savepoint sp');
+      // Record the acknowledgment (Coach A → the client), then the same send succeeds.
+      await c.query('insert into public.chat_acknowledgments (user_id, peer_id) values ($1, $2)', [COACH_A.sub, NEWC]);
+      await c.query('set local role authenticated');
+      await c.query("select set_config('request.jwt.claims', $1, true)", [coachClaims]);
+      const ok = await c.query(
+        'insert into public.messages (recipient_id, body) values ($1, $2) returning id',
+        [NEWC, 'hi'],
+      );
+      expect(ok.rows).toHaveLength(1);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('H-1 — moderation FKs are ON DELETE SET NULL (audit trail survives user deletion)', async () => {
+    const r = await asService((c) =>
+      c.query(
+        `select conname, confdeltype from pg_constraint
+          where conname in ('message_reports_reported_user_id_fkey', 'ban_appeals_user_id_fkey')
+          order by conname`,
+      ),
+    );
+    expect(r.rows).toHaveLength(2);
+    for (const row of r.rows) expect(row.confdeltype).toBe('n'); // 'n' = SET NULL
+  });
+
+  it('C-1 — a blocklisted email cannot register (case-insensitive handle_new_user guard)', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query("insert into public.email_blocklist (email_lc) values ('blocked@example.test')");
+      await expect(
+        c.query("insert into auth.users (id, email) values (gen_random_uuid(), 'Blocked@Example.test')"),
+      ).rejects.toThrow();
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+});
+
+describe('@handle (0069)', () => {
+  it('rejects a duplicate handle (case-insensitive unique)', async () => {
+    const U1 = 'da030001-0000-0000-0000-000000000001';
+    const U2 = 'da030002-0000-0000-0000-000000000002';
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2), ($3, $4)', [
+        U1,
+        'h1.dup@example.test',
+        U2,
+        'h2.dup@example.test',
+      ]);
+      await c.query('update public.profiles set handle = $1 where id = $2', ['takenname', U1]);
+      // U2 tries the same handle in a different case → lower(handle) unique index rejects.
+      await expect(
+        c.query('update public.profiles set handle = $1 where id = $2', ['TakenName', U2]),
+      ).rejects.toThrow();
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('enforces the 14-day rename cooldown', async () => {
+    const U = 'da030003-0000-0000-0000-000000000003';
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [U, 'h3.cd@example.test']);
+      // First rename is free (signup left handle_changed_at null), then stamps now().
+      await c.query('update public.profiles set handle = $1 where id = $2', ['firstname', U]);
+      await expect(
+        c.query('update public.profiles set handle = $1 where id = $2', ['secondname', U]),
+      ).rejects.toThrow(/handle_cooldown/);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('rejects a reserved handle', async () => {
+    const U = 'da030004-0000-0000-0000-000000000004';
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [U, 'h4.res@example.test']);
+      await expect(
+        c.query('update public.profiles set handle = $1 where id = $2', ['admin', U]),
+      ).rejects.toThrow(/handle_reserved/);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('check_handle_available is not callable by anon (execute revoked)', async () => {
+    await expect(
+      asAnon((c) => c.query("select * from public.check_handle_available('whatever')")),
     ).rejects.toThrow();
   });
 });

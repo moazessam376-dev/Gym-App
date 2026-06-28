@@ -257,7 +257,10 @@
     "activeToday": "active today",
     "activeDaysAgo_one": "active {{count}}d ago",
     "activeDaysAgo_other": "active {{count}}d ago",
-    "noSessions": "no sessions yet"
+    "noSessions": "no sessions yet",
+    "filterAll": "All",
+    "filterAttention": "Needs attention",
+    "filterOnTrack": "On track"
   },
   "ranks": {
     "thisWeek": "This week",
@@ -479,6 +482,7 @@
     "sectionManage": "Manage",
     "sectionPreferences": "Preferences",
     "setYourName": "Set your name",
+    "profile": "Profile",
     "editProfile": "Edit profile",
     "notifications": "Notifications",
     "coachingProfile": "Coaching profile",
@@ -497,7 +501,9 @@
     "language": "Language",
     "dangerZone": "Danger zone",
     "deleteAccount": "Delete account",
-    "deleteFailed": "Could not delete your account. Please try again."
+    "deleteFailed": "Could not delete your account. Please try again.",
+    "deleteConfirmBody1": "This permanently erases your account and all your data — workouts, nutrition, progress, photos and messages. This cannot be undone.",
+    "deleteConfirmBody2": "Are you absolutely sure? There is no way to recover your account after this."
   },
   "settings": {
     "title": "Settings"
@@ -555,7 +561,21 @@
     "yearsExp_other": "{{count}} yrs experience",
     "emptyTitle": "No public coaches yet",
     "emptySub": "Check back soon — coaches are setting up their profiles.",
-    "loadError": "Could not load coaches"
+    "loadError": "Could not load coaches",
+    "verified": "Verified",
+    "outcome": "{{tracked}} clients tracked · {{improved}} improved"
+  },
+  "specialty": {
+    "hypertrophy": "Hypertrophy",
+    "powerlifting": "Powerlifting",
+    "weight_loss": "Weight loss",
+    "nutrition": "Nutrition",
+    "strength": "Strength",
+    "bodybuilding": "Bodybuilding",
+    "general_fitness": "General fitness",
+    "sport_performance": "Sport performance",
+    "mobility": "Mobility",
+    "womens_training": "Women's training"
   },
   "leaderboards": {
     "title": "Leaderboards",
@@ -928,7 +948,23 @@
     }
   },
   "profile": {
-    "displayName": "Display name"
+    "displayName": "Display name",
+    "identity": "Identity",
+    "handle": "Username",
+    "handlePlaceholder": "username",
+    "handleHint": "Your unique @username. Changeable once every 14 days.",
+    "handleChecking": "Checking…",
+    "handleAvailable": "Available",
+    "handleTaken": "Already taken",
+    "handleReserved": "Not available",
+    "handleInvalid": "3–20 characters: letters, numbers, . or _",
+    "handleCooldown": "You can change your username once every 14 days.",
+    "handleSaveError": "Couldn't save — that username may be taken.",
+    "email": "Email",
+    "more": "More",
+    "sectionGoals": "Goals & body",
+    "sectionCoaching": "Coaching profile",
+    "sectionPublic": "Public presence"
   },
   "food": {
     "grams": "Grams",
@@ -1001,6 +1037,11 @@
     "deleteNote": "Delete note",
     "deleteNoteTitle": "Delete this note?",
     "deleteNoteMsg": "This removes the note from your workout and your coach's feed.",
+    "noteRemoveTitle": "Remove this note",
+    "hideFromLog": "Hide from my log",
+    "hideFromLogHint": "Removes it from your workout. Your coach still sees it in chat.",
+    "deleteForEveryone": "Delete for everyone",
+    "deleteForEveryoneHint": "Also removes it from your chat with your coach.",
     "leaveNote": "Leave a note for your coach",
     "noteToCoach": "Note to your coach",
     "noteSub": "Tell your coach how it went — they’ll see it on your profile.",

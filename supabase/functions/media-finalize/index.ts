@@ -101,20 +101,36 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
-    // Athletes may submit at most one InBody per (UTC) day (Phase 12b). The AI read is a
-    // coach action; this just caps how often a client uploads a new sheet. Progress photos
-    // are unaffected.
-    if (kind === 'inbody') {
-      const startOfDay = new Date();
-      startOfDay.setUTCHours(0, 0, 0, 0);
+    // Per-kind upload caps (§9 abuse / M-3). inbody stays 1 per UTC day (the AI read is a
+    // coach action; this just caps how often a client uploads a new sheet). The other
+    // kinds get a rolling hourly cap so a client can't exhaust storage by looping
+    // media-create-upload + media-finalize (only inbody was capped before). Counts only
+    // 'ready' rows for the caller; returns the generic {status:'daily_limit'} marker the
+    // client already maps (§4 — no detail leak).
+    const RATE: Record<string, { max: number; windowMs: number }> = {
+      inbody: { max: 1, windowMs: 0 }, // special-cased to the UTC day below
+      progress_photo: { max: 20, windowMs: 60 * 60 * 1000 },
+      avatar: { max: 5, windowMs: 60 * 60 * 1000 },
+      audio: { max: 10, windowMs: 60 * 60 * 1000 },
+      other: { max: 20, windowMs: 60 * 60 * 1000 },
+    };
+    const rule = RATE[kind];
+    if (rule) {
+      let since: Date;
+      if (kind === 'inbody') {
+        since = new Date();
+        since.setUTCHours(0, 0, 0, 0);
+      } else {
+        since = new Date(Date.now() - rule.windowMs);
+      }
       const { count } = await svc
         .from('media')
         .select('id', { count: 'exact', head: true })
         .eq('owner_id', caller.id)
-        .eq('kind', 'inbody')
+        .eq('kind', kind)
         .eq('status', 'ready')
-        .gte('created_at', startOfDay.toISOString());
-      if ((count ?? 0) >= 1) {
+        .gte('created_at', since.toISOString());
+      if ((count ?? 0) >= rule.max) {
         await dropInbox();
         return json({ status: 'daily_limit' }, 200);
       }

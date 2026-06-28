@@ -36,6 +36,12 @@ unsaved exit.
 ## Reusable client infra (prefer over rebuilding)
 - `src/lib/confirm.ts` — `confirm` / `confirmDestructive` (cross-platform; `Alert.alert`'s
   multi-button form is a no-op on web, so always use these for confirms).
+- **A 3+-option chooser is NOT a confirm.** `confirm`/`confirmDestructive` are binary and
+  `Alert.alert`'s button array is native-only (silently a no-op on web), so neither covers a
+  three-way action. Build a `Modal` bottom-sheet — mirror `MessageActionsSheet` /
+  `NoteDeleteSheet` (full-screen backdrop `Pressable` closes; an inner `Pressable onPress={()=>{}}`
+  stops propagation; one row per action; add a subtitle when the consequences differ, e.g. "Hide
+  from my log" vs "Delete for everyone"). A module-scope sheet gets its **own** `useTranslation()`.
 - **Shipped on PR #42 (pre-pilot refactor — see `docs/collab/BOARD.md`); reuse once merged:**
   `useToast()` (`src/components/ui/Toast.tsx`), `haptics` (`src/lib/haptics.ts`),
   `useUnsavedGuard` (`src/lib/useUnsavedGuard.ts`). Don't re-implement toasts/guards.

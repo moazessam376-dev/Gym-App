@@ -15,6 +15,7 @@
     "db:apply": "bash scripts/db-apply.sh",
     "test:rls": "tsx supabase/tests/rls/runner.ts",
     "test": "npm run test:rls",
+    "seed:pilot": "tsx supabase/seed/seed-pilot.ts",
     "typecheck": "tsc --noEmit",
     "lint:secrets": "gitleaks detect --config .gitleaks.toml --redact",
     "prepare": "bash scripts/install-hooks.sh || true"

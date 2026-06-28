@@ -61,6 +61,21 @@ Topic detail for CLAUDE.md §2 ("deny by default"). **This file wins over a prom
   the bytes **first**, then delete the row. Every FK to `media(id)` is `ON DELETE SET NULL`
   (`body_metrics`, voice notes, avatars), so the row delete never breaks a link. Don't
   reach for a migration here — the fix is a function.
+- **Owner-delete from a table the client has NO `DELETE` policy on (e.g. an athlete retracting
+  their own mirrored note from `messages`) → a `SECURITY DEFINER` RPC fenced on `auth.uid()`,
+  not a new DELETE policy.** This is the pure-DB sibling of the `media-delete` Edge-function
+  pattern (that one also owns storage bytes; a DB-only retract is just the RPC). `auth.uid()`
+  survives `SECURITY DEFINER`, so the `where … = auth.uid()` fence holds. Delete **linked rows
+  first** (a `SET NULL` FK would null the link before you can match it) — see
+  `delete_workout_note_everywhere` (0060): mirror message, then note. It's a fresh `public` fn,
+  so **`revoke execute … from anon` explicitly** (the anon-by-name grant gotcha) — it then trips
+  only the accepted `0029`, never `0028`.
+- **A per-user "hide / archive from MY view" that must stay visible to the counterpart is a
+  nullable flag column filtered in that user's query — NOT an RLS change.** RLS rows are *shared*
+  by both parties (athlete + coach read the same `workout_notes` row), so you can't hide a row
+  from one side via RLS without breaking the other's read. `workout_notes.hidden_at` (0060) is
+  filtered in `listSessionNotes` (athlete's exercise view) while `listClientNotes` (the coach)
+  stays unfiltered. Setting it is a plain owner `UPDATE` (the owner UPDATE policy already exists).
 
 ## Test gate
 - The harness in `supabase/tests/rls/` MUST stay green (CLAUDE.md §11). Any new

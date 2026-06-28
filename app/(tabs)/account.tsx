@@ -41,13 +41,13 @@ export default function AccountTab() {
     // two explicit confirms guard against an accidental tap.
     const first = await confirmDestructive(
       t('account.deleteAccount'),
-      'This permanently erases your account and all your data — workouts, nutrition, progress, photos and messages. This cannot be undone.',
+      t('account.deleteConfirmBody1'),
       t('account.deleteAccount'),
     );
     if (!first) return;
     const second = await confirmDestructive(
       t('account.deleteAccount'),
-      'Are you absolutely sure? There is no way to recover your account after this.',
+      t('account.deleteConfirmBody2'),
       t('account.deleteAccount'),
     );
     if (!second) return;
@@ -78,32 +78,23 @@ export default function AccountTab() {
       </Card>
 
       <View style={{ gap: theme.spacing.sm }}>
+        {/* One Profile hub (U-5): identity + @handle + links to the goals/coaching +
+            public-presence editors. Replaces the old three confusing rows (Edit Profile /
+            Goals&Profile / Public Profile) — which also removes the dead admin row + the
+            ambiguous role-branched label (U-7). */}
         <SectionLabel>{t('account.sectionProfile')}</SectionLabel>
-        <LinkRow icon="person-outline" label={t('account.editProfile')} onPress={go('/profile')} />
-        <LinkRow
-          icon={role === 'coach' ? 'ribbon-outline' : 'flag-outline'}
-          label={role === 'coach' ? t('account.coachingProfile') : t('account.goalsProfile')}
-          onPress={go('/profile-setup')}
-        />
+        <LinkRow icon="person-outline" label={t('account.profile')} onPress={go('/profile')} />
 
         {role === 'coach' || role === 'client' ? (
           <>
             <SectionLabel>{t('account.sectionCommunity')}</SectionLabel>
             <LinkRow
-              icon="globe-outline"
-              label={t('account.publicProfile')}
-              onPress={go('/public-profile-edit')}
-            />
-            <LinkRow
               icon="compass-outline"
               label={t('account.discoverCoaches')}
               onPress={go('/discover/coaches')}
             />
-            <LinkRow
-              icon="trophy-outline"
-              label={t('account.leaderboards')}
-              onPress={go('/leaderboards')}
-            />
+            {/* Public profile now lives in the Profile hub; Leaderboards is a one-tap trophy
+                in the Home header (U-3). Both removed here to de-junk Account. */}
           </>
         ) : null}
 

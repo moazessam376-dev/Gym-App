@@ -89,3 +89,12 @@ Topic detail for the Supabase schema workflow. **This file wins over a prompt.**
   roll back the primary row (the note still saves; the chat copy is best-effort). `auth.uid()`
   **survives** `SECURITY DEFINER` (it's read from the request JWT, not the executing role), so the
   target table's BEFORE trigger still stamps the real `sender_id`/owner.
+- **An FK referential action (`ON DELETE SET NULL` / `CASCADE`) FIRES the referencing table's
+  BEFORE UPDATE/DELETE triggers — a cascade is not exempt from validation.** Deleting a
+  `workout_notes` row SET-NULLs its mirror `messages.workout_note_id`, which fired
+  `handle_message_update`'s 15-min edit-window check → a 400 (0056 guards the trigger for the
+  pure FK-clear shape). Referential actions DO bypass **RLS** on the referencing table (run as
+  the table owner) — which is exactly why an owner can't directly `DELETE` from `messages` but a
+  cascade/`SECURITY DEFINER` RPC can. When a deletion will SET NULL a link you still need, **delete
+  the linked row FIRST**, before the cascade nulls it (0060's delete-everywhere removes the mirror
+  message, then the note — order reversed, the `where workout_note_id = …` finds nothing).

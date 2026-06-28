@@ -10,23 +10,35 @@ import { forwardChevron, textStart } from '../../src/lib/rtl';
 import { usePublicCoaches } from '../../src/lib/queries/profiles';
 import type { PublicCoachListItem } from '../../src/lib/public-profiles';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
-import { Icon, Screen, Text, Input, GlassCard, Chip, EmptyState } from '../../src/components/ui';
+import { Icon, Screen, Text, Input, GlassCard, Chip, Badge, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
+/** Prettify a raw specialty value as a last-resort fallback (the dictionary wins). */
 function label(s: string): string {
   return s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
 function CoachCard({ coach, onPress }: { coach: PublicCoachListItem; onPress: () => void }) {
   const { t } = useTranslation();
+  const improved = coach.improved_clients ?? 0;
+  const tracked = coach.tracked_clients ?? 0;
   return (
     <GlassCard onPress={onPress} style={{ gap: theme.spacing.md }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
         <ProfileAvatar name={coach.full_name} avatarMediaId={coach.avatar_media_id} size={52} />
         <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="bodyStrong" style={textStart}>
-            {coach.full_name ?? ''}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+            <Text variant="bodyStrong" style={[textStart, { flexShrink: 1 }]} numberOfLines={1}>
+              {coach.full_name ?? ''}
+            </Text>
+            {/* Verified = has at least one client who improved on verified readings (U-4). */}
+            {improved > 0 ? <Badge label={t('discover.verified')} tone="success" solid /> : null}
+          </View>
+          {coach.handle ? (
+            <Text variant="caption" muted style={textStart}>
+              @{coach.handle}
+            </Text>
+          ) : null}
           {coach.years_experience != null ? (
             <Text variant="caption" muted style={textStart}>
               {t('discover.yearsExp', { count: coach.years_experience })}
@@ -35,10 +47,21 @@ function CoachCard({ coach, onPress }: { coach: PublicCoachListItem; onPress: ()
         </View>
         <Icon name={forwardChevron()} size={18} color={theme.colors.textMuted} />
       </View>
+      {coach.bio ? (
+        <Text variant="caption" muted style={textStart} numberOfLines={2}>
+          {coach.bio}
+        </Text>
+      ) : null}
+      {/* Outcome proof — turns the directory into a "specialist list" (U-4). */}
+      {tracked > 0 ? (
+        <Text variant="caption" color="primary" style={textStart}>
+          {t('discover.outcome', { tracked, improved })}
+        </Text>
+      ) : null}
       {coach.specialties.length > 0 ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
           {coach.specialties.slice(0, 4).map((s) => (
-            <Chip key={s} label={label(s)} />
+            <Chip key={s} label={t(`specialty.${s}`, { defaultValue: label(s) })} />
           ))}
         </View>
       ) : null}

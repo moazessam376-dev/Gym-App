@@ -23,3 +23,12 @@ export const profileSelfInsertSchema = z.object({
   full_name: z.string().min(1).max(120),
 });
 export type ProfileSelfInsert = z.infer<typeof profileSelfInsertSchema>;
+
+// Instagram-style @handle (U-6): unique identity anchor, lowercase, 3–20 chars of
+// [a-z0-9_.]. Uniqueness + the 14-day rename cooldown are enforced server-side (0069);
+// this is the client-side format gate. Lowercase the input before parsing.
+export const handleSchema = z
+  .string()
+  .min(3)
+  .max(20)
+  .regex(/^[a-z0-9_.]+$/);
