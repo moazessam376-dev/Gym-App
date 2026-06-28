@@ -160,6 +160,11 @@ they are expensive to change later:
   `_shared/schemas.ts` — changes nothing until you **redeploy every function that imports
   it**. A repo↔deployed drift surfaces as a runtime 400/500, not a build error (e.g.
   adding an `avatar` media kind needed `media-finalize` redeployed before uploads worked).
+  **A DB fix that lives in fn code (not the migration) is not live until you redeploy** — C-1/M-3
+  only took effect on the `account-delete`/`media-finalize` redeploy. **MCP deploy mechanics** (the
+  `source/index.ts` + sibling `_shared/` + `deno.json` file layout, the `list_edge_functions`
+  "is it even deployed?" check — `account-delete` wasn't — and the node-escape trick) live in
+  `.claude/rules/migrations.md` → "Edge Function deploys (via MCP)".
 - **Deploying to PROD is an outward-facing action that needs the user's *explicit* go-ahead
   each time.** A general "start phase X" / "continue" does **not** authorize a prod
   `apply_migration` or `deploy_edge_function` (the harness will block it). Before asking,

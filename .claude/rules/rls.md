@@ -76,6 +76,15 @@ Topic detail for CLAUDE.md §2 ("deny by default"). **This file wins over a prom
   from one side via RLS without breaking the other's read. `workout_notes.hidden_at` (0060) is
   filtered in `listSessionNotes` (athlete's exercise view) while `listClientNotes` (the coach)
   stays unfiltered. Setting it is a plain owner `UPDATE` (the owner UPDATE policy already exists).
+- **Chat is coach↔client-only, not open between any two users.** `messages_insert` (0012) requires
+  `sender_id = auth.uid() AND recipient_id <> auth.uid() AND (is_coach_of(recipient) OR recipient =
+  my_coach_id())`. So the per-person disclaimer gate (0063 / M-2) fires on the **first message
+  WITHIN an established coach-client pair**, not first contact between strangers. A harness test for
+  it must use a coach + a client assigned to them (set `coach_id` via service_role first) — two
+  unrelated clients hit the RLS `with check` (42501), not the `disclaimer_required` raise (cost a CI
+  round-trip on the M-2 test). The first-contact disclaimer is enforced in the `handle_message_insert`
+  trigger; it exempts the workout-note mirror (`workout_note_id` set) so 0051's best-effort copy isn't
+  dropped.
 
 ## Test gate
 - The harness in `supabase/tests/rls/` MUST stay green (CLAUDE.md §11). Any new
