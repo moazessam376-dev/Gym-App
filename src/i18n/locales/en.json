@@ -501,7 +501,9 @@
     "language": "Language",
     "dangerZone": "Danger zone",
     "deleteAccount": "Delete account",
-    "deleteFailed": "Could not delete your account. Please try again."
+    "deleteFailed": "Could not delete your account. Please try again.",
+    "deleteConfirmBody1": "This permanently erases your account and all your data — workouts, nutrition, progress, photos and messages. This cannot be undone.",
+    "deleteConfirmBody2": "Are you absolutely sure? There is no way to recover your account after this."
   },
   "settings": {
     "title": "Settings"
@@ -566,14 +568,14 @@
   "specialty": {
     "hypertrophy": "Hypertrophy",
     "powerlifting": "Powerlifting",
-    "bodybuilding": "Bodybuilding",
-    "strength": "Strength",
-    "fat_loss": "Fat loss",
     "weight_loss": "Weight loss",
+    "nutrition": "Nutrition",
+    "strength": "Strength",
+    "bodybuilding": "Bodybuilding",
     "general_fitness": "General fitness",
-    "sports_performance": "Sports performance",
+    "sport_performance": "Sport performance",
     "mobility": "Mobility",
-    "nutrition": "Nutrition"
+    "womens_training": "Women's training"
   },
   "leaderboards": {
     "title": "Leaderboards",

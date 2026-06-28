@@ -933,8 +933,8 @@ describe('messages (0012) — coach⇄client DMs, server-set sender, rate limit 
   });
 
   it('rate-limits a burst of sends from one sender', async () => {
-    // 20/10s cap; the 21st in the same transaction trips it (now() is constant
-    // within the txn, so all rows fall inside the window).
+    // 10/10s cap (tightened in 0063); the 11th in the same transaction trips it (now()
+    // is constant within the txn, so all rows fall inside the window).
     await expect(
       asUser(COACH_A, async (c) => {
         for (let i = 0; i < 21; i++) {
@@ -3791,5 +3791,68 @@ describe('security hardening (0061–0067)', () => {
       await c.query('rollback').catch(() => {});
       c.release();
     }
+  });
+});
+
+describe('@handle (0069)', () => {
+  it('rejects a duplicate handle (case-insensitive unique)', async () => {
+    const U1 = 'da030001-0000-0000-0000-000000000001';
+    const U2 = 'da030002-0000-0000-0000-000000000002';
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2), ($3, $4)', [
+        U1,
+        'h1.dup@example.test',
+        U2,
+        'h2.dup@example.test',
+      ]);
+      await c.query('update public.profiles set handle = $1 where id = $2', ['takenname', U1]);
+      // U2 tries the same handle in a different case → lower(handle) unique index rejects.
+      await expect(
+        c.query('update public.profiles set handle = $1 where id = $2', ['TakenName', U2]),
+      ).rejects.toThrow();
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('enforces the 14-day rename cooldown', async () => {
+    const U = 'da030003-0000-0000-0000-000000000003';
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [U, 'h3.cd@example.test']);
+      // First rename is free (signup left handle_changed_at null), then stamps now().
+      await c.query('update public.profiles set handle = $1 where id = $2', ['firstname', U]);
+      await expect(
+        c.query('update public.profiles set handle = $1 where id = $2', ['secondname', U]),
+      ).rejects.toThrow(/handle_cooldown/);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('rejects a reserved handle', async () => {
+    const U = 'da030004-0000-0000-0000-000000000004';
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('insert into auth.users (id, email) values ($1, $2)', [U, 'h4.res@example.test']);
+      await expect(
+        c.query('update public.profiles set handle = $1 where id = $2', ['admin', U]),
+      ).rejects.toThrow(/handle_reserved/);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('check_handle_available is not callable by anon (execute revoked)', async () => {
+    await expect(
+      asAnon((c) => c.query("select * from public.check_handle_available('whatever')")),
+    ).rejects.toThrow();
   });
 });

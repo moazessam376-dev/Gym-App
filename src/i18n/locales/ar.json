@@ -95,7 +95,9 @@
     "language": "اللغة",
     "dangerZone": "منطقة الخطر",
     "deleteAccount": "امسح الحساب",
-    "deleteFailed": "مش قادرين نمسح حسابك. حاول تاني."
+    "deleteFailed": "مش قادرين نمسح حسابك. حاول تاني.",
+    "deleteConfirmBody1": "ده هيمسح حسابك وكل بياناتك نهائيًا — التمارين والأكل والتقدم والصور والرسايل. مفيش رجوع.",
+    "deleteConfirmBody2": "متأكد تمامًا؟ مفيش أي طريقة تسترجع حسابك بعد كده."
   },
   "settings": {
     "title": "الإعدادات"
@@ -172,14 +174,14 @@
   "specialty": {
     "hypertrophy": "تضخيم العضلات",
     "powerlifting": "باور ليفتنج",
-    "bodybuilding": "كمال أجسام",
-    "strength": "قوة",
-    "fat_loss": "حرق دهون",
     "weight_loss": "إنقاص وزن",
+    "nutrition": "تغذية",
+    "strength": "قوة",
+    "bodybuilding": "كمال أجسام",
     "general_fitness": "لياقة عامة",
-    "sports_performance": "أداء رياضي",
+    "sport_performance": "أداء رياضي",
     "mobility": "مرونة",
-    "nutrition": "تغذية"
+    "womens_training": "تدريب السيدات"
   },
   "leaderboards": {
     "title": "لوحات المتصدرين",

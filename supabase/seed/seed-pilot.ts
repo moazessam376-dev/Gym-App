@@ -28,7 +28,7 @@ const N_COACHES = 20;
 const N_ATHLETES = 220;
 const SHARED_PASSWORD = 'Pilot-Raptor-2025!';
 const EMAIL_DOMAIN = 'pilot.test'; // RFC 6761 reserved — no real mail bounces
-const SETLOG_CHUNK = 5000; // PostgREST default batch limit is 1000; we send 5k via one POST body
+const SETLOG_CHUNK = 1000; // stay within PostgREST's per-request row cap (1000)
 const ROW_CHUNK = 1000;
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
@@ -72,7 +72,9 @@ const dateAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString
 // ── Name + content pools ──────────────────────────────────────────────────────
 const FIRST = ['Ahmed', 'Mohamed', 'Mahmoud', 'Omar', 'Youssef', 'Khaled', 'Karim', 'Hassan', 'Tarek', 'Amr', 'Mostafa', 'Ali', 'Sara', 'Nour', 'Mariam', 'Hana', 'Laila', 'Salma', 'Dina', 'Yara', 'Farida', 'Habiba', 'Aya', 'Reem'];
 const LAST = ['Hassan', 'Ibrahim', 'Mahmoud', 'Said', 'Fahmy', 'Sobhy', 'Zaki', 'Naguib', 'Saleh', 'Abdel Aziz', 'El Sayed', 'Mansour', 'Kamal', 'Refaat', 'Gad', 'Shawky', 'Helmy', 'Adel', 'Fouad', 'Nabil'];
-const SPECIALTIES = ['hypertrophy', 'powerlifting', 'fat_loss', 'strength', 'bodybuilding', 'general_fitness', 'sports_performance', 'nutrition'];
+// Mirrors the specialtySchema enum (src/schemas/coach-profile.ts) so seeded coaches
+// render localized specialty chips (t('specialty.<key>')).
+const SPECIALTIES = ['hypertrophy', 'powerlifting', 'weight_loss', 'nutrition', 'strength', 'bodybuilding', 'general_fitness', 'sport_performance', 'mobility', 'womens_training'];
 const GOALS = ['lose_fat', 'build_muscle', 'gain_strength', 'maintain', 'improve_health', 'sport_performance'] as const;
 const GOAL_WEIGHTS: [(typeof GOALS)[number], number][] = [['lose_fat', 30], ['build_muscle', 30], ['gain_strength', 15], ['maintain', 10], ['improve_health', 10], ['sport_performance', 5]];
 const EXPERIENCE = ['beginner', 'intermediate', 'advanced'] as const;
@@ -185,6 +187,21 @@ async function main() {
   // Create (or reuse) auth users → email→id map. createUser fires on_auth_user_created,
   // which makes a 'client' profile with full_name from metadata.
   const existing = await listAllAuthUsers();
+
+  // Idempotency: child rows (coach_profile/plans/…) are plain inserts, so a re-run over an
+  // already-seeded DB would fail on duplicate keys. Fail fast with a clear message — use
+  // --reset to wipe the @pilot.test users (cascading their data) and reseed cleanly.
+  if (!RESET) {
+    const clash = specs.find((s) => existing.has(s.email.toLowerCase()));
+    if (clash) {
+      console.error(
+        `Pilot users already exist (e.g. ${clash.email}). Re-run with --reset to wipe and reseed ` +
+          '(child rows are not upserted, so a partial re-run would collide).',
+      );
+      process.exit(1);
+    }
+  }
+
   const idByEmail = new Map<string, string>();
   for (const s of specs) {
     const known = existing.get(s.email.toLowerCase());

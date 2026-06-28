@@ -176,7 +176,7 @@ export default function CoachProfileScreen() {
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
             {p.specialties.map((s) => (
-              <Chip key={s} label={label(s)} />
+              <Chip key={s} label={t(`specialty.${s}`, { defaultValue: label(s) })} />
             ))}
           </View>
         </View>

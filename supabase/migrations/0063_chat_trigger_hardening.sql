@@ -86,14 +86,15 @@ begin
     raise exception 'rate_limited' using errcode = 'P0001';
   end if;
 
-  -- Per-recipient cap: at most 200 messages to one peer per rolling hour (M-7) — blocks
-  -- sustained one-on-one flooding while staying generous for real back-and-forth.
+  -- Per-recipient cap: at most 100 messages to one peer per rolling hour (M-7) — blocks
+  -- sustained one-on-one flooding while staying generous for real back-and-forth (the
+  -- 10/10s burst cap above already bounds short spikes).
   select count(*) into v_to_peer
     from public.messages
    where sender_id = auth.uid()
      and recipient_id = new.recipient_id
      and created_at > now() - interval '1 hour';
-  if v_to_peer >= 200 then
+  if v_to_peer >= 100 then
     raise exception 'rate_limited' using errcode = 'P0001';
   end if;
 

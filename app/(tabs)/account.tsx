@@ -41,13 +41,13 @@ export default function AccountTab() {
     // two explicit confirms guard against an accidental tap.
     const first = await confirmDestructive(
       t('account.deleteAccount'),
-      'This permanently erases your account and all your data — workouts, nutrition, progress, photos and messages. This cannot be undone.',
+      t('account.deleteConfirmBody1'),
       t('account.deleteAccount'),
     );
     if (!first) return;
     const second = await confirmDestructive(
       t('account.deleteAccount'),
-      'Are you absolutely sure? There is no way to recover your account after this.',
+      t('account.deleteConfirmBody2'),
       t('account.deleteAccount'),
     );
     if (!second) return;

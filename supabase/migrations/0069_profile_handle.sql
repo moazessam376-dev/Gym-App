@@ -158,13 +158,16 @@ begin
     raise exception 'email_blocked' using errcode = 'P0001';
   end if;
 
+  -- handle_changed_at stays NULL at signup so the FIRST rename of the auto-generated
+  -- handle is free; the 14-day cooldown only applies to subsequent changes (the guard
+  -- trigger checks old.handle_changed_at is not null).
   insert into public.profiles (id, role, full_name, handle, handle_changed_at)
   values (
     new.id,
     'client',
     nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''),
     public.generate_handle(split_part(coalesce(new.email, ''), '@', 1)),
-    now()
+    null
   )
   on conflict (id) do nothing;  -- idempotent: never disturb an existing profile
   return new;
