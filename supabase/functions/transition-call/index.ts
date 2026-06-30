@@ -6,9 +6,15 @@
 // JWT). The RPC enforces that the caller is a PARTY to the call (coach_id or client_id) AND
 // the transition is legal for the row's origin + current status — a non-party caller matches
 // no row and gets a generic error. The slot follows via tg_calls_sync_slot. Generic errors (§4).
+import { z } from 'zod';
 import { getCaller, serviceClient } from '../_shared/clients.ts';
-import { transitionCallSchema } from '../_shared/schemas.ts';
 import { corsHeaders, json } from '../_shared/http.ts';
+
+// Inlined (not imported from _shared/schemas.ts) to keep the deploy bundle minimal.
+const transitionCallSchema = z.object({
+  call_id: z.string().uuid(),
+  event: z.enum(['start', 'complete', 'miss', 'cancel']),
+});
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });

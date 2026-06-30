@@ -7,9 +7,15 @@
 // no extra role read is needed here — a non-addressed caller simply matches no pending row
 // and gets a generic error. The slot status follows the call via tg_calls_sync_slot, and
 // the client is notified (call_accepted / call_declined). Generic errors only (§4).
+import { z } from 'zod';
 import { getCaller, serviceClient } from '../_shared/clients.ts';
-import { resolveCallRequestSchema } from '../_shared/schemas.ts';
 import { corsHeaders, json } from '../_shared/http.ts';
+
+// Inlined (not imported from _shared/schemas.ts) to keep the deploy bundle minimal.
+const resolveCallRequestSchema = z.object({
+  call_id: z.string().uuid(),
+  decision: z.enum(['accept', 'decline']),
+});
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
