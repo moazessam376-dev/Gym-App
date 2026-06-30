@@ -27,9 +27,10 @@ import {
 } from '../../../src/lib/nutrition';
 import { getStreak, listSessions, type WorkoutSession } from '../../../src/lib/sessions';
 import { readCache, writeCache } from '../../../src/lib/screen-cache';
+import { startAndJoinCall } from '../../../src/lib/calls';
 import { useChrome } from '../../../src/lib/chrome';
 import { ClientDetailDesktop } from '../../../src/components/coach/web/ClientDetailDesktop';
-import { Icon, IconButton, Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented, EmptyState, LineChart } from '../../../src/components/ui';
+import { Icon, IconButton, Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented, EmptyState, LineChart, useToast } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
 // Warm-cache snapshot so re-opening a client renders instantly (then refetches).
@@ -120,6 +121,7 @@ export default function ClientDetail() {
   // Coach desktop shell switch (wide web + coach). Read unconditionally with the other
   // hooks; the early return below it stays after the role guard (rules-of-hooks safe).
   const { active: desktopShell } = useChrome();
+  const toast = useToast();
   // openAi/aiType arrive when the coach came from the "Generate with AI" client picker
   // (app/coach/ai-plan.tsx) — the AI modal opens on mount, pre-set to the chosen type.
   const { id, name, openAi, aiType: aiTypeParam } = useLocalSearchParams<{
@@ -309,6 +311,13 @@ export default function ClientDetail() {
               {t('clientDetail.client')}
             </Text>
           </View>
+          <IconButton
+            name="video"
+            accessibilityLabel={t('calls.coach.callNow')}
+            onPress={() => {
+              if (id) startAndJoinCall(id).catch(() => toast.show(t('calls.error.generic'), 'error'));
+            }}
+          />
           <IconButton
             name="chatbubble-ellipses"
             accessibilityLabel={t('clientDetail.messageClient')}

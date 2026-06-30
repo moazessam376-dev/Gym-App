@@ -60,7 +60,9 @@ import { BanAppealSheet } from '../../src/components/BanAppealSheet';
 import { MessageActionsSheet } from '../../src/components/MessageActionsSheet';
 import { VoiceNoteBubble } from '../../src/components/VoiceNoteBubble';
 import { Emoji } from '../../src/components/Emoji';
-import { Icon, Screen, Text, Button } from '../../src/components/ui';
+import { Icon, IconButton, Screen, Text, Button, useToast } from '../../src/components/ui';
+import { startAndJoinCall } from '../../src/lib/calls';
+import { BookCallSheet } from '../../src/components/calls/BookCallSheet';
 import { theme } from '../../src/theme';
 
 const EDIT_WINDOW_MS = 15 * 60 * 1000; // mirrors the 0036 server-side edit window
@@ -504,6 +506,8 @@ export default function ChatThread() {
   // and narrow web keep this screen.
   const wideWebChat = useIsWideWeb();
   const myId = session?.user?.id;
+  const toast = useToast();
+  const [bookSheet, setBookSheet] = useState(false);
   // Measured header height → exact keyboard offset (the hardcoded 90 clipped).
   const headerHeight = useHeaderHeight();
 
@@ -899,7 +903,27 @@ export default function ChatThread() {
 
   return (
     <>
-      <Stack.Screen options={{ title: name ?? t('chat.title') }} />
+      <Stack.Screen
+        options={{
+          title: name ?? t('chat.title'),
+          // Role-aware call action: a coach calls the client ad-hoc; a client books a call.
+          headerRight: () =>
+            role === 'coach' ? (
+              <IconButton
+                name="video"
+                accessibilityLabel={t('calls.coach.callNow')}
+                onPress={() => {
+                  if (otherId) startAndJoinCall(otherId).catch(() => toast.show(t('calls.error.generic'), 'error'));
+                }}
+              />
+            ) : (
+              <IconButton name="video" accessibilityLabel={t('calls.bookEntry')} onPress={() => setBookSheet(true)} />
+            ),
+        }}
+      />
+      {role === 'client' ? (
+        <BookCallSheet visible={bookSheet} onClose={() => setBookSheet(false)} coachName={name} />
+      ) : null}
       <Screen gradient padded={false} edges={['bottom']}>
         <KeyboardAvoidingView
           // Web: center the thread in a phone-like column (matches the chat design) instead
