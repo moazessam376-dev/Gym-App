@@ -43,6 +43,9 @@ export function LineChart({
 
   const min = data.length ? Math.min(...data.map((d) => d.value)) : 0;
   const max = data.length ? Math.max(...data.map((d) => d.value)) : 0;
+  // All values equal (e.g. an unchanged weight) → there's no range. Draw the line down
+  // the vertical middle instead of gluing it to the bottom axis, and show one gridline.
+  const flat = max === min;
   const range = max - min || 1;
 
   const plotW = Math.max(0, width - padL - padR);
@@ -51,7 +54,7 @@ export function LineChart({
 
   const pts = data.map((d, i) => {
     const x = padL + i * stepX;
-    const y = padT + plotH * (1 - (d.value - min) / range);
+    const y = flat ? padT + plotH / 2 : padT + plotH * (1 - (d.value - min) / range);
     return [x, y] as const;
   });
   const polyline = pts.map(([x, y]) => `${x},${y}`).join(' ');
@@ -61,32 +64,29 @@ export function LineChart({
     <View onLayout={onLayout} style={[{ height }, style]}>
       {width > 0 && data.length > 0 ? (
         <Svg width={width} height={height}>
-          {/* Min / max gridlines + y labels */}
-          {[max, min].map((v, idx) => {
-            const y = idx === 0 ? padT : padT + plotH;
-            return (
-              <Fragment key={idx}>
-                <Line
-                  x1={padL}
-                  y1={y}
-                  x2={width - padR}
-                  y2={y}
-                  stroke={theme.colors.border}
-                  strokeWidth={1}
-                  strokeDasharray="3 5"
-                />
-                <SvgText
-                  x={padL - 6}
-                  y={y + 4}
-                  fill={theme.colors.textMuted}
-                  fontSize={10}
-                  textAnchor="end"
-                >
-                  {`${Math.round(v * 10) / 10}${unit}`}
-                </SvgText>
-              </Fragment>
-            );
-          })}
+          {/* Min / max gridlines + y labels (a single centered line when the data is flat) */}
+          {(flat
+            ? [{ v: max, y: padT + plotH / 2 }]
+            : [
+                { v: max, y: padT },
+                { v: min, y: padT + plotH },
+              ]
+          ).map(({ v, y }, idx) => (
+            <Fragment key={idx}>
+              <Line
+                x1={padL}
+                y1={y}
+                x2={width - padR}
+                y2={y}
+                stroke={theme.colors.border}
+                strokeWidth={1}
+                strokeDasharray="3 5"
+              />
+              <SvgText x={padL - 6} y={y + 4} fill={theme.colors.textMuted} fontSize={10} textAnchor="end">
+                {`${Math.round(v * 10) / 10}${unit}`}
+              </SvgText>
+            </Fragment>
+          ))}
 
           {data.length > 1 ? (
             <>

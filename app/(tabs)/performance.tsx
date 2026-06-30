@@ -61,6 +61,40 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
   );
 }
 
+// One activity metric (number + WoW delta + sparkline). On wide it's a flex column so the
+// two stats sit side-by-side and the sparkline stays beside its number instead of being
+// flung to the far edge of the (up-to-1100px) card; on phone they stack full-width.
+function ActivityStat({
+  value,
+  wow,
+  label,
+  series,
+  color,
+  wide,
+}: {
+  value: number;
+  wow: number | null;
+  label: string;
+  series: number[];
+  color: string;
+  wide: boolean;
+}) {
+  return (
+    <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, wide ? { flex: 1 } : null]}>
+      <View style={{ gap: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+          <Text variant="bodyStrong">{value}</Text>
+          {wow != null ? <DeltaChip value={wow} suffix="" /> : null}
+        </View>
+        <Text variant="caption" muted>
+          {label}
+        </Text>
+      </View>
+      <Sparkline data={series} width={140} height={40} color={color} />
+    </View>
+  );
+}
+
 export default function PerformanceTab() {
   const { t } = useTranslation();
   const { role, session } = useAuth();
@@ -178,29 +212,23 @@ export default function PerformanceTab() {
                 <Text variant="label" muted style={textStart}>
                   {t('performance.activityTrend')}
                 </Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View style={{ gap: 4 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                      <Text variant="bodyStrong">{sessionsSeries[sessionsSeries.length - 1]}</Text>
-                      {sessionsWow != null ? <DeltaChip value={sessionsWow} suffix="" /> : null}
-                    </View>
-                    <Text variant="caption" muted>
-                      {t('performance.sessionsThisWeek')}
-                    </Text>
-                  </View>
-                  <Sparkline data={sessionsSeries} width={140} height={40} />
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View style={{ gap: 4 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                      <Text variant="bodyStrong">{activeSeries[activeSeries.length - 1]}</Text>
-                      {activeWow != null ? <DeltaChip value={activeWow} suffix="" /> : null}
-                    </View>
-                    <Text variant="caption" muted>
-                      {t('performance.activeThisWeek')}
-                    </Text>
-                  </View>
-                  <Sparkline data={activeSeries} width={140} height={40} color={theme.colors.secondary} />
+                <View style={{ flexDirection: wide ? 'row' : 'column', gap: wide ? theme.spacing.xl : theme.spacing.md }}>
+                  <ActivityStat
+                    value={sessionsSeries[sessionsSeries.length - 1]!}
+                    wow={sessionsWow}
+                    label={t('performance.sessionsThisWeek')}
+                    series={sessionsSeries}
+                    color={theme.colors.primary}
+                    wide={wide}
+                  />
+                  <ActivityStat
+                    value={activeSeries[activeSeries.length - 1]!}
+                    wow={activeWow}
+                    label={t('performance.activeThisWeek')}
+                    series={activeSeries}
+                    color={theme.colors.secondary}
+                    wide={wide}
+                  />
                 </View>
               </GlassCard>
             ) : null}
@@ -213,6 +241,7 @@ export default function PerformanceTab() {
                   <RosterMatrix
                     rows={roster}
                     board={board}
+                    wide={wide}
                     onRowPress={(id) => router.push({ pathname: '/coach/client/[id]', params: { id } })}
                   />
                 </GlassCard>

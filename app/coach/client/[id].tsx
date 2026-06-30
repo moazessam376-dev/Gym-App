@@ -93,7 +93,10 @@ function BodyStat({
   const isGood = delta == null || delta === 0 || good === 'neutral' ? null : good === 'low' ? delta < 0 : delta > 0;
   const deltaColor = isGood == null ? theme.colors.textMuted : isGood ? theme.colors.success : theme.colors.danger;
   return (
-    <View style={{ flex: 1, gap: 2 }}>
+    // Center content within each equal third (matches MiniStat) so the row reads as an
+    // evenly-distributed stat strip at any width — left-aligned thirds looked sparse and
+    // misaligned on wide/web screens.
+    <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
       <Text style={{ fontFamily: theme.fontFamily.monoBold, fontSize: 24, color: theme.colors.text }}>{value}</Text>
       <Text variant="label" muted style={{ fontSize: 9 }}>
         {unit}

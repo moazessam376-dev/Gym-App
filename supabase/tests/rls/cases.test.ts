@@ -3762,6 +3762,38 @@ describe('coach_requests (0053, Slice G2) — request-a-coach funnel (§2)', () 
     );
     expect(r.rowCount).toBe(1);
   });
+
+  // ── INSERT through the trigger (0082 bugfix; previously only reads were tested) ──
+  // The trigger handle_coach_request_insert is SECURITY INVOKER; before 0082 it read the
+  // target coach's profiles row directly, which the client's RLS hides → request_invalid
+  // for every client requesting any coach. is_public_coach() (SECURITY DEFINER) fixes it.
+  const LEAD_4: Identity = { sub: '1ea00000-0000-0000-0000-000000000004', userRole: 'client' }; // unassigned
+  const LEAD_5: Identity = { sub: '1ea00000-0000-0000-0000-000000000005', userRole: 'client' }; // unassigned
+  const LEAD_6: Identity = { sub: '1ea00000-0000-0000-0000-000000000006', userRole: 'client' }; // unassigned
+  const COACH_P_ID = 'c0c0c0c0-0000-0000-0000-000000000001'; // private coach (is_public = false)
+
+  it('an unassigned client CAN request a PUBLIC coach (trigger server-sets client_id)', async () => {
+    const r = await asUser(LEAD_4, (c) =>
+      c.query('insert into public.coach_requests (coach_id) values ($1) returning client_id, status', [COACH_A.sub]),
+    );
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0].client_id).toBe(LEAD_4.sub); // server-set, not client-supplied
+    expect(r.rows[0].status).toBe('pending');
+  });
+
+  it('requesting a PRIVATE coach raises request_invalid', async () => {
+    await expect(
+      asUser(LEAD_5, (c) => c.query('insert into public.coach_requests (coach_id) values ($1)', [COACH_P_ID])),
+    ).rejects.toThrow();
+  });
+
+  it('requesting a PUBLIC ATHLETE (not a coach) raises request_invalid — is_public_coach is stricter than is_public_profile', async () => {
+    // CLIENT_A1 has a public athlete_profile, so is_public_profile(A1) is TRUE; the request
+    // must still fail because A1 is not a public COACH.
+    await expect(
+      asUser(LEAD_6, (c) => c.query('insert into public.coach_requests (coach_id) values ($1)', [CLIENT_A1.sub])),
+    ).rejects.toThrow();
+  });
 });
 
 describe('admin console RPCs (0054, Slice G3) — in-function admin fence', () => {

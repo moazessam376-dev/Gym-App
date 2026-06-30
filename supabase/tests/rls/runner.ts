@@ -103,6 +103,7 @@ const migrationFiles = [
   '0079_coach_profile_enrichment.sql',
   '0080_chat_note_context.sql',
   '0081_coach_performance_trends.sql',
+  '0082_coach_request_public_coach_fix.sql',
 ];
 
 const baseUrl =
