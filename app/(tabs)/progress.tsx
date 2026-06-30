@@ -181,6 +181,13 @@ export default function ProgressTab() {
               }
               onPress={() => router.push('/client/progress/body-comp')}
             />
+            {/* Before/after: build a transformation card and send it to your coach to feature (E3, 0084). */}
+            <PillarRow
+              icon="images"
+              label={t('progress.transformation')}
+              hint={t('progress.transformationHint')}
+              onPress={() => router.push('/client/transformation')}
+            />
 
             <Text variant="label" muted style={{ marginTop: theme.spacing.xs }}>
               {t('progress.recentWorkouts')}

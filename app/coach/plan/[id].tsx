@@ -531,13 +531,15 @@ export default function PlanEditor() {
           {isTraining ? (
             <View style={styles.weekBar}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekPills}>
-                {weeks.map((w) => (
+                {weeks.map((w, i) => (
                   <Pressable
                     key={w.id}
                     style={[styles.weekPill, w.id === weekId && styles.weekPillActive]}
                     onPress={() => selectWeek(w.id)}
                   >
-                    <Text style={[styles.weekPillText, w.id === weekId && styles.weekPillTextActive]}>{w.name}</Text>
+                    {/* Label is derived from list position, not the stored name — so deleting
+                        a middle week or duplicating renumbers contiguously (Week 1, 2, 3…). */}
+                    <Text style={[styles.weekPillText, w.id === weekId && styles.weekPillTextActive]}>{t('planEditor.weekLabel', { n: i + 1 })}</Text>
                   </Pressable>
                 ))}
                 <Pressable style={styles.weekAdd} onPress={onAddWeek} disabled={busy}>
