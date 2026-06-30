@@ -18,6 +18,8 @@ import { useCoachCallInbox, useCoachCalls, useMySlots } from '../../src/lib/quer
 import { Button, EmptyState, Screen, Segmented, Text, useToast } from '../../src/components/ui';
 import { CallCard } from '../../src/components/calls/CallCard';
 import { AvailabilityCalendar } from '../../src/components/calls/AvailabilityCalendar';
+import { useChrome } from '../../src/lib/chrome';
+import { CoachCallsDesktop } from '../../src/components/coach/web/CoachCallsDesktop';
 import { theme } from '../../src/theme';
 
 type Tab = 'requests' | 'upcoming' | 'availability';
@@ -119,9 +121,11 @@ function AvailabilityTab({ coachId }: { coachId: string }) {
 export default function CoachCallsScreen() {
   const { t } = useTranslation();
   const { role, session } = useAuth();
+  const { active: wide } = useChrome();
   const [tab, setTab] = useState<Tab>('requests');
 
   if (role && role !== 'coach') return <Redirect href="/" />;
+  if (wide) return <CoachCallsDesktop />; // portal dashboard on wide web
   const coachId = session?.user?.id;
 
   return (
