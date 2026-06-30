@@ -3352,9 +3352,12 @@ describe('transformation submissions (0084) — client→coach, coach-approves (
       const ins = await c.query("insert into public.transformation_submissions (client_id, coach_id, status) values ($1, $2, 'pending') returning id", [CLIENT_A1.sub, COACH_A.sub]);
       const subId = ins.rows[0].id as string;
       const asId = (id: string, role: string) => c.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: id, role: 'authenticated', user_role: role })]);
-      // A coach who isn't the addressee can't resolve it.
+      // A coach who isn't the addressee can't resolve it. The raise aborts the txn, so
+      // wrap it in a SAVEPOINT and roll back to it to keep the connection usable.
       await c.query('reset role'); await c.query('set local role authenticated'); await asId(COACH_B_ID, 'coach');
+      await c.query('savepoint sp_foreign');
       await expect(c.query('select public.resolve_transformation_submission($1, $2)', [subId, 'approve'])).rejects.toThrow();
+      await c.query('rollback to savepoint sp_foreign');
       // The owning coach approves → it becomes a featured coach_transformations row and flips to approved.
       await c.query('reset role'); await c.query('set local role authenticated'); await asId(COACH_A.sub, 'coach');
       await c.query('select public.resolve_transformation_submission($1, $2)', [subId, 'approve']);
