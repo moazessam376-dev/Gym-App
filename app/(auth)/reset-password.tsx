@@ -104,6 +104,8 @@ export default function ResetPassword() {
             onChangeText={setConfirm}
             editable={!loading}
             error={error}
+            returnKeyType="go"
+            onSubmitEditing={onSubmit}
           />
           <Button title={t('auth.updatePassword')} onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
         </View>

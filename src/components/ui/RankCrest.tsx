@@ -3,6 +3,7 @@
 // the leaderboard, and the rank-up moment. This is the RANK identity; it is never
 // the app icon (that's the R. monogram). The full ranking SYSTEM is a separate
 // phase — this component is presentational dressing over whatever tier it's given.
+import { useId } from 'react';
 import Svg, { Defs, RadialGradient, Rect, Stop, G } from 'react-native-svg';
 import { View, type ViewStyle } from 'react-native';
 import { theme, type Tier } from '@/theme';
@@ -34,7 +35,11 @@ export function RankCrest({ tier, size = 48, division, glow = false, style }: Ra
   const base = theme.tier[tier];
   const light = shade(base, 0.4);
   const dark = shade(base, -0.4);
-  const id = `crest-${tier}`;
+  // UNIQUE per instance: multiple same-tier crests on one page (the leaderboard, the roster)
+  // would otherwise emit duplicate SVG gradient ids, and on web `fill="url(#id)"` fails to
+  // resolve against a duplicate → the gem renders gray. useId is unique + stable; strip the
+  // ':' react adds (invalid in an SVG id / url() reference).
+  const id = `crest-${tier}-${useId().replace(/:/g, '')}`;
 
   return (
     <View

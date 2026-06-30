@@ -237,31 +237,106 @@
     "empty": "لسه مفيش إنجازات. سجّل تمرين واكسب أول واحد.",
     "locked": "مقفول",
     "count": "{{earned}} من {{total}}",
-    "first_workout": { "title": "أول تمرين", "desc": "سجّلت أول حصة ليك" },
-    "workouts_10": { "title": "10 تمارين", "desc": "سجّلت 10 حصص" },
-    "workouts_50": { "title": "50 تمرين", "desc": "سجّلت 50 حصة" },
-    "workouts_100": { "title": "100 تمرين", "desc": "سجّلت 100 حصة" },
-    "streak_7": { "title": "7 أيام ورا بعض", "desc": "تمرّنت 7 أيام ورا بعض" },
-    "streak_30": { "title": "30 يوم ورا بعض", "desc": "تمرّنت 30 يوم ورا بعض" },
-    "streak_100": { "title": "100 يوم ورا بعض", "desc": "تمرّنت 100 يوم ورا بعض" },
-    "pr_first": { "title": "أول رقم قياسي", "desc": "حقّقت أول رقم قياسي ليك" },
-    "pr_10": { "title": "10 أرقام قياسية", "desc": "أرقام قياسية في 10 تمارين" },
-    "pr_25": { "title": "25 رقم قياسي", "desc": "أرقام قياسية في 25 تمرين" },
-    "first_inbody": { "title": "أول إن-بودي", "desc": "أول قياس إن-بودي موثّق" },
-    "inbody_10": { "title": "10 قياسات إن-بودي", "desc": "10 قياسات إن-بودي موثّقة" },
-    "body_fat_drop_1": { "title": "نزّلت دهون", "desc": "نزّلت 1% من الدهون" },
-    "body_fat_drop_5": { "title": "فورمة", "desc": "نزّلت 5% من الدهون" },
-    "lean_gain_1kg": { "title": "بتكبر", "desc": "زوّدت 1 كيلو عضل" },
-    "lean_gain_5kg": { "title": "وحش عضلات", "desc": "زوّدت 5 كيلو عضل" },
-    "goal_hit": { "title": "وصلت لهدفك", "desc": "وصلت للوزن المستهدف" },
-    "tier_bronze": { "title": "دوري البرونز", "desc": "وصلت لمستوى البرونز" },
-    "tier_silver": { "title": "الدوري الفضي", "desc": "وصلت للمستوى الفضي" },
-    "tier_gold": { "title": "الدوري الدهبي", "desc": "وصلت للمستوى الدهبي" },
-    "tier_platinum": { "title": "الدوري البلاتيني", "desc": "وصلت للمستوى البلاتيني" },
-    "tier_diamond": { "title": "دوري الدياموند", "desc": "وصلت لمستوى الدياموند" },
-    "tier_master": { "title": "دوري الماستر", "desc": "وصلت لمستوى الماستر" },
-    "tier_grandmaster": { "title": "دوري الجراند ماستر", "desc": "وصلت لمستوى الجراند ماستر" },
-    "tier_apex": { "title": "دوري القمة", "desc": "وصلت لمستوى القمة" }
+    "first_workout": {
+      "title": "أول تمرين",
+      "desc": "سجّلت أول حصة ليك"
+    },
+    "workouts_10": {
+      "title": "10 تمارين",
+      "desc": "سجّلت 10 حصص"
+    },
+    "workouts_50": {
+      "title": "50 تمرين",
+      "desc": "سجّلت 50 حصة"
+    },
+    "workouts_100": {
+      "title": "100 تمرين",
+      "desc": "سجّلت 100 حصة"
+    },
+    "streak_7": {
+      "title": "7 أيام ورا بعض",
+      "desc": "تمرّنت 7 أيام ورا بعض"
+    },
+    "streak_30": {
+      "title": "30 يوم ورا بعض",
+      "desc": "تمرّنت 30 يوم ورا بعض"
+    },
+    "streak_100": {
+      "title": "100 يوم ورا بعض",
+      "desc": "تمرّنت 100 يوم ورا بعض"
+    },
+    "pr_first": {
+      "title": "أول رقم قياسي",
+      "desc": "حقّقت أول رقم قياسي ليك"
+    },
+    "pr_10": {
+      "title": "10 أرقام قياسية",
+      "desc": "أرقام قياسية في 10 تمارين"
+    },
+    "pr_25": {
+      "title": "25 رقم قياسي",
+      "desc": "أرقام قياسية في 25 تمرين"
+    },
+    "first_inbody": {
+      "title": "أول إن-بودي",
+      "desc": "أول قياس إن-بودي موثّق"
+    },
+    "inbody_10": {
+      "title": "10 قياسات إن-بودي",
+      "desc": "10 قياسات إن-بودي موثّقة"
+    },
+    "body_fat_drop_1": {
+      "title": "نزّلت دهون",
+      "desc": "نزّلت 1% من الدهون"
+    },
+    "body_fat_drop_5": {
+      "title": "فورمة",
+      "desc": "نزّلت 5% من الدهون"
+    },
+    "lean_gain_1kg": {
+      "title": "بتكبر",
+      "desc": "زوّدت 1 كيلو عضل"
+    },
+    "lean_gain_5kg": {
+      "title": "وحش عضلات",
+      "desc": "زوّدت 5 كيلو عضل"
+    },
+    "goal_hit": {
+      "title": "وصلت لهدفك",
+      "desc": "وصلت للوزن المستهدف"
+    },
+    "tier_bronze": {
+      "title": "دوري البرونز",
+      "desc": "وصلت لمستوى البرونز"
+    },
+    "tier_silver": {
+      "title": "الدوري الفضي",
+      "desc": "وصلت للمستوى الفضي"
+    },
+    "tier_gold": {
+      "title": "الدوري الدهبي",
+      "desc": "وصلت للمستوى الدهبي"
+    },
+    "tier_platinum": {
+      "title": "الدوري البلاتيني",
+      "desc": "وصلت للمستوى البلاتيني"
+    },
+    "tier_diamond": {
+      "title": "دوري الدياموند",
+      "desc": "وصلت لمستوى الدياموند"
+    },
+    "tier_master": {
+      "title": "دوري الماستر",
+      "desc": "وصلت لمستوى الماستر"
+    },
+    "tier_grandmaster": {
+      "title": "دوري الجراند ماستر",
+      "desc": "وصلت لمستوى الجراند ماستر"
+    },
+    "tier_apex": {
+      "title": "دوري القمة",
+      "desc": "وصلت لمستوى القمة"
+    }
   },
   "athleteProfile": {
     "streak": "السلسلة",
@@ -484,7 +559,11 @@
     "sinceStart": "{{delta}} {{unit}} من البداية",
     "invalidWeight": "اكتب وزن صح.",
     "saveEntryError": "مقدرناش نحفظ القياس. حاول تاني.",
-    "field": { "weight": "الوزن", "fat": "نسبة الدهون", "muscle": "العضل" },
+    "field": {
+      "weight": "الوزن",
+      "fat": "نسبة الدهون",
+      "muscle": "العضل"
+    },
     "latestVerified": "آخر قياس: {{date}} · موثّق من الكوتش",
     "needTwoReadings": "محتاج قياسين على الأقل لـ{{field}} عشان نوريك خط التقدّم.",
     "noInbodyTitle": "مفيش قياسات InBody لسه",
@@ -607,7 +686,11 @@
   "aiPlan": {
     "intro": "اختار العميل اللي هتعملّه خطة.",
     "noClientsTitle": "لسه مفيش عملاء",
-    "noClientsSub": "اعمل دعوة لعميل الأول، وبعدين اعملّه خطة."
+    "noClientsSub": "اعمل دعوة لعميل الأول، وبعدين اعملّه خطة.",
+    "generateFor": "اعمل خطة لـ",
+    "changeClient": "غيّر",
+    "promptLabel": "أي حاجة معيّنة؟ (اختياري)",
+    "generated": "اتعملت الخطة"
   },
   "newPlan": {
     "aiTitle": "خطة بالذكاء",
@@ -1025,13 +1108,23 @@
     "injuries": "إصابات / ملاحظات",
     "injuriesPlaceholder": "أي حاجة لازم الكوتش يعرفها",
     "saveError": "مقدرناش نحفظ. راجع اللي كتبته وحاول تاني.",
-    "exp": { "beginner": "مبتدئ", "intermediate": "متوسط", "advanced": "متقدم" },
+    "exp": {
+      "beginner": "مبتدئ",
+      "intermediate": "متوسط",
+      "advanced": "متقدم"
+    },
     "expHint": {
       "beginner": "جديد على التمرين، أو أقل من سنة تمرين منتظم.",
       "intermediate": "من سنة لـ3 سنين تمرين منتظم؛ مرتاح مع التمارين الأساسية.",
       "advanced": "أكتر من 3 سنين تمرين وبرمجة منظمة."
     },
-    "activity": { "sedentary": "قليل الحركة", "light": "خفيف", "moderate": "متوسط", "active": "نشيط", "very_active": "نشيط جداً" },
+    "activity": {
+      "sedentary": "قليل الحركة",
+      "light": "خفيف",
+      "moderate": "متوسط",
+      "active": "نشيط",
+      "very_active": "نشيط جداً"
+    },
     "activityHint": {
       "sedentary": "تمرين قليل أو معدوم؛ قاعد أغلب الوقت (شغل مكتب).",
       "light": "تمرين خفيف 1–3 أيام في الأسبوع.",
@@ -1039,7 +1132,10 @@
       "active": "تمرين قوي 6–7 أيام في الأسبوع.",
       "very_active": "تمرين يومي قوي جداً، أو شغل بدني / تمرينين في اليوم."
     },
-    "sex": { "male": "ذكر", "female": "أنثى" },
+    "sex": {
+      "male": "ذكر",
+      "female": "أنثى"
+    },
     "diet": {
       "vegetarian": "نباتي",
       "vegan": "نباتي صرف",
@@ -1127,7 +1223,12 @@
     "prefsCount": "{{liked}} محبوب · {{avoided}} متجنّب",
     "noFoodsMatch": "مفيش أكل مطابق.",
     "all": "الكل",
-    "slot": { "breakfast": "فطار", "lunch": "غدا", "dinner": "عشا", "snack": "سناك" },
+    "slot": {
+      "breakfast": "فطار",
+      "lunch": "غدا",
+      "dinner": "عشا",
+      "snack": "سناك"
+    },
     "category": {
       "protein": "بروتين",
       "carbs": "كارب",
@@ -1175,7 +1276,13 @@
     "keepLogging": "كمّل تسجيل"
   },
   "coach": {
-    "muscle": { "push": "دفع", "pull": "سحب", "legs": "رجل", "arms": "دراع", "core": "بطن" },
+    "muscle": {
+      "push": "دفع",
+      "pull": "سحب",
+      "legs": "رجل",
+      "arms": "دراع",
+      "core": "بطن"
+    },
     "cancelCustomExercise": "إلغاء المخصص",
     "createCustomExercise": "اعمل تمرين مخصص",
     "exerciseName": "اسم التمرين",
@@ -1217,7 +1324,12 @@
     "invExpires": "بتنتهي {{date}}",
     "duplicateInvite": "عندك دعوة منتظرة بالفعل للإيميل ده.",
     "createInviteError": "مقدرناش نعمل الدعوة. حاول تاني.",
-    "invStatus": { "pending": "منتظرة", "accepted": "اتقبلت", "revoked": "اتلغت", "expired": "انتهت" }
+    "invStatus": {
+      "pending": "منتظرة",
+      "accepted": "اتقبلت",
+      "revoked": "اتلغت",
+      "expired": "انتهت"
+    }
   },
   "admin": {
     "console": "لوحة الأدمن",
@@ -1308,7 +1420,12 @@
     "addInbody": "أضف قياس InBody",
     "recentFeedback": "آخر الملاحظات",
     "messageClient": "رسالة",
-    "tabs": { "overview": "نظرة عامة", "plans": "الخطط", "progress": "التقدم", "notes": "الملاحظات" },
+    "tabs": {
+      "overview": "نظرة عامة",
+      "plans": "الخطط",
+      "progress": "التقدم",
+      "notes": "الملاحظات"
+    },
     "noNotesTitle": "لسه مفيش ملاحظات",
     "noNotesSub": "ملاحظات العميل على تمارينه هتظهر هنا.",
     "assignFromTemplates": "اسند من القوالب",
@@ -1386,7 +1503,142 @@
     "coachProfile": "بروفايل الكوتش",
     "profile": "بروفايل",
     "discoverCoaches": "اكتشف كوتشيز",
-    "leaderboards": "المتصدرين"
+    "leaderboards": "المتصدرين",
+    "calls": "المكالمات"
+  },
+  "webnav": {
+    "brand": "Raptor",
+    "brandTagline": "كوتشينج",
+    "coaching": "التدريب",
+    "plans": "الخطط",
+    "communication": "التواصل",
+    "account": "الحساب",
+    "dashboard": "لوحة التحكم",
+    "clients": "العملاء",
+    "leaderboard": "المتصدرين",
+    "analytics": "التحليلات",
+    "templates": "القوالب",
+    "newPlan": "خطة جديدة",
+    "messages": "الرسائل",
+    "calls": "المكالمات",
+    "profile": "البروفايل",
+    "settings": "الإعدادات",
+    "soon": "قريبًا",
+    "coachRole": "كوتش",
+    "searchPlaceholder": "دوّر على عملاء أو خطط…",
+    "callsSoonTitle": "المكالمات قريبًا",
+    "callsSoonSub": "مكالمات صوت وفيديو مجدولة جوّه التطبيق مع عملائك — المواعيد والحجز والمكالمات المباشرة — في الطريق."
+  },
+  "webportal": {
+    "dashboard": {
+      "weeklySessions": "الجلسات الأسبوعية",
+      "topClients": "أحسن المتدربين أداءً",
+      "topPlans": "أحسن الخطط أداءً",
+      "progress": "التقدم",
+      "viewAll": "عرض الكل",
+      "clientsAssigned": "{{count}} متدرب"
+    },
+    "clients": {
+      "requests": "الطلبات",
+      "kpiTotal": "إجمالي العملاء",
+      "kpiAttention": "محتاجين متابعة",
+      "kpiOnTrack": "ماشيين تمام",
+      "kpiAvgAdherence": "متوسط الالتزام",
+      "statAdherence": "الالتزام",
+      "statProgress": "التقدّم",
+      "statSessions": "الجلسات",
+      "statusAttention": "محتاج متابعة",
+      "statusOnTrack": "ماشي تمام",
+      "statusNoData": "لسه مفيش بيانات"
+    },
+    "templates": {
+      "title": "قوالب الخطط",
+      "version": "النسخة",
+      "updated": "آخر تحديث",
+      "assign": "تعيين",
+      "statWeeks": "أسابيع",
+      "statClients": "العملاء",
+      "statAdherence": "الالتزام"
+    },
+    "leaderboard": {
+      "colAthlete": "اللاعب",
+      "colTier": "الرتبة",
+      "colCoach": "الكوتش"
+    },
+    "clientDetail": {
+      "bookCall": "احجز مكالمة",
+      "totalChange": "إجمالي التغيير",
+      "sinceBaseline": "من أول قياس",
+      "streakNote": "أيام متتالية",
+      "statusLabel": "الحالة",
+      "statusActive": "نشِط",
+      "statusIdle": "خامل",
+      "statusNone": "لسه مفيش نشاط",
+      "noActivePlan": "مفيش خطة فعّالة",
+      "bodyweightTrend": "تطوّر الوزن",
+      "latestMetrics": "آخر القياسات",
+      "recentSessions": "آخر الحصص",
+      "viewAll": "اعرض الكل ({{n}})",
+      "showLess": "اعرض أقل",
+      "aiInsight": "تحليل الذكاء الاصطناعي",
+      "noReadingsTitle": "لسه مفيش قياسات موثّقة",
+      "noReadingsSub": "ضيف قياس InBody موثّق من المدرّب عشان يبان تطوّر العميل.",
+      "visceralFat": "الدهون الحشوية",
+      "bmr": "معدل الأيض",
+      "noSessions": "لسه مفيش حصص متسجّلة"
+    },
+    "planEditor": {
+      "colExercise": "التمرين",
+      "colSetsReps": "مجموعات × عدّات",
+      "colRest": "راحة"
+    },
+    "messages": {
+      "subtitle": "تابع كل محادثاتك مع عملائك في مكان واحد.",
+      "conversations": "المحادثات",
+      "unread": "غير مقروء",
+      "inbox": "الرسائل",
+      "newCount": "{{count}} جديدة",
+      "selectConversation": "اختار محادثة",
+      "selectConversationSub": "اختار عميل من القايمة عشان تشوف الدردشة.",
+      "online": "متصل",
+      "snapshot": "نظرة سريعة",
+      "statPlan": "الخطة",
+      "openProfile": "افتح الملف الكامل",
+      "noConversations": "لسه مفيش محادثات",
+      "noConversationsSub": "أول ما تبدأ تكلم عميل هتلاقي المحادثة هنا.",
+      "composer": "ابعت رسالة لـ {{name}}…",
+      "recording": "بيسجّل… دوس عشان تبعت"
+    },
+    "profile": {
+      "previewLabel": "معاينة الملف العام",
+      "settingsLabel": "الظهور والإعدادات",
+      "public": "عام",
+      "private": "خاص",
+      "noBio": "لسه مفيش نبذة — ضيفها من تعديل الملف."
+    },
+    "settings": {
+      "accountSection": "الحساب",
+      "notificationsSection": "الإشعارات",
+      "availabilitySection": "مواعيد المكالمات",
+      "billingSection": "الفواتير",
+      "languageSection": "اللغة",
+      "fullName": "الاسم بالكامل",
+      "namePlaceholder": "اسمك",
+      "emailReadonly": "مش هتقدر تغيّر الإيميل من هنا.",
+      "manageHours": "ظبّط مواعيدك المتاحة للحجز",
+      "manageHoursSub": "حدّد العملاء يقدروا يحجزوا مكالمات معاك إمتى.",
+      "billingValue": "مجاني في فترة الإتاحة المبكرة",
+      "billingNote": "الفوترة مقفولة دلوقتي في الفترة التجريبية — هنبلّغك قبل أي تغيير.",
+      "pilotBadge": "تجريبي",
+      "prefDesc": {
+        "message": "رسايل الشات الجديدة",
+        "coachComment": "الملاحظات اللي بتتكتب على المتابعات",
+        "planPublished": "لما تتبعتلك خطة جديدة",
+        "prAchieved": "إنجازات الأرقام القياسية",
+        "clientNote": "الملاحظات اللي عملاؤك بيسجّلوها على تمارينهم",
+        "coachRequest": "طلبات العملاء الجدد اللي عايزين ينضمّوا ليك"
+      }
+    }
   },
   "bodyMetric": {
     "reviewTitle": "مراجعة قياس InBody",

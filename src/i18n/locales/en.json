@@ -195,7 +195,11 @@
     "sinceStart": "{{delta}} {{unit}} since start",
     "invalidWeight": "Enter a valid weight.",
     "saveEntryError": "Could not save that entry. Please try again.",
-    "field": { "weight": "Weight", "fat": "Body fat", "muscle": "Muscle" },
+    "field": {
+      "weight": "Weight",
+      "fat": "Body fat",
+      "muscle": "Muscle"
+    },
     "latestVerified": "Latest: {{date}} · coach-verified",
     "needTwoReadings": "Need at least two readings of {{field}} to show a trend.",
     "noInbodyTitle": "No InBody readings yet",
@@ -314,7 +318,11 @@
   "aiPlan": {
     "intro": "Pick a client to generate a plan for.",
     "noClientsTitle": "No clients yet",
-    "noClientsSub": "Invite a client first, then generate a plan for them."
+    "noClientsSub": "Invite a client first, then generate a plan for them.",
+    "generateFor": "Generate for",
+    "changeClient": "Change",
+    "promptLabel": "Anything specific? (optional)",
+    "generated": "Plan generated"
   },
   "newPlan": {
     "aiTitle": "AI plan",
@@ -631,31 +639,106 @@
     "empty": "No trophies yet. Log a workout to earn your first.",
     "locked": "Locked",
     "count": "{{earned}} of {{total}}",
-    "first_workout": { "title": "First Workout", "desc": "Logged your first session" },
-    "workouts_10": { "title": "10 Workouts", "desc": "Logged 10 sessions" },
-    "workouts_50": { "title": "50 Workouts", "desc": "Logged 50 sessions" },
-    "workouts_100": { "title": "Century", "desc": "Logged 100 sessions" },
-    "streak_7": { "title": "7-Day Streak", "desc": "Trained 7 days in a row" },
-    "streak_30": { "title": "30-Day Streak", "desc": "Trained 30 days in a row" },
-    "streak_100": { "title": "100-Day Streak", "desc": "Trained 100 days in a row" },
-    "pr_first": { "title": "First PR", "desc": "Set your first personal record" },
-    "pr_10": { "title": "10 PRs", "desc": "Personal records on 10 lifts" },
-    "pr_25": { "title": "25 PRs", "desc": "Personal records on 25 lifts" },
-    "first_inbody": { "title": "First InBody", "desc": "Your first verified InBody scan" },
-    "inbody_10": { "title": "10 InBody Scans", "desc": "10 verified InBody scans" },
-    "body_fat_drop_1": { "title": "Leaner", "desc": "Dropped 1% body fat" },
-    "body_fat_drop_5": { "title": "Shredded", "desc": "Dropped 5% body fat" },
-    "lean_gain_1kg": { "title": "Building", "desc": "Gained 1 kg of muscle" },
-    "lean_gain_5kg": { "title": "Mass Monster", "desc": "Gained 5 kg of muscle" },
-    "goal_hit": { "title": "Goal Reached", "desc": "Hit your target weight" },
-    "tier_bronze": { "title": "Bronze League", "desc": "Reached Bronze tier" },
-    "tier_silver": { "title": "Silver League", "desc": "Reached Silver tier" },
-    "tier_gold": { "title": "Gold League", "desc": "Reached Gold tier" },
-    "tier_platinum": { "title": "Platinum League", "desc": "Reached Platinum tier" },
-    "tier_diamond": { "title": "Diamond League", "desc": "Reached Diamond tier" },
-    "tier_master": { "title": "Master League", "desc": "Reached Master tier" },
-    "tier_grandmaster": { "title": "Grandmaster League", "desc": "Reached Grandmaster tier" },
-    "tier_apex": { "title": "Apex League", "desc": "Reached Apex tier" }
+    "first_workout": {
+      "title": "First Workout",
+      "desc": "Logged your first session"
+    },
+    "workouts_10": {
+      "title": "10 Workouts",
+      "desc": "Logged 10 sessions"
+    },
+    "workouts_50": {
+      "title": "50 Workouts",
+      "desc": "Logged 50 sessions"
+    },
+    "workouts_100": {
+      "title": "Century",
+      "desc": "Logged 100 sessions"
+    },
+    "streak_7": {
+      "title": "7-Day Streak",
+      "desc": "Trained 7 days in a row"
+    },
+    "streak_30": {
+      "title": "30-Day Streak",
+      "desc": "Trained 30 days in a row"
+    },
+    "streak_100": {
+      "title": "100-Day Streak",
+      "desc": "Trained 100 days in a row"
+    },
+    "pr_first": {
+      "title": "First PR",
+      "desc": "Set your first personal record"
+    },
+    "pr_10": {
+      "title": "10 PRs",
+      "desc": "Personal records on 10 lifts"
+    },
+    "pr_25": {
+      "title": "25 PRs",
+      "desc": "Personal records on 25 lifts"
+    },
+    "first_inbody": {
+      "title": "First InBody",
+      "desc": "Your first verified InBody scan"
+    },
+    "inbody_10": {
+      "title": "10 InBody Scans",
+      "desc": "10 verified InBody scans"
+    },
+    "body_fat_drop_1": {
+      "title": "Leaner",
+      "desc": "Dropped 1% body fat"
+    },
+    "body_fat_drop_5": {
+      "title": "Shredded",
+      "desc": "Dropped 5% body fat"
+    },
+    "lean_gain_1kg": {
+      "title": "Building",
+      "desc": "Gained 1 kg of muscle"
+    },
+    "lean_gain_5kg": {
+      "title": "Mass Monster",
+      "desc": "Gained 5 kg of muscle"
+    },
+    "goal_hit": {
+      "title": "Goal Reached",
+      "desc": "Hit your target weight"
+    },
+    "tier_bronze": {
+      "title": "Bronze League",
+      "desc": "Reached Bronze tier"
+    },
+    "tier_silver": {
+      "title": "Silver League",
+      "desc": "Reached Silver tier"
+    },
+    "tier_gold": {
+      "title": "Gold League",
+      "desc": "Reached Gold tier"
+    },
+    "tier_platinum": {
+      "title": "Platinum League",
+      "desc": "Reached Platinum tier"
+    },
+    "tier_diamond": {
+      "title": "Diamond League",
+      "desc": "Reached Diamond tier"
+    },
+    "tier_master": {
+      "title": "Master League",
+      "desc": "Reached Master tier"
+    },
+    "tier_grandmaster": {
+      "title": "Grandmaster League",
+      "desc": "Reached Grandmaster tier"
+    },
+    "tier_apex": {
+      "title": "Apex League",
+      "desc": "Reached Apex tier"
+    }
   },
   "athleteProfile": {
     "streak": "Streak",
@@ -997,13 +1080,23 @@
     "injuries": "Injuries / notes",
     "injuriesPlaceholder": "Anything your coach should know",
     "saveError": "Could not save. Please check your inputs and try again.",
-    "exp": { "beginner": "Beginner", "intermediate": "Intermediate", "advanced": "Advanced" },
+    "exp": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
     "expHint": {
       "beginner": "New to training, or less than ~1 year of consistent workouts.",
       "intermediate": "1–3 years of consistent training; comfortable with the main lifts.",
       "advanced": "3+ years of structured training and programming."
     },
-    "activity": { "sedentary": "Sedentary", "light": "Light", "moderate": "Moderate", "active": "Active", "very_active": "Very active" },
+    "activity": {
+      "sedentary": "Sedentary",
+      "light": "Light",
+      "moderate": "Moderate",
+      "active": "Active",
+      "very_active": "Very active"
+    },
     "activityHint": {
       "sedentary": "Little or no exercise; mostly sitting (desk job).",
       "light": "Light exercise 1–3 days a week.",
@@ -1011,7 +1104,10 @@
       "active": "Hard exercise 6–7 days a week.",
       "very_active": "Very hard daily training, or a physical job / two-a-days."
     },
-    "sex": { "male": "Male", "female": "Female" },
+    "sex": {
+      "male": "Male",
+      "female": "Female"
+    },
     "diet": {
       "vegetarian": "Vegetarian",
       "vegan": "Vegan",
@@ -1099,7 +1195,12 @@
     "prefsCount": "{{liked}} liked · {{avoided}} avoided",
     "noFoodsMatch": "No foods match.",
     "all": "All",
-    "slot": { "breakfast": "Breakfast", "lunch": "Lunch", "dinner": "Dinner", "snack": "Snack" },
+    "slot": {
+      "breakfast": "Breakfast",
+      "lunch": "Lunch",
+      "dinner": "Dinner",
+      "snack": "Snack"
+    },
     "category": {
       "protein": "Protein",
       "carbs": "Carbs",
@@ -1147,7 +1248,13 @@
     "keepLogging": "Keep logging"
   },
   "coach": {
-    "muscle": { "push": "Push", "pull": "Pull", "legs": "Legs", "arms": "Arms", "core": "Core" },
+    "muscle": {
+      "push": "Push",
+      "pull": "Pull",
+      "legs": "Legs",
+      "arms": "Arms",
+      "core": "Core"
+    },
     "cancelCustomExercise": "Cancel custom",
     "createCustomExercise": "Create a custom exercise",
     "exerciseName": "Exercise name",
@@ -1189,7 +1296,12 @@
     "invExpires": "expires {{date}}",
     "duplicateInvite": "You already have a pending invite for this email.",
     "createInviteError": "Could not create the invitation. Please try again.",
-    "invStatus": { "pending": "pending", "accepted": "accepted", "revoked": "revoked", "expired": "expired" }
+    "invStatus": {
+      "pending": "pending",
+      "accepted": "accepted",
+      "revoked": "revoked",
+      "expired": "expired"
+    }
   },
   "admin": {
     "console": "Admin console",
@@ -1280,7 +1392,12 @@
     "addInbody": "Add InBody reading",
     "recentFeedback": "Recent feedback",
     "messageClient": "Message",
-    "tabs": { "overview": "Overview", "plans": "Plans", "progress": "Progress", "notes": "Notes" },
+    "tabs": {
+      "overview": "Overview",
+      "plans": "Plans",
+      "progress": "Progress",
+      "notes": "Notes"
+    },
     "noNotesTitle": "No notes yet",
     "noNotesSub": "Notes your client leaves on their workouts show up here.",
     "assignFromTemplates": "Assign from templates",
@@ -1358,7 +1475,142 @@
     "coachProfile": "Coach profile",
     "profile": "Profile",
     "discoverCoaches": "Discover coaches",
-    "leaderboards": "Leaderboards"
+    "leaderboards": "Leaderboards",
+    "calls": "Calls"
+  },
+  "webnav": {
+    "brand": "Raptor",
+    "brandTagline": "Coaching",
+    "coaching": "Coaching",
+    "plans": "Plans",
+    "communication": "Communication",
+    "account": "Account",
+    "dashboard": "Dashboard",
+    "clients": "Clients",
+    "leaderboard": "Leaderboard",
+    "analytics": "Analytics",
+    "templates": "Templates",
+    "newPlan": "New Plan",
+    "messages": "Messages",
+    "calls": "Calls",
+    "profile": "Profile",
+    "settings": "Settings",
+    "soon": "Soon",
+    "coachRole": "Coach",
+    "searchPlaceholder": "Search clients, plans…",
+    "callsSoonTitle": "Calls are coming soon",
+    "callsSoonSub": "In-app scheduled audio & video calls with your clients — availability, booking, and live calls — are on the way."
+  },
+  "webportal": {
+    "dashboard": {
+      "weeklySessions": "Weekly sessions",
+      "topClients": "Top performing clients",
+      "topPlans": "Top performing plans",
+      "progress": "Progress",
+      "viewAll": "View all",
+      "clientsAssigned": "{{count}} clients"
+    },
+    "clients": {
+      "requests": "Requests",
+      "kpiTotal": "Total clients",
+      "kpiAttention": "Needs attention",
+      "kpiOnTrack": "On track",
+      "kpiAvgAdherence": "Avg adherence",
+      "statAdherence": "Adherence",
+      "statProgress": "Progress",
+      "statSessions": "Sessions",
+      "statusAttention": "Needs attention",
+      "statusOnTrack": "On track",
+      "statusNoData": "No data yet"
+    },
+    "templates": {
+      "title": "Plan templates",
+      "version": "Version",
+      "updated": "Updated",
+      "assign": "Assign",
+      "statWeeks": "Weeks",
+      "statClients": "Clients",
+      "statAdherence": "Adherence"
+    },
+    "leaderboard": {
+      "colAthlete": "Athlete",
+      "colTier": "Tier",
+      "colCoach": "Coach"
+    },
+    "clientDetail": {
+      "bookCall": "Book call",
+      "totalChange": "Total change",
+      "sinceBaseline": "Since baseline",
+      "streakNote": "Consecutive days",
+      "statusLabel": "Status",
+      "statusActive": "Active",
+      "statusIdle": "Idle",
+      "statusNone": "No activity yet",
+      "noActivePlan": "No active plan",
+      "bodyweightTrend": "Bodyweight trend",
+      "latestMetrics": "Latest metrics",
+      "recentSessions": "Recent sessions",
+      "viewAll": "View all ({{n}})",
+      "showLess": "Show less",
+      "aiInsight": "AI insight",
+      "noReadingsTitle": "No verified readings yet",
+      "noReadingsSub": "Add a coach-verified InBody reading to chart this client's progress.",
+      "visceralFat": "Visceral fat",
+      "bmr": "BMR",
+      "noSessions": "No sessions logged yet"
+    },
+    "planEditor": {
+      "colExercise": "Exercise",
+      "colSetsReps": "Sets × reps",
+      "colRest": "Rest"
+    },
+    "messages": {
+      "subtitle": "Stay on top of every client conversation.",
+      "conversations": "Conversations",
+      "unread": "Unread",
+      "inbox": "Inbox",
+      "newCount": "{{count}} new",
+      "selectConversation": "Select a conversation",
+      "selectConversationSub": "Choose a client from the list to view your chat.",
+      "online": "Online",
+      "snapshot": "Snapshot",
+      "statPlan": "Plan",
+      "openProfile": "Open full profile",
+      "noConversations": "No conversations yet",
+      "noConversationsSub": "Once you start chatting with a client, it'll show up here.",
+      "composer": "Message {{name}}…",
+      "recording": "Recording… tap to send"
+    },
+    "profile": {
+      "previewLabel": "Public preview",
+      "settingsLabel": "Visibility & settings",
+      "public": "Public",
+      "private": "Private",
+      "noBio": "No bio yet — add one from Edit profile."
+    },
+    "settings": {
+      "accountSection": "Account",
+      "notificationsSection": "Notifications",
+      "availabilitySection": "Call availability",
+      "billingSection": "Billing",
+      "languageSection": "Language",
+      "fullName": "Full name",
+      "namePlaceholder": "Your name",
+      "emailReadonly": "Your email can’t be changed here.",
+      "manageHours": "Manage your bookable hours",
+      "manageHoursSub": "Set when clients can book calls with you.",
+      "billingValue": "Free during early access",
+      "billingNote": "Billing is off during the pilot — we’ll let you know before anything changes.",
+      "pilotBadge": "Pilot",
+      "prefDesc": {
+        "message": "New chat messages",
+        "coachComment": "Feedback left on check-ins",
+        "planPublished": "When a new plan is shared with you",
+        "prAchieved": "Personal-record milestones",
+        "clientNote": "Notes your clients log on their workouts",
+        "coachRequest": "New requests from clients to join you"
+      }
+    }
   },
   "bodyMetric": {
     "reviewTitle": "Review InBody reading",

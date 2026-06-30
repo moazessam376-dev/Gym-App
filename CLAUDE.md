@@ -249,6 +249,17 @@ Full status + the founder-facing test plan: [[engagement-track]] (project memory
   logs `permission denied for function coach_*` / `request_invalid` / `id=eq.undefined`, the client
   is calling the DB as `anon` (stale/expired session) — **full sign-out + sign-in**, not a code bug.
 
+**Coach Web Portal (responsive desktop) — SHIPPED to main (branch `cc/coach-web-portal`).** A
+desktop coach experience (left sidebar + top bar on wide web; mobile keeps bottom tabs) built INTO
+this single codebase, reusing every screen/hook. Pure client/web — **DB-untouched** (no migration/
+RLS/edge change). **Before ANY web/responsive work, read [`.claude/rules/web.md`](.claude/rules/web.md)**
+— it captures the RN-Web traps we already hit once (TextInput key events need a DOM `keydown`
+listener not the filtered `onKeyDown` prop; no `.web.tsx` desktop variants; computed-flex not CSS
+grid; disable nav animations on web; Realtime subscribe-once + unique channel; react-native-svg
+needs a unique gradient `useId()`; rules-of-hooks scan the SHELL files too; cross-route desktop
+variants need a `<Redirect>` on resize; honest data — no fabricated stats). Full status: project
+memory [[coach-web-portal]].
+
 ---
 
 ## 14. Parallel build with GLM (two-agent workflow)

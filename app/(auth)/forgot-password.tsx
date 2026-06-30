@@ -69,6 +69,8 @@ export default function ForgotPassword() {
                 onChangeText={setEmail}
                 editable={!loading}
                 error={error}
+                returnKeyType="send"
+                onSubmitEditing={onSubmit}
               />
               <Button title={t('auth.sendResetLink')} onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />
               <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: theme.spacing.sm }}>

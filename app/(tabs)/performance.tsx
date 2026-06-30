@@ -10,6 +10,7 @@ import { View, useWindowDimensions } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
+import { useChrome } from '../../src/lib/chrome';
 import { forwardChevron, textStart } from '../../src/lib/rtl';
 import {
   useAnalyticsInsight,
@@ -101,6 +102,9 @@ export default function PerformanceTab() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const wide = width >= 900;
+  // Inside the coach desktop shell, Screen already centers + caps the column (1240), so
+  // skip this page's own 1100 cap and fill the shell width; keep it everywhere else.
+  const { active: inShell } = useChrome();
 
   // The roster size + the "has clients" gate come from useMyClients — the SAME
   // deployed/cached source the Clients tab uses — so the page never wrongly shows
@@ -171,7 +175,7 @@ export default function PerformanceTab() {
 
   return (
     <Screen scroll gradient contentStyle={{ paddingTop: theme.spacing.md, gap: theme.spacing.xl }}>
-      <View style={{ width: '100%', maxWidth: 1100, alignSelf: 'center', gap: theme.spacing.xl }}>
+      <View style={{ width: '100%', maxWidth: inShell ? undefined : 1100, alignSelf: 'center', gap: theme.spacing.xl }}>
         {/* Header */}
         <View>
           <Text variant="label" color="primary" style={textStart}>

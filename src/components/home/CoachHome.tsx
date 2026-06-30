@@ -8,6 +8,7 @@ import { Pressable, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
+import { useChrome } from '@/lib/chrome';
 import { forwardChevron, textStart } from '@/lib/rtl';
 import {
   useMyName,
@@ -18,10 +19,12 @@ import {
   useCoachLeaderboard,
   useAnalyticsInsight,
   useConversationPreviews,
+  useCoachPerformanceTrends,
+  useCoachPlanEffectiveness,
   useRefreshOnFocus,
 } from '@/lib/queries/home';
-import { needsAttention, rosterAdherencePct, type AttentionRow } from '@/lib/analytics';
-import { Icon, Screen, Text, Avatar, Card, GlassCard, KpiTile, EmptyState } from '@/components/ui';
+import { needsAttention, rosterAdherencePct, topPlans, type AttentionRow } from '@/lib/analytics';
+import { Icon, Screen, Text, Avatar, Card, GlassCard, KpiTile, EmptyState, Chip } from '@/components/ui';
 import { NotificationBell } from '@/components/NotificationBell';
 import { theme } from '@/theme';
 
@@ -92,6 +95,9 @@ export default function CoachHome() {
   const weekQ = useCoachLeaderboard();
   const insightQ = useAnalyticsInsight();
   const previewsQ = useConversationPreviews();
+  const trendsQ = useCoachPerformanceTrends();
+  const plansQ = useCoachPlanEffectiveness();
+  const { active: wide } = useChrome();
 
   useRefreshOnFocus(() => {
     nameQ.refetch();
@@ -102,6 +108,8 @@ export default function CoachHome() {
     weekQ.refetch();
     insightQ.refetch();
     previewsQ.refetch();
+    trendsQ.refetch();
+    plansQ.refetch();
   });
 
   const name = nameQ.data ?? null;
@@ -115,6 +123,9 @@ export default function CoachHome() {
   const recentlyActive = (weekQ.data ?? []).filter((r) => r.sessions_done > 0).slice(0, 3);
   const insight = insightQ.data ?? null;
   const unread = (previewsQ.data ?? []).reduce((a, c) => a + c.unread_count, 0);
+  // Desktop-only extras (cheap cached reads): weekly roster-activity trend + "plans that work".
+  const trends = trendsQ.data ?? [];
+  const plans = topPlans(plansQ.data ?? []).slice(0, 5);
 
   const go = (href: Href) => () => router.push(href);
   const openClient = (id: string, n: string | null) => () =>
@@ -134,6 +145,272 @@ export default function CoachHome() {
     if (a.reason === 'inactive') return t('home.reasonInactive', { count: a.value });
     return t('home.reasonLowAdherence', { pct: a.value });
   };
+
+  // ── Desktop coach portal (wide web + coach role) ─────────────────────────────
+  // A purpose-built multi-column dashboard: a 4-up KPI row, then a two-column region
+  // (weekly sessions + needs-attention | top clients + top plans + AI insight). Same
+  // cached hooks — no new data. The phone layout below is left byte-for-byte untouched.
+  if (wide) {
+    const maxSessions = Math.max(1, ...trends.map((p) => p.sessions_logged));
+    const wkLabel = (d: string) => {
+      const [, m, day] = d.split('-');
+      return `${Number(m)}/${Number(day)}`;
+    };
+    const topClients = board.filter((r) => r.progress.hasTrend).slice(0, 6);
+    const activeRows = (weekQ.data ?? []).filter((r) => r.sessions_done > 0).slice(0, 6);
+    const divider = { borderTopWidth: 1, borderTopColor: theme.colors.border } as const;
+    const rankNum = (rank: number, top: boolean) => (
+      <Text
+        color={top ? theme.colors.primary : theme.colors.textMuted}
+        style={{ width: 24, fontFamily: theme.fontFamily.monoBold, fontSize: 14 }}
+      >
+        {rank}
+      </Text>
+    );
+    const cardTitle = (title: string, link?: { label: string; onPress: () => void }) => (
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: theme.spacing.lg,
+        }}
+      >
+        <Text variant="bodyStrong" style={textStart}>
+          {title}
+        </Text>
+        {link ? (
+          <Pressable onPress={link.onPress} hitSlop={8}>
+            <Text variant="caption" color={theme.colors.primary}>
+              {link.label}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+    );
+
+    return (
+      <Screen scroll gradient contentStyle={{ paddingTop: theme.spacing.md, gap: theme.spacing.xl }}>
+        {/* Page heading (the shell top bar holds the bell/avatar — not duplicated here). */}
+        <View>
+          <Text variant="label" color="primary" style={textStart}>
+            {t('home.performanceHub')}
+          </Text>
+          <Text variant="h1" style={textStart}>
+            {name ? name.split(' ')[0] : t('home.coach')}
+          </Text>
+        </View>
+
+        {/* 4-up KPI row */}
+        <View style={{ flexDirection: 'row', gap: theme.spacing.lg }}>
+          <KpiTile value={pad2(clients)} label={t('home.activeClients')} tone="primary" icon="users" onPress={go('/(tabs)/clients')} />
+          <KpiTile
+            value={pad2(pending)}
+            label={t('home.pendingInvites')}
+            tone={pending > 0 ? 'warning' : 'neutral'}
+            icon="user-plus"
+            onPress={go('/coach/invite')}
+          />
+          <KpiTile
+            value={adherence == null ? '—' : `${adherence}%`}
+            label={t('home.rosterAdherence')}
+            valueColor={adherenceColor}
+            icon="activity"
+            onPress={go('/(tabs)/performance')}
+          />
+          <KpiTile
+            value={pad2(unread)}
+            label={t('home.unreadMessages')}
+            tone={unread > 0 ? 'warning' : 'neutral'}
+            icon="message-square"
+            onPress={go('/(tabs)/messages')}
+          />
+        </View>
+
+        {/* Two-column region */}
+        <View style={{ flexDirection: 'row', gap: theme.spacing.lg, alignItems: 'flex-start' }}>
+          {/* LEFT — weekly sessions + needs attention */}
+          <View style={{ flex: 1.4, gap: theme.spacing.lg }}>
+            <Card>
+              {cardTitle(t('webportal.dashboard.weeklySessions'), {
+                label: t('home.viewPerformance'),
+                onPress: () => router.push('/(tabs)/performance'),
+              })}
+              {trends.length > 0 ? (
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: theme.spacing.sm, height: 184, paddingTop: theme.spacing.md }}>
+                  {trends.map((pt) => {
+                    const h = Math.max(4, Math.round((pt.sessions_logged / maxSessions) * 120));
+                    return (
+                      <View key={pt.week_start} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+                        <Text variant="mono" style={{ fontSize: 11 }}>
+                          {pt.sessions_logged}
+                        </Text>
+                        <View
+                          style={{
+                            width: '100%',
+                            height: h,
+                            backgroundColor: theme.colors.primary,
+                            borderTopLeftRadius: 6,
+                            borderTopRightRadius: 6,
+                          }}
+                        />
+                        <Text variant="caption" muted style={{ fontSize: 10 }}>
+                          {wkLabel(pt.week_start)}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text variant="body" muted style={textStart}>
+                  {t('home.noActivityYet')}
+                </Text>
+              )}
+            </Card>
+
+            {clients > 0 ? (
+              <Card>
+                {cardTitle(t('home.needsAttention'))}
+                {attention.length === 0 ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <Icon name="check-circle" size={18} color={theme.colors.success} />
+                    <Text variant="body" muted style={[textStart, { flex: 1 }]}>
+                      {t('home.allOnTrack')}
+                    </Text>
+                  </View>
+                ) : (
+                  attention.map((a, i) => (
+                    <Pressable
+                      key={a.client_id}
+                      onPress={openClient(a.client_id, a.full_name)}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, paddingVertical: theme.spacing.sm, ...(i > 0 ? divider : null) }}
+                    >
+                      <Avatar name={a.full_name ?? t('home.client')} size={36} />
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text variant="bodyStrong" numberOfLines={1} style={textStart}>
+                          {a.full_name ?? t('home.client')}
+                        </Text>
+                        <Text variant="caption" color={theme.colors.warning} style={textStart}>
+                          {attentionMeta(a)}
+                        </Text>
+                      </View>
+                      <Icon name={forwardChevron()} size={16} color={theme.colors.textMuted} />
+                    </Pressable>
+                  ))
+                )}
+              </Card>
+            ) : null}
+          </View>
+
+          {/* RIGHT — top clients + top plans + AI insight */}
+          <View style={{ flex: 1, gap: theme.spacing.lg }}>
+            <Card>
+              {cardTitle(t('webportal.dashboard.topClients'), {
+                label: t('webportal.dashboard.viewAll'),
+                onPress: () => router.push('/(tabs)/clients'),
+              })}
+              {topClients.length > 0 ? (
+                <View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, paddingBottom: theme.spacing.sm, borderBottomWidth: 1, borderBottomColor: theme.colors.border }}>
+                    <Text variant="label" muted style={{ width: 24 }}>#</Text>
+                    <Text variant="label" muted style={[textStart, { flex: 2 }]}>{t('performance.matrixClient')}</Text>
+                    <Text variant="label" muted style={[textStart, { flex: 1.6 }]}>{t('webportal.dashboard.progress')}</Text>
+                    <Text variant="label" muted style={[textStart, { flex: 1.2 }]}>{t('performance.matrixGoal')}</Text>
+                  </View>
+                  {topClients.map((r) => (
+                    <Pressable
+                      key={r.client_id}
+                      onPress={openClient(r.client_id, r.full_name)}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, paddingVertical: theme.spacing.sm, ...divider }}
+                    >
+                      {rankNum(r.rank, r.rank <= 3)}
+                      <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                        <Avatar name={r.full_name ?? t('home.client')} size={32} />
+                        <Text variant="bodyStrong" numberOfLines={1} style={[textStart, { flex: 1 }]}>
+                          {r.full_name ?? t('home.client')}
+                        </Text>
+                      </View>
+                      <Text variant="caption" color={theme.colors.primary} numberOfLines={1} style={[textStart, { flex: 1.6 }]}>
+                        {r.progress.headline}
+                      </Text>
+                      <View style={{ flex: 1.2, alignItems: 'flex-start' }}>
+                        {r.primary_goal ? (
+                          <Chip label={t(`goals.${r.primary_goal}`)} />
+                        ) : (
+                          <Text variant="caption" muted>—</Text>
+                        )}
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : activeRows.length > 0 ? (
+                activeRows.map((r, i) => (
+                  <Pressable
+                    key={r.client_id}
+                    onPress={openClient(r.client_id, r.full_name)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, paddingVertical: theme.spacing.sm, ...(i > 0 ? divider : null) }}
+                  >
+                    <Avatar name={r.full_name ?? t('home.client')} size={32} />
+                    <Text variant="bodyStrong" numberOfLines={1} style={[textStart, { flex: 1 }]}>
+                      {r.full_name ?? t('home.client')}
+                    </Text>
+                    <Text variant="caption" muted>
+                      {t('ranks.setsLogged', { count: r.sets_done })}
+                    </Text>
+                  </Pressable>
+                ))
+              ) : clients === 0 ? (
+                <EmptyState
+                  icon="people-outline"
+                  title={t('clients.emptyTitle')}
+                  subtitle={t('clients.emptySub')}
+                  actionLabel={t('clients.inviteAction')}
+                  onAction={() => router.push('/coach/invite')}
+                />
+              ) : (
+                <Text variant="body" muted style={textStart}>
+                  {t('home.noActivityYet')}
+                </Text>
+              )}
+            </Card>
+
+            {plans.length > 0 ? (
+              <Card>
+                {cardTitle(t('webportal.dashboard.topPlans'))}
+                {plans.map((p, i) => (
+                  <View
+                    key={p.key}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, paddingVertical: theme.spacing.sm, ...(i > 0 ? divider : null) }}
+                  >
+                    {rankNum(i + 1, i < 3)}
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text variant="bodyStrong" numberOfLines={1} style={textStart}>
+                        {p.title}
+                      </Text>
+                      <Text variant="caption" muted numberOfLines={1} style={textStart}>
+                        {t('webportal.dashboard.clientsAssigned', { count: p.clients })} · {p.headline}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </Card>
+            ) : null}
+
+            {insight?.analysis ? (
+              <Card onPress={go('/(tabs)/performance')}>
+                <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
+                  <Icon name="sparkles-outline" size={20} color={theme.colors.primary} />
+                  <Text variant="body" style={[textStart, { flex: 1 }]} numberOfLines={4}>
+                    {insight.analysis}
+                  </Text>
+                </View>
+              </Card>
+            ) : null}
+          </View>
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen scroll gradient contentStyle={{ paddingTop: theme.spacing.md, gap: theme.spacing.xl }}>
