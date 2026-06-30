@@ -5,7 +5,7 @@
 //   • Availability — a month-grid calendar editor: tap any day (weekends included), add/manage
 //                    time slots for it (AvailabilityCalendar).
 // Coach-only; others redirect. Reached from the web sidebar + Settings "Manage hours".
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,7 @@ import { useAuth } from '../../src/lib/auth-context';
 import { textStart } from '../../src/lib/rtl';
 import { queryClient } from '../../src/lib/query';
 import { joinCall } from '../../src/lib/callProvider';
+import { ensureDailyCoachReminder } from '../../src/lib/callReminders';
 import { resolveCallRequest, type Call } from '../../src/lib/calls';
 import { useCoachCallInbox, useCoachCalls, useMySlots } from '../../src/lib/queries/calls';
 import { Button, EmptyState, Screen, Segmented, Text, useToast } from '../../src/components/ui';
@@ -123,6 +124,11 @@ export default function CoachCallsScreen() {
   const { role, session } = useAuth();
   const { active: wide } = useChrome();
   const [tab, setTab] = useState<Tab>('requests');
+
+  // Schedule (once) the daily "check your calendar" local reminder for coaches. No-op on web.
+  useEffect(() => {
+    if (role === 'coach') ensureDailyCoachReminder(t('calls.reminder.dailyTitle'), t('calls.reminder.dailyBody'));
+  }, [role, t]);
 
   if (role && role !== 'coach') return <Redirect href="/" />;
   if (wide) return <CoachCallsDesktop />; // portal dashboard on wide web

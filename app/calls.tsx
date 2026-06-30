@@ -2,7 +2,7 @@
 // call (Phase A: the Jitsi room via the adapter); Cancel retracts a pending/accepted booking.
 // Client-only; others redirect. Reached from the Account screen + a Home card.
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../src/lib/auth-context';
@@ -12,7 +12,8 @@ import { confirm } from '../src/lib/confirm';
 import { joinCall } from '../src/lib/callProvider';
 import { cancelCall, type Call } from '../src/lib/calls';
 import { useMyCalls } from '../src/lib/queries/calls';
-import { Button, EmptyState, Screen, Text, useToast } from '../src/components/ui';
+import { addCallToDeviceCalendar } from '../src/lib/deviceCalendar';
+import { Button, EmptyState, IconButton, Screen, Text, useToast } from '../src/components/ui';
 import { BookCallSheet } from '../src/components/calls/BookCallSheet';
 import { CallCard } from '../src/components/calls/CallCard';
 import { theme } from '../src/theme';
@@ -54,6 +55,12 @@ export default function ClientCallsScreen() {
     }
   };
 
+  const addToCal = (c: Call) => async () => {
+    const ok = await addCallToDeviceCalendar(c, t('calls.calendarEventTitle'));
+    if (ok) toast.show(t('calls.addedToCalendar'));
+    else toast.show(t('calls.error.generic'), 'error');
+  };
+
   const actionsFor = (c: Call) => {
     const canJoin = c.status === 'accepted' || c.status === 'in_progress' || c.status === 'ringing';
     const canCancel = c.status === 'pending' || c.status === 'accepted';
@@ -64,6 +71,9 @@ export default function ClientCallsScreen() {
           <View style={{ flex: 1 }}>
             <Button title={t('calls.join')} onPress={join(c)} />
           </View>
+        ) : null}
+        {canJoin && Platform.OS !== 'web' ? (
+          <IconButton name="calendar" accessibilityLabel={t('calls.addToCalendar')} onPress={addToCal(c)} />
         ) : null}
         {canCancel ? (
           <View style={{ flex: 1 }}>

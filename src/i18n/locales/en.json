@@ -1,6 +1,13 @@
 {
   "calls": {
     "bookEntry": "Book a call",
+    "addToCalendar": "Add to calendar",
+    "addedToCalendar": "Added to your calendar",
+    "calendarEventTitle": "Coaching call",
+    "reminder": {
+      "dailyTitle": "Check your calendar",
+      "dailyBody": "Review today's calls and your bookable hours."
+    },
     "book": {
       "title": "Book a call with {{name}}",
       "titleNoName": "Book a call",

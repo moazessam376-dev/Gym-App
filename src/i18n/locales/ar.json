@@ -1,6 +1,13 @@
 {
   "calls": {
     "bookEntry": "احجز مكالمة",
+    "addToCalendar": "ضيفها للتقويم",
+    "addedToCalendar": "اتضافت لتقويمك",
+    "calendarEventTitle": "مكالمة كوتشينج",
+    "reminder": {
+      "dailyTitle": "راجع تقويمك",
+      "dailyBody": "راجع مكالمات النهاردة ومواعيدك المتاحة."
+    },
     "book": {
       "title": "احجز مكالمة مع {{name}}",
       "titleNoName": "احجز مكالمة",
