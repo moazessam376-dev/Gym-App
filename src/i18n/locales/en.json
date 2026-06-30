@@ -83,7 +83,9 @@
       "reopen": "Re-open",
       "delete": "Delete",
       "deleteConfirm": "Delete this slot?",
-      "invalidTime": "Enter a valid future date and time.",
+      "invalidTime": "Enter a valid future time for this day.",
+      "daySlots": "Slots on {{date}}",
+      "noDaySlots": "No slots this day yet.",
       "slot": {
         "open": "Open",
         "held": "Requested",

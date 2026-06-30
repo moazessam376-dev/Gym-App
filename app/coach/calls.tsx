@@ -1,10 +1,9 @@
-// Coach calls hub — replaces the "coming soon" placeholder. Three sections:
-//   • Requests   — pending booking requests; Accept (resolve-call-request) links the slot
-//                  + notifies the client, Decline reopens it.
-//   • Upcoming   — confirmed/live calls; Join opens the room (Phase A: Jitsi via the adapter).
-//   • Availability — publish / close / delete discrete bookable slots (Calendly-style, no
-//                  recurrence). Date+time are typed (works on web + Expo Go); a native picker
-//                  is a later enhancement.
+// Coach calls hub — three tabs:
+//   • Requests     — pending booking requests; Accept (resolve-call-request) confirms + notifies,
+//                    Decline reopens the slot.
+//   • Upcoming     — confirmed/live calls; Join opens the room (Phase A: Jitsi via the adapter).
+//   • Availability — a month-grid calendar editor: tap any day (weekends included), add/manage
+//                    time slots for it (AvailabilityCalendar).
 // Coach-only; others redirect. Reached from the web sidebar + Settings "Manage hours".
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -13,50 +12,16 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { textStart } from '../../src/lib/rtl';
 import { queryClient } from '../../src/lib/query';
-import { confirm } from '../../src/lib/confirm';
 import { joinCall } from '../../src/lib/callProvider';
-import {
-  closeSlot,
-  createSlot,
-  deleteSlot,
-  reopenSlot,
-  resolveCallRequest,
-  type Call,
-  type CoachCallSlot,
-  type SlotStatus,
-} from '../../src/lib/calls';
+import { resolveCallRequest, type Call } from '../../src/lib/calls';
 import { useCoachCallInbox, useCoachCalls, useMySlots } from '../../src/lib/queries/calls';
-import {
-  Badge,
-  Button,
-  EmptyState,
-  GlassCard,
-  Input,
-  Screen,
-  Segmented,
-  Text,
-  useToast,
-  type BadgeTone,
-} from '../../src/components/ui';
-import { CallCard, fmtWhen } from '../../src/components/calls/CallCard';
+import { Button, EmptyState, Screen, Segmented, Text, useToast } from '../../src/components/ui';
+import { CallCard } from '../../src/components/calls/CallCard';
+import { AvailabilityCalendar } from '../../src/components/calls/AvailabilityCalendar';
 import { theme } from '../../src/theme';
 
 type Tab = 'requests' | 'upcoming' | 'availability';
 const UPCOMING: Call['status'][] = ['accepted', 'ringing', 'in_progress'];
-
-const SLOT_TONE: Record<SlotStatus, BadgeTone> = {
-  open: 'success',
-  held: 'warning',
-  booked: 'primary',
-  closed: 'neutral',
-};
-
-function toIso(dateStr: string, timeStr: string): string | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || !/^\d{2}:\d{2}$/.test(timeStr)) return null;
-  const d = new Date(`${dateStr}T${timeStr}:00`);
-  if (Number.isNaN(d.getTime()) || d.getTime() <= Date.now()) return null;
-  return d.toISOString();
-}
 
 function invalidateCalls() {
   queryClient.invalidateQueries({ queryKey: ['coach-call-inbox'] });
@@ -141,122 +106,14 @@ function UpcomingTab() {
   );
 }
 
-// ── Slot row ────────────────────────────────────────────────────────────────────
-function SlotRow({ slot, onChange }: { slot: CoachCallSlot; onChange: () => void }) {
-  const { t } = useTranslation();
-  const toast = useToast();
-  const [busy, setBusy] = useState(false);
-  const locked = slot.status === 'held' || slot.status === 'booked';
-
-  const run = (fn: () => Promise<void>) => async () => {
-    setBusy(true);
-    try {
-      await fn();
-      onChange();
-    } catch (e) {
-      if ((e as Error)?.message !== 'cancelled-by-user') toast.show(t('calls.error.generic'), 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const remove = run(async () => {
-    const ok = await confirm(t('calls.availability.deleteConfirm'), '', t('calls.availability.delete'), t('common.cancel'));
-    if (!ok) throw new Error('cancelled-by-user');
-    await deleteSlot(slot.id);
-  });
-
-  return (
-    <GlassCard style={{ gap: theme.spacing.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Text variant="bodyStrong" style={textStart} numberOfLines={1}>{fmtWhen(slot.starts_at)}</Text>
-          <Text variant="caption" muted style={textStart}>{t('calls.book.minutes', { count: slot.duration_minutes })}</Text>
-        </View>
-        <Badge label={t(`calls.availability.slot.${slot.status}`)} tone={SLOT_TONE[slot.status]} />
-      </View>
-      {!locked ? (
-        <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-          <View style={{ flex: 1 }}>
-            {slot.status === 'open' ? (
-              <Button title={t('calls.availability.close')} variant="ghost" onPress={run(() => closeSlot(slot.id))} disabled={busy} />
-            ) : (
-              <Button title={t('calls.availability.reopen')} variant="ghost" onPress={run(() => reopenSlot(slot.id))} disabled={busy} />
-            )}
-          </View>
-          <View style={{ flex: 1 }}>
-            <Button title={t('calls.availability.delete')} variant="danger" onPress={remove} loading={busy} />
-          </View>
-        </View>
-      ) : null}
-    </GlassCard>
-  );
-}
-
-// ── Availability editor ───────────────────────────────────────────────────────────
+// ── Availability editor (month-grid calendar) ──────────────────────────────────────
 function AvailabilityTab({ coachId }: { coachId: string }) {
-  const { t } = useTranslation();
-  const toast = useToast();
   const slotsQ = useMySlots();
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
-  const [duration, setDuration] = useState('30');
-  const [busy, setBusy] = useState(false);
-
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['my-slots'] });
     queryClient.invalidateQueries({ queryKey: ['coach-open-slots'] });
   };
-
-  const publish = async () => {
-    const iso = toIso(date.trim(), time.trim());
-    if (!iso) {
-      toast.show(t('calls.availability.invalidTime'), 'error');
-      return;
-    }
-    setBusy(true);
-    try {
-      await createSlot(coachId, iso, Number(duration));
-      setDate('');
-      setTime('');
-      refresh();
-    } catch {
-      toast.show(t('calls.error.generic'), 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const slots = slotsQ.data ?? [];
-
-  return (
-    <View style={{ gap: theme.spacing.lg }}>
-      <GlassCard style={{ gap: theme.spacing.md }}>
-        <Text variant="bodyStrong" style={textStart}>{t('calls.availability.addTitle')}</Text>
-        <Input label={t('calls.availability.date')} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" autoCapitalize="none" />
-        <Input label={t('calls.availability.time')} value={time} onChangeText={setTime} placeholder="HH:MM" autoCapitalize="none" />
-        <View style={{ gap: theme.spacing.xs }}>
-          <Text variant="label" muted style={textStart}>{t('calls.availability.duration')}</Text>
-          <Segmented
-            options={['15', '30', '45', '60'].map((d) => ({ value: d, label: t('calls.book.minutes', { count: Number(d) }) }))}
-            value={duration}
-            onChange={setDuration}
-          />
-        </View>
-        <Button title={t('calls.availability.publish')} onPress={publish} loading={busy} fullWidth />
-      </GlassCard>
-
-      {slots.length === 0 && !slotsQ.isPending ? (
-        <EmptyState icon="calendar" title={t('calls.availability.empty')} />
-      ) : (
-        <View style={{ gap: theme.spacing.md }}>
-          {slots.map((s) => (
-            <SlotRow key={s.id} slot={s} onChange={refresh} />
-          ))}
-        </View>
-      )}
-    </View>
-  );
+  return <AvailabilityCalendar slots={slotsQ.data ?? []} coachId={coachId} onChanged={refresh} />;
 }
 
 export default function CoachCallsScreen() {
