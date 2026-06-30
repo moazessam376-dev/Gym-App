@@ -4,9 +4,11 @@
 // stay in the ROOT stack (app/_layout.tsx) so router.push slides them full-screen
 // over the tab bar. The redirect guard already blocks roleless users, so role is
 // resolved before this layout mounts (no flicker).
+import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
+import { useIsWideWeb } from '../../src/lib/useBreakpoint';
 import { theme } from '../../src/theme';
 import { Icon, type IconName } from '../../src/components/ui';
 
@@ -25,6 +27,12 @@ export default function TabsLayout() {
   const isCoach = role === 'coach';
   const isAdmin = role === 'admin';
 
+  // On wide WEB the coach gets the desktop sidebar shell (CoachWebChrome), so the bottom
+  // bar is suppressed — the sidebar drives navigation. Every <Tabs.Screen> stays
+  // registered (incl. the href:null `clients`), so all tab routes remain navigable from
+  // the sidebar. Native / phone-web / client / admin keep the bar exactly as today.
+  const hideTabBar = useIsWideWeb() && isCoach;
+
   // `href: null` keeps the route available (deep links / programmatic nav) but
   // removes it from the bar for roles that shouldn't see it.
   const showFor = (visible: boolean) => (visible ? undefined : null);
@@ -37,10 +45,12 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      tabBar={hideTabBar ? () => null : undefined}
       screenOptions={{
         headerShown: false,
-        // Subtle cross-shift when switching tabs (not a hard cut). Tuned in theme.motion.
-        animation: theme.motion.tab,
+        // Subtle cross-shift when switching tabs (native). On WEB, switch instantly — a
+        // dashboard shouldn't animate between sidebar sections (reads as lag).
+        animation: Platform.OS === 'web' ? 'none' : theme.motion.tab,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarStyle: {

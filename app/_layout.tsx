@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BootSplash } from '../src/components/BootSplash';
 import { useFonts } from 'expo-font';
@@ -31,6 +31,8 @@ import { usePushNotifications } from '../src/lib/push';
 import { loadSavedLanguage } from '../src/i18n'; // side-effect: initializes i18next
 import { ToastProvider } from '../src/components/ui';
 import { FirstRunTour } from '../src/components/FirstRunTour';
+import { CoachWebChrome } from '../src/components/coach/web/CoachWebChrome';
+import { useIsWideWeb } from '../src/lib/useBreakpoint';
 import { theme } from '../src/theme';
 
 // Role-aware routing. The role comes from the verified JWT claim (server-issued
@@ -40,6 +42,13 @@ function RootNavigator() {
   const { session, role, initializing, recovering } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  // The coach desktop shell is active on wide web + coach role. Computed UP HERE with the
+  // other hooks (useIsWideWeb → useWindowDimensions) so it runs unconditionally on every
+  // render — never after the `initializing` early-return below (rules-of-hooks). When
+  // active, the sidebar + top bar own the chrome, so the root-stack detail screens the
+  // sidebar links to (Templates, New Plan, Settings, Profile, Calls) drop their duplicate
+  // native header; deep-drill screens (client/[id], plan/[id], chat/[id]) keep theirs.
+  const chrome = useIsWideWeb() && role === 'coach';
 
   useEffect(() => {
     if (initializing) return; // wait until we know whether a session exists
@@ -121,6 +130,7 @@ function RootNavigator() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+    <CoachWebChrome>
     <Stack
       screenOptions={{
         headerShown: false,
@@ -132,10 +142,11 @@ function RootNavigator() {
         // Show only the back arrow — never the previous route's name (e.g. "(tabs)").
         headerBackButtonDisplayMode: 'minimal',
         headerBackTitle: '',
-        // Brand screen transition: a short right-slide (auto-mirrored in RTL). Kept
-        // brief so navigation feels responsive, not sluggish. Tuned in theme.motion.
-        animation: theme.motion.screen,
-        animationDuration: theme.motion.screenMs,
+        // Brand screen transition: a short right-slide (auto-mirrored in RTL) on native.
+        // On WEB, navigate instantly — the slide + mount reads as a "press → wait → loads"
+        // lag in the desktop shell, where sections should switch like a normal web app.
+        animation: Platform.OS === 'web' ? 'none' : theme.motion.screen,
+        animationDuration: Platform.OS === 'web' ? 0 : theme.motion.screenMs,
       }}
     >
       <Stack.Screen name="(tabs)" />
@@ -150,8 +161,8 @@ function RootNavigator() {
       <Stack.Screen name="accept-invite" options={{ headerShown: true, title: t('nav.acceptInvite') }} />
       {/* Phase 3 plan screens. */}
       <Stack.Screen name="coach/client/[id]" options={{ headerShown: true, title: t('nav.clientPlans') }} />
-      <Stack.Screen name="coach/templates" options={{ headerShown: true, title: t('nav.planTemplates') }} />
-      <Stack.Screen name="coach/new-plan" options={{ headerShown: true, title: t('nav.newPlan') }} />
+      <Stack.Screen name="coach/templates" options={{ headerShown: !chrome, title: t('nav.planTemplates') }} />
+      <Stack.Screen name="coach/new-plan" options={{ headerShown: !chrome, title: t('nav.newPlan') }} />
       <Stack.Screen name="coach/ai-plan" options={{ headerShown: true, title: t('nav.generatePlan') }} />
       <Stack.Screen name="coach/plan/[id]" options={{ headerShown: true, title: t('nav.plan') }} />
       <Stack.Screen name="coach/exercise-picker" options={{ headerShown: true, title: t('nav.addExercise') }} />
@@ -176,7 +187,7 @@ function RootNavigator() {
       <Stack.Screen name="profile" options={{ headerShown: true, title: t('nav.editProfile') }} />
       <Stack.Screen name="profile-setup" options={{ headerShown: true, title: t('nav.goalsProfile') }} />
       <Stack.Screen name="become-coach" options={{ headerShown: true, title: t('nav.becomeCoach') }} />
-      <Stack.Screen name="settings" options={{ headerShown: true, title: t('nav.settings') }} />
+      <Stack.Screen name="settings" options={{ headerShown: !chrome, title: t('nav.settings') }} />
       <Stack.Screen name="admin/applications" options={{ headerShown: true, title: t('nav.coachApplications') }} />
       <Stack.Screen name="admin/reports" options={{ headerShown: true, title: t('nav.reportedMessages') }} />
       <Stack.Screen name="admin/users" options={{ headerShown: true, title: t('nav.users') }} />
@@ -185,15 +196,19 @@ function RootNavigator() {
       <Stack.Screen name="notifications" options={{ headerShown: true, title: t('nav.notifications') }} />
       <Stack.Screen name="notification-settings" options={{ headerShown: true, title: t('nav.notifications') }} />
       {/* Phase 19 public profiles. */}
-      <Stack.Screen name="public-profile-edit" options={{ headerShown: true, title: t('nav.publicProfile') }} />
+      <Stack.Screen name="public-profile-edit" options={{ headerShown: !chrome, title: t('nav.publicProfile') }} />
       <Stack.Screen name="coach-profile/[id]" options={{ headerShown: true, title: t('nav.coachProfile') }} />
       <Stack.Screen name="athlete-profile/[id]" options={{ headerShown: true, title: t('nav.profile') }} />
       <Stack.Screen name="discover/coaches" options={{ headerShown: true, title: t('nav.discoverCoaches') }} />
       <Stack.Screen name="leaderboards/index" options={{ headerShown: true, title: t('nav.leaderboards') }} />
+      {/* Calls — deferred placeholder, reachable from the coach web sidebar. */}
+      <Stack.Screen name="coach/calls" options={{ headerShown: !chrome, title: t('nav.calls') }} />
     </Stack>
+    </CoachWebChrome>
     {/* The navigator is mounted underneath (so routing + queries run and the cache
         warms); the splash overlays it until the prefetch settles, then fades to
-        reveal a fully-populated app. */}
+        reveal a fully-populated app. The splash + tour sit OUTSIDE CoachWebChrome so
+        they cover the sidebar during boot. */}
     {booting ? <BootSplash /> : null}
     {/* First-run welcome tour — shows once per role per device, only after the boot
         splash settles (so it never overlaps it). Self-gates on a local pref. */}

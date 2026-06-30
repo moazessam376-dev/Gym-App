@@ -27,6 +27,8 @@ import {
 } from '../../../src/lib/nutrition';
 import { getStreak, listSessions, type WorkoutSession } from '../../../src/lib/sessions';
 import { readCache, writeCache } from '../../../src/lib/screen-cache';
+import { useChrome } from '../../../src/lib/chrome';
+import { ClientDetailDesktop } from '../../../src/components/coach/web/ClientDetailDesktop';
 import { Icon, IconButton, Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented, EmptyState, LineChart } from '../../../src/components/ui';
 import { theme } from '../../../src/theme';
 
@@ -115,6 +117,9 @@ export default function ClientDetail() {
   const { t } = useTranslation();
   const { role } = useAuth();
   const router = useRouter();
+  // Coach desktop shell switch (wide web + coach). Read unconditionally with the other
+  // hooks; the early return below it stays after the role guard (rules-of-hooks safe).
+  const { active: desktopShell } = useChrome();
   // openAi/aiType arrive when the coach came from the "Generate with AI" client picker
   // (app/coach/ai-plan.tsx) — the AI modal opens on mount, pre-set to the chosen type.
   const { id, name, openAi, aiType: aiTypeParam } = useLocalSearchParams<{
@@ -280,6 +285,9 @@ export default function ClientDetail() {
   }
 
   if (role && role !== 'coach') return <Redirect href="/" />;
+  // Desktop web portal: render the purpose-built two-pane layout (it re-reads the params
+  // and calls the same data layer). Mobile/native/narrow web fall through unchanged.
+  if (desktopShell) return <ClientDetailDesktop />;
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>

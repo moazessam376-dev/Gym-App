@@ -93,6 +93,8 @@ export default function SignUp() {
             onChangeText={setPassword}
             editable={!loading}
             error={error}
+            returnKeyType="go"
+            onSubmitEditing={onSubmit}
           />
 
           {info ? (

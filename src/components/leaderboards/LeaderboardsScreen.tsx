@@ -10,11 +10,12 @@
 // Shared body used by BOTH the standalone /leaderboards route (client trophy → stack header
 // + back) and the coach's Leaderboard bottom tab (app/(tabs)/board.tsx → `inTab` renders an
 // in-screen title + top safe-area, since tabs have no stack header).
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
+import { useMemo, useState, type ReactNode } from 'react';
+import { ActivityIndicator, FlatList, Pressable, View, type ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
+import { useChrome } from '@/lib/chrome';
 import { textStart } from '@/lib/rtl';
 import {
   useTopAthletes,
@@ -29,7 +30,7 @@ import type { AthleteBoardRow, CoachBoardRow, LeaderboardPeriod, MyAthleteRank, 
 import type { Sex } from '@/schemas/athlete-profile';
 import { ProfileAvatar } from '@/components/ProfileAvatar';
 import { FfmiInfoSheet } from '@/components/FfmiInfoSheet';
-import { Screen, Text, GlassCard, Segmented, EmptyState, TierChip, Icon } from '@/components/ui';
+import { Screen, Text, GlassCard, Card, Segmented, EmptyState, TierChip, RankCrest, Icon } from '@/components/ui';
 import { theme } from '@/theme';
 
 type Board = 'athletes' | 'coaches';
@@ -206,6 +207,156 @@ function CoachRow({ row, rank, onPress }: { row: CoachBoardRow; rank: number; on
   );
 }
 
+// ── Desktop (coach web shell) ranked TABLE — header row + flex-weighted data rows,
+// mirroring RosterMatrix's wide mode. Module-scope components → their OWN useTranslation.
+// Reuses the exact tier/FFMI helpers + board data as the mobile cards; no new query.
+
+const ATHLETE_COLS = { rank: 0.5, athlete: 2.8, tier: 1.7, result: 1 } as const;
+const COACH_COLS = { rank: 0.5, coach: 3.5, result: 1.3 } as const;
+
+/** A desktop table header label cell (RTL-safe alignment via `align`). */
+function HeadCell({ flex, align, children }: { flex: number; align: 'start' | 'center' | 'end'; children: ReactNode }) {
+  return (
+    <View style={{ flex, alignItems: align === 'center' ? 'center' : align === 'end' ? 'flex-end' : undefined, paddingHorizontal: theme.spacing.sm }}>
+      <Text variant="label" muted style={align === 'start' ? textStart : undefined} numberOfLines={1}>
+        {children}
+      </Text>
+    </View>
+  );
+}
+
+/** Mono rank cell — cyan for the podium top three, muted otherwise. */
+function RankCell({ rank, flex }: { rank: number; flex: number }) {
+  return (
+    <View style={{ flex, alignItems: 'center' }}>
+      <Text color={rank <= 3 ? theme.colors.primary : theme.colors.textMuted} style={{ fontFamily: theme.fontFamily.monoBold, fontSize: 16 }}>
+        {rank}
+      </Text>
+    </View>
+  );
+}
+
+const tableRow = (last: boolean): ViewStyle => ({
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: theme.spacing.md,
+  borderBottomWidth: last ? 0 : 1,
+  borderBottomColor: theme.colors.border,
+});
+
+function AthleteTable({ rows, sex, onRowPress }: { rows: AthleteBoardRow[]; sex: Sex; onRowPress: (id: string) => void }) {
+  const { t } = useTranslation();
+  return (
+    <View style={{ width: '100%' }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingBottom: theme.spacing.sm,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        }}
+      >
+        <HeadCell flex={ATHLETE_COLS.rank} align="center">#</HeadCell>
+        <HeadCell flex={ATHLETE_COLS.athlete} align="start">{t('webportal.leaderboard.colAthlete')}</HeadCell>
+        <HeadCell flex={ATHLETE_COLS.tier} align="start">{t('webportal.leaderboard.colTier')}</HeadCell>
+        <HeadCell flex={ATHLETE_COLS.result} align="end">{t('leaderboards.ffmi')}</HeadCell>
+      </View>
+      {rows.map((row, i) => {
+        const rank = i + 1;
+        const tier = ffmiTier(row.ffmi, sex);
+        return (
+          <Pressable
+            key={row.athlete_id}
+            onPress={() => onRowPress(row.athlete_id)}
+            style={({ pressed }) => [tableRow(i === rows.length - 1), { opacity: pressed ? 0.85 : 1 }]}
+          >
+            <RankCell rank={rank} flex={ATHLETE_COLS.rank} />
+            <View style={{ flex: ATHLETE_COLS.athlete, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, paddingHorizontal: theme.spacing.sm }}>
+              <ProfileAvatar name={row.full_name} avatarMediaId={row.avatar_media_id} size={40} />
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Text variant="bodyStrong" numberOfLines={1} style={textStart}>
+                  {row.full_name ?? ''}
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                  {row.handle ? (
+                    <Text variant="caption" muted numberOfLines={1}>
+                      @{row.handle}
+                    </Text>
+                  ) : null}
+                  {row.primary_goal ? (
+                    <Text variant="caption" muted numberOfLines={1}>
+                      {t(`goals.${row.primary_goal}`, { defaultValue: row.primary_goal })}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            </View>
+            <View style={{ flex: ATHLETE_COLS.tier, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, paddingHorizontal: theme.spacing.sm }}>
+              <RankCrest tier={tier} size={26} />
+              <TierBadge tier={tier} />
+            </View>
+            <View style={{ flex: ATHLETE_COLS.result, alignItems: 'flex-end', paddingHorizontal: theme.spacing.sm }}>
+              <Text variant="display" color={theme.colors.primary} style={{ fontSize: 20, lineHeight: 24 }}>
+                {row.ffmi.toFixed(1)}
+              </Text>
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function CoachTable({ rows, onRowPress }: { rows: CoachBoardRow[]; onRowPress: (id: string) => void }) {
+  const { t } = useTranslation();
+  return (
+    <View style={{ width: '100%' }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingBottom: theme.spacing.sm,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        }}
+      >
+        <HeadCell flex={COACH_COLS.rank} align="center">#</HeadCell>
+        <HeadCell flex={COACH_COLS.coach} align="start">{t('webportal.leaderboard.colCoach')}</HeadCell>
+        <HeadCell flex={COACH_COLS.result} align="end">{t('leaderboards.medianProgress')}</HeadCell>
+      </View>
+      {rows.map((row, i) => {
+        const rank = i + 1;
+        return (
+          <Pressable
+            key={row.coach_id}
+            onPress={() => onRowPress(row.coach_id)}
+            style={({ pressed }) => [tableRow(i === rows.length - 1), { opacity: pressed ? 0.85 : 1 }]}
+          >
+            <RankCell rank={rank} flex={COACH_COLS.rank} />
+            <View style={{ flex: COACH_COLS.coach, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, paddingHorizontal: theme.spacing.sm }}>
+              <ProfileAvatar name={row.full_name} avatarMediaId={row.avatar_media_id} size={40} />
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Text variant="bodyStrong" numberOfLines={1} style={textStart}>
+                  {row.full_name ?? ''}
+                </Text>
+                <Text variant="caption" muted numberOfLines={1} style={textStart}>
+                  {t('leaderboards.clientsImproved', { improved: row.improved_clients, tracked: row.tracked_clients })}
+                </Text>
+              </View>
+            </View>
+            <View style={{ flex: COACH_COLS.result, alignItems: 'flex-end', paddingHorizontal: theme.spacing.sm }}>
+              <Text variant="display" color={theme.colors.primary} style={{ fontSize: 20, lineHeight: 24 }}>
+                {medianLabel(row.median_goal_progress)}
+              </Text>
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 /** The coach viewer's own standing, pinned above the coach board (E4 — parity with athletes). */
 function MyCoachStandingCard({ rank, onManage }: { rank: MyCoachRank | null; onManage: () => void }) {
   const { t } = useTranslation();
@@ -259,10 +410,116 @@ function MyCoachStandingCard({ rank, onManage }: { rank: MyCoachRank | null; onM
   );
 }
 
+// ── Desktop compact "You" standing — a single slim, full-width highlighted row pinned
+// ABOVE the ranked table (replaces the wide side rail). Cyan-tinted, one line. Module-scope
+// → their OWN useTranslation. Reuse the exact same rank data + tier/stat helpers.
+const standingBarStyle: ViewStyle = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: theme.spacing.md,
+  paddingVertical: theme.spacing.md,
+  paddingHorizontal: theme.spacing.lg,
+  backgroundColor: 'rgba(63,217,192,0.1)',
+  borderWidth: 1,
+  borderColor: 'rgba(63,217,192,0.3)',
+  borderRadius: theme.radii.md,
+};
+
+function MyStandingBar({
+  rank,
+  standing,
+  sex,
+  onManage,
+}: {
+  rank: MyAthleteRank | null;
+  standing: LeagueStanding | undefined;
+  sex: Sex;
+  onManage: () => void;
+}) {
+  const { t } = useTranslation();
+  if (rank) {
+    const tier = ffmiTier(rank.ffmi, sex);
+    return (
+      <View style={standingBarStyle}>
+        <Text color={theme.colors.primary} style={{ fontFamily: theme.fontFamily.monoBold, fontSize: 16 }}>
+          {rank.rank}
+        </Text>
+        <Text variant="bodyStrong" numberOfLines={1} style={textStart}>
+          {t('leaderboards.you')}
+        </Text>
+        <TierBadge tier={tier} />
+        <Text variant="caption" muted numberOfLines={1}>
+          {t('leaderboards.rankOf', { rank: rank.rank, total: rank.total })}
+        </Text>
+        <View style={{ flex: 1 }} />
+        <Text variant="display" color={theme.colors.primary} style={{ fontSize: 18, lineHeight: 22 }}>
+          {rank.ffmi.toFixed(1)}
+        </Text>
+        <Text variant="label" muted>
+          {t('leaderboards.ffmi')}
+        </Text>
+      </View>
+    );
+  }
+  // No qualifying standing → a slim, actionable nudge row.
+  const needsReading = !standing?.hasVerifiedReading;
+  return (
+    <Pressable onPress={onManage} accessibilityRole="button" style={standingBarStyle}>
+      <Icon name="trophy-outline" size={20} color={theme.colors.primary} />
+      <Text variant="bodyStrong" numberOfLines={1} style={textStart}>
+        {t('leaderboards.you')}
+      </Text>
+      <Text variant="caption" muted numberOfLines={1} style={[textStart, { flex: 1 }]}>
+        {needsReading ? t('leaderboards.nudgeReading') : t('leaderboards.nudgeOptIn')}
+      </Text>
+      {!needsReading ? <Icon name="chevron-forward" size={18} color={theme.colors.textMuted} /> : null}
+    </Pressable>
+  );
+}
+
+function MyCoachStandingBar({ rank, onManage }: { rank: MyCoachRank | null; onManage: () => void }) {
+  const { t } = useTranslation();
+  if (rank) {
+    return (
+      <View style={standingBarStyle}>
+        <Text color={theme.colors.primary} style={{ fontFamily: theme.fontFamily.monoBold, fontSize: 16 }}>
+          {rank.rank}
+        </Text>
+        <Text variant="bodyStrong" numberOfLines={1} style={textStart}>
+          {t('leaderboards.you')}
+        </Text>
+        <Text variant="caption" muted numberOfLines={1} style={{ flex: 1 }}>
+          {t('leaderboards.rankOf', { rank: rank.rank, total: rank.total })} ·{' '}
+          {t('leaderboards.clientsImproved', { improved: rank.improved_clients, tracked: rank.tracked_clients })}
+        </Text>
+        <Text variant="display" color={theme.colors.primary} style={{ fontSize: 18, lineHeight: 22 }}>
+          {medianLabel(rank.median_goal_progress)}
+        </Text>
+        <Text variant="label" muted>
+          {t('leaderboards.medianProgress')}
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <Pressable onPress={onManage} accessibilityRole="button" style={standingBarStyle}>
+      <Icon name="trophy-outline" size={20} color={theme.colors.primary} />
+      <Text variant="bodyStrong" numberOfLines={1} style={textStart}>
+        {t('leaderboards.you')}
+      </Text>
+      <Text variant="caption" muted numberOfLines={1} style={[textStart, { flex: 1 }]}>
+        {t('leaderboards.coachNudge')}
+      </Text>
+      <Icon name="chevron-forward" size={18} color={theme.colors.textMuted} />
+    </Pressable>
+  );
+}
+
 export function LeaderboardsScreen({ inTab = false }: { inTab?: boolean }) {
   const { t } = useTranslation();
   const router = useRouter();
   const { session, role } = useAuth();
+  const { active: wide } = useChrome();
   const userId = session?.user?.id;
   const isCoach = role === 'coach';
 
@@ -379,6 +636,96 @@ export function LeaderboardsScreen({ inTab = false }: { inTab?: boolean }) {
   ) : (
     <EmptyState icon="trophy-outline" title={t('leaderboards.emptyTitle')} subtitle={t('leaderboards.emptySub')} />
   );
+
+  // ── Desktop (coach web shell): centered, capped column with a proper ranked TABLE and
+  // the "my standing" summary beside it. Reuses the exact same data + tier helpers. ──
+  if (wide) {
+    const hasRows = board === 'athletes' ? athletes.length > 0 : coaches.length > 0;
+    const ready = !activeQ.isLoading && !activeQ.isError && hasRows;
+    // The viewer's own standing, shown as a compact full-width bar ABOVE the table.
+    const standingBar = showMyStanding ? (
+      <MyStandingBar
+        rank={myRankQ.data ?? null}
+        standing={standingQ.data}
+        sex={effectiveSex}
+        onManage={() => router.push('/public-profile-edit')}
+      />
+    ) : board === 'coaches' && isCoach ? (
+      <MyCoachStandingBar rank={myCoachRankQ.data ?? null} onManage={() => router.push('/public-profile-edit')} />
+    ) : null;
+
+    return (
+      <Screen scroll gradient contentStyle={{ paddingTop: theme.spacing.xl, gap: theme.spacing.lg }}>
+        {/* Header */}
+        <View style={{ gap: theme.spacing.sm }}>
+          <Text variant="h1" style={textStart}>
+            {t('leaderboards.title')}
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+            <Text variant="body" muted style={[textStart, { flex: 1 }]}>
+              {t('leaderboards.subtitle')}
+            </Text>
+            {board === 'athletes' ? (
+              <Pressable
+                onPress={() => setInfoOpen(true)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('leaderboards.ffmiInfo.title')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              >
+                <Icon name="info" size={16} color={theme.colors.primary} />
+                <Text variant="caption" color={theme.colors.primary}>
+                  {t('leaderboards.whatsFfmi')}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+
+        {/* Controls — board + period toggles share their own row (with breathing room),
+            the men/women filter sits on the row below so nothing is squeezed. */}
+        <View style={{ gap: theme.spacing.md }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: theme.spacing.lg }}>
+            <Segmented options={boardOptions} value={board} onChange={setBoard} style={{ width: 240 }} />
+            <Segmented options={periodOptions} value={period} onChange={setPeriod} style={{ width: 380 }} />
+          </View>
+          {board === 'athletes' ? (
+            <Segmented
+              options={sexOptions}
+              value={effectiveSex}
+              onChange={(v) => {
+                setSexTouched(true);
+                setSex(v);
+              }}
+              style={{ width: 200 }}
+            />
+          ) : null}
+        </View>
+
+        {/* Compact "You" standing bar (full width), then the ranked table spanning the
+            full width below it — no side rail. */}
+        {standingBar}
+
+        <Card>
+          {ready ? (
+            board === 'athletes' ? (
+              <AthleteTable
+                rows={athletes}
+                sex={effectiveSex}
+                onRowPress={(id) => router.push(`/athlete-profile/${id}`)}
+              />
+            ) : (
+              <CoachTable rows={coaches} onRowPress={(id) => router.push(`/coach-profile/${id}`)} />
+            )
+          ) : (
+            empty
+          )}
+        </Card>
+
+        <FfmiInfoSheet visible={infoOpen} onClose={() => setInfoOpen(false)} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen gradient padded={false} edges={inTab ? ['top', 'bottom'] : ['bottom']}>

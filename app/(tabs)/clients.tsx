@@ -16,6 +16,8 @@ import type { BoardRow, GoalProgress } from '../../src/lib/body-metrics';
 import { forwardChevron, textStart } from '../../src/lib/rtl';
 import { Icon, Screen, Text, Card, Avatar, Badge, Chip, EmptyState } from '../../src/components/ui';
 import { theme } from '../../src/theme';
+import { useChrome } from '../../src/lib/chrome';
+import { ClientsDesktop } from '../../src/components/coach/web/ClientsDesktop';
 
 type Filter = 'all' | 'attention' | 'on_track';
 
@@ -34,6 +36,10 @@ function adherenceColor(pct: number | null): string {
 }
 
 export default function ClientsTab() {
+  // Desktop coach web shell: the purpose-built dashboard variant is returned BELOW,
+  // after every hook has run (rules-of-hooks), so resizing across the breakpoint is safe.
+  const { active } = useChrome();
+
   const { t } = useTranslation();
   const router = useRouter();
   // Shared cache: warmed on app open + reused by Home, so this tab is populated on first visit.
@@ -90,6 +96,9 @@ export default function ClientsTab() {
       }),
     [ordered, filter, attentionByClient],
   );
+
+  // Every hook above has run — now safe to branch to the desktop variant.
+  if (active) return <ClientsDesktop />;
 
   const loading = clientsQ.isPending;
   const error = clientsQ.isError;

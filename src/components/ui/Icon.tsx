@@ -14,10 +14,11 @@ import {
   ChevronUp, Circle, CircleCheck, CircleDot, CirclePause, CirclePlay, CircleX,
   ClipboardList, Clock, CloudOff, Compass, Copy, Dumbbell, Eye, FileText, Flag,
   EyeOff, Flame, Globe, Heart, Home, Hourglass, Image as ImageIcon, Images, Info,
-  Languages, Lock, LogOut, type LucideIcon, Mail, Maximize2, MessageSquare, Mic,
-  MoreHorizontal, Pencil, Phone, Plus, PlusCircle, RefreshCw, Ruler, Salad, Scale,
-  Search, Send, Settings, Shield, ShieldCheck, Smile, Sparkles, Star, Ticket, Trash2,
-  TrendingUp, TriangleAlert, Trophy, User, UserPlus, Users, Utensils, Undo2, X, Zap,
+  Languages, LayoutDashboard, Lock, LogOut, type LucideIcon, Mail, Maximize2,
+  MessageSquare, Mic, MoreHorizontal, Pencil, Phone, Plus, PlusCircle, RefreshCw,
+  Ruler, Salad, Scale, Search, Send, Settings, Shield, ShieldCheck, Smile, Sparkles,
+  Star, Ticket, Trash2, TrendingUp, TriangleAlert, Trophy, User, UserPlus, Users,
+  Utensils, Undo2, Video, X, Zap,
 } from 'lucide-react-native';
 import { theme } from '../../theme';
 
@@ -29,6 +30,8 @@ const ICONS = {
   'dumbbell': Dumbbell,
   'scale': Scale,
   'bar-chart': ChartColumn,
+  'layout-dashboard': LayoutDashboard,
+  'video': Video,
   'file-text': FileText,
   'clipboard': ClipboardList,
   'salad': Salad,

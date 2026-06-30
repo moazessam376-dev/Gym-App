@@ -67,6 +67,8 @@ export default function SignIn() {
             onChangeText={setPassword}
             editable={!loading}
             error={error}
+            returnKeyType="go"
+            onSubmitEditing={onSubmit}
           />
 
           <Button title={t('auth.signIn')} onPress={onSubmit} loading={loading} size="lg" style={{ marginTop: theme.spacing.sm }} />

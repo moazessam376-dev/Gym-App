@@ -9,11 +9,13 @@ import { FlatList, RefreshControl, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
+import { useChrome } from '../../src/lib/chrome';
 import { useConversationPreviews, useMyClients, useMyCoach, useRefreshOnFocus } from '../../src/lib/queries/home';
 import { compactTimeParts } from '../../src/lib/notifications';
 import type { ConversationPreview } from '../../src/lib/messages';
 import { textStart } from '../../src/lib/rtl';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
+import { MessagesDesktop } from '../../src/components/coach/web/MessagesDesktop';
 import { Icon, Screen, Text, GlassCard, EmptyState, Badge } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
@@ -26,6 +28,7 @@ type Row = {
 export default function MessagesTab() {
   const { t } = useTranslation();
   const { session, role } = useAuth();
+  const { active: wide } = useChrome();
   const router = useRouter();
   const userId = session?.user?.id;
 
@@ -125,6 +128,9 @@ export default function MessagesTab() {
       </Text>
     </View>
   );
+
+  // Coach desktop shell → the wide inbox layout (mobile tree below is untouched).
+  if (wide) return <MessagesDesktop />;
 
   return (
     <Screen padded={false} gradient>

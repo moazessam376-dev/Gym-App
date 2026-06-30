@@ -22,11 +22,12 @@ import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming, Z
 import { useAudioRecorder, useAudioRecorderState, RecordingPresets } from 'expo-audio';
 import { useTranslation } from 'react-i18next';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../../src/lib/supabase';
 import { queryClient } from '../../src/lib/query';
 import { useAuth } from '../../src/lib/auth-context';
+import { useIsWideWeb } from '../../src/lib/useBreakpoint';
 import {
   CONVERSATION_PAGE_SIZE,
   addReaction,
@@ -496,7 +497,12 @@ export default function ChatThread() {
   const { id: otherId, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const { t } = useTranslation();
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, role } = useAuth();
+  // On WIDE web a coach uses the 3-pane /messages portal, not this full-screen chat. If we
+  // land here while wide (e.g. resizing the window back up after using the narrow mobile
+  // chat, or a deep link), bounce to the 3-pane with this peer pre-selected. Clients/native
+  // and narrow web keep this screen.
+  const wideWebChat = useIsWideWeb();
   const myId = session?.user?.id;
   // Measured header height → exact keyboard offset (the hardcoded 90 clipped).
   const headerHeight = useHeaderHeight();
@@ -529,6 +535,29 @@ export default function ChatThread() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [actionsFor, setActionsFor] = useState<Message | null>(null);
+
+  // Web Enter-to-send: a real DOM keydown listener on the composer (RN-Web filters
+  // onKeyDown/onKeyPress props). Enter sends, Shift+Enter = newline. trySendRef holds the
+  // latest closure so the once-attached listener always sees current input/editing state.
+  const composerRef = useRef<TextInput | null>(null);
+  const trySendRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = composerRef.current as unknown as HTMLElement | null;
+    if (!node || typeof node.addEventListener !== 'function') return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        trySendRef.current();
+      }
+    };
+    node.addEventListener('keydown', handler);
+    return () => node.removeEventListener('keydown', handler);
+  }, []);
+  // Refresh the send closure every render so the listener uses current input/editing state.
+  trySendRef.current = () => {
+    if (input.trim().length > 0 || editingId) onSend();
+  };
 
   // Report flow (Phase 18 Slice 1): which incoming message is being reported.
   const [reportId, setReportId] = useState<string | null>(null);
@@ -863,12 +892,19 @@ export default function ChatThread() {
   const needsAck =
     !loading && ackLoaded && !banned && !acknowledged && !messages.some((m) => m.sender_id === myId);
 
+  // Wide web + coach → use the 3-pane Messages portal instead of this stretched mobile chat.
+  if (wideWebChat && role === 'coach') {
+    return <Redirect href={{ pathname: '/(tabs)/messages', params: otherId ? { peer: otherId } : {} }} />;
+  }
+
   return (
     <>
       <Stack.Screen options={{ title: name ?? t('chat.title') }} />
       <Screen gradient padded={false} edges={['bottom']}>
         <KeyboardAvoidingView
-          style={{ flex: 1 }}
+          // Web: center the thread in a phone-like column (matches the chat design) instead
+          // of stretching bubbles across the full width. Native unchanged.
+          style={[{ flex: 1 }, Platform.OS === 'web' ? { width: '100%', maxWidth: 680, alignSelf: 'center' } : null]}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
         >
@@ -1070,12 +1106,16 @@ export default function ChatThread() {
                   }}
                 >
                   <TextInput
+                    ref={composerRef}
                     value={input}
                     onChangeText={setInput}
                     placeholder={t('chat.messagePlaceholder')}
                     placeholderTextColor={theme.colors.textMuted}
                     multiline
                     maxLength={4000}
+                    // Web: Enter sends, Shift+Enter = newline — wired via a real DOM keydown
+                    // listener on the composer ref (RN-Web filters onKeyDown/onKeyPress props).
+                    // Native keeps Enter = newline (send via the button).
                     style={{
                       flex: 1,
                       maxHeight: 120,

@@ -24,6 +24,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/lib/auth-context';
 import { confirm, confirmDestructive } from '../../../src/lib/confirm';
 import { haptics } from '../../../src/lib/haptics';
+import { useChrome } from '../../../src/lib/chrome';
+import { textStart } from '../../../src/lib/rtl';
 import {
   createDay,
   createMeal,
@@ -69,6 +71,10 @@ export default function PlanEditor() {
   const router = useRouter();
   const navigation = useNavigation();
   const toast = useToast();
+  // Desktop coach shell switch (wide web + coach role). Branches ONLY presentation —
+  // a capped/centred content column + a denser per-day exercise TABLE. All state,
+  // handlers and the mobile layout below are untouched.
+  const { active: wide } = useChrome();
   const { id, fresh } = useLocalSearchParams<{ id: string; fresh?: string }>();
 
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -433,7 +439,7 @@ export default function PlanEditor() {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <KeyboardAvoidingView style={styles.flex}>
         <ScrollView
-          contentContainerStyle={styles.wrap}
+          contentContainerStyle={[styles.wrap, wide && styles.wrapWide]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
@@ -559,6 +565,7 @@ export default function PlanEditor() {
                 <DayCard
                   key={d.id}
                   day={d}
+                  wide={wide}
                   exercises={exByDay[d.id] ?? []}
                   notesByExercise={exNotes}
                   canMoveUp={i > 0}
@@ -789,6 +796,7 @@ function NoteEditor({
 
 function DayCard({
   day,
+  wide = false,
   exercises,
   notesByExercise,
   canMoveUp,
@@ -802,6 +810,7 @@ function DayCard({
   onSaveNote,
 }: {
   day: Day;
+  wide?: boolean;
   exercises: ExerciseRow[];
   notesByExercise: Record<string, WorkoutNote[]>;
   canMoveUp: boolean;
@@ -815,6 +824,13 @@ function DayCard({
   onSaveNote: (text: string) => Promise<void>;
 }) {
   const { t } = useTranslation();
+  // Desktop: a denser per-day exercise TABLE (header + flex-weighted rows) reusing the
+  // exact same row data + onOpenExercise/onAddExercise handlers as the mobile cards.
+  // Numbered sequentially across the day (over the block-grouped order).
+  const orderedBlocks = BLOCK_ORDER.filter((b) => exercises.some((e) => e.block === b));
+  const exIndex = new Map(
+    orderedBlocks.flatMap((b) => exercises.filter((e) => e.block === b)).map((e, i) => [e.id, i + 1]),
+  );
   return (
     <View style={styles.card}>
       <View style={styles.cardHead}>
@@ -832,36 +848,91 @@ function DayCard({
         </Pressable>
       </View>
       <NoteEditor addPrompt={t('planEditor.addDayNote')} value={day.note} placeholder={t('planEditor.dayNotePlaceholder')} onSave={onSaveNote} />
-      {BLOCK_ORDER.filter((b) => exercises.some((e) => e.block === b)).map((b) => (
-        <View key={b}>
-          <Text style={styles.blockLabel}>{BLOCK_LABEL[b]}</Text>
-          {exercises
-            .filter((e) => e.block === b)
-            .map((e) => (
-              <Pressable key={e.id} style={styles.exRow} onPress={() => onOpenExercise(e.id)}>
-                <Text style={styles.exName}>{e.exercise_name}</Text>
-                <Text style={styles.exMeta}>
-                  {[
-                    e.sets != null ? `${e.sets}×${e.reps ?? '—'}` : null,
-                    e.rest_seconds != null ? t('planView.restShort', { n: e.rest_seconds }) : null,
-                  ]
-                    .filter(Boolean)
-                    .join('  ·  ') || t('planEditor.tapToSetDetails')}
-                </Text>
-                {e.note ? <Text style={styles.exNote}>“{e.note}”</Text> : null}
-                {(notesByExercise[e.id] ?? []).map((n) => {
-                  const tint = n.category === 'compliment' ? theme.colors.success : theme.colors.warning;
+      {wide && exercises.length > 0 ? (
+        // Desktop: denser table. Header once, block labels as section separators, one
+        // flex-weighted row per exercise. Same onOpenExercise target as the mobile card.
+        <View style={styles.exTableWrap}>
+          <View style={styles.exHeadRow}>
+            <Text style={[styles.exHeadCell, { flex: 0.4 }]}>#</Text>
+            <Text style={[styles.exHeadCell, textStart, { flex: 3 }]} numberOfLines={1}>
+              {t('webportal.planEditor.colExercise')}
+            </Text>
+            <Text style={[styles.exHeadCell, { flex: 1.3 }]} numberOfLines={1}>
+              {t('webportal.planEditor.colSetsReps')}
+            </Text>
+            <Text style={[styles.exHeadCell, { flex: 1 }]} numberOfLines={1}>
+              {t('webportal.planEditor.colRest')}
+            </Text>
+          </View>
+          {orderedBlocks.map((b) => (
+            <View key={b}>
+              <Text style={styles.blockLabel}>{BLOCK_LABEL[b]}</Text>
+              {exercises
+                .filter((e) => e.block === b)
+                .map((e) => {
+                  const setsReps = e.sets != null ? `${e.sets}×${e.reps ?? '—'}` : null;
                   return (
-                    <View key={n.id} style={styles.clientNoteRow}>
-                      <Icon name="clipboard" size={12} color={tint} />
-                      <Text style={[styles.clientNoteText, { color: tint }]}>{n.body}</Text>
-                    </View>
+                    <Pressable key={e.id} style={styles.exTableRow} onPress={() => onOpenExercise(e.id)}>
+                      <View style={styles.exTableMain}>
+                        <Text style={[styles.exTableNum, { flex: 0.4 }]}>{exIndex.get(e.id)}</Text>
+                        <Text style={[styles.exTableName, textStart, { flex: 3 }]} numberOfLines={1}>
+                          {e.exercise_name}
+                        </Text>
+                        <Text style={[setsReps ? styles.exTableStat : styles.exTableStatMuted, { flex: 1.3 }]}>
+                          {setsReps ?? '—'}
+                        </Text>
+                        <Text style={[e.rest_seconds != null ? styles.exTableStat : styles.exTableStatMuted, { flex: 1 }]}>
+                          {e.rest_seconds != null ? `${e.rest_seconds}s` : '—'}
+                        </Text>
+                      </View>
+                      {e.note ? <Text style={[styles.exNote, styles.exTableSub]}>“{e.note}”</Text> : null}
+                      {(notesByExercise[e.id] ?? []).map((n) => {
+                        const tint = n.category === 'compliment' ? theme.colors.success : theme.colors.warning;
+                        return (
+                          <View key={n.id} style={[styles.clientNoteRow, styles.exTableSub]}>
+                            <Icon name="clipboard" size={12} color={tint} />
+                            <Text style={[styles.clientNoteText, { color: tint }]}>{n.body}</Text>
+                          </View>
+                        );
+                      })}
+                    </Pressable>
                   );
                 })}
-              </Pressable>
-            ))}
+            </View>
+          ))}
         </View>
-      ))}
+      ) : (
+        BLOCK_ORDER.filter((b) => exercises.some((e) => e.block === b)).map((b) => (
+          <View key={b}>
+            <Text style={styles.blockLabel}>{BLOCK_LABEL[b]}</Text>
+            {exercises
+              .filter((e) => e.block === b)
+              .map((e) => (
+                <Pressable key={e.id} style={styles.exRow} onPress={() => onOpenExercise(e.id)}>
+                  <Text style={styles.exName}>{e.exercise_name}</Text>
+                  <Text style={styles.exMeta}>
+                    {[
+                      e.sets != null ? `${e.sets}×${e.reps ?? '—'}` : null,
+                      e.rest_seconds != null ? t('planView.restShort', { n: e.rest_seconds }) : null,
+                    ]
+                      .filter(Boolean)
+                      .join('  ·  ') || t('planEditor.tapToSetDetails')}
+                  </Text>
+                  {e.note ? <Text style={styles.exNote}>“{e.note}”</Text> : null}
+                  {(notesByExercise[e.id] ?? []).map((n) => {
+                    const tint = n.category === 'compliment' ? theme.colors.success : theme.colors.warning;
+                    return (
+                      <View key={n.id} style={styles.clientNoteRow}>
+                        <Icon name="clipboard" size={12} color={tint} />
+                        <Text style={[styles.clientNoteText, { color: tint }]}>{n.body}</Text>
+                      </View>
+                    );
+                  })}
+                </Pressable>
+              ))}
+          </View>
+        ))
+      )}
       <Pressable style={styles.addInline} onPress={onAddExercise}>
         <Text style={styles.addInlineText}>{t('planEditor.addExercise')}</Text>
       </Pressable>
@@ -917,6 +988,9 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg },
   wrap: { padding: 16, paddingBottom: 160, gap: 10 },
+  // Desktop: centre + cap the editor column so it reads as a focused document instead
+  // of a phone screen stretched across the content region.
+  wrapWide: { maxWidth: 920, width: '100%', alignSelf: 'center', paddingHorizontal: 24, paddingTop: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontSize: 24, fontFamily: f.displayBold, color: c.text },
   type: { fontSize: 14, fontFamily: f.bodyRegular, color: c.textMuted, textTransform: 'capitalize' },
@@ -986,6 +1060,17 @@ const styles = StyleSheet.create({
   // The client's logged workout note shown inline on the exercise (0051).
   clientNoteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: 4 },
   clientNoteText: { flex: 1, fontSize: 13, fontFamily: f.bodyRegular },
+  // Desktop exercise table (wide only) — header + flex-weighted rows; mono for numbers.
+  exTableWrap: { marginTop: 6 },
+  exHeadRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.glassBorder },
+  exHeadCell: { fontSize: 11, fontFamily: f.bodyBold, letterSpacing: 0.5, color: c.textMuted, textTransform: 'uppercase', paddingHorizontal: 4 },
+  exTableRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.glassBorder },
+  exTableMain: { flexDirection: 'row', alignItems: 'center' },
+  exTableNum: { fontSize: 13, fontFamily: f.monoMedium, color: c.textMuted, paddingHorizontal: 4 },
+  exTableName: { fontSize: 15, fontFamily: f.bodySemiBold, color: c.text, paddingHorizontal: 4 },
+  exTableStat: { fontSize: 14, fontFamily: f.monoMedium, color: c.text, paddingHorizontal: 4 },
+  exTableStatMuted: { fontSize: 14, fontFamily: f.monoMedium, color: c.textMuted, paddingHorizontal: 4 },
+  exTableSub: { marginLeft: 28 },
   addInline: { paddingVertical: 10, marginTop: 4 },
   addInlineText: { color: c.primary, fontFamily: f.bodySemiBold, fontSize: 15 },
   addBox: { gap: 8, marginTop: 12 },
