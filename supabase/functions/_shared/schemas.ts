@@ -40,6 +40,23 @@ export const resolveCoachRequestSchema = z.object({
   decision: z.enum(['accept', 'decline']),
 });
 
+// ── Calls & Meetings (Phase A, §2) ──────────────────────────────────────────
+// A coach accepts/declines a client's booking request. resolve_call_request flips the
+// call status (the slot follows via tg_calls_sync_slot) + notifies the client — the
+// only writer of accept/decline. The RPC re-checks the request is pending + addressed
+// to the caller, so no extra role read is needed here.
+export const resolveCallRequestSchema = z.object({
+  call_id: z.string().uuid(),
+  decision: z.enum(['accept', 'decline']),
+});
+
+// Either party transitions a call's lifecycle. set_call_status validates the caller is
+// a party AND the transition is legal for the row's origin + current status.
+export const transitionCallSchema = z.object({
+  call_id: z.string().uuid(),
+  event: z.enum(['start', 'complete', 'miss', 'cancel']),
+});
+
 // ── Admin ban/unban from user search (Slice G3) ─────────────────────────────
 // Sets profiles.banned_at directly (client-immutable, service-role only). The Edge
 // Function re-checks the caller is an admin before applying.

@@ -178,7 +178,8 @@ export default function PublicProfileEdit() {
           public_achievements: cleaned,
           leaderboard_opt_in: optIn,
           share_body_metrics_publicly: isPublic && shareBody,
-          allow_transformation_sharing: isPublic && allowTransform,
+          // Independent of is_public — featured on the coach's profile, not the athlete's.
+          allow_transformation_sharing: allowTransform,
         });
       }
       setAchievements(cleaned);
@@ -639,18 +640,20 @@ export default function PublicProfileEdit() {
                   {t('publicProfile.shareBodySub')}
                 </Text>
               </GlassCard>
-              <GlassCard style={{ gap: theme.spacing.sm, opacity: isPublic ? 1 : 0.55 }}>
+              {/* Independent of is_public: this consent lets the coach feature the
+                  before/after on THEIR profile, so it doesn't require the athlete's own
+                  profile to be public (listConsentingClients filters on this flag alone). */}
+              <GlassCard style={{ gap: theme.spacing.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
                   <Text variant="bodyStrong" style={{ flex: 1 }}>
                     {t('publicProfile.allowTransformTitle')}
                   </Text>
                   <Switch
-                    value={isPublic && allowTransform}
+                    value={allowTransform}
                     onValueChange={(v) => {
                       setAllowTransform(v);
                       setDirty(true);
                     }}
-                    disabled={!isPublic}
                     trackColor={{ true: theme.colors.primary, false: theme.colors.border }}
                   />
                 </View>

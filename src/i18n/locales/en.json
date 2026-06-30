@@ -1,4 +1,102 @@
 {
+  "calls": {
+    "bookEntry": "Book a call",
+    "book": {
+      "title": "Book a call with {{name}}",
+      "titleNoName": "Book a call",
+      "subtitle": "Requires coach approval · within 24h",
+      "purpose": "Purpose",
+      "duration": "Duration",
+      "date": "Date",
+      "availableTimes": "Available times",
+      "noSlots": "No open times yet — your coach hasn't published availability.",
+      "noSlotsForDay": "No times on this day.",
+      "request": "Request call",
+      "requestWhen": "Request call · {{when}}",
+      "minutes": "{{count}} min",
+      "success": "Call requested — you'll be notified when your coach confirms.",
+      "slotTaken": "That time was just taken. Pick another."
+    },
+    "purpose": {
+      "progress_review": "Progress review",
+      "plan_adjustment": "Plan adjustment",
+      "form_check": "Form check",
+      "other": "Other"
+    },
+    "status": {
+      "pending": "Pending approval",
+      "accepted": "Confirmed",
+      "ringing": "Ringing…",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "declined": "Declined",
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "missed": "Missed"
+    },
+    "list": {
+      "title": "My calls",
+      "upcoming": "Upcoming",
+      "past": "Past",
+      "empty": "No calls yet",
+      "emptySub": "Book a call with your coach to get started."
+    },
+    "join": "Join",
+    "cancel": "Cancel call",
+    "cancelConfirm": "Cancel this call?",
+    "cancelConfirmBody": "Your coach will be notified.",
+    "incoming": {
+      "title": "Incoming call",
+      "from": "{{name}} is calling you",
+      "fromCoach": "Your coach is calling you",
+      "join": "Join",
+      "dismiss": "Dismiss"
+    },
+    "coach": {
+      "title": "Calls",
+      "subtitle": "Requests, upcoming calls, and your bookable hours.",
+      "tabRequests": "Requests",
+      "tabUpcoming": "Upcoming",
+      "tabAvailability": "Availability",
+      "requestsEmpty": "No pending requests",
+      "requestsEmptySub": "When a client requests a call, it shows here.",
+      "upcomingEmpty": "No upcoming calls",
+      "upcomingEmptySub": "Confirmed calls appear here.",
+      "accept": "Accept",
+      "decline": "Decline",
+      "accepted": "Call confirmed",
+      "declined": "Request declined",
+      "callNow": "Call now",
+      "calling": "Starting call…"
+    },
+    "availability": {
+      "title": "Bookable hours",
+      "subtitle": "Open time slots clients can request.",
+      "add": "Add a slot",
+      "addTitle": "New slot",
+      "date": "Date",
+      "time": "Time (24h)",
+      "duration": "Duration",
+      "publish": "Publish slot",
+      "empty": "No slots yet — add one so clients can book.",
+      "close": "Close",
+      "reopen": "Re-open",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this slot?",
+      "invalidTime": "Enter a valid future date and time.",
+      "slot": {
+        "open": "Open",
+        "held": "Requested",
+        "booked": "Booked",
+        "closed": "Closed"
+      }
+    },
+    "error": {
+      "generic": "Something went wrong. Try again.",
+      "rateLimited": "You've reached the limit for now. Try again later.",
+      "noCoach": "You need a coach before you can book a call."
+    }
+  },
   "common": {
     "cancel": "Cancel",
     "close": "Close",
@@ -428,6 +526,7 @@
     "addPlanNote": "Add plan note",
     "planNotePlaceholder": "Overall note for the trainee (e.g. focus on tempo this block)",
     "planTotal": "PLAN TOTAL",
+    "weekLabel": "Week {{n}}",
     "addWeek": "＋ Week",
     "duplicateWeek": "Duplicate this week",
     "deleteWeek": "Delete week",
@@ -505,6 +604,7 @@
     "reportedMessages": "Reported messages",
     "communityGuidelines": "Community guidelines",
     "publicProfile": "Public profile",
+    "transformations": "Transformations",
     "discoverCoaches": "Discover coaches",
     "leaderboards": "Leaderboards",
     "language": "Language",

@@ -127,16 +127,16 @@ export default function ClientsTab() {
 
   return (
     <Screen padded={false} gradient>
+      {/* Title sits on its own full-width row above the actions — three text-labelled
+          action cards next to an h1 overflow a phone width and wrap the title mid-word. */}
       <View
         style={{
           paddingHorizontal: theme.spacing.lg,
           paddingTop: theme.spacing.lg,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          gap: theme.spacing.md,
         }}
       >
-        <View style={{ flexShrink: 1 }}>
+        <View>
           <Text variant="h1">{t('clients.title')}</Text>
           <Text variant="caption" muted>
             {t('clients.activeCount', { count: clients.length })}

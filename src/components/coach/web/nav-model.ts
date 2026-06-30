@@ -47,7 +47,7 @@ export const NAV_SECTIONS: NavSection[] = [
     titleKey: 'webnav.communication',
     items: [
       { key: 'messages', labelKey: 'webnav.messages', icon: 'message-square', route: '/messages', match: startsAny('/messages', '/chat'), badge: 'unread' },
-      { key: 'calls', labelKey: 'webnav.calls', icon: 'video', route: '/coach/calls', match: startsAny('/coach/calls'), soon: true },
+      { key: 'calls', labelKey: 'webnav.calls', icon: 'video', route: '/coach/calls', match: startsAny('/coach/calls') },
     ],
   },
   {

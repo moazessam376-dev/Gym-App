@@ -59,7 +59,9 @@ export default function CoachTransformationsEditor() {
   async function pickPhoto(which: 'before' | 'after') {
     setUploading(which);
     try {
-      const res = await captureAndUploadPhoto({ source: 'library', kind: 'transformation' });
+      // squareCrop opens the native pan + pinch-zoom editor (1:1) so the coach can frame
+      // the before/after — the card renders the two photos in ~square cells.
+      const res = await captureAndUploadPhoto({ source: 'library', kind: 'transformation', squareCrop: true });
       if ('mediaId' in res) (which === 'before' ? setBeforeId : setAfterId)(res.mediaId);
       else if ('limited' in res) toast.show(t('publicProfile.photoError'), 'error');
     } catch {

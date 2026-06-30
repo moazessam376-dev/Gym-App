@@ -51,7 +51,14 @@ export default function SignIn() {
             label={t('auth.email')}
             placeholder={t('auth.emailPlaceholder')}
             autoCapitalize="none"
+            // autoCorrect/spellCheck OFF: the iOS QuickType predictive bar toggles the
+            // keyboard height per keystroke, and with the centered KeyboardAvoidingView
+            // that re-centers the whole form → the field "shakes" while typing. (The
+            // password field doesn't, because secureTextEntry already suppresses QuickType.)
+            autoCorrect={false}
+            spellCheck={false}
             autoComplete="email"
+            textContentType="emailAddress"
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
