@@ -15,10 +15,11 @@ import { queryClient } from '../../src/lib/query';
 import { joinCall } from '../../src/lib/callProvider';
 import { ensureDailyCoachReminder } from '../../src/lib/callReminders';
 import { AUTH_EXPIRED, resolveCallRequest, type Call } from '../../src/lib/calls';
-import { useCoachCallInbox, useCoachCalls, useMySlots } from '../../src/lib/queries/calls';
+import { useCoachAvailability, useCoachCallInbox, useCoachCalls, useMySlots } from '../../src/lib/queries/calls';
 import { Button, EmptyState, Screen, Segmented, Text, useToast } from '../../src/components/ui';
 import { CallCard } from '../../src/components/calls/CallCard';
 import { AvailabilityCalendar } from '../../src/components/calls/AvailabilityCalendar';
+import { WeeklyHoursEditor } from '../../src/components/calls/WeeklyHoursEditor';
 import { useChrome } from '../../src/lib/chrome';
 import { CoachCallsDesktop } from '../../src/components/coach/web/CoachCallsDesktop';
 import { theme } from '../../src/theme';
@@ -109,14 +110,26 @@ function UpcomingTab() {
   );
 }
 
-// ── Availability editor (month-grid calendar) ──────────────────────────────────────
+// ── Availability editor: weekly working-hours (Calendly) + one-off slots ───────────
 function AvailabilityTab({ coachId }: { coachId: string }) {
+  const { t } = useTranslation();
   const slotsQ = useMySlots();
-  const refresh = () => {
+  const availQ = useCoachAvailability();
+  const refreshSlots = () => {
     queryClient.invalidateQueries({ queryKey: ['my-slots'] });
     queryClient.invalidateQueries({ queryKey: ['coach-open-slots'] });
   };
-  return <AvailabilityCalendar slots={slotsQ.data ?? []} coachId={coachId} onChanged={refresh} />;
+  const refreshAvail = () => queryClient.invalidateQueries({ queryKey: ['coach-availability'] });
+  return (
+    <View style={{ gap: theme.spacing.lg }}>
+      <WeeklyHoursEditor windows={availQ.data ?? []} coachId={coachId} onChanged={refreshAvail} />
+      <View style={{ gap: 2 }}>
+        <Text variant="bodyStrong" style={textStart}>{t('calls.availability.adhocTitle')}</Text>
+        <Text variant="caption" muted style={textStart}>{t('calls.availability.subtitle')}</Text>
+      </View>
+      <AvailabilityCalendar slots={slotsQ.data ?? []} coachId={coachId} onChanged={refreshSlots} />
+    </View>
+  );
 }
 
 export default function CoachCallsScreen() {

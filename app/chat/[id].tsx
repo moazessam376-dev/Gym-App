@@ -922,7 +922,7 @@ export default function ChatThread() {
         }}
       />
       {role === 'client' ? (
-        <BookCallSheet visible={bookSheet} onClose={() => setBookSheet(false)} coachName={name} />
+        <BookCallSheet visible={bookSheet} onClose={() => setBookSheet(false)} coachName={name} coachId={otherId} />
       ) : null}
       <Screen gradient padded={false} edges={['bottom']}>
         <KeyboardAvoidingView

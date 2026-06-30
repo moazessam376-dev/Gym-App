@@ -11,10 +11,11 @@ import { textStart } from '@/lib/rtl';
 import { queryClient } from '@/lib/query';
 import { joinCall } from '@/lib/callProvider';
 import { AUTH_EXPIRED, resolveCallRequest, type Call } from '@/lib/calls';
-import { useCoachCallInbox, useCoachCalls, useMySlots } from '@/lib/queries/calls';
+import { useCoachAvailability, useCoachCallInbox, useCoachCalls, useMySlots } from '@/lib/queries/calls';
 import { Button, EmptyState, KpiTile, Screen, Text, useToast } from '@/components/ui';
 import { CallCard } from '@/components/calls/CallCard';
 import { AvailabilityCalendar } from '@/components/calls/AvailabilityCalendar';
+import { WeeklyHoursEditor } from '@/components/calls/WeeklyHoursEditor';
 import { theme } from '@/theme';
 
 const UPCOMING: Call['status'][] = ['accepted', 'ringing', 'in_progress'];
@@ -27,6 +28,7 @@ export function CoachCallsDesktop() {
   const inboxQ = useCoachCallInbox();
   const callsQ = useCoachCalls();
   const slotsQ = useMySlots();
+  const availQ = useCoachAvailability();
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const requests = inboxQ.data ?? [];
@@ -68,9 +70,11 @@ export function CoachCallsDesktop() {
       </View>
 
       <View style={{ flexDirection: 'row', gap: theme.spacing.xl, alignItems: 'flex-start' }}>
-        {/* Left: availability calendar */}
-        <View style={{ flex: 1.4 }}>
+        {/* Left: weekly working-hours + one-off slots */}
+        <View style={{ flex: 1.4, gap: theme.spacing.lg }}>
           <Text variant="label" muted style={[textStart, { marginBottom: theme.spacing.md }]}>{t('calls.coach.tabAvailability')}</Text>
+          {coachId ? <WeeklyHoursEditor windows={availQ.data ?? []} coachId={coachId} onChanged={refreshAll} /> : null}
+          <Text variant="label" muted style={textStart}>{t('calls.availability.adhocTitle')}</Text>
           {coachId ? <AvailabilityCalendar slots={slotsQ.data ?? []} coachId={coachId} onChanged={refreshAll} /> : null}
         </View>
 
