@@ -3192,13 +3192,18 @@ describe('app achievements (0073, E1) — minted trophies, owner-only raw read, 
       await actAs(c, 'service');
       await c.query("select public.mint_achievement($1, 'workouts_10')", [CLIENT_A1.sub]);
       await actAs(c, CLIENT_A1);
-      const owner = await c.query('select achievement_key from public.app_achievements');
+      const owner = await c.query('select user_id, achievement_key from public.app_achievements');
       await actAs(c, CLIENT_A2_ID);
-      const other = await c.query('select achievement_key from public.app_achievements');
+      const other = await c.query('select user_id from public.app_achievements');
       await actAs(c, 'anon');
-      const anon = await c.query('select achievement_key from public.app_achievements');
-      expect(owner.rows.some((r) => r.achievement_key === 'workouts_10')).toBe(true);
-      expect(other.rows).toHaveLength(0);
+      const anon = await c.query('select user_id from public.app_achievements');
+      // Owner sees their own minted trophy.
+      expect(owner.rows.some((r) => r.achievement_key === 'workouts_10' && r.user_id === CLIENT_A1.sub)).toBe(true);
+      // Cross-tenant isolation: A2 may have their OWN auto-minted trophies (the 0073
+      // completion trigger fires on seeded workouts), but NEVER A1's rows (RLS is
+      // user_id = auth.uid()); anon sees nothing.
+      expect(other.rows.some((r) => r.user_id === CLIENT_A1.sub)).toBe(false);
+      expect(other.rows.every((r) => r.user_id === CLIENT_A2)).toBe(true);
       expect(anon.rows).toHaveLength(0);
     } finally {
       await c.query('rollback').catch(() => {});
@@ -3391,8 +3396,13 @@ describe('public profiles (0044, Phase 19) — opt-in portfolio via field-allowl
     expect(r.rows[0].achievements).toContain('NASM-CPT');
     expect(r.rows[0].avatar_media_id).toBe(COACH_A_AVATAR);
     // The allowlist is the column set — sensitive/foreign columns simply aren't there.
+    // (Enriched by 0070/0079: handle + verified outcomes + coaching_philosophy/featured.)
     expect(Object.keys(r.rows[0]).sort()).toEqual(
-      ['achievements', 'avatar_media_id', 'bio', 'certifications', 'coach_id', 'full_name', 'handle', 'specialties', 'years_experience'].sort(),
+      [
+        'accepting_clients', 'achievements', 'active_roster_count', 'avatar_media_id', 'bio',
+        'certifications', 'coach_id', 'coaching_philosophy', 'featured_template_id', 'full_name',
+        'handle', 'median_goal_progress', 'specialties', 'years_experience',
+      ].sort(),
     );
   });
 
@@ -3417,13 +3427,27 @@ describe('public profiles (0044, Phase 19) — opt-in portfolio via field-allowl
     expect(r.rows[0].primary_goal).toBe('build_muscle');
     expect(r.rows[0].public_achievements).toContain('Down 5kg in 12 weeks');
     const cols = Object.keys(r.rows[0]);
+    // Enriched by 0075 (E2): coach link + opt-in body-metrics/FFMI/streak/PRs. Body-metrics
+    // fields are gated by share_body_metrics (null otherwise); raw PII is still never exposed.
     expect(cols.sort()).toEqual(
-      ['athlete_id', 'avatar_media_id', 'full_name', 'handle', 'primary_goal', 'public_achievements'].sort(),
+      [
+        'athlete_id', 'full_name', 'handle', 'avatar_media_id', 'primary_goal', 'public_achievements',
+        'current_streak', 'workouts_last_30d', 'training_days', 'top_prs', 'coach_id', 'coach_name',
+        'coach_avatar_media_id', 'share_body_metrics', 'has_transformation', 'baseline_at', 'latest_at',
+        'body_fat_delta_bp', 'lean_mass_delta_grams', 'ffmi_latest', 'ffmi_tier', 'target_weight_grams',
+        'latest_weight_grams', 'body_metrics_series',
+      ].sort(),
     );
-    // Explicitly assert the sensitive columns can never be returned by this RPC.
-    for (const banned of ['birth_date', 'height_cm', 'injuries_notes', 'sex', 'coach_id', 'target_weight_grams']) {
+    // Raw sensitive PII can never be returned by this RPC.
+    for (const banned of ['birth_date', 'height_cm', 'injuries_notes', 'sex']) {
       expect(cols).not.toContain(banned);
     }
+    // A1 has NOT opted into public body metrics (and the viewer isn't A1) → gated fields null.
+    expect(r.rows[0].share_body_metrics).toBe(false);
+    expect(r.rows[0].latest_weight_grams).toBeNull();
+    expect(r.rows[0].target_weight_grams).toBeNull();
+    expect(r.rows[0].body_fat_delta_bp).toBeNull();
+    expect(r.rows[0].body_metrics_series).toBeNull();
   });
 
   it('a PRIVATE athlete profile returns 0 rows to outsiders', async () => {
@@ -3462,7 +3486,7 @@ describe('public profiles (0044, Phase 19) — opt-in portfolio via field-allowl
     expect(r.rows.length).toBeGreaterThanOrEqual(1);
     // The shape is aggregate-only — there is structurally no client identifier column.
     const cols = Object.keys(r.rows[0]);
-    expect(cols.sort()).toEqual(['client_count', 'improved', 'primary_goal', 'with_progress'].sort());
+    expect(cols.sort()).toEqual(['client_count', 'improved', 'median_progress', 'primary_goal', 'with_progress'].sort());
     for (const banned of ['client_id', 'user_id', 'full_name', 'id']) {
       expect(cols).not.toContain(banned);
     }
@@ -3575,7 +3599,7 @@ describe('public leaderboards (0045, Phase 20) — opt-in physique/outcomes boar
     expect(ids.indexOf(L3)).toBeLessThan(ids.indexOf(L1));
     // The SELECT column list IS the allowlist — raw inputs (weight/body-fat/height/sex) absent.
     const cols = Object.keys(r.rows[0]);
-    expect(cols.sort()).toEqual(['athlete_id', 'avatar_media_id', 'ffmi', 'full_name', 'primary_goal'].sort());
+    expect(cols.sort()).toEqual(['athlete_id', 'avatar_media_id', 'ffmi', 'full_name', 'handle', 'primary_goal'].sort());
     for (const banned of ['weight_grams', 'body_fat_bp', 'skeletal_muscle_mass_grams', 'height_cm', 'sex']) {
       expect(cols).not.toContain(banned);
     }
@@ -3614,7 +3638,7 @@ describe('public leaderboards (0045, Phase 20) — opt-in physique/outcomes boar
     expect(row.improved_clients).toBe(3);
     // Aggregate-only shape — structurally no client identifier column.
     const cols = Object.keys(r.rows[0]);
-    expect(cols.sort()).toEqual(['avatar_media_id', 'coach_id', 'full_name', 'improved_clients', 'tracked_clients'].sort());
+    expect(cols.sort()).toEqual(['avatar_media_id', 'coach_id', 'full_name', 'improved_clients', 'median_goal_progress', 'tracked_clients'].sort());
     for (const banned of ['client_id', 'user_id']) {
       expect(cols).not.toContain(banned);
     }
