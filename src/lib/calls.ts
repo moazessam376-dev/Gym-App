@@ -187,12 +187,31 @@ export async function startAndJoinCall(clientId: string, purpose: CallPurpose = 
 }
 
 // ── Privileged transitions (Edge Functions, §2) ───────────────────────────────
+/** Raised only when the session is genuinely dead (token refresh failed) → prompt re-login. */
+export const AUTH_EXPIRED = 'auth_expired';
+
+/**
+ * Invoke an Edge Function, recovering from a STALE access token. The functions gateway
+ * (verify_jwt) returns 401 on an expired/revoked token even while REST reads still work
+ * (the in-session gotcha the founder hit). On a 401 we refresh the session ONCE and retry,
+ * so a real user never sees the failure; only a genuinely-dead session (refresh fails)
+ * surfaces AUTH_EXPIRED for the UI to prompt a re-login. A non-401 error (e.g. a business
+ * request_invalid 400) is surfaced unchanged.
+ */
+async function invokeAuthed(fn: string, body: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.functions.invoke(fn, { body });
+  if (!error) return;
+  const status = (error as { context?: { status?: number } }).context?.status;
+  if (status !== 401) throw error;
+  const { data, error: refreshErr } = await supabase.auth.refreshSession();
+  if (refreshErr || !data.session) throw new Error(AUTH_EXPIRED);
+  const { error: retryErr } = await supabase.functions.invoke(fn, { body });
+  if (retryErr) throw retryErr;
+}
+
 /** Coach accepts/declines a booking request → resolve-call-request (the only writer). */
 export async function resolveCallRequest(callId: string, decision: 'accept' | 'decline'): Promise<void> {
-  const { error } = await supabase.functions.invoke('resolve-call-request', {
-    body: { call_id: callId, decision },
-  });
-  if (error) throw error;
+  await invokeAuthed('resolve-call-request', { call_id: callId, decision });
 }
 
 /** Either party moves a call's lifecycle → transition-call (start/complete/miss/cancel). */
@@ -200,10 +219,7 @@ export async function transitionCall(
   callId: string,
   event: 'start' | 'complete' | 'miss' | 'cancel',
 ): Promise<void> {
-  const { error } = await supabase.functions.invoke('transition-call', {
-    body: { call_id: callId, event },
-  });
-  if (error) throw error;
+  await invokeAuthed('transition-call', { call_id: callId, event });
 }
 
 // ── Realtime ──────────────────────────────────────────────────────────────────

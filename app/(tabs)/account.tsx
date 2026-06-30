@@ -84,6 +84,9 @@ export default function AccountTab() {
             ambiguous role-branched label (U-7). */}
         <SectionLabel>{t('account.sectionProfile')}</SectionLabel>
         <LinkRow icon="person-outline" label={t('account.profile')} onPress={go('/profile')} />
+        {role === 'coach' ? (
+          <LinkRow icon="video" label={t('calls.coach.manageEntry')} onPress={go('/coach/calls')} />
+        ) : null}
 
         {/* Discover Coaches removed from Account: clients reach it from the Home "find a
             coach" card; it isn't relevant to coaches. Public profile lives in the Profile

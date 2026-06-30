@@ -62,6 +62,7 @@
     "coach": {
       "title": "Calls",
       "subtitle": "Requests, upcoming calls, and your bookable hours.",
+      "manageEntry": "Calls & availability",
       "tabRequests": "Requests",
       "tabUpcoming": "Upcoming",
       "tabAvailability": "Availability",
@@ -102,6 +103,7 @@
     },
     "error": {
       "generic": "Something went wrong. Try again.",
+      "sessionExpired": "Your session expired — please sign in again.",
       "rateLimited": "You've reached the limit for now. Try again later.",
       "noCoach": "You need a coach before you can book a call."
     }

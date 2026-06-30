@@ -28,7 +28,7 @@ const SLOT_TONE: Record<SlotStatus, BadgeTone> = {
 const pad = (n: number) => String(n).padStart(2, '0');
 const dayKeyLocal = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const dayKeyOfIso = (iso: string) => dayKeyLocal(new Date(iso));
-const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
 
 function monthCells(view: Date): (Date | null)[] {
   const y = view.getFullYear();

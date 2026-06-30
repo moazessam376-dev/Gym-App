@@ -28,7 +28,7 @@ function fmtWeekday(iso: string): string {
   return new Date(iso).toLocaleDateString([], { weekday: 'short' });
 }
 function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 export function BookCallSheet({

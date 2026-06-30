@@ -14,7 +14,7 @@ import { textStart } from '../../src/lib/rtl';
 import { queryClient } from '../../src/lib/query';
 import { joinCall } from '../../src/lib/callProvider';
 import { ensureDailyCoachReminder } from '../../src/lib/callReminders';
-import { resolveCallRequest, type Call } from '../../src/lib/calls';
+import { AUTH_EXPIRED, resolveCallRequest, type Call } from '../../src/lib/calls';
 import { useCoachCallInbox, useCoachCalls, useMySlots } from '../../src/lib/queries/calls';
 import { Button, EmptyState, Screen, Segmented, Text, useToast } from '../../src/components/ui';
 import { CallCard } from '../../src/components/calls/CallCard';
@@ -46,8 +46,8 @@ function RequestsTab() {
       await resolveCallRequest(c.id, decision);
       invalidateCalls();
       toast.show(decision === 'accept' ? t('calls.coach.accepted') : t('calls.coach.declined'));
-    } catch {
-      toast.show(t('calls.error.generic'), 'error');
+    } catch (e) {
+      toast.show((e as Error)?.message === AUTH_EXPIRED ? t('calls.error.sessionExpired') : t('calls.error.generic'), 'error');
     } finally {
       setBusyId(null);
     }

@@ -10,7 +10,7 @@ import { useAuth } from '@/lib/auth-context';
 import { textStart } from '@/lib/rtl';
 import { queryClient } from '@/lib/query';
 import { joinCall } from '@/lib/callProvider';
-import { resolveCallRequest, type Call } from '@/lib/calls';
+import { AUTH_EXPIRED, resolveCallRequest, type Call } from '@/lib/calls';
 import { useCoachCallInbox, useCoachCalls, useMySlots } from '@/lib/queries/calls';
 import { Button, EmptyState, KpiTile, Screen, Text, useToast } from '@/components/ui';
 import { CallCard } from '@/components/calls/CallCard';
@@ -46,8 +46,8 @@ export function CoachCallsDesktop() {
       await resolveCallRequest(c.id, decision);
       refreshAll();
       toast.show(decision === 'accept' ? t('calls.coach.accepted') : t('calls.coach.declined'));
-    } catch {
-      toast.show(t('calls.error.generic'), 'error');
+    } catch (e) {
+      toast.show((e as Error)?.message === AUTH_EXPIRED ? t('calls.error.sessionExpired') : t('calls.error.generic'), 'error');
     } finally {
       setBusyId(null);
     }
