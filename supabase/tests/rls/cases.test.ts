@@ -4278,23 +4278,30 @@ describe('calls & meetings (0083) — slots + booking asymmetry + lifecycle (§2
 
   // ── client create + cancel are the ONLY client writes (mutating → last) ──
   it('client can create a booking and cancel it, but cannot self-accept', async () => {
-    const booked = await asUser(CLIENT_A1, (c) =>
-      c.query(
+    // ONE asUser call: each asUser begins+rolls-back its own txn, so the booking must live
+    // in the SAME connection as the cancel. The self-accept (WITH CHECK fail) is wrapped in a
+    // savepoint so its error doesn't abort the txn before the cancel (mirrors 0084's pattern).
+    await asUser(CLIENT_A1, async (c) => {
+      const booked = await c.query(
         "insert into public.calls (slot_id, purpose) values ($1, 'progress_review') returning id, origin, status",
         [SLOT_A_OPEN],
-      ),
-    );
-    expect(booked.rows[0].origin).toBe('client_request'); // server-derived, not the body
-    expect(booked.rows[0].status).toBe('pending');
-    const callId = booked.rows[0].id;
-    // Self-accept violates the cancel WITH CHECK (status must be 'cancelled').
-    await expect(
-      asUser(CLIENT_A1, (c) => c.query("update public.calls set status = 'accepted' where id = $1", [callId])),
-    ).rejects.toThrow();
-    // Cancel is allowed.
-    const cancel = await asUser(CLIENT_A1, (c) =>
-      c.query("update public.calls set status = 'cancelled' where id = $1", [callId]),
-    );
-    expect(cancel.rowCount).toBe(1);
+      );
+      expect(booked.rows[0].origin).toBe('client_request'); // server-derived, not the body
+      expect(booked.rows[0].status).toBe('pending');
+      const callId = booked.rows[0].id;
+
+      await c.query('savepoint sp_accept');
+      let threw = false;
+      try {
+        await c.query("update public.calls set status = 'accepted' where id = $1", [callId]);
+      } catch {
+        threw = true;
+      }
+      await c.query('rollback to savepoint sp_accept');
+      expect(threw).toBe(true); // self-accept rejected (only pending/accepted → cancelled is allowed)
+
+      const cancel = await c.query("update public.calls set status = 'cancelled' where id = $1", [callId]);
+      expect(cancel.rowCount).toBe(1);
+    });
   });
 });
