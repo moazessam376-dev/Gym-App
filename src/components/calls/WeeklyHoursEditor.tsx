@@ -1,58 +1,32 @@
-// WeeklyHoursEditor — Calendly-style recurring availability. The coach toggles each weekday
-// and sets a start time + window length (4h/8h); clients then book any free time inside those
-// windows at their own chosen duration. The ad-hoc month-grid (AvailabilityCalendar) stays for
-// one-off slots outside these hours. Module-scope rows get their OWN useTranslation.
+// WeeklyHoursEditor — Calendly-style recurring availability, COMPACT. One thin row per weekday
+// with an on/off switch (off = a day off / weekend) and, when on, a From–To time range picked
+// via the AM/PM TimeField (no 24h typing). Toggling a day on seeds a default 9 AM–5 PM window;
+// changing From/To, or toggling off, saves immediately. Clients then book any free time inside
+// these hours at their own duration. Module-scope rows get their OWN useTranslation.
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Switch, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Button, GlassCard, Input, Segmented, Text, useToast } from '../ui';
+import { GlassCard, Text, TimeField, useToast } from '../ui';
 import { theme } from '../../theme';
 import { textStart } from '../../lib/rtl';
 import { clearCoachAvailabilityDay, setCoachAvailability, type CoachAvailability } from '../../lib/calls';
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6]; // 0=Sunday (JS getDay)
-
-const pad = (n: number) => String(n).padStart(2, '0');
-const fmtMin = (min: number): string => {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  const am = h < 12;
-  const hh = ((h + 11) % 12) + 1;
-  return `${hh}:${pad(m)} ${am ? 'AM' : 'PM'}`;
-};
-const parseHHMM = (s: string): number | null => {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(s.trim());
-  if (!m) return null;
-  const h = Number(m[1]);
-  const mm = Number(m[2]);
-  if (h > 23 || mm > 59) return null;
-  return h * 60 + mm;
-};
+const DEFAULT_START = 9 * 60; // 9:00 AM
+const DEFAULT_END = 17 * 60; // 5:00 PM
+const MIN_WINDOW = 15; // a window must be at least 15 min wide
 
 function DayRow({ weekday, win, coachId, onChanged }: { weekday: number; win?: CoachAvailability; coachId: string; onChanged: () => void }) {
   const { t } = useTranslation();
   const toast = useToast();
-  const [editing, setEditing] = useState(false);
-  const [start, setStart] = useState(win ? `${pad(Math.floor(win.start_minute / 60))}:${pad(win.start_minute % 60)}` : '09:00');
-  const [length, setLength] = useState(win ? String(Math.round((win.end_minute - win.start_minute) / 60)) : '8');
   const [busy, setBusy] = useState(false);
   const dayName = new Date(2023, 0, 1 + weekday).toLocaleDateString([], { weekday: 'long' });
+  const on = !!win;
 
-  const save = async () => {
-    const sm = parseHHMM(start);
-    if (sm == null) {
-      toast.show(t('calls.availability.invalidTime'), 'error');
-      return;
-    }
-    const em = Math.min(sm + Number(length) * 60, 1440);
-    if (em <= sm) {
-      toast.show(t('calls.availability.invalidTime'), 'error');
-      return;
-    }
+  const persist = async (fn: () => Promise<void>) => {
     setBusy(true);
     try {
-      await setCoachAvailability(coachId, weekday, sm, em);
-      setEditing(false);
+      await fn();
       onChanged();
     } catch {
       toast.show(t('calls.error.generic'), 'error');
@@ -60,51 +34,56 @@ function DayRow({ weekday, win, coachId, onChanged }: { weekday: number; win?: C
       setBusy(false);
     }
   };
-  const remove = async () => {
-    setBusy(true);
-    try {
-      await clearCoachAvailabilityDay(coachId, weekday);
-      onChanged();
-    } catch {
-      toast.show(t('calls.error.generic'), 'error');
-    } finally {
-      setBusy(false);
+
+  const toggle = (next: boolean) =>
+    persist(() =>
+      next
+        ? setCoachAvailability(coachId, weekday, DEFAULT_START, DEFAULT_END)
+        : clearCoachAvailabilityDay(coachId, weekday),
+    );
+
+  const setStart = (sm: number) => {
+    if (!win) return;
+    if (sm + MIN_WINDOW > win.end_minute) {
+      toast.show(t('calls.availability.invalidRange'), 'error');
+      return;
     }
+    persist(() => setCoachAvailability(coachId, weekday, sm, win.end_minute));
+  };
+  const setEnd = (em: number) => {
+    if (!win) return;
+    if (em - MIN_WINDOW < win.start_minute) {
+      toast.show(t('calls.availability.invalidRange'), 'error');
+      return;
+    }
+    persist(() => setCoachAvailability(coachId, weekday, win.start_minute, em));
   };
 
   return (
-    <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.glassBorder, paddingTop: theme.spacing.sm, gap: theme.spacing.sm }}>
+    <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.glassBorder, paddingTop: theme.spacing.md, gap: theme.spacing.sm }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
         <Text variant="bodyStrong" style={[textStart, { flex: 1, textTransform: 'capitalize' }]}>{dayName}</Text>
-        {win && !editing ? (
-          <Text variant="caption" muted>{`${fmtMin(win.start_minute)} – ${fmtMin(win.end_minute)}`}</Text>
-        ) : null}
+        {!on ? <Text variant="caption" muted>{t('calls.availability.off')}</Text> : null}
+        <Switch
+          value={on}
+          onValueChange={toggle}
+          disabled={busy}
+          trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+          thumbColor={theme.colors.text}
+        />
       </View>
-      {editing ? (
-        <>
-          <Input label={t('calls.availability.startTime')} value={start} onChangeText={setStart} placeholder="HH:MM" autoCapitalize="none" />
-          <Segmented
-            options={['4', '8'].map((h) => ({ value: h, label: t('calls.availability.hours', { count: Number(h) }) }))}
-            value={length}
-            onChange={setLength}
-          />
-          <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-            <View style={{ flex: 1 }}><Button title={t('common.cancel')} variant="ghost" onPress={() => setEditing(false)} disabled={busy} /></View>
-            <View style={{ flex: 1 }}><Button title={t('common.save')} onPress={save} loading={busy} /></View>
-          </View>
-        </>
-      ) : (
+      {on ? (
         <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-          <View style={{ flex: 1 }}>
-            <Button title={win ? t('calls.availability.editHours') : t('calls.availability.setHours')} variant="ghost" onPress={() => setEditing(true)} disabled={busy} />
+          <View style={{ flex: 1, gap: theme.spacing.xs }}>
+            <Text variant="label" muted style={textStart}>{t('calls.availability.from')}</Text>
+            <TimeField value={win!.start_minute} onChange={setStart} disabled={busy} />
           </View>
-          {win ? (
-            <View style={{ flex: 1 }}>
-              <Button title={t('calls.availability.off')} variant="danger" onPress={remove} disabled={busy} />
-            </View>
-          ) : null}
+          <View style={{ flex: 1, gap: theme.spacing.xs }}>
+            <Text variant="label" muted style={textStart}>{t('calls.availability.to')}</Text>
+            <TimeField value={win!.end_minute} onChange={setEnd} disabled={busy} />
+          </View>
         </View>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -113,8 +92,8 @@ export function WeeklyHoursEditor({ windows, coachId, onChanged }: { windows: Co
   const { t } = useTranslation();
   const byDay = new Map(windows.map((w) => [w.weekday, w]));
   return (
-    <GlassCard style={{ gap: theme.spacing.md }}>
-      <View style={{ gap: 2 }}>
+    <GlassCard style={{ gap: theme.spacing.sm }}>
+      <View style={{ gap: 2, marginBottom: theme.spacing.xs }}>
         <Text variant="bodyStrong" style={textStart}>{t('calls.availability.weeklyTitle')}</Text>
         <Text variant="caption" muted style={textStart}>{t('calls.availability.weeklySub')}</Text>
       </View>

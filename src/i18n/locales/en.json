@@ -102,6 +102,9 @@
       "editHours": "Edit hours",
       "setHours": "Set hours",
       "off": "Off",
+      "from": "From",
+      "to": "To",
+      "invalidRange": "End time must be after the start time.",
       "adhocTitle": "One-off slots",
       "slot": {
         "open": "Open",
@@ -109,6 +112,10 @@
         "booked": "Booked",
         "closed": "Closed"
       }
+    },
+    "time": {
+      "am": "AM",
+      "pm": "PM"
     },
     "error": {
       "generic": "Something went wrong. Try again.",

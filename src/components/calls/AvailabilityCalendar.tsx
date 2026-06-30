@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, GlassCard, Icon, Input, Segmented, Text, useToast, type BadgeTone } from '../ui';
+import { Badge, Button, GlassCard, Icon, Segmented, Text, TimeField, minutesToLabel, useToast, type BadgeTone } from '../ui';
 import { theme } from '../../theme';
 import { textStart, forwardChevron } from '../../lib/rtl';
 import { confirm } from '../../lib/confirm';
@@ -28,7 +28,12 @@ const SLOT_TONE: Record<SlotStatus, BadgeTone> = {
 const pad = (n: number) => String(n).padStart(2, '0');
 const dayKeyLocal = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const dayKeyOfIso = (iso: string) => dayKeyLocal(new Date(iso));
-const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+// Local minutes-from-midnight, so the slot list renders AM/PM via the SAME app-language
+// dictionary as the TimeField picker (avoids a device-locale vs app-locale mismatch on screen).
+const localMinutes = (iso: string) => {
+  const d = new Date(iso);
+  return d.getHours() * 60 + d.getMinutes();
+};
 
 function monthCells(view: Date): (Date | null)[] {
   const y = view.getFullYear();
@@ -59,7 +64,7 @@ function DaySlotRow({ slot, busy, onAction }: { slot: CoachCallSlot; busy: boole
     <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.glassBorder, paddingTop: theme.spacing.sm, gap: theme.spacing.sm }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
         <Text variant="bodyStrong" style={{ flex: 1 }}>
-          {fmtTime(slot.starts_at)} · {t('calls.book.minutes', { count: slot.duration_minutes })}
+          {minutesToLabel(localMinutes(slot.starts_at), t('calls.time.am'), t('calls.time.pm'))} · {t('calls.book.minutes', { count: slot.duration_minutes })}
         </Text>
         <Badge label={t(`calls.availability.slot.${slot.status}`)} tone={SLOT_TONE[slot.status]} />
       </View>
@@ -96,7 +101,7 @@ export function AvailabilityCalendar({
   const todayKey = dayKeyLocal(today);
   const [view, setView] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selected, setSelected] = useState<string>(todayKey);
-  const [time, setTime] = useState('');
+  const [timeMin, setTimeMin] = useState(9 * 60); // 9:00 AM
   const [duration, setDuration] = useState('30');
   const [busy, setBusy] = useState(false);
 
@@ -128,11 +133,10 @@ export function AvailabilityCalendar({
   };
 
   const addSlot = async () => {
-    if (!/^\d{2}:\d{2}$/.test(time.trim())) {
-      toast.show(t('calls.availability.invalidTime'), 'error');
-      return;
-    }
-    const d = new Date(`${selected}T${time.trim()}:00`);
+    // selected is "YYYY-MM-DD" (local). Build the local Date by parts — never parse a string
+    // (avoids any date-string-vs-timezone ambiguity).
+    const [yy, mm, dd] = selected.split('-').map(Number);
+    const d = new Date(yy, mm - 1, dd, Math.floor(timeMin / 60), timeMin % 60);
     if (Number.isNaN(d.getTime()) || d.getTime() <= Date.now()) {
       toast.show(t('calls.availability.invalidTime'), 'error');
       return;
@@ -140,7 +144,6 @@ export function AvailabilityCalendar({
     setBusy(true);
     try {
       await createSlot(coachId, d.toISOString(), Number(duration));
-      setTime('');
       onChanged();
     } catch {
       toast.show(t('calls.error.generic'), 'error');
@@ -229,7 +232,10 @@ export function AvailabilityCalendar({
           })}
         </Text>
 
-        <Input label={t('calls.availability.time')} value={time} onChangeText={setTime} placeholder="HH:MM" autoCapitalize="none" />
+        <View style={{ gap: theme.spacing.xs }}>
+          <Text variant="label" muted style={textStart}>{t('calls.availability.startTime')}</Text>
+          <TimeField value={timeMin} onChange={setTimeMin} disabled={busy} />
+        </View>
         <View style={{ gap: theme.spacing.xs }}>
           <Text variant="label" muted style={textStart}>{t('calls.availability.duration')}</Text>
           <Segmented
