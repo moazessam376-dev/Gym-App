@@ -1,4 +1,4 @@
-// Client → before/after builder (athlete side of E3, 0083). The client picks a BEFORE and
+// Client → before/after builder (athlete side of E3, 0084). The client picks a BEFORE and
 // an AFTER photo — from their existing progress photos or a new upload — adds a caption, and
 // SENDS it to their coach. It arrives as a PENDING submission the coach reviews; on approval
 // it's featured on the coach's public showcase. Sending sets transformation-sharing consent

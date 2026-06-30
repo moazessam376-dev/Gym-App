@@ -3303,7 +3303,7 @@ describe('coach transformations (0077, E3) — coach-curated, consent-gated show
   });
 });
 
-describe('transformation submissions (0083) — client→coach, coach-approves (§2)', () => {
+describe('transformation submissions (0084) — client→coach, coach-approves (§2)', () => {
   it('a client submits for THEMSELVES to THEIR coach; not a different coach, not another client', async () => {
     const ok = await asUser(CLIENT_A1, (c) =>
       c.query("insert into public.transformation_submissions (client_id, coach_id, caption, status) values ($1, $2, '12 weeks', 'pending')", [CLIENT_A1.sub, COACH_A.sub]),

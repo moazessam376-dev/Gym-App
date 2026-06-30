@@ -1,4 +1,4 @@
-// Client-initiated before/after submissions (the athlete side of the E3 showcase, 0083).
+// Client-initiated before/after submissions (the athlete side of the E3 showcase, 0084).
 // A client builds a before/after in their Progress section and SENDS it to their coach;
 // the coach reviews PENDING ones in their Transformations editor and approves (features it
 // publicly via resolve_transformation_submission → coach_transformations) or dismisses.

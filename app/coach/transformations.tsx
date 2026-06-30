@@ -40,7 +40,7 @@ export default function CoachTransformationsEditor() {
     queryFn: () => listConsentingClients(userId!),
     enabled: !!userId,
   });
-  // Client-initiated submissions awaiting this coach's review (0083).
+  // Client-initiated submissions awaiting this coach's review (0084).
   const pendingQ = useQuery({
     queryKey: ['pending-transformation-submissions', userId],
     queryFn: () => listPendingSubmissions(userId!),
@@ -145,7 +145,7 @@ export default function CoachTransformationsEditor() {
           {t('coachProfile.transformationsHelp')}
         </Text>
 
-        {/* Pending client submissions (0083): review → approve features it, dismiss clears it. */}
+        {/* Pending client submissions (0084): review → approve features it, dismiss clears it. */}
         {pending.length > 0 ? (
           <View style={{ gap: theme.spacing.sm }}>
             <Text variant="label" muted style={textStart}>
