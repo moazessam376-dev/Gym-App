@@ -3,7 +3,7 @@
 // segment-scoped keys. These power the Top Athletes (per-sex) + Top Coaches boards and the
 // athlete's own "league standing" Home CTA.
 import { useQuery } from '@tanstack/react-query';
-import { getMyAthleteRank, listTopAthletes, listTopCoaches, type LeaderboardPeriod } from '@/lib/leaderboards';
+import { getMyAthleteRank, getMyCoachRank, listTopAthletes, listTopCoaches, type LeaderboardPeriod } from '@/lib/leaderboards';
 import { getMyLeagueStanding } from '@/lib/leagues';
 import type { Sex } from '@/schemas/athlete-profile';
 
@@ -26,6 +26,14 @@ export function useMyAthleteRank(sex: Sex | null | undefined, period: Leaderboar
     queryKey: ['my-athlete-rank', sex, period],
     queryFn: () => getMyAthleteRank(sex!, period),
     enabled: !!sex,
+  });
+}
+
+export function useMyCoachRank(period: LeaderboardPeriod = 'all', enabled = true) {
+  return useQuery({
+    queryKey: ['my-coach-rank', period],
+    queryFn: () => getMyCoachRank(period),
+    enabled,
   });
 }
 

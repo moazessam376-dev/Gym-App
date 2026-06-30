@@ -106,6 +106,9 @@ export default function WorkoutScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
+  // Measured height of the sticky finish bar (E8) — drives the list's bottom inset so it
+  // clears the bar exactly, instead of a hardcoded 160 that left a gap on short screens.
+  const [finishBarH, setFinishBarH] = useState(96);
 
   // Rest timer — counts down ex.rest_seconds after a set is completed. restEndsAt is
   // the wall-clock target (survives re-renders); a 250ms tick keeps the seconds snappy.
@@ -534,7 +537,7 @@ export default function WorkoutScreen() {
         </View>
 
         <ScrollView
-          contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md, paddingBottom: 160 }}
+          contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md, paddingBottom: finishBarH + theme.spacing.md }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
@@ -803,6 +806,7 @@ export default function WorkoutScreen() {
 
         {/* Finish bar */}
         <View
+          onLayout={(e) => setFinishBarH(e.nativeEvent.layout.height)}
           style={{
             position: 'absolute',
             left: 0,

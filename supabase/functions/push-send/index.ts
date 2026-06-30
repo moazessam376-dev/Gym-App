@@ -126,23 +126,29 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
 
   // Trusted-path gate (defense in depth, §2/§3):
-  //   1. service-role JWT role claim — the gateway already verified the signature
+  //   1. service-role JWT role claim — the gateway verifies the signature
   //      (verify_jwt=true, pinned in supabase/config.toml), so we authorize on the claim.
-  //   2. H-2: a Vault-stored shared secret the 0041 trigger sends as `x-push-secret`. This
-  //      is a second factor INDEPENDENT of verify_jwt — even if verify_jwt were ever
-  //      misconfigured off, a forged service-role JWT can't pass without the secret. It is
-  //      enforced only when PUSH_SHARED_SECRET is configured (a no-op until push is
-  //      activated), so existing behavior is unchanged until both ends are set.
+  //   2. H-2: a MANDATORY Vault-stored shared secret the 0068 trigger sends as
+  //      `x-push-secret`. This is a second factor INDEPENDENT of verify_jwt — even if
+  //      verify_jwt were ever misconfigured off, a forged service-role JWT cannot pass
+  //      without the secret. It now FAILS CLOSED: if PUSH_SHARED_SECRET is unset the
+  //      function refuses to send rather than degrading to the verify_jwt claim alone.
+  //
+  //   DEPLOY PREREQUISITE (H-2): set Vault `push_shared_secret` AND the push-send env
+  //   `PUSH_SHARED_SECRET` to the same value before/with this deploy, or push delivery
+  //   stops here (503) — the in-app feed row still stands.
   const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
   if (jwtRole(bearer) !== 'service_role') {
     return json({ error: 'unauthorized' }, 401);
   }
   const expectedSecret = Deno.env.get('PUSH_SHARED_SECRET');
-  if (expectedSecret) {
-    const presented = req.headers.get('x-push-secret') ?? '';
-    if (!timingSafeEqual(presented, expectedSecret)) {
-      return json({ error: 'unauthorized' }, 401);
-    }
+  if (!expectedSecret) {
+    console.error('push-send: PUSH_SHARED_SECRET is not configured — refusing to send (fail-closed, H-2)');
+    return json({ error: 'server_error' }, 503);
+  }
+  const presented = req.headers.get('x-push-secret') ?? '';
+  if (!timingSafeEqual(presented, expectedSecret)) {
+    return json({ error: 'unauthorized' }, 401);
   }
 
   let raw: unknown;

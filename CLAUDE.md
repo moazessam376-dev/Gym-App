@@ -232,6 +232,23 @@ password-reset deep-link are a **"launch auth" follow-up** (each needs external 
 + device testing); gyms/org tenancy, friends/followers, and multi-week AI plan-gen stay deferred
 per the roadmap.
 
+**Engagement Track (E1–E8 + security H-3/H-2) — SHIPPED to prod, branch `cc/sec-token-push-hardening`
+(migrations 0071–0081 + edge fns media-finalize v7 / media-create-upload v4 / push-send v5).**
+Full status + the founder-facing test plan: [[engagement-track]] (project memory) +
+`ENGAGEMENT_TRACK_TEST_CHECKLIST.md`. Agents resuming here MUST read those first. Open follow-ups:
+- **Device-test deferral (founder has no EAS/dev account yet).** Two pieces need a **dev build** and
+  do **NOT** work in Expo Go: (1) the **E3 transformation "Share" button** (`react-native-view-shot`
+  — third-party native module, not bundled in Expo Go; the card still *renders* fine, only the
+  in-app capture→share is gated), and (2) full native confirmation of **voice notes** (`expo-audio`
+  speaker routing / web `MediaRecorder`). Everything else is testable now in Expo Go (iOS) + web.
+  Do NOT treat these two as bugs until tested on a dev build — they're expected to no-op in Expo Go.
+- **push-send is now fail-closed (H-2):** it returns 503 until the founder sets Vault
+  `push_shared_secret` **and** the function env `PUSH_SHARED_SECRET` to the same value. Push isn't
+  active yet (no device tokens), so this is deferred, not broken — set it at push activation.
+- **Anon-session gotcha (re-confirmed 2026-06-29):** if the app shows everything empty + the console
+  logs `permission denied for function coach_*` / `request_invalid` / `id=eq.undefined`, the client
+  is calling the DB as `anon` (stale/expired session) — **full sign-out + sign-in**, not a code bug.
+
 ---
 
 ## 14. Parallel build with GLM (two-agent workflow)

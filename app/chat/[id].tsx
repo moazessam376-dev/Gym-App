@@ -53,7 +53,7 @@ import {
 } from '../../src/lib/moderation';
 import { REACTION_EMOJIS, type ReactionEmoji } from '../../src/schemas/message';
 import type { ReportReason } from '../../src/schemas/moderation';
-import { ensureMicPermission, uploadVoiceNote } from '../../src/lib/voice';
+import { ensureMicPermission, uploadVoiceNote, startWebRecording, uploadVoiceNoteBytes, type WebRecorder } from '../../src/lib/voice';
 import { ReportMessageSheet } from '../../src/components/ReportMessageSheet';
 import { BanAppealSheet } from '../../src/components/BanAppealSheet';
 import { MessageActionsSheet } from '../../src/components/MessageActionsSheet';
@@ -189,6 +189,9 @@ function Bubble({
   mediaId,
   workoutNoteId,
   note,
+  noteExercise,
+  noteDay,
+  noteDate,
   at,
   edited,
   reply,
@@ -208,6 +211,10 @@ function Bubble({
   workoutNoteId: string | null;
   /** The resolved note (category/exercise); may be null on a live row until refetch. */
   note: WorkoutNoteRef | null;
+  /** Denormalized note context (E6) — present even on realtime rows. */
+  noteExercise: string | null;
+  noteDay: string | null;
+  noteDate: string | null;
   at: string;
   edited: boolean;
   reply: ReplyPreview | null;
@@ -331,13 +338,20 @@ function Bubble({
                   {note ? t(`workout.${note.category}`) : t('chat.note')}
                 </Text>
               </View>
-              {/* Exercise name on its own line so it stays visible even when the note
-                  body is short (a row-shared name collapses on a content-sized card). */}
-              {note?.exercise_name ? (
-                <Text variant="bodyStrong" numberOfLines={2} color={theme.colors.text}>
-                  {note.exercise_name}
-                </Text>
-              ) : null}
+              {/* Context line (exercise · day · date) on its own line — denormalized (E6) so
+                  it's present on realtime rows, with a fallback to the embedded exercise name. */}
+              {(() => {
+                const exercise = noteExercise ?? note?.exercise_name ?? null;
+                const date = noteDate
+                  ? new Date(noteDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                  : null;
+                const ctx = [exercise, noteDay, date].filter(Boolean).join(' · ');
+                return ctx.length > 0 ? (
+                  <Text variant="bodyStrong" numberOfLines={2} color={theme.colors.text}>
+                    {ctx}
+                  </Text>
+                ) : null;
+              })()}
               {body.length > 0 ? (
                 <Text variant="body" color={theme.colors.text}>
                   {body}
@@ -491,6 +505,7 @@ export default function ChatThread() {
   // secure media pipeline and send a message carrying the media id.
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 200);
+  const webRecRef = useRef<WebRecorder | null>(null); // web MediaRecorder (E7); native uses `recorder`
   const [recording, setRecording] = useState(false);
   const [sendingVoice, setSendingVoice] = useState(false);
 
@@ -694,6 +709,11 @@ export default function ChatThread() {
         Alert.alert(t('chat.micDeniedTitle'), t('chat.micDeniedBody'));
         return;
       }
+      if (Platform.OS === 'web') {
+        webRecRef.current = await startWebRecording();
+        setRecording(true);
+        return;
+      }
       await recorder.prepareToRecordAsync();
       recorder.record();
       setRecording(true);
@@ -706,6 +726,11 @@ export default function ChatThread() {
     if (!recording) return;
     setRecording(false);
     try {
+      if (Platform.OS === 'web') {
+        webRecRef.current?.cancel();
+        webRecRef.current = null;
+        return;
+      }
       await recorder.stop();
     } catch {
       /* discard — nothing is sent */
@@ -717,10 +742,19 @@ export default function ChatThread() {
     setRecording(false);
     setSendingVoice(true);
     try {
-      await recorder.stop();
-      const uri = recorder.uri;
-      if (!uri) throw new Error('no_recording');
-      const mediaId = await uploadVoiceNote(uri);
+      let mediaId: string;
+      if (Platform.OS === 'web') {
+        const r = webRecRef.current;
+        webRecRef.current = null;
+        if (!r) throw new Error('no_recording');
+        const { bytes, mimeType } = await r.stop();
+        mediaId = await uploadVoiceNoteBytes(bytes, mimeType);
+      } else {
+        await recorder.stop();
+        const uri = recorder.uri;
+        if (!uri) throw new Error('no_recording');
+        mediaId = await uploadVoiceNote(uri);
+      }
       const sent = await sendMessage({ recipient_id: otherId, body: '', media_id: mediaId });
       setMessages((prev) => (prev.some((x) => x.id === sent.id) ? prev : [sent, ...prev]));
       queryClient.invalidateQueries({ queryKey: ['conversation-previews'] }); // re-sort the chat list (own send)
@@ -882,6 +916,9 @@ export default function ChatThread() {
                       mediaId={item.media_id}
                       workoutNoteId={item.workout_note_id}
                       note={item.workout_note}
+                      noteExercise={item.workout_note_exercise}
+                      noteDay={item.workout_note_day}
+                      noteDate={item.workout_note_date}
                       at={item.created_at}
                       edited={item.edited_at != null}
                       reply={item.reply_to}

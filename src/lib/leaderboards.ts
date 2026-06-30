@@ -14,6 +14,7 @@ export type LeaderboardPeriod = 'all' | 'month' | 'quarter';
 export type AthleteBoardRow = {
   athlete_id: string;
   full_name: string | null;
+  handle: string | null;
   avatar_media_id: string | null;
   primary_goal: AthleteGoal | null;
   ffmi: number;
@@ -25,6 +26,8 @@ export type CoachBoardRow = {
   avatar_media_id: string | null;
   improved_clients: number;
   tracked_clients: number;
+  // E4: the new rank key — median client goal-progress score (null if no rankable clients).
+  median_goal_progress: number | null;
 };
 
 /** The signed-in athlete's OWN standing on the board: exact rank + board size + FFMI. */
@@ -32,6 +35,15 @@ export type MyAthleteRank = {
   rank: number;
   total: number;
   ffmi: number;
+};
+
+/** The signed-in coach's OWN standing on the coach board (E4). Null = not ranked. */
+export type MyCoachRank = {
+  rank: number;
+  total: number;
+  median_goal_progress: number | null;
+  tracked_clients: number;
+  improved_clients: number;
 };
 
 /** Top athletes for one sex segment + period, FFMI-ranked (best first). Top 100. */
@@ -67,7 +79,31 @@ export async function listTopCoaches(opts?: {
     p_offset: opts?.offset ?? 0,
   });
   if (error) throw error;
-  return (data ?? []) as CoachBoardRow[];
+  // median_goal_progress is a Postgres `numeric` → PostgREST returns it as a string; coerce.
+  return (data ?? []).map((r: CoachBoardRow & { median_goal_progress: number | string | null }) => ({
+    ...r,
+    median_goal_progress: r.median_goal_progress == null ? null : Number(r.median_goal_progress),
+  })) as CoachBoardRow[];
+}
+
+/**
+ * The caller-coach's own rank on the coach board for a period. Null when not ranked (not
+ * opted in / fewer than 3 tracked clients). Returns only the caller's own numbers.
+ */
+export async function getMyCoachRank(period: LeaderboardPeriod = 'all'): Promise<MyCoachRank | null> {
+  const { data, error } = await supabase.rpc('public_coach_my_rank', { p_period: period });
+  if (error) throw error;
+  const row = (data ?? [])[0] as
+    | { rank: number | string; total: number | string; median_goal_progress: number | string | null; tracked_clients: number | string; improved_clients: number | string }
+    | undefined;
+  if (!row || row.rank == null) return null;
+  return {
+    rank: Number(row.rank),
+    total: Number(row.total),
+    median_goal_progress: row.median_goal_progress == null ? null : Number(row.median_goal_progress),
+    tracked_clients: Number(row.tracked_clients),
+    improved_clients: Number(row.improved_clients),
+  };
 }
 
 /**

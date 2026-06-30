@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { getSignedUrl } from '../lib/media';
+import { setPlaybackMode } from '../lib/voice';
 import { Icon, Text } from './ui';
 import { theme } from '../theme';
 
@@ -28,6 +29,9 @@ export function VoiceNoteBubble({ mediaId, mine }: { mediaId: string; mine: bool
 
   async function onToggle() {
     if (loading) return;
+    // Route to the speaker, not the iOS earpiece (E7) — the session may still be in
+    // record mode after sending a note in the same chat.
+    await setPlaybackMode();
     if (!loaded) {
       setLoading(true);
       try {

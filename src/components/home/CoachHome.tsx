@@ -150,16 +150,8 @@ export default function CoachHome() {
           </Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-          {/* Leaderboards is a destination, not an Account setting (U-3) — give coaches the
-              same one-tap trophy ClientHome has. */}
-          <Pressable
-            onPress={() => router.push('/leaderboards')}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={t('account.leaderboards')}
-          >
-            <Icon name="trophy-outline" size={24} color={theme.colors.text} />
-          </Pressable>
+          {/* Leaderboards moved to a dedicated bottom tab for coaches (no longer a header
+              trophy). Account is reached by tapping the avatar. */}
           <View style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
             <NotificationBell />
           </View>

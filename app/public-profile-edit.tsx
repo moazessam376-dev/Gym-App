@@ -19,7 +19,9 @@ import { ProfileAvatar } from '../src/components/ProfileAvatar';
 import { Icon, Screen, Text, Input, Button, GlassCard, useToast } from '../src/components/ui';
 import { theme } from '../src/theme';
 
-const MAX_ACHIEVEMENTS = 20;
+// Self-assigned achievements are capped at 3 (founder decision; enforced in DB by 0074).
+// System-minted trophies (0073) are unlimited and live on the public profile, not here.
+const MAX_ACHIEVEMENTS = 3;
 
 export default function PublicProfileEdit() {
   const { t } = useTranslation();
@@ -36,6 +38,8 @@ export default function PublicProfileEdit() {
 
   const [isPublic, setIsPublic] = useState(false);
   const [leaderboardOptIn, setLeaderboardOptIn] = useState(false);
+  const [shareBody, setShareBody] = useState(false); // athlete: share transformation on my profile
+  const [allowTransform, setAllowTransform] = useState(false); // athlete: let my coach feature me
   const [achievements, setAchievements] = useState<string[]>([]);
   const [avatarMediaId, setAvatarMediaId] = useState<string | null>(null);
   const [avatarDirty, setAvatarDirty] = useState(false); // a new photo is picked but not yet saved
@@ -70,6 +74,11 @@ export default function PublicProfileEdit() {
       if (profile) {
         setIsPublic(profile.is_public);
         setLeaderboardOptIn(profile.leaderboard_opt_in);
+        if (!isCoach) {
+          const ap = profile as { share_body_metrics_publicly?: boolean; allow_transformation_sharing?: boolean };
+          setShareBody(ap.share_body_metrics_publicly ?? false);
+          setAllowTransform(ap.allow_transformation_sharing ?? false);
+        }
         setAchievements(
           isCoach
             ? (profile as { achievements: string[] }).achievements
@@ -145,6 +154,8 @@ export default function PublicProfileEdit() {
           is_public: isPublic,
           public_achievements: cleaned,
           leaderboard_opt_in: optIn,
+          share_body_metrics_publicly: isPublic && shareBody,
+          allow_transformation_sharing: isPublic && allowTransform,
         });
       }
       setAchievements(cleaned);
@@ -263,11 +274,61 @@ export default function PublicProfileEdit() {
             ) : null}
           </GlassCard>
 
+          {/* Athlete-only consents (E2/E3): share transformation on my profile, and let my
+              coach feature my before/after. Independent of is_public/leaderboard. */}
+          {!isCoach ? (
+            <>
+              <GlassCard style={{ gap: theme.spacing.sm, opacity: isPublic ? 1 : 0.55 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                  <Text variant="bodyStrong" style={{ flex: 1 }}>
+                    {t('publicProfile.shareBodyTitle')}
+                  </Text>
+                  <Switch
+                    value={isPublic && shareBody}
+                    onValueChange={(v) => {
+                      setShareBody(v);
+                      setDirty(true);
+                    }}
+                    disabled={!isPublic}
+                    trackColor={{ true: theme.colors.primary, false: theme.colors.border }}
+                  />
+                </View>
+                <Text variant="caption" muted style={textStart}>
+                  {t('publicProfile.shareBodySub')}
+                </Text>
+              </GlassCard>
+              <GlassCard style={{ gap: theme.spacing.sm, opacity: isPublic ? 1 : 0.55 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+                  <Text variant="bodyStrong" style={{ flex: 1 }}>
+                    {t('publicProfile.allowTransformTitle')}
+                  </Text>
+                  <Switch
+                    value={isPublic && allowTransform}
+                    onValueChange={(v) => {
+                      setAllowTransform(v);
+                      setDirty(true);
+                    }}
+                    disabled={!isPublic}
+                    trackColor={{ true: theme.colors.primary, false: theme.colors.border }}
+                  />
+                </View>
+                <Text variant="caption" muted style={textStart}>
+                  {t('publicProfile.allowTransformSub')}
+                </Text>
+              </GlassCard>
+            </>
+          ) : null}
+
           {/* Achievements */}
           <View style={{ gap: theme.spacing.sm }}>
-            <Text variant="label" muted style={textStart}>
-              {t('publicProfile.achievements')}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+              <Text variant="label" muted style={[textStart, { flex: 1 }]}>
+                {t('publicProfile.achievements')}
+              </Text>
+              <Text variant="caption" muted>
+                {achievements.length}/{MAX_ACHIEVEMENTS}
+              </Text>
+            </View>
             <Text variant="caption" muted style={textStart}>
               {isCoach ? t('publicProfile.achievementsSubCoach') : t('publicProfile.achievementsSubAthlete')}
             </Text>
@@ -302,6 +363,29 @@ export default function PublicProfileEdit() {
               </Pressable>
             ) : null}
           </View>
+
+          {/* Coach: manage the transformations showcase (E3) */}
+          {isCoach ? (
+            <Pressable
+              onPress={() => router.push('/coach/transformations')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: theme.spacing.md,
+                padding: theme.spacing.md,
+                borderRadius: theme.radii.md,
+                backgroundColor: theme.colors.glass,
+                borderWidth: 1,
+                borderColor: theme.colors.glassBorder,
+              }}
+            >
+              <Icon name="images" size={20} color={theme.colors.primary} />
+              <Text variant="bodyStrong" style={{ flex: 1 }}>
+                {t('coachProfile.manageTransformations')}
+              </Text>
+              <Icon name={forwardChevron()} size={18} color={theme.colors.textMuted} />
+            </Pressable>
+          ) : null}
 
           {/* View my public profile */}
           <Pressable

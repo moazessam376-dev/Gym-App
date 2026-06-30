@@ -4,21 +4,24 @@
 // coach helps achieve" highlights (counts only, never a client identity). Authenticated
 // members only in V1.
 import { useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { textStart } from '../../src/lib/rtl';
 import { useAuth } from '../../src/lib/auth-context';
-import { usePublicCoachProfile, useCoachPublicHighlights } from '../../src/lib/queries/profiles';
+import { usePublicCoachProfile, useCoachPublicHighlights, useCoachTransformations } from '../../src/lib/queries/profiles';
 import { useMyCoach } from '../../src/lib/queries/home';
 import { useMyCoachRequests } from '../../src/lib/queries/coach-requests';
 import { createCoachRequest, cancelCoachRequest, DUPLICATE_PENDING_REQUEST } from '../../src/lib/coach-requests';
 import { queryClient } from '../../src/lib/query';
 import type { CoachHighlight } from '../../src/lib/public-profiles';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
+import { ShareableTransformationCard } from '../../src/components/ShareableTransformationCard';
 import { RequestCoachSheet } from '../../src/components/RequestCoachSheet';
-import { Icon, Screen, Text, GlassCard, Chip, EmptyState, Button, useToast } from '../../src/components/ui';
+import { Icon, Screen, Text, GlassCard, Chip, Badge, EmptyState, Button, useToast } from '../../src/components/ui';
 import { theme } from '../../src/theme';
+
+const medianLabel = (m: number | null) => (m == null ? null : `${m >= 0 ? '+' : '−'}${Math.abs(m).toFixed(1)}`);
 
 function label(s: string): string {
   return s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
@@ -35,6 +38,7 @@ function HighlightRow({ h }: { h: CoachHighlight }) {
         </Text>
         <Text variant="caption" muted style={textStart}>
           {t('publicProfile.highlightClients', { count: h.client_count })}
+          {h.median_progress != null ? ` · ${medianLabel(h.median_progress)} ${t('coachProfile.medianOutcome')}` : ''}
         </Text>
       </View>
       {h.with_progress > 0 ? (
@@ -54,6 +58,7 @@ export default function CoachProfileScreen() {
   const toast = useToast();
   const profileQ = usePublicCoachProfile(id);
   const highlightsQ = useCoachPublicHighlights(id);
+  const transformationsQ = useCoachTransformations(id);
 
   // "Request this coach" funnel (G2) — only for a signed-in client. We need their coach
   // status (unassigned can request) and any existing request to THIS coach.
@@ -142,7 +147,46 @@ export default function CoachProfileScreen() {
             {t('publicProfile.yearsExperience', { count: p.years_experience })}
           </Text>
         ) : null}
+        <Badge
+          label={p.accepting_clients ? t('coachProfile.acceptingClients') : t('coachProfile.fullRoster')}
+          tone={p.accepting_clients ? 'success' : 'warning'}
+          solid
+        />
       </View>
+
+      {/* Outcome strip — real numbers (active roster + median goal-progress), not vanity %. */}
+      <GlassCard style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+        <View style={{ alignItems: 'center', gap: 4 }}>
+          <Text variant="bodyStrong">{p.active_roster_count}</Text>
+          <Text variant="caption" muted>
+            {t('coachProfile.activeClientsLabel')}
+          </Text>
+        </View>
+        {p.median_goal_progress != null ? (
+          <View style={{ alignItems: 'center', gap: 4 }}>
+            <Text variant="bodyStrong" color={theme.colors.primary}>
+              {medianLabel(p.median_goal_progress)}
+            </Text>
+            <Text variant="caption" muted>
+              {t('coachProfile.medianOutcome')}
+            </Text>
+          </View>
+        ) : null}
+      </GlassCard>
+
+      {/* Transformations showcase — branded before/after cards (the conversion driver). */}
+      {(transformationsQ.data ?? []).length > 0 ? (
+        <View style={{ gap: theme.spacing.sm }}>
+          <Text variant="label" muted style={textStart}>
+            {t('coachProfile.transformations')}
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: theme.spacing.md }}>
+            {(transformationsQ.data ?? []).map((tr) => (
+              <ShareableTransformationCard key={tr.transformation_id} item={tr} />
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
 
       {/* Request-a-coach CTA — only for an unassigned signed-in client (G2). */}
       {isClient ? (
@@ -167,6 +211,19 @@ export default function CoachProfileScreen() {
             {p.bio}
           </Text>
         </GlassCard>
+      ) : null}
+
+      {p.coaching_philosophy ? (
+        <View style={{ gap: theme.spacing.sm }}>
+          <Text variant="label" muted style={textStart}>
+            {t('coachProfile.philosophy')}
+          </Text>
+          <GlassCard>
+            <Text variant="body" style={textStart}>
+              {p.coaching_philosophy}
+            </Text>
+          </GlassCard>
+        </View>
       ) : null}
 
       {p.specialties.length > 0 ? (

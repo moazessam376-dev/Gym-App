@@ -40,6 +40,20 @@ export async function getAdherenceOverview(windowDays = ADHERENCE_WINDOW_DAYS): 
   return (data ?? []) as AdherenceRow[];
 }
 
+// ── Weekly roster-activity trend (coach_performance_trends, E5) ──────────────
+export type CoachTrendPoint = {
+  week_start: string;
+  sessions_logged: number;
+  active_clients: number;
+};
+
+/** Last N weeks of roster activity (sessions + active clients per week), coach-fenced. */
+export async function getCoachPerformanceTrends(weeks = 8): Promise<CoachTrendPoint[]> {
+  const { data, error } = await supabase.rpc('coach_performance_trends', { p_weeks: weeks });
+  if (error) throw error;
+  return (data ?? []) as CoachTrendPoint[];
+}
+
 const clampPct = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
 export type AdherenceScore = {

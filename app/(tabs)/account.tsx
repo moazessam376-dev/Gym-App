@@ -85,18 +85,9 @@ export default function AccountTab() {
         <SectionLabel>{t('account.sectionProfile')}</SectionLabel>
         <LinkRow icon="person-outline" label={t('account.profile')} onPress={go('/profile')} />
 
-        {role === 'coach' || role === 'client' ? (
-          <>
-            <SectionLabel>{t('account.sectionCommunity')}</SectionLabel>
-            <LinkRow
-              icon="compass-outline"
-              label={t('account.discoverCoaches')}
-              onPress={go('/discover/coaches')}
-            />
-            {/* Public profile now lives in the Profile hub; Leaderboards is a one-tap trophy
-                in the Home header (U-3). Both removed here to de-junk Account. */}
-          </>
-        ) : null}
+        {/* Discover Coaches removed from Account: clients reach it from the Home "find a
+            coach" card; it isn't relevant to coaches. Public profile lives in the Profile
+            hub; Leaderboards is a bottom tab (coach) / Home trophy (client). */}
 
         {/* Role-defining actions. Coach day-to-day actions (Invite, Templates) now
             live on the Clients tab; food preferences moved to the Nutrition tab. */}

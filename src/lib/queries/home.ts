@@ -52,6 +52,7 @@ import { getBodyMetricsBoard, listBodyMetrics, rankBoard, type BodyMetric } from
 import {
   getAdherenceOverview,
   getAnalyticsInsight,
+  getCoachPerformanceTrends,
   getPlanEffectiveness,
 } from '@/lib/analytics';
 import { countMediaFor } from '@/lib/media';
@@ -366,6 +367,10 @@ export function useCoachAdherence() {
 
 export function useCoachPlanEffectiveness() {
   return useQuery({ queryKey: ['coach-plan-effectiveness'], queryFn: getPlanEffectiveness });
+}
+
+export function useCoachPerformanceTrends() {
+  return useQuery({ queryKey: ['coach-performance-trends'], queryFn: () => getCoachPerformanceTrends() });
 }
 
 export function useAnalyticsInsight() {

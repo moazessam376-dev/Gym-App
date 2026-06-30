@@ -67,6 +67,25 @@ export default function MessagesTab() {
     else coachQ.refetch();
   };
 
+  // "No one to talk to yet" — a client with no coach, or a coach with no clients. This is
+  // distinct from a search that filtered everyone out (people exist, rows don't): the
+  // roster empty-state is shown centered with NO search header (the search bar + section
+  // label looked broken floating above it); a search miss keeps the header.
+  const peopleCount = role === 'coach' ? (clientsQ.data?.length ?? 0) : coachQ.data ? 1 : 0;
+  const noPeople = !loading && peopleCount === 0;
+  const rosterEmptyState =
+    role === 'client' ? (
+      <EmptyState
+        icon="chatbubbles-outline"
+        title={t('messages.noCoachTitle')}
+        subtitle={t('messages.noCoachSub')}
+        actionLabel={t('home.acceptInvite')}
+        onAction={() => router.push('/accept-invite')}
+      />
+    ) : (
+      <EmptyState icon="chatbubbles-outline" title={t('messages.noClientsTitle')} subtitle={t('messages.noClientsSub')} />
+    );
+
   // The single-line preview text (You:/voice/note aware). Empty body + voice → a label.
   const previewText = (p: ConversationPreview | null): string => {
     if (!p) return t('messages.noMessagesYet');
@@ -114,27 +133,18 @@ export default function MessagesTab() {
           {t('messages.title')}
         </Text>
       </View>
-      <FlatList
-        data={rows}
-        keyExtractor={(r) => r.peerId}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md, flexGrow: 1 }}
-        ListHeaderComponent={loading && rows.length === 0 ? null : header}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor={theme.colors.primary} />}
-        ListEmptyComponent={
-          loading ? null : role === 'client' ? (
-            <EmptyState
-              icon="chatbubbles-outline"
-              title={t('messages.noCoachTitle')}
-              subtitle={t('messages.noCoachSub')}
-              actionLabel={t('home.acceptInvite')}
-              onAction={() => router.push('/accept-invite')}
-            />
-          ) : (
-            <EmptyState icon="chatbubbles-outline" title={t('messages.noClientsTitle')} subtitle={t('messages.noClientsSub')} />
-          )
-        }
-        renderItem={({ item }) => {
+      {noPeople ? (
+        <View style={{ flex: 1, justifyContent: 'center' }}>{rosterEmptyState}</View>
+      ) : (
+        <FlatList
+          data={rows}
+          keyExtractor={(r) => r.peerId}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md, flexGrow: 1 }}
+          ListHeaderComponent={loading && rows.length === 0 ? null : header}
+          refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor={theme.colors.primary} />}
+          ListEmptyComponent={loading ? null : <EmptyState icon="search" title={t('chat.noResults')} />}
+          renderItem={({ item }) => {
           const p = item.preview;
           const unread = p?.unread_count ?? 0;
           const tparts = p ? compactTimeParts(p.last_at) : null;
@@ -169,8 +179,9 @@ export default function MessagesTab() {
               </View>
             </GlassCard>
           );
-        }}
-      />
+          }}
+        />
+      )}
     </Screen>
   );
 }

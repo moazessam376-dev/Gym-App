@@ -108,6 +108,18 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="board"
+        options={{
+          // Leaderboard is a coach bottom-tab (it used to be a Home-header trophy). Clients
+          // still reach the boards via the standalone /leaderboards route (Home trophy), so
+          // this tab is coach-only. Coach bar: Home · Performance · Leaderboard · Chat.
+          title: t('tabs.leaderboard'),
+          href: showFor(isCoach),
+          lazy: eager(isCoach),
+          tabBarIcon: tabIcon('trophy-outline'),
+        }}
+      />
+      <Tabs.Screen
         name="messages"
         options={{
           title: t('tabs.chat'),
@@ -120,10 +132,11 @@ export default function TabsLayout() {
         name="account"
         options={{
           title: t('tabs.account'),
-          // Clients reach Account from the Home header avatar (keeps the client bar
-          // at five: Home · Plans · Nutrition · Progress · Chat). Coach/admin keep it.
-          href: showFor(!isClient),
-          lazy: eager(!isClient),
+          // Clients AND coaches reach Account from the Home header avatar; only admin keeps
+          // it as a bottom tab. (Client bar stays five; coach bar frees a slot for the
+          // Leaderboard tab above.)
+          href: showFor(isAdmin),
+          lazy: eager(isAdmin),
           tabBarIcon: tabIcon('user'),
         }}
       />

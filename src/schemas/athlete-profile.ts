@@ -64,6 +64,11 @@ export const upsertAthleteProfileSchema = z.object({
   // Phase 20 — separate opt-in to the public physique leaderboard (a bigger disclosure
   // than a profile page, so its own consent). Only meaningful when is_public is on.
   leaderboard_opt_in: z.boolean().optional(),
+  // E2/E3 — two further independent consents (only meaningful when is_public is on):
+  //   share_body_metrics_publicly: show transformation deltas/FFMI/weight on my own profile.
+  //   allow_transformation_sharing: let my coach feature my before/after on THEIR profile.
+  share_body_metrics_publicly: z.boolean().optional(),
+  allow_transformation_sharing: z.boolean().optional(),
 });
 export type UpsertAthleteProfile = z.infer<typeof upsertAthleteProfileSchema>;
 
