@@ -3303,6 +3303,76 @@ describe('coach transformations (0077, E3) — coach-curated, consent-gated show
   });
 });
 
+describe('transformation submissions (0084) — client→coach, coach-approves (§2)', () => {
+  it('a client submits for THEMSELVES to THEIR coach; not a different coach, not another client', async () => {
+    const ok = await asUser(CLIENT_A1, (c) =>
+      c.query("insert into public.transformation_submissions (client_id, coach_id, caption, status) values ($1, $2, '12 weeks', 'pending')", [CLIENT_A1.sub, COACH_A.sub]),
+    );
+    expect(ok.rowCount).toBe(1);
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query("insert into public.transformation_submissions (client_id, coach_id, status) values ($1, $2, 'pending')", [CLIENT_A1.sub, COACH_B_ID])),
+    ).rejects.toThrow(); // coach_id must equal my_coach_id()
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query("insert into public.transformation_submissions (client_id, coach_id, status) values ($1, $2, 'pending')", [CLIENT_B1, COACH_A.sub])),
+    ).rejects.toThrow(); // can't submit on behalf of another client
+  });
+
+  it('the coach reads submissions addressed to them; another tenant and anon see none', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role service_role');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+      await c.query("insert into public.transformation_submissions (client_id, coach_id, status) values ($1, $2, 'pending')", [CLIENT_A1.sub, COACH_A.sub]);
+      const asId = (id: string, role: string) => c.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: id, role: 'authenticated', user_role: role })]);
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(COACH_A.sub, 'coach');
+      const coach = await c.query('select id from public.transformation_submissions');
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(COACH_B_ID, 'coach');
+      const otherCoach = await c.query('select id from public.transformation_submissions');
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(CLIENT_B1, 'client');
+      const otherClient = await c.query('select id from public.transformation_submissions');
+      await c.query('reset role'); await c.query('set local role anon'); await c.query("select set_config('request.jwt.claims', '{}', true)");
+      const anon = await c.query('select id from public.transformation_submissions');
+      expect(coach.rows.length).toBeGreaterThanOrEqual(1);
+      expect(otherCoach.rows).toHaveLength(0);
+      expect(otherClient.rows).toHaveLength(0);
+      expect(anon.rows).toHaveLength(0);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('resolve_transformation_submission is coach-fenced: a foreign coach cannot approve; the owning coach can', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role service_role');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+      const ins = await c.query("insert into public.transformation_submissions (client_id, coach_id, status) values ($1, $2, 'pending') returning id", [CLIENT_A1.sub, COACH_A.sub]);
+      const subId = ins.rows[0].id as string;
+      const asId = (id: string, role: string) => c.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: id, role: 'authenticated', user_role: role })]);
+      // A coach who isn't the addressee can't resolve it. The raise aborts the txn, so
+      // wrap it in a SAVEPOINT and roll back to it to keep the connection usable.
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(COACH_B_ID, 'coach');
+      await c.query('savepoint sp_foreign');
+      await expect(c.query('select public.resolve_transformation_submission($1, $2)', [subId, 'approve'])).rejects.toThrow();
+      await c.query('rollback to savepoint sp_foreign');
+      // The owning coach approves → it becomes a featured coach_transformations row and flips to approved.
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(COACH_A.sub, 'coach');
+      await c.query('select public.resolve_transformation_submission($1, $2)', [subId, 'approve']);
+      await c.query('reset role'); await c.query('set local role service_role'); await c.query("select set_config('request.jwt.claims', '{}', true)");
+      const sub = await c.query('select status from public.transformation_submissions where id = $1', [subId]);
+      const feat = await c.query('select id from public.coach_transformations where coach_id = $1 and client_id = $2', [COACH_A.sub, CLIENT_A1.sub]);
+      expect(sub.rows[0].status).toBe('approved');
+      expect(feat.rows.length).toBeGreaterThanOrEqual(1);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+});
+
 describe('voice notes (0043, Phase 18) — audio media readable by chat participants (§2/§7/§8)', () => {
   const ADMIN: Identity = { sub: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userRole: 'admin' };
   const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };

@@ -180,6 +180,7 @@ function RootNavigator() {
       <Stack.Screen name="client/progress/view" options={{ headerShown: true, title: '', headerTransparent: true, headerTintColor: '#fff' }} />
       {/* Phase 12a body metrics / InBody. */}
       <Stack.Screen name="client/progress/body-comp" options={{ headerShown: true, title: t('nav.bodyComposition') }} />
+      <Stack.Screen name="client/transformation" options={{ headerShown: true, title: t('nav.myTransformation') }} />
       <Stack.Screen name="coach/body-metric" options={{ headerShown: true, title: t('nav.newInbodyReading') }} />
       <Stack.Screen name="food/add" options={{ headerShown: true, title: t('nav.logFood') }} />
       <Stack.Screen name="food/preferences" options={{ headerShown: true, title: t('nav.foodPreferences') }} />
