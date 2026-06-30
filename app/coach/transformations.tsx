@@ -19,8 +19,9 @@ import {
   deleteTransformation,
   type ConsentingClient,
 } from '../../src/lib/coach-transformations';
+import { listPendingSubmissions, resolveSubmission } from '../../src/lib/transformation-submissions';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
-import { Icon, Screen, Text, GlassCard, Button, Input, SignedImage, EmptyState, useToast } from '../../src/components/ui';
+import { Icon, Screen, Text, GlassCard, Button, Input, SignedImage, EmptyState, Badge, useToast } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
 export default function CoachTransformationsEditor() {
@@ -37,6 +38,12 @@ export default function CoachTransformationsEditor() {
   const clientsQ = useQuery({
     queryKey: ['consenting-clients', userId],
     queryFn: () => listConsentingClients(userId!),
+    enabled: !!userId,
+  });
+  // Client-initiated submissions awaiting this coach's review (0083).
+  const pendingQ = useQuery({
+    queryKey: ['pending-transformation-submissions', userId],
+    queryFn: () => listPendingSubmissions(userId!),
     enabled: !!userId,
   });
 
@@ -59,7 +66,9 @@ export default function CoachTransformationsEditor() {
   async function pickPhoto(which: 'before' | 'after') {
     setUploading(which);
     try {
-      const res = await captureAndUploadPhoto({ source: 'library', kind: 'transformation' });
+      // squareCrop opens the native pan + pinch-zoom editor (1:1) so the coach can frame
+      // the before/after — the card renders the two photos in ~square cells.
+      const res = await captureAndUploadPhoto({ source: 'library', kind: 'transformation', squareCrop: true });
       if ('mediaId' in res) (which === 'before' ? setBeforeId : setAfterId)(res.mediaId);
       else if ('limited' in res) toast.show(t('publicProfile.photoError'), 'error');
     } catch {
@@ -104,8 +113,29 @@ export default function CoachTransformationsEditor() {
     }
   }
 
+  // Approve features the client's submission on the public showcase (atomic RPC); dismiss
+  // just clears it. Either way it leaves the pending list, and approve refreshes the showcase.
+  const [resolving, setResolving] = useState<string | null>(null);
+  async function onResolve(id: string, action: 'approve' | 'dismiss') {
+    setResolving(id);
+    try {
+      await resolveSubmission(id, action);
+      await queryClient.invalidateQueries({ queryKey: ['pending-transformation-submissions', userId] });
+      if (action === 'approve') {
+        await queryClient.invalidateQueries({ queryKey: ['my-transformations', userId] });
+        await queryClient.invalidateQueries({ queryKey: ['coach-transformations', userId] });
+      }
+      toast.show(action === 'approve' ? t('coachProfile.submissionApproved') : t('coachProfile.submissionDismissed'));
+    } catch {
+      toast.show(t('common.error'), 'error');
+    } finally {
+      setResolving(null);
+    }
+  }
+
   const clients = clientsQ.data ?? [];
   const existing = existingQ.data ?? [];
+  const pending = pendingQ.data ?? [];
 
   return (
     <Screen gradient padded={false} edges={['bottom']}>
@@ -114,6 +144,55 @@ export default function CoachTransformationsEditor() {
         <Text variant="body" muted style={textStart}>
           {t('coachProfile.transformationsHelp')}
         </Text>
+
+        {/* Pending client submissions (0083): review → approve features it, dismiss clears it. */}
+        {pending.length > 0 ? (
+          <View style={{ gap: theme.spacing.sm }}>
+            <Text variant="label" muted style={textStart}>
+              {t('coachProfile.pendingSubmissions')}
+            </Text>
+            {pending.map((sub) => (
+              <GlassCard key={sub.id} style={{ gap: theme.spacing.sm, borderColor: theme.colors.primary }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <ProfileAvatar name={sub.client_name} avatarMediaId={sub.client_avatar_media_id} size={28} />
+                  <Text variant="bodyStrong" style={[{ flex: 1 }, textStart]}>
+                    {sub.client_name ?? ''}
+                  </Text>
+                  <Badge label={t('clientTransformation.status.pending')} tone="warning" />
+                </View>
+                <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+                  {sub.before_media_id ? (
+                    <SignedImage mediaId={sub.before_media_id} style={{ width: 80, height: 80, borderRadius: theme.radii.sm }} />
+                  ) : null}
+                  {sub.after_media_id ? (
+                    <SignedImage mediaId={sub.after_media_id} style={{ width: 80, height: 80, borderRadius: theme.radii.sm }} />
+                  ) : null}
+                </View>
+                {sub.caption ? (
+                  <Text variant="caption" muted style={textStart}>
+                    {sub.caption}
+                  </Text>
+                ) : null}
+                <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+                  <Button
+                    title={t('coachProfile.approveFeature')}
+                    onPress={() => onResolve(sub.id, 'approve')}
+                    loading={resolving === sub.id}
+                    disabled={resolving != null}
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    title={t('coachProfile.dismiss')}
+                    variant="secondary"
+                    onPress={() => onResolve(sub.id, 'dismiss')}
+                    disabled={resolving != null}
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              </GlassCard>
+            ))}
+          </View>
+        ) : null}
 
         {/* Existing */}
         {existing.map((tr) => (

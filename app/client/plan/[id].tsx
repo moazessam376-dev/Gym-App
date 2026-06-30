@@ -155,7 +155,7 @@ export default function ClientPlanView() {
         {/* Week selector (training only) */}
         {isTraining && weeks.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: theme.spacing.sm, paddingVertical: theme.spacing.xs }}>
-            {weeks.map((w) => {
+            {weeks.map((w, i) => {
               const active = w.id === weekId;
               return (
                 <Pressable
@@ -170,8 +170,9 @@ export default function ClientPlanView() {
                     borderColor: active ? theme.colors.primary : theme.colors.glassBorder,
                   }}
                 >
+                  {/* Numbered by position so it matches the coach editor's contiguous labels. */}
                   <Text variant="caption" color={active ? theme.colors.onPrimary : theme.colors.textMuted} style={{ fontFamily: theme.fontFamily.bodyBold }}>
-                    {w.name}
+                    {t('planEditor.weekLabel', { n: i + 1 })}
                   </Text>
                 </Pressable>
               );

@@ -77,7 +77,11 @@ export default function SignUp() {
             label={t('auth.email')}
             placeholder={t('auth.emailPlaceholder')}
             autoCapitalize="none"
+            // See sign-in: QuickType height flicker shakes the centered form while typing.
+            autoCorrect={false}
+            spellCheck={false}
             autoComplete="email"
+            textContentType="emailAddress"
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}

@@ -179,6 +179,7 @@ function RootNavigator() {
       <Stack.Screen name="client/progress/view" options={{ headerShown: true, title: '', headerTransparent: true, headerTintColor: '#fff' }} />
       {/* Phase 12a body metrics / InBody. */}
       <Stack.Screen name="client/progress/body-comp" options={{ headerShown: true, title: t('nav.bodyComposition') }} />
+      <Stack.Screen name="client/transformation" options={{ headerShown: true, title: t('nav.myTransformation') }} />
       <Stack.Screen name="coach/body-metric" options={{ headerShown: true, title: t('nav.newInbodyReading') }} />
       <Stack.Screen name="food/add" options={{ headerShown: true, title: t('nav.logFood') }} />
       <Stack.Screen name="food/preferences" options={{ headerShown: true, title: t('nav.foodPreferences') }} />
@@ -197,6 +198,7 @@ function RootNavigator() {
       <Stack.Screen name="notification-settings" options={{ headerShown: true, title: t('nav.notifications') }} />
       {/* Phase 19 public profiles. */}
       <Stack.Screen name="public-profile-edit" options={{ headerShown: !chrome, title: t('nav.publicProfile') }} />
+      <Stack.Screen name="coach/transformations" options={{ headerShown: !chrome, title: t('nav.transformations') }} />
       <Stack.Screen name="coach-profile/[id]" options={{ headerShown: true, title: t('nav.coachProfile') }} />
       <Stack.Screen name="athlete-profile/[id]" options={{ headerShown: true, title: t('nav.profile') }} />
       <Stack.Screen name="discover/coaches" options={{ headerShown: true, title: t('nav.discoverCoaches') }} />
