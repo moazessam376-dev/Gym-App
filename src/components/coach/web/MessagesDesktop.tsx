@@ -36,6 +36,7 @@ import { compactTimeParts } from '@/lib/notifications';
 import { queryClient } from '@/lib/query';
 import { supabase } from '@/lib/supabase';
 import { textStart } from '@/lib/rtl';
+import { startAndJoinCall } from '@/lib/calls';
 import { ProfileAvatar } from '@/components/ProfileAvatar';
 import { Badge, Button, Card, EmptyState, Icon, IconButton, Input, Screen, Text, useToast } from '@/components/ui';
 import { theme } from '@/theme';
@@ -420,8 +421,8 @@ export function MessagesDesktop() {
                     </Text>
                   </View>
                 </View>
-                <IconButton name="phone" onPress={() => router.push('/coach/calls')} />
-                <IconButton name="video" onPress={() => router.push('/coach/calls')} />
+                <IconButton name="phone" onPress={() => { if (selectedPeer) startAndJoinCall(selectedPeer).catch(() => toast.show(t('calls.error.generic'), 'error')); }} />
+                <IconButton name="video" onPress={() => { if (selectedPeer) startAndJoinCall(selectedPeer).catch(() => toast.show(t('calls.error.generic'), 'error')); }} />
                 {/* Fold/unfold the client snapshot. */}
                 <IconButton
                   name="user"

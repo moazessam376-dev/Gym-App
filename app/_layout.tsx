@@ -32,6 +32,7 @@ import { loadSavedLanguage } from '../src/i18n'; // side-effect: initializes i18
 import { ToastProvider } from '../src/components/ui';
 import { FirstRunTour } from '../src/components/FirstRunTour';
 import { CoachWebChrome } from '../src/components/coach/web/CoachWebChrome';
+import { IncomingCallBanner } from '../src/components/calls/IncomingCallBanner';
 import { useIsWideWeb } from '../src/lib/useBreakpoint';
 import { theme } from '../src/theme';
 
@@ -203,8 +204,10 @@ function RootNavigator() {
       <Stack.Screen name="athlete-profile/[id]" options={{ headerShown: true, title: t('nav.profile') }} />
       <Stack.Screen name="discover/coaches" options={{ headerShown: true, title: t('nav.discoverCoaches') }} />
       <Stack.Screen name="leaderboards/index" options={{ headerShown: true, title: t('nav.leaderboards') }} />
-      {/* Calls — deferred placeholder, reachable from the coach web sidebar. */}
+      {/* Calls & Meetings (Phase A): the coach hub (sidebar + Settings "Manage hours") and
+          the client calls / booking hub. */}
       <Stack.Screen name="coach/calls" options={{ headerShown: !chrome, title: t('nav.calls') }} />
+      <Stack.Screen name="calls" options={{ headerShown: true, title: t('nav.calls') }} />
     </Stack>
     </CoachWebChrome>
     {/* The navigator is mounted underneath (so routing + queries run and the cache
@@ -215,6 +218,9 @@ function RootNavigator() {
     {/* First-run welcome tour — shows once per role per device, only after the boot
         splash settles (so it never overlaps it). Self-gates on a local pref. */}
     {!booting && session && role ? <FirstRunTour role={role} /> : null}
+    {/* Global incoming-call ring for ad-hoc coach calls (client-only; self-gates on role
+        and returns null until a call is ringing). */}
+    {session && role === 'client' ? <IncomingCallBanner /> : null}
     </View>
   );
 }

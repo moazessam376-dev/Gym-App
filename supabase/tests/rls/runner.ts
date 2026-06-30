@@ -104,6 +104,7 @@ const migrationFiles = [
   '0080_chat_note_context.sql',
   '0081_coach_performance_trends.sql',
   '0082_coach_request_public_coach_fix.sql',
+  '0083_calls.sql',
   '0084_transformation_submissions.sql',
 ];
 

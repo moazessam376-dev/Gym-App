@@ -25,6 +25,7 @@ import {
   Screen,
   Text,
   TierChip,
+  useToast,
   type BadgeTone,
 } from '@/components/ui';
 import { forwardChevron, textStart } from '@/lib/rtl';
@@ -35,6 +36,7 @@ import { getStreak, listSessions, type WorkoutSession } from '@/lib/sessions';
 import { getPlanInsight } from '@/lib/coach-ai';
 import { computeFfmi, ffmiTier } from '@/lib/leagues';
 import { readCache } from '@/lib/screen-cache';
+import { startAndJoinCall } from '@/lib/calls';
 
 const STATUS_TONE: Record<Plan['status'], BadgeTone> = {
   draft: 'warning',
@@ -116,6 +118,7 @@ type Snapshot = {
 export function ClientDetailDesktop() {
   const { t } = useTranslation();
   const router = useRouter();
+  const toast = useToast();
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const cacheKey = id ? `coach-client:${id}` : null;
   const cached = readCache<Snapshot>(cacheKey);
@@ -315,11 +318,11 @@ export function ClientDetailDesktop() {
               onPress={() => router.push({ pathname: '/chat/[id]', params: { id: id!, name: name ?? '' } })}
             />
             <Button
-              title={t('webportal.clientDetail.bookCall')}
+              title={t('calls.coach.callNow')}
               variant="secondary"
               fullWidth={false}
               left={<Icon name="video" size={16} color={theme.colors.text} />}
-              onPress={() => router.push('/coach/calls')}
+              onPress={() => { if (id) startAndJoinCall(id).catch(() => toast.show(t('calls.error.generic'), 'error')); }}
             />
           </View>
         </View>

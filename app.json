@@ -48,6 +48,12 @@
       "expo-localization",
       "expo-notifications",
       [
+        "expo-calendar",
+        {
+          "calendarPermission": "Allow $(PRODUCT_NAME) to add your booked calls to your calendar."
+        }
+      ],
+      [
         "expo-audio",
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone so you can send voice notes in chat."

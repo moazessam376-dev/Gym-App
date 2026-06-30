@@ -461,3 +461,21 @@ insert into public.coach_requests (id, client_id, client_name, coach_id, message
 -- target row to be denied. Composite PK of existing profile ids → no new UUID.
 insert into public.conversation_read_state (user_id, peer_id, last_read_at) values
   ('aaaa0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', now() - interval '1 day');
+
+-- ── Calls & Meetings (0083) — slots + a past call (cross-tenant + positive fixtures) ──
+-- Seeded as superuser (auth.uid() null → handle_call_insert passes through), so origin/
+-- parties/status are set explicitly. S_A_held is set 'held' DIRECTLY (no pending call → no
+-- notification side effect); the completed ad-hoc call's notify trigger no-ops (it fires only
+-- for pending/ringing). Coach A: one OPEN + one HELD slot. Coach B: one OPEN (cross-tenant).
+insert into public.coach_call_slots (id, coach_id, starts_at, duration_minutes, status) values
+  ('00831001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', now() + interval '7 days', 30, 'open'),
+  ('00831002-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', now() + interval '8 days', 30, 'held'),
+  ('00831003-0000-0000-0000-000000000003', '22222222-2222-2222-2222-222222222222', now() + interval '7 days', 45, 'open');
+
+-- A completed ad-hoc call (Coach A ↔ Client A1): a positive read fixture for both parties.
+insert into public.calls
+  (id, origin, coach_id, client_id, client_name, slot_id, status, scheduled_at, duration_minutes, started_at, ended_at)
+values
+  ('00831010-0000-0000-0000-000000000010', 'coach_adhoc',
+   '11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', 'Client A1',
+   null, 'completed', now() - interval '2 days', 30, now() - interval '2 days', now() - interval '2 days');

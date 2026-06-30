@@ -1,4 +1,111 @@
 {
+  "calls": {
+    "bookEntry": "احجز مكالمة",
+    "addToCalendar": "ضيفها للتقويم",
+    "addedToCalendar": "اتضافت لتقويمك",
+    "calendarEventTitle": "مكالمة كوتشينج",
+    "reminder": {
+      "dailyTitle": "راجع تقويمك",
+      "dailyBody": "راجع مكالمات النهاردة ومواعيدك المتاحة."
+    },
+    "book": {
+      "title": "احجز مكالمة مع {{name}}",
+      "titleNoName": "احجز مكالمة",
+      "subtitle": "محتاجة موافقة الكوتش · خلال ٢٤ ساعة",
+      "purpose": "الغرض",
+      "duration": "المدة",
+      "date": "التاريخ",
+      "availableTimes": "المواعيد المتاحة",
+      "noSlots": "مفيش مواعيد متاحة لسه — الكوتش لسه ما حددش مواعيده.",
+      "noSlotsForDay": "مفيش مواعيد في اليوم ده.",
+      "request": "اطلب مكالمة",
+      "requestWhen": "اطلب مكالمة · {{when}}",
+      "minutes": "{{count}} دقيقة",
+      "success": "اتبعت طلب المكالمة — هنبعتلك إشعار لما الكوتش يأكّد.",
+      "slotTaken": "الموعد ده اتحجز للتو. اختار غيره."
+    },
+    "purpose": {
+      "progress_review": "مراجعة التقدّم",
+      "plan_adjustment": "تعديل الخطة",
+      "form_check": "مراجعة الأداء",
+      "other": "تاني"
+    },
+    "status": {
+      "pending": "في انتظار الموافقة",
+      "accepted": "مؤكّدة",
+      "ringing": "بترن…",
+      "in_progress": "جارية",
+      "completed": "خلصت",
+      "declined": "اترفضت",
+      "cancelled": "اتلغت",
+      "expired": "انتهت",
+      "missed": "فاتت"
+    },
+    "list": {
+      "title": "مكالماتي",
+      "upcoming": "القادمة",
+      "past": "السابقة",
+      "empty": "مفيش مكالمات لسه",
+      "emptySub": "احجز مكالمة مع الكوتش بتاعك علشان تبدأ."
+    },
+    "join": "ادخل",
+    "cancel": "إلغاء المكالمة",
+    "cancelConfirm": "تلغي المكالمة دي؟",
+    "cancelConfirmBody": "هيتبعت إشعار للكوتش.",
+    "incoming": {
+      "title": "مكالمة جاية",
+      "from": "{{name}} بيكلّمك",
+      "fromCoach": "الكوتش بيكلّمك",
+      "join": "ادخل",
+      "dismiss": "تجاهل"
+    },
+    "coach": {
+      "title": "المكالمات",
+      "subtitle": "الطلبات، المكالمات القادمة، ومواعيدك المتاحة.",
+      "tabRequests": "الطلبات",
+      "tabUpcoming": "القادمة",
+      "tabAvailability": "المواعيد",
+      "requestsEmpty": "مفيش طلبات معلّقة",
+      "requestsEmptySub": "لما عميل يطلب مكالمة هتظهر هنا.",
+      "upcomingEmpty": "مفيش مكالمات قادمة",
+      "upcomingEmptySub": "المكالمات المؤكّدة هتظهر هنا.",
+      "accept": "قبول",
+      "decline": "رفض",
+      "accepted": "اتأكدت المكالمة",
+      "declined": "اترفض الطلب",
+      "callNow": "اتصل دلوقتي",
+      "calling": "بنبدأ المكالمة…"
+    },
+    "availability": {
+      "title": "المواعيد المتاحة للحجز",
+      "subtitle": "مواعيد مفتوحة العملاء يقدروا يطلبوها.",
+      "add": "ضيف موعد",
+      "addTitle": "موعد جديد",
+      "date": "التاريخ",
+      "time": "الوقت (٢٤ ساعة)",
+      "duration": "المدة",
+      "publish": "انشر الموعد",
+      "empty": "مفيش مواعيد لسه — ضيف واحد علشان العملاء يحجزوا.",
+      "close": "إغلاق",
+      "reopen": "إعادة فتح",
+      "delete": "حذف",
+      "deleteConfirm": "تحذف الموعد ده؟",
+      "invalidTime": "اكتب وقت صح في المستقبل لليوم ده.",
+      "daySlots": "مواعيد {{date}}",
+      "noDaySlots": "مفيش مواعيد في اليوم ده لسه.",
+      "slot": {
+        "open": "مفتوح",
+        "held": "مطلوب",
+        "booked": "محجوز",
+        "closed": "مقفول"
+      }
+    },
+    "error": {
+      "generic": "حصل خطأ. حاول تاني.",
+      "rateLimited": "وصلت للحد دلوقتي. حاول تاني بعدين.",
+      "noCoach": "لازم يكون عندك كوتش قبل ما تحجز مكالمة."
+    }
+  },
   "common": {
     "cancel": "إلغاء",
     "close": "إغلاق",

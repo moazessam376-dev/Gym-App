@@ -99,6 +99,9 @@ export default function AccountTab() {
             {!hasCoach ? (
               <LinkRow icon="ticket-outline" label={t('account.acceptInvite')} onPress={go('/accept-invite')} />
             ) : null}
+            {hasCoach ? (
+              <LinkRow icon="video" label={t('calls.bookEntry')} onPress={go('/calls')} />
+            ) : null}
             <LinkRow icon="ribbon-outline" label={t('account.becomeCoach')} onPress={go('/become-coach')} />
           </>
         ) : null}

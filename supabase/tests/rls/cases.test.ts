@@ -4163,3 +4163,138 @@ describe('@handle (0069)', () => {
     ).rejects.toThrow();
   });
 });
+
+describe('calls & meetings (0083) — slots + booking asymmetry + lifecycle (§2)', () => {
+  const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };
+  const CLIENT_B1_ID: Identity = { sub: CLIENT_B1, userRole: 'client' };
+  const SLOT_A_OPEN = '00831001-0000-0000-0000-000000000001';
+  const SLOT_A_HELD = '00831002-0000-0000-0000-000000000002';
+  const SLOT_B_OPEN = '00831003-0000-0000-0000-000000000003';
+  const DONE_CALL = '00831010-0000-0000-0000-000000000010';
+
+  // ── cross-tenant reads → 0 rows (read tests first; mutating tests are last) ──
+  it("client A1 sees only their coach's OPEN slots (held + other-coach hidden)", async () => {
+    const r = await asUser(CLIENT_A1, (c) => c.query('select id from public.coach_call_slots'));
+    const ids = r.rows.map((x) => x.id);
+    expect(ids).toContain(SLOT_A_OPEN);
+    expect(ids).not.toContain(SLOT_A_HELD); // held → hidden from the booking sheet
+    expect(ids).not.toContain(SLOT_B_OPEN); // another coach's slot → cross-tenant
+    expect(r.rows).toHaveLength(1);
+  });
+
+  it('client B1 cannot read coach A slots or client A1 calls', async () => {
+    const slots = await asUser(CLIENT_B1_ID, (c) =>
+      c.query('select id from public.coach_call_slots where coach_id = $1', [COACH_A.sub]),
+    );
+    const calls = await asUser(CLIENT_B1_ID, (c) =>
+      c.query('select id from public.calls where id = $1', [DONE_CALL]),
+    );
+    expect(slots.rows).toHaveLength(0);
+    expect(calls.rows).toHaveLength(0);
+  });
+
+  it('coach B cannot read coach A slots or calls', async () => {
+    const slots = await asUser(COACH_B, (c) =>
+      c.query('select id from public.coach_call_slots where coach_id = $1', [COACH_A.sub]),
+    );
+    const calls = await asUser(COACH_B, (c) => c.query('select id from public.calls'));
+    expect(slots.rows).toHaveLength(0);
+    expect(calls.rows).toHaveLength(0);
+  });
+
+  it('anon sees no slots or calls', async () => {
+    const slots = await asAnon((c) => c.query('select id from public.coach_call_slots'));
+    const calls = await asAnon((c) => c.query('select id from public.calls'));
+    expect(slots.rows).toHaveLength(0);
+    expect(calls.rows).toHaveLength(0);
+  });
+
+  // ── positive controls ──
+  it('coach A sees their own two slots + the completed call', async () => {
+    const slots = await asUser(COACH_A, (c) => c.query('select id from public.coach_call_slots'));
+    const calls = await asUser(COACH_A, (c) => c.query('select id from public.calls'));
+    expect(slots.rows).toHaveLength(2); // open + held
+    expect(calls.rows.map((x) => x.id)).toContain(DONE_CALL);
+  });
+
+  it('client A1 sees their own call', async () => {
+    const r = await asUser(CLIENT_A1, (c) => c.query('select id from public.calls'));
+    expect(r.rows.map((x) => x.id)).toContain(DONE_CALL);
+  });
+
+  // ── the asymmetry: a client can NEVER create a coach_adhoc / ringing call ──
+  it('client forging coach_adhoc is rejected (origin forced → no slot → invalid)', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query(
+          "insert into public.calls (origin, coach_id, client_id, status) values ('coach_adhoc', $1, $2, 'ringing')",
+          [COACH_A.sub, CLIENT_A2],
+        ),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("client cannot book another coach's slot", async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("insert into public.calls (slot_id, purpose) values ($1, 'other')", [SLOT_B_OPEN]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('client cannot book a held slot (double-booking guard)', async () => {
+    await expect(
+      asUser(CLIENT_A1, (c) =>
+        c.query("insert into public.calls (slot_id, purpose) values ($1, 'other')", [SLOT_A_HELD]),
+      ),
+    ).rejects.toThrow();
+  });
+
+  // ── status transitions are server-side only ──
+  it('coach cannot mutate a call via a direct RLS update (must use the RPC)', async () => {
+    const r = await asUser(COACH_A, (c) =>
+      c.query("update public.calls set status = 'cancelled' where id = $1", [DONE_CALL]),
+    );
+    expect(r.rowCount).toBe(0); // no coach UPDATE policy → 0 rows
+  });
+
+  it('coach can publish their OWN slot but not one for another coach', async () => {
+    const own = await asUser(COACH_A, (c) =>
+      c.query(
+        "insert into public.coach_call_slots (coach_id, starts_at, duration_minutes) values ($1, now() + interval '30 days', 30) returning id",
+        [COACH_A.sub],
+      ),
+    );
+    expect(own.rows).toHaveLength(1);
+    await expect(
+      asUser(COACH_A, (c) =>
+        c.query(
+          "insert into public.coach_call_slots (coach_id, starts_at, duration_minutes) values ($1, now() + interval '31 days', 30)",
+          [COACH_B_ID],
+        ),
+      ),
+    ).rejects.toThrow();
+  });
+
+  // ── client create + cancel are the ONLY client writes (mutating → last) ──
+  it('client can create a booking and cancel it, but cannot self-accept', async () => {
+    const booked = await asUser(CLIENT_A1, (c) =>
+      c.query(
+        "insert into public.calls (slot_id, purpose) values ($1, 'progress_review') returning id, origin, status",
+        [SLOT_A_OPEN],
+      ),
+    );
+    expect(booked.rows[0].origin).toBe('client_request'); // server-derived, not the body
+    expect(booked.rows[0].status).toBe('pending');
+    const callId = booked.rows[0].id;
+    // Self-accept violates the cancel WITH CHECK (status must be 'cancelled').
+    await expect(
+      asUser(CLIENT_A1, (c) => c.query("update public.calls set status = 'accepted' where id = $1", [callId])),
+    ).rejects.toThrow();
+    // Cancel is allowed.
+    const cancel = await asUser(CLIENT_A1, (c) =>
+      c.query("update public.calls set status = 'cancelled' where id = $1", [callId]),
+    );
+    expect(cancel.rowCount).toBe(1);
+  });
+});

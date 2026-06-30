@@ -32,6 +32,10 @@ const COPY: Record<
     coach_comment: { title: string; body: (name: string) => string };
     plan_published: { title: string; body: (name: string, type: string, title: string) => string };
     pr_achieved: { title: string; body: (exercise: string) => string };
+    call_requested: { title: string; body: (name: string) => string };
+    call_accepted: { title: string; body: (name: string) => string };
+    call_declined: { title: string; body: (name: string) => string };
+    call_incoming: { title: string; body: (name: string) => string };
   }
 > = {
   en: {
@@ -44,6 +48,10 @@ const COPY: Record<
       body: (n, type, title) => `${n} published your ${type} plan: ${title}`,
     },
     pr_achieved: { title: 'New personal record 💪', body: (e) => e },
+    call_requested: { title: 'New call request', body: (n) => `${n} requested a call` },
+    call_accepted: { title: 'Call confirmed', body: (n) => `${n} confirmed your call` },
+    call_declined: { title: 'Call declined', body: (n) => `${n} declined your call request` },
+    call_incoming: { title: 'Incoming call 📞', body: (n) => `${n} is calling you` },
   },
   ar: {
     someone: 'حد',
@@ -55,6 +63,10 @@ const COPY: Record<
       body: (n, type, title) => `${n} نشرلك خطة ${type}: ${title}`,
     },
     pr_achieved: { title: 'رقم قياسي جديد 💪', body: (e) => e },
+    call_requested: { title: 'طلب مكالمة جديد', body: (n) => `${n} طلب مكالمة معاك` },
+    call_accepted: { title: 'المكالمة اتأكدت', body: (n) => `${n} أكّد مكالمتك` },
+    call_declined: { title: 'المكالمة اترفضت', body: (n) => `${n} رفض طلب المكالمة` },
+    call_incoming: { title: 'مكالمة جاية 📞', body: (n) => `${n} بيكلّمك دلوقتي` },
   },
 };
 
@@ -91,7 +103,15 @@ function jwtRole(token: string): string | undefined {
 
 type NotificationRow = {
   recipient_id: string;
-  type: 'message' | 'coach_comment' | 'plan_published' | 'pr_achieved';
+  type:
+    | 'message'
+    | 'coach_comment'
+    | 'plan_published'
+    | 'pr_achieved'
+    | 'call_requested'
+    | 'call_accepted'
+    | 'call_declined'
+    | 'call_incoming';
   params: Record<string, unknown> | null;
   entity_type: string | null;
   entity_id: string | null;
@@ -116,6 +136,14 @@ function render(row: NotificationRow, locale: Locale): { title: string; body: st
     }
     case 'pr_achieved':
       return { title: c.pr_achieved.title, body: c.pr_achieved.body(str(row.params, 'exercise_name')) };
+    case 'call_requested':
+      return { title: c.call_requested.title, body: c.call_requested.body(actor) };
+    case 'call_accepted':
+      return { title: c.call_accepted.title, body: c.call_accepted.body(actor) };
+    case 'call_declined':
+      return { title: c.call_declined.title, body: c.call_declined.body(actor) };
+    case 'call_incoming':
+      return { title: c.call_incoming.title, body: c.call_incoming.body(actor) };
     default:
       return { title: '', body: '' };
   }
