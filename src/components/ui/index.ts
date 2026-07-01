@@ -14,6 +14,8 @@ export { Badge } from './Badge';
 export type { BadgeProps, BadgeTone } from './Badge';
 export { Input } from './Input';
 export type { InputProps } from './Input';
+export { TimeField, minutesToLabel } from './TimeField';
+export type { TimeFieldProps } from './TimeField';
 export { ProgressRing } from './ProgressRing';
 export type { ProgressRingProps } from './ProgressRing';
 export { IconButton } from './IconButton';

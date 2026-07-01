@@ -17,7 +17,7 @@ import {
   getNotificationPrefs,
   setNotificationPrefs,
   type NotificationPrefs,
-  type NotificationType,
+  type NotificationPrefKey,
 } from '@/lib/notifications';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import {
@@ -35,7 +35,7 @@ import { theme } from '@/theme';
 
 // One notification toggle: the real pref key + its row icon + the i18n keys for the
 // bold label and the muted description line. Order mirrors the mobile screen.
-const PREF_ROWS: { key: NotificationType; icon: IconName; labelKey: string; descKey: string }[] = [
+const PREF_ROWS: { key: NotificationPrefKey; icon: IconName; labelKey: string; descKey: string }[] = [
   { key: 'message', icon: 'chatbubble-ellipses-outline', labelKey: 'notifications.prefs.message', descKey: 'webportal.settings.prefDesc.message' },
   { key: 'coach_comment', icon: 'chatbox-ellipses-outline', labelKey: 'notifications.prefs.coachComment', descKey: 'webportal.settings.prefDesc.coachComment' },
   { key: 'plan_published', icon: 'document-text-outline', labelKey: 'notifications.prefs.planPublished', descKey: 'webportal.settings.prefDesc.planPublished' },
@@ -151,7 +151,7 @@ export function SettingsDesktop() {
     if (prefsQ.data) setPrefs(prefsQ.data);
   }, [prefsQ.data]);
 
-  const onTogglePref = (key: NotificationType) => async (v: boolean) => {
+  const onTogglePref = (key: NotificationPrefKey) => async (v: boolean) => {
     if (!prefs || !userId) return;
     const prev = prefs;
     const next = { ...prefs, [key]: v };

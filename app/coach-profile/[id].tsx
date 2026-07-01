@@ -182,7 +182,7 @@ export default function CoachProfileScreen() {
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: theme.spacing.md }}>
             {(transformationsQ.data ?? []).map((tr) => (
-              <ShareableTransformationCard key={tr.transformation_id} item={tr} />
+              <ShareableTransformationCard key={tr.transformation_id} item={tr} coachName={p.full_name} />
             ))}
           </ScrollView>
         </View>

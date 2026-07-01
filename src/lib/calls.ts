@@ -86,6 +86,92 @@ export async function createCallRequest(slotId: string, purpose: CallPurpose): P
   }
 }
 
+// ── Recurring weekly availability (Calendly model, 0085) ──────────────────────
+export type CoachAvailability = { coach_id: string; weekday: number; start_minute: number; end_minute: number };
+
+/** The coach's weekly windows — readable by the coach (own) or their clients (booking sheet). */
+export async function listCoachAvailability(): Promise<CoachAvailability[]> {
+  const { data, error } = await supabase
+    .from('coach_availability')
+    .select('coach_id, weekday, start_minute, end_minute');
+  if (error) throw error;
+  return (data ?? []) as CoachAvailability[];
+}
+
+/** Upsert a coach's window for one weekday (0=Sun). Minutes are local minutes-from-midnight. */
+export async function setCoachAvailability(
+  coachId: string,
+  weekday: number,
+  startMinute: number,
+  endMinute: number,
+): Promise<void> {
+  const { error } = await supabase
+    .from('coach_availability')
+    .upsert({ coach_id: coachId, weekday, start_minute: startMinute, end_minute: endMinute }, { onConflict: 'coach_id,weekday' });
+  if (error) throw error;
+}
+
+/** Remove a coach's window for one weekday (the day becomes unavailable). */
+export async function clearCoachAvailabilityDay(coachId: string, weekday: number): Promise<void> {
+  const { error } = await supabase.from('coach_availability').delete().eq('coach_id', coachId).eq('weekday', weekday);
+  if (error) throw error;
+}
+
+/** The coach's busy start-times (no client identity) so the booking sheet can grey them out. */
+export async function listCoachBookedTimes(coachId: string): Promise<{ scheduled_at: string; duration_minutes: number | null }[]> {
+  const { data, error } = await supabase.rpc('coach_booked_times', { p_coach: coachId });
+  if (error) throw error;
+  return (data ?? []) as { scheduled_at: string; duration_minutes: number | null }[];
+}
+
+/** Book a TIME within the coach's working hours (slotless). The trigger validates future +
+ *  duration + sets the parties; the exact-start unique index rejects a clash → SLOT_TAKEN. */
+export async function createCallRequestAtTime(scheduledAtIso: string, durationMinutes: number, purpose: CallPurpose): Promise<void> {
+  const { error } = await supabase
+    .from('calls')
+    .insert({ scheduled_at: scheduledAtIso, duration_minutes: durationMinutes, purpose });
+  if (error) {
+    if (error.code === '23505') throw new Error(SLOT_TAKEN);
+    throw error;
+  }
+}
+
+/** Compute bookable LOCAL start-times from the coach's weekly windows over the next `days`,
+ *  at `duration` minutes (stepped every 30 min), excluding past times and any that OVERLAP an
+ *  already-booked call. Pure client-side (single-region pilot: same tz on both sides). */
+export function deriveBookableTimes(
+  windows: CoachAvailability[],
+  booked: { scheduled_at: string; duration_minutes: number | null }[],
+  durationMinutes: number,
+  days = 21,
+  stepMinutes = 30,
+): Date[] {
+  const now = Date.now();
+  const byWeekday = new Map<number, CoachAvailability>();
+  for (const w of windows) byWeekday.set(w.weekday, w);
+  const ranges = booked
+    .filter((b) => b.scheduled_at)
+    .map((b) => {
+      const s = new Date(b.scheduled_at).getTime();
+      return [s, s + (b.duration_minutes ?? 30) * 60_000] as [number, number];
+    });
+  const out: Date[] = [];
+  const base = new Date();
+  for (let d = 0; d < days; d++) {
+    const day = new Date(base.getFullYear(), base.getMonth(), base.getDate() + d);
+    const w = byWeekday.get(day.getDay());
+    if (!w) continue;
+    for (let m = w.start_minute; m + durationMinutes <= w.end_minute; m += stepMinutes) {
+      const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, m).getTime();
+      if (start <= now) continue;
+      const end = start + durationMinutes * 60_000;
+      if (ranges.some(([bs, be]) => start < be && end > bs)) continue; // overlaps a booking
+      out.push(new Date(start));
+    }
+  }
+  return out;
+}
+
 /** The signed-in client's calls, newest scheduled first (RLS: client_id = auth.uid()). */
 export async function listMyCalls(): Promise<Call[]> {
   const { data, error } = await supabase
@@ -187,12 +273,31 @@ export async function startAndJoinCall(clientId: string, purpose: CallPurpose = 
 }
 
 // ── Privileged transitions (Edge Functions, §2) ───────────────────────────────
+/** Raised only when the session is genuinely dead (token refresh failed) → prompt re-login. */
+export const AUTH_EXPIRED = 'auth_expired';
+
+/**
+ * Invoke an Edge Function, recovering from a STALE access token. The functions gateway
+ * (verify_jwt) returns 401 on an expired/revoked token even while REST reads still work
+ * (the in-session gotcha the founder hit). On a 401 we refresh the session ONCE and retry,
+ * so a real user never sees the failure; only a genuinely-dead session (refresh fails)
+ * surfaces AUTH_EXPIRED for the UI to prompt a re-login. A non-401 error (e.g. a business
+ * request_invalid 400) is surfaced unchanged.
+ */
+async function invokeAuthed(fn: string, body: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.functions.invoke(fn, { body });
+  if (!error) return;
+  const status = (error as { context?: { status?: number } }).context?.status;
+  if (status !== 401) throw error;
+  const { data, error: refreshErr } = await supabase.auth.refreshSession();
+  if (refreshErr || !data.session) throw new Error(AUTH_EXPIRED);
+  const { error: retryErr } = await supabase.functions.invoke(fn, { body });
+  if (retryErr) throw retryErr;
+}
+
 /** Coach accepts/declines a booking request → resolve-call-request (the only writer). */
 export async function resolveCallRequest(callId: string, decision: 'accept' | 'decline'): Promise<void> {
-  const { error } = await supabase.functions.invoke('resolve-call-request', {
-    body: { call_id: callId, decision },
-  });
-  if (error) throw error;
+  await invokeAuthed('resolve-call-request', { call_id: callId, decision });
 }
 
 /** Either party moves a call's lifecycle → transition-call (start/complete/miss/cancel). */
@@ -200,10 +305,7 @@ export async function transitionCall(
   callId: string,
   event: 'start' | 'complete' | 'miss' | 'cancel',
 ): Promise<void> {
-  const { error } = await supabase.functions.invoke('transition-call', {
-    body: { call_id: callId, event },
-  });
-  if (error) throw error;
+  await invokeAuthed('transition-call', { call_id: callId, event });
 }
 
 // ── Realtime ──────────────────────────────────────────────────────────────────

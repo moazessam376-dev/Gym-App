@@ -6,19 +6,20 @@
 //                    time slots for it (AvailabilityCalendar).
 // Coach-only; others redirect. Reached from the web sidebar + Settings "Manage hours".
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
-import { textStart } from '../../src/lib/rtl';
+import { textStart, forwardChevron } from '../../src/lib/rtl';
 import { queryClient } from '../../src/lib/query';
 import { joinCall } from '../../src/lib/callProvider';
 import { ensureDailyCoachReminder } from '../../src/lib/callReminders';
-import { resolveCallRequest, type Call } from '../../src/lib/calls';
-import { useCoachCallInbox, useCoachCalls, useMySlots } from '../../src/lib/queries/calls';
-import { Button, EmptyState, Screen, Segmented, Text, useToast } from '../../src/components/ui';
+import { AUTH_EXPIRED, resolveCallRequest, type Call } from '../../src/lib/calls';
+import { useCoachAvailability, useCoachCallInbox, useCoachCalls, useMySlots } from '../../src/lib/queries/calls';
+import { Button, EmptyState, Icon, Screen, Segmented, Text, useToast } from '../../src/components/ui';
 import { CallCard } from '../../src/components/calls/CallCard';
 import { AvailabilityCalendar } from '../../src/components/calls/AvailabilityCalendar';
+import { WeeklyHoursEditor } from '../../src/components/calls/WeeklyHoursEditor';
 import { useChrome } from '../../src/lib/chrome';
 import { CoachCallsDesktop } from '../../src/components/coach/web/CoachCallsDesktop';
 import { theme } from '../../src/theme';
@@ -46,8 +47,8 @@ function RequestsTab() {
       await resolveCallRequest(c.id, decision);
       invalidateCalls();
       toast.show(decision === 'accept' ? t('calls.coach.accepted') : t('calls.coach.declined'));
-    } catch {
-      toast.show(t('calls.error.generic'), 'error');
+    } catch (e) {
+      toast.show((e as Error)?.message === AUTH_EXPIRED ? t('calls.error.sessionExpired') : t('calls.error.generic'), 'error');
     } finally {
       setBusyId(null);
     }
@@ -109,14 +110,39 @@ function UpcomingTab() {
   );
 }
 
-// ── Availability editor (month-grid calendar) ──────────────────────────────────────
+// ── Availability editor: weekly working-hours (Calendly, the hero) + one-off slots ─────
+// The weekly schedule is the primary tool; one-off dates are tucked into a collapsible
+// section so the screen stays compact (the month grid is only shown on demand).
 function AvailabilityTab({ coachId }: { coachId: string }) {
+  const { t } = useTranslation();
   const slotsQ = useMySlots();
-  const refresh = () => {
+  const availQ = useCoachAvailability();
+  const [showOneOff, setShowOneOff] = useState(false);
+  const refreshSlots = () => {
     queryClient.invalidateQueries({ queryKey: ['my-slots'] });
     queryClient.invalidateQueries({ queryKey: ['coach-open-slots'] });
   };
-  return <AvailabilityCalendar slots={slotsQ.data ?? []} coachId={coachId} onChanged={refresh} />;
+  const refreshAvail = () => queryClient.invalidateQueries({ queryKey: ['coach-availability'] });
+  const oneOffCount = (slotsQ.data ?? []).length;
+  return (
+    <View style={{ gap: theme.spacing.lg }}>
+      <WeeklyHoursEditor windows={availQ.data ?? []} coachId={coachId} onChanged={refreshAvail} />
+      <Pressable
+        onPress={() => setShowOneOff((s) => !s)}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}
+      >
+        <Icon name={showOneOff ? 'chevron-down' : forwardChevron()} size={18} color={theme.colors.textMuted} />
+        <Text variant="bodyStrong" style={[textStart, { flex: 1 }]}>{t('calls.availability.adhocTitle')}</Text>
+        {oneOffCount > 0 ? <Text variant="caption" muted>{String(oneOffCount)}</Text> : null}
+      </Pressable>
+      {showOneOff ? (
+        <>
+          <Text variant="caption" muted style={textStart}>{t('calls.availability.subtitle')}</Text>
+          <AvailabilityCalendar slots={slotsQ.data ?? []} coachId={coachId} onChanged={refreshSlots} />
+        </>
+      ) : null}
+    </View>
+  );
 }
 
 export default function CoachCallsScreen() {

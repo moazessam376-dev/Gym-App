@@ -106,6 +106,7 @@ const migrationFiles = [
   '0082_coach_request_public_coach_fix.sql',
   '0083_calls.sql',
   '0084_transformation_submissions.sql',
+  '0085_coach_availability.sql',
 ];
 
 const baseUrl =

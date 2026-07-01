@@ -18,6 +18,7 @@
       "availableTimes": "المواعيد المتاحة",
       "noSlots": "مفيش مواعيد متاحة لسه — الكوتش لسه ما حددش مواعيده.",
       "noSlotsForDay": "مفيش مواعيد في اليوم ده.",
+      "noTimesForDuration": "مفيش مواعيد فاضية بالمدة دي — جرّب مكالمة أقصر أو مدة تانية.",
       "request": "اطلب مكالمة",
       "requestWhen": "اطلب مكالمة · {{when}}",
       "minutes": "{{count}} دقيقة",
@@ -62,6 +63,7 @@
     "coach": {
       "title": "المكالمات",
       "subtitle": "الطلبات، المكالمات القادمة، ومواعيدك المتاحة.",
+      "manageEntry": "المكالمات والمواعيد",
       "tabRequests": "الطلبات",
       "tabUpcoming": "القادمة",
       "tabAvailability": "المواعيد",
@@ -93,6 +95,17 @@
       "invalidTime": "اكتب وقت صح في المستقبل لليوم ده.",
       "daySlots": "مواعيد {{date}}",
       "noDaySlots": "مفيش مواعيد في اليوم ده لسه.",
+      "weeklyTitle": "مواعيد الأسبوع",
+      "weeklySub": "حدّد مواعيدك المتاحة كل أسبوع. العملاء بيحجزوا أي وقت فاضي جوّه المواعيد دي.",
+      "startTime": "وقت البداية",
+      "hours": "{{count}} ساعة",
+      "editHours": "تعديل المواعيد",
+      "setHours": "حدّد المواعيد",
+      "off": "أجازة",
+      "from": "من",
+      "to": "إلى",
+      "invalidRange": "وقت النهاية لازم يكون بعد وقت البداية.",
+      "adhocTitle": "مواعيد لمرة واحدة",
       "slot": {
         "open": "مفتوح",
         "held": "مطلوب",
@@ -100,8 +113,13 @@
         "closed": "مقفول"
       }
     },
+    "time": {
+      "am": "ص",
+      "pm": "م"
+    },
     "error": {
       "generic": "حصل خطأ. حاول تاني.",
+      "sessionExpired": "انتهت جلستك — سجّل دخول تاني.",
       "rateLimited": "وصلت للحد دلوقتي. حاول تاني بعدين.",
       "noCoach": "لازم يكون عندك كوتش قبل ما تحجز مكالمة."
     }
@@ -464,6 +482,14 @@
   },
   "coachProfile": {
     "weeks": "{{count}} أسبوع",
+    "weeksShort": "{{count}} أسبوع",
+    "cardTag": "تحوّل",
+    "rankUp": "ترقية",
+    "rank": "المستوى",
+    "coachedBy": "تدريب {{name}}",
+    "ratioSquare": "مربّع",
+    "ratioPortrait": "طولي",
+    "ratioStory": "ستوري",
     "before": "قبل",
     "after": "بعد",
     "share": "مشاركة",
@@ -582,6 +608,9 @@
     "noPlanWithCoach": "{{coach}} هيبعتلك خطتك قريب.",
     "noPlanNoCoach": "أول ما يبقى عندك كوتش وخطة، تمرين النهارده هيظهر هنا.",
     "nutritionToday": "أكل النهارده",
+    "calls": "المكالمات",
+    "callsNext": "المكالمة الجاية · {{when}}",
+    "callsBookSub": "احجز جلسة فردية مع الكوتش.",
     "kcalLeft": "فاضل {{left}} سعر",
     "macroLine": "{{consumed}} / {{target}} سعر · بروتين {{p}} · كارب {{c}} · دهون {{f}}",
     "macroConsumed": "{{consumed}} / {{target}} سعر",
@@ -1030,6 +1059,22 @@
     "coachRequest": {
       "title": "طلب تدريب جديد",
       "body": "{{name}} عايزك تبقى الكوتش بتاعه"
+    },
+    "callRequested": {
+      "title": "طلب مكالمة جديد",
+      "body": "{{name}} طلب مكالمة"
+    },
+    "callIncoming": {
+      "title": "مكالمة واردة",
+      "body": "{{name}} بيتصل بيك"
+    },
+    "callAccepted": {
+      "title": "المكالمة اتأكدت",
+      "body": "{{name}} أكّد مكالمتك"
+    },
+    "callDeclined": {
+      "title": "المكالمة اترفضت",
+      "body": "{{name}} مش هيقدر ياخد مكالمتك المرة دي"
     },
     "settingsTitle": "إعدادات الإشعارات",
     "settingsSub": "اختار تتبلّغ بإيه.",

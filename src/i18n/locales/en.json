@@ -18,6 +18,7 @@
       "availableTimes": "Available times",
       "noSlots": "No open times yet — your coach hasn't published availability.",
       "noSlotsForDay": "No times on this day.",
+      "noTimesForDuration": "No times free at this length — try a shorter call or another duration.",
       "request": "Request call",
       "requestWhen": "Request call · {{when}}",
       "minutes": "{{count}} min",
@@ -62,6 +63,7 @@
     "coach": {
       "title": "Calls",
       "subtitle": "Requests, upcoming calls, and your bookable hours.",
+      "manageEntry": "Calls & availability",
       "tabRequests": "Requests",
       "tabUpcoming": "Upcoming",
       "tabAvailability": "Availability",
@@ -93,6 +95,17 @@
       "invalidTime": "Enter a valid future time for this day.",
       "daySlots": "Slots on {{date}}",
       "noDaySlots": "No slots this day yet.",
+      "weeklyTitle": "Weekly hours",
+      "weeklySub": "Set when you're available each week. Clients book any free time inside these hours.",
+      "startTime": "Start time",
+      "hours": "{{count}}h",
+      "editHours": "Edit hours",
+      "setHours": "Set hours",
+      "off": "Off",
+      "from": "From",
+      "to": "To",
+      "invalidRange": "End time must be after the start time.",
+      "adhocTitle": "One-off slots",
       "slot": {
         "open": "Open",
         "held": "Requested",
@@ -100,8 +113,13 @@
         "closed": "Closed"
       }
     },
+    "time": {
+      "am": "AM",
+      "pm": "PM"
+    },
     "error": {
       "generic": "Something went wrong. Try again.",
+      "sessionExpired": "Your session expired — please sign in again.",
       "rateLimited": "You've reached the limit for now. Try again later.",
       "noCoach": "You need a coach before you can book a call."
     }
@@ -194,6 +212,9 @@
     "noPlanWithCoach": "{{coach}} will assign your plan soon.",
     "noPlanNoCoach": "Once you have a coach and a plan, your daily workout shows up here.",
     "nutritionToday": "Nutrition today",
+    "calls": "Calls",
+    "callsNext": "Next call · {{when}}",
+    "callsBookSub": "Book a 1-on-1 with your coach.",
     "kcalLeft": "{{left}} kcal left",
     "macroLine": "{{consumed}} / {{target}} kcal · {{p}}P / {{c}}C / {{f}}F",
     "macroConsumed": "{{consumed}} / {{target}} kcal",
@@ -869,6 +890,14 @@
   },
   "coachProfile": {
     "weeks": "{{count}} weeks",
+    "weeksShort": "{{count}} WK",
+    "cardTag": "Transformation",
+    "rankUp": "Rank up",
+    "rank": "Rank",
+    "coachedBy": "Coached by {{name}}",
+    "ratioSquare": "Square",
+    "ratioPortrait": "Portrait",
+    "ratioStory": "Story",
     "before": "Before",
     "after": "After",
     "share": "Share",
@@ -1002,6 +1031,22 @@
     "coachRequest": {
       "title": "New coaching request",
       "body": "{{name}} wants you as their coach"
+    },
+    "callRequested": {
+      "title": "New call request",
+      "body": "{{name}} requested a call"
+    },
+    "callIncoming": {
+      "title": "Incoming call",
+      "body": "{{name}} is calling you"
+    },
+    "callAccepted": {
+      "title": "Call confirmed",
+      "body": "{{name}} confirmed your call"
+    },
+    "callDeclined": {
+      "title": "Call declined",
+      "body": "{{name}} couldn't take your call this time"
     },
     "settingsTitle": "Notification settings",
     "settingsSub": "Choose what you get notified about.",

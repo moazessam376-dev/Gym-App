@@ -18,6 +18,8 @@ import {
   useRefreshOnFocus,
 } from '@/lib/queries/home';
 import { useMyLeagueStanding } from '@/lib/queries/leaderboards';
+import { useMyCalls } from '@/lib/queries/calls';
+import type { Call } from '@/lib/calls';
 import { TIER_COLORS } from '@/lib/leagues';
 import { remaining } from '@/lib/nutrition';
 import { Icon, Screen, Text, Card, Avatar, Button, ProgressRing, EmptyState, RankCrest, MacroBar } from '@/components/ui';
@@ -41,6 +43,7 @@ export default function ClientHome() {
   const nutritionQ = useDailyNutrition(userId);
   const workoutQ = useTodayWorkout(userId);
   const leagueQ = useMyLeagueStanding(userId);
+  const callsQ = useMyCalls(!!userId);
 
   // Refetch in the background when the tab regains focus (fresh data after logging
   // elsewhere) without flashing — cached values stay on screen during the refetch.
@@ -53,6 +56,7 @@ export default function ClientHome() {
     nutritionQ.refetch();
     workoutQ.refetch();
     leagueQ.refetch();
+    callsQ.refetch();
   });
 
   const name = nameQ.data ?? null;
@@ -62,6 +66,16 @@ export default function ClientHome() {
   const needsOnboarding = athleteQ.isSuccess && athleteQ.data?.onboarded_at == null;
   const nutTargets = targetsQ.data ?? null;
   const nutDaily = nutritionQ.data ?? null;
+
+  // Soonest upcoming call (pending/accepted) — the reliable Home surface for booking + managing
+  // calls, instead of burying them under Account.
+  const UPCOMING_CALL: Call['status'][] = ['pending', 'accepted', 'ringing', 'in_progress'];
+  const nextCall =
+    (callsQ.data ?? [])
+      .filter((c) => UPCOMING_CALL.includes(c.status) && c.scheduled_at)
+      .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())[0] ?? null;
+  const fmtCallWhen = (iso: string) =>
+    new Date(iso).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
 
   // League standing CTA (Phase 20). Four states: ranked & opted-in, ranked but not opted
   // in, has a verified reading but no placement (missing sex/height), or no reading yet.
@@ -322,6 +336,32 @@ export default function ClientHome() {
                 variant="ghost"
                 onPress={() => router.push('/discover/coaches')}
               />
+            </View>
+          </Card>
+        </View>
+      ) : null}
+
+      {/* Calls — a reliable Home surface to book + manage 1-on-1 calls (was buried in Account). */}
+      {coachName ? (
+        <View style={{ gap: theme.spacing.sm }}>
+          <Text variant="label" muted style={textStart}>{t('home.calls')}</Text>
+          <Card onPress={() => router.push('/calls')}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+              <Icon name="video" size={22} color={theme.colors.primary} />
+              <View style={{ flex: 1 }}>
+                {nextCall ? (
+                  <>
+                    <Text variant="bodyStrong" style={textStart}>{t('home.callsNext', { when: fmtCallWhen(nextCall.scheduled_at!) })}</Text>
+                    <Text variant="caption" muted style={textStart}>{t(`calls.status.${nextCall.status}`)}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text variant="bodyStrong" style={textStart}>{t('calls.bookEntry')}</Text>
+                    <Text variant="caption" muted style={textStart}>{t('home.callsBookSub')}</Text>
+                  </>
+                )}
+              </View>
+              <Icon name={forwardChevron()} size={20} color={theme.colors.textMuted} />
             </View>
           </Card>
         </View>
