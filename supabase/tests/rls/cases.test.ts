@@ -3301,6 +3301,10 @@ describe('coach transformations (0077, E3) — coach-curated, consent-gated show
   it('anon cannot call get_coach_transformations (execute revoked from anon)', async () => {
     await expect(asAnon((c) => c.query('select * from public.get_coach_transformations($1)', [COACH_A.sub]))).rejects.toThrow();
   });
+
+  it('anon cannot call get_athlete_transformations either (0086 — execute revoked from anon)', async () => {
+    await expect(asAnon((c) => c.query('select * from public.get_athlete_transformations($1)', [CLIENT_A1.sub]))).rejects.toThrow();
+  });
 });
 
 describe('transformation submissions (0084) — client→coach, coach-approves (§2)', () => {

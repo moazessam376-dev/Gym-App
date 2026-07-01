@@ -6,6 +6,8 @@
 // athlete; coach_id = auth.uid() for the coach). The approve/dismiss transition is the
 // coach-only SECURITY DEFINER RPC — clients never feature their own card.
 import { supabase } from './supabase';
+import type { PhotoFrame, TransformationCardInput, TransformationLayout } from './public-profiles';
+import type { TierId } from './leagues';
 
 export type SubmissionStatus = 'pending' | 'approved' | 'dismissed';
 
@@ -16,6 +18,16 @@ export type MySubmission = {
   after_media_id: string | null;
   status: SubmissionStatus;
   created_at: string;
+  duration_weeks_override: number | null;
+  body_fat_delta_bp_override: number | null;
+  lean_mass_delta_grams_override: number | null;
+  tier_before_override: TierId | null;
+  tier_after_override: TierId | null;
+  measurement_started_at: string | null;
+  measurement_ended_at: string | null;
+  layout: TransformationLayout;
+  before_frame: PhotoFrame | null;
+  after_frame: PhotoFrame | null;
 };
 
 export type PendingSubmission = MySubmission & {
@@ -24,13 +36,36 @@ export type PendingSubmission = MySubmission & {
   client_avatar_media_id: string | null;
 };
 
-const COLS = 'id, caption, before_media_id, after_media_id, status, created_at';
+const COLS =
+  'id, caption, before_media_id, after_media_id, status, created_at, duration_weeks_override, body_fat_delta_bp_override, lean_mass_delta_grams_override, tier_before_override, tier_after_override, measurement_started_at, measurement_ended_at, layout, before_frame, after_frame';
 
 // PostgREST returns a to-one embed as a single object at runtime but types it as an array
 // — normalize either shape (mirrors coach-transformations.ts).
 function one<T>(embed: T | T[] | null | undefined): T | null {
   if (embed == null) return null;
   return Array.isArray(embed) ? (embed[0] ?? null) : embed;
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function mapSubmissionRow(r: any): MySubmission {
+  return {
+    id: r.id,
+    caption: r.caption,
+    before_media_id: r.before_media_id,
+    after_media_id: r.after_media_id,
+    status: r.status as SubmissionStatus,
+    created_at: r.created_at,
+    duration_weeks_override: r.duration_weeks_override ?? null,
+    body_fat_delta_bp_override: r.body_fat_delta_bp_override ?? null,
+    lean_mass_delta_grams_override: r.lean_mass_delta_grams_override ?? null,
+    tier_before_override: (r.tier_before_override ?? null) as TierId | null,
+    tier_after_override: (r.tier_after_override ?? null) as TierId | null,
+    measurement_started_at: r.measurement_started_at ?? null,
+    measurement_ended_at: r.measurement_ended_at ?? null,
+    layout: (r.layout === 'stack' ? 'stack' : 'side') as TransformationLayout,
+    before_frame: (r.before_frame ?? null) as PhotoFrame | null,
+    after_frame: (r.after_frame ?? null) as PhotoFrame | null,
+  };
 }
 
 /** The signed-in client's own submissions (any status), newest first. */
@@ -41,7 +76,7 @@ export async function listMySubmissions(clientId: string): Promise<MySubmission[
     .eq('client_id', clientId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []) as MySubmission[];
+  return (data ?? []).map(mapSubmissionRow);
 }
 
 /** The coach's PENDING submissions to review, with the submitting client's name + avatar. */
@@ -56,12 +91,7 @@ export async function listPendingSubmissions(coachId: string): Promise<PendingSu
   return (data ?? []).map((r) => {
     const client = one<{ full_name: string | null; avatar_media_id: string | null }>(r.client);
     return {
-      id: r.id,
-      caption: r.caption,
-      before_media_id: r.before_media_id,
-      after_media_id: r.after_media_id,
-      status: r.status as SubmissionStatus,
-      created_at: r.created_at,
+      ...mapSubmissionRow(r),
       client_id: r.client_id as string,
       client_name: client?.full_name ?? null,
       client_avatar_media_id: client?.avatar_media_id ?? null,
@@ -69,14 +99,9 @@ export async function listPendingSubmissions(coachId: string): Promise<PendingSu
   });
 }
 
-/** Create a pending submission addressed to the client's coach. RLS enforces ownership. */
-export async function createSubmission(input: {
-  clientId: string;
-  coachId: string;
-  caption: string | null;
-  beforeMediaId: string | null;
-  afterMediaId: string | null;
-}): Promise<void> {
+/** Create a pending submission addressed to the client's coach. RLS enforces ownership; fields
+ *  are allowlisted explicitly (§4). */
+export async function createSubmission(input: { clientId: string; coachId: string } & TransformationCardInput): Promise<void> {
   const { error } = await supabase.from('transformation_submissions').insert({
     client_id: input.clientId,
     coach_id: input.coachId,
@@ -84,6 +109,16 @@ export async function createSubmission(input: {
     before_media_id: input.beforeMediaId,
     after_media_id: input.afterMediaId,
     status: 'pending',
+    duration_weeks_override: input.durationWeeksOverride,
+    body_fat_delta_bp_override: input.bodyFatDeltaBpOverride,
+    lean_mass_delta_grams_override: input.leanMassDeltaGramsOverride,
+    tier_before_override: input.tierBeforeOverride,
+    tier_after_override: input.tierAfterOverride,
+    measurement_started_at: input.measurementStartedAt,
+    measurement_ended_at: input.measurementEndedAt,
+    layout: input.layout,
+    before_frame: input.beforeFrame,
+    after_frame: input.afterFrame,
   });
   if (error) throw error;
 }

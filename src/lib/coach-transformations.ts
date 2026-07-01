@@ -3,6 +3,8 @@
 // client they actually coach via the WITH CHECK in 0077). The PUBLIC showcase read path is
 // the separate get_coach_transformations RPC (src/lib/public-profiles.ts).
 import { supabase } from './supabase';
+import type { PhotoFrame, TransformationCardInput, TransformationLayout } from './public-profiles';
+import type { TierId } from './leagues';
 
 export type MyTransformation = {
   id: string;
@@ -11,7 +13,21 @@ export type MyTransformation = {
   before_media_id: string | null;
   after_media_id: string | null;
   client_name: string | null;
+  // Editable overrides / presentation (for pre-filling the editor when editing an existing card).
+  duration_weeks_override: number | null;
+  body_fat_delta_bp_override: number | null;
+  lean_mass_delta_grams_override: number | null;
+  tier_before_override: TierId | null;
+  tier_after_override: TierId | null;
+  measurement_started_at: string | null;
+  measurement_ended_at: string | null;
+  layout: TransformationLayout;
+  before_frame: PhotoFrame | null;
+  after_frame: PhotoFrame | null;
 };
+
+const EDIT_COLS =
+  'id, client_id, caption, before_media_id, after_media_id, duration_weeks_override, body_fat_delta_bp_override, lean_mass_delta_grams_override, tier_before_override, tier_after_override, measurement_started_at, measurement_ended_at, layout, before_frame, after_frame';
 
 /** A coach's clients who have consented to be featured (allow_transformation_sharing). */
 export type ConsentingClient = { user_id: string; full_name: string | null; avatar_media_id: string | null };
@@ -27,7 +43,7 @@ function one<T>(embed: T | T[] | null | undefined): T | null {
 export async function listMyTransformations(coachId: string): Promise<MyTransformation[]> {
   const { data, error } = await supabase
     .from('coach_transformations')
-    .select('id, client_id, caption, before_media_id, after_media_id, client:profiles!client_id(full_name)')
+    .select(`${EDIT_COLS}, client:profiles!client_id(full_name)`)
     .eq('coach_id', coachId)
     .order('featured_at', { ascending: false });
   if (error) throw error;
@@ -40,6 +56,16 @@ export async function listMyTransformations(coachId: string): Promise<MyTransfor
       before_media_id: r.before_media_id,
       after_media_id: r.after_media_id,
       client_name: client?.full_name ?? null,
+      duration_weeks_override: r.duration_weeks_override,
+      body_fat_delta_bp_override: r.body_fat_delta_bp_override,
+      lean_mass_delta_grams_override: r.lean_mass_delta_grams_override,
+      tier_before_override: (r.tier_before_override ?? null) as TierId | null,
+      tier_after_override: (r.tier_after_override ?? null) as TierId | null,
+      measurement_started_at: r.measurement_started_at,
+      measurement_ended_at: r.measurement_ended_at,
+      layout: (r.layout === 'stack' ? 'stack' : 'side') as TransformationLayout,
+      before_frame: (r.before_frame ?? null) as PhotoFrame | null,
+      after_frame: (r.after_frame ?? null) as PhotoFrame | null,
     };
   });
 }
@@ -57,14 +83,9 @@ export async function listConsentingClients(coachId: string): Promise<Consenting
     .map((r) => ({ user_id: r.user_id, full_name: r.profile?.full_name ?? null, avatar_media_id: r.profile?.avatar_media_id ?? null }));
 }
 
-/** Create or update (one per coach+client) a featured transformation. */
-export async function upsertTransformation(input: {
-  coachId: string;
-  clientId: string;
-  caption: string | null;
-  beforeMediaId: string | null;
-  afterMediaId: string | null;
-}): Promise<void> {
+/** Create or update (one per coach+client) a featured transformation. Fields are allowlisted
+ *  explicitly (§4 — never spread untrusted input). */
+export async function upsertTransformation(input: { coachId: string; clientId: string } & TransformationCardInput): Promise<void> {
   const { error } = await supabase.from('coach_transformations').upsert(
     {
       coach_id: input.coachId,
@@ -73,6 +94,16 @@ export async function upsertTransformation(input: {
       before_media_id: input.beforeMediaId,
       after_media_id: input.afterMediaId,
       featured_at: new Date().toISOString(),
+      duration_weeks_override: input.durationWeeksOverride,
+      body_fat_delta_bp_override: input.bodyFatDeltaBpOverride,
+      lean_mass_delta_grams_override: input.leanMassDeltaGramsOverride,
+      tier_before_override: input.tierBeforeOverride,
+      tier_after_override: input.tierAfterOverride,
+      measurement_started_at: input.measurementStartedAt,
+      measurement_ended_at: input.measurementEndedAt,
+      layout: input.layout,
+      before_frame: input.beforeFrame,
+      after_frame: input.afterFrame,
     },
     { onConflict: 'coach_id,client_id' },
   );
