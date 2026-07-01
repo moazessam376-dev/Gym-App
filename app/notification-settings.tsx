@@ -12,13 +12,13 @@ import {
   getNotificationPrefs,
   setNotificationPrefs,
   type NotificationPrefs,
-  type NotificationType,
+  type NotificationPrefKey,
 } from '@/lib/notifications';
 import { Icon, type IconName, Screen, Text, Card } from '@/components/ui';
 import { theme } from '@/theme';
 
 
-const ROWS: { key: NotificationType; icon: IconName; labelKey: string }[] = [
+const ROWS: { key: NotificationPrefKey; icon: IconName; labelKey: string }[] = [
   { key: 'message', icon: 'chatbubble-ellipses-outline', labelKey: 'notifications.prefs.message' },
   { key: 'coach_comment', icon: 'chatbox-ellipses-outline', labelKey: 'notifications.prefs.coachComment' },
   { key: 'plan_published', icon: 'document-text-outline', labelKey: 'notifications.prefs.planPublished' },
@@ -44,7 +44,7 @@ export default function NotificationSettingsScreen() {
     if (prefsQ.data) setLocal(prefsQ.data);
   }, [prefsQ.data]);
 
-  const onToggle = (key: NotificationType) => async (value: boolean) => {
+  const onToggle = (key: NotificationPrefKey) => async (value: boolean) => {
     if (!local || !userId) return;
     const prev = local;
     const next = { ...local, [key]: value };

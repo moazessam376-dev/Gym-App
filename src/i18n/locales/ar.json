@@ -1052,6 +1052,22 @@
       "title": "طلب تدريب جديد",
       "body": "{{name}} عايزك تبقى الكوتش بتاعه"
     },
+    "callRequested": {
+      "title": "طلب مكالمة جديد",
+      "body": "{{name}} طلب مكالمة"
+    },
+    "callIncoming": {
+      "title": "مكالمة واردة",
+      "body": "{{name}} بيتصل بيك"
+    },
+    "callAccepted": {
+      "title": "المكالمة اتأكدت",
+      "body": "{{name}} أكّد مكالمتك"
+    },
+    "callDeclined": {
+      "title": "المكالمة اترفضت",
+      "body": "{{name}} مش هيقدر ياخد مكالمتك المرة دي"
+    },
     "settingsTitle": "إعدادات الإشعارات",
     "settingsSub": "اختار تتبلّغ بإيه.",
     "prefs": {

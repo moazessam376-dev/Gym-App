@@ -1024,6 +1024,22 @@
       "title": "New coaching request",
       "body": "{{name}} wants you as their coach"
     },
+    "callRequested": {
+      "title": "New call request",
+      "body": "{{name}} requested a call"
+    },
+    "callIncoming": {
+      "title": "Incoming call",
+      "body": "{{name}} is calling you"
+    },
+    "callAccepted": {
+      "title": "Call confirmed",
+      "body": "{{name}} confirmed your call"
+    },
+    "callDeclined": {
+      "title": "Call declined",
+      "body": "{{name}} couldn't take your call this time"
+    },
     "settingsTitle": "Notification settings",
     "settingsSub": "Choose what you get notified about.",
     "prefs": {

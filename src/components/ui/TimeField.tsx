@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { theme } from '@/theme';
+import { useIsWideWeb } from '@/lib/useBreakpoint';
 import { Text } from './Text';
 import { Button } from './Button';
 
@@ -96,6 +97,8 @@ export function TimeField({ value, onChange, minuteStep = 5, disabled }: TimeFie
     setOpen(false);
   };
 
+  const wide = useIsWideWeb();
+
   return (
     <>
       <Pressable
@@ -114,30 +117,50 @@ export function TimeField({ value, onChange, minuteStep = 5, disabled }: TimeFie
         <Text variant="bodyStrong">{minutesToLabel(value, am, pm)}</Text>
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+      {/* Wide web → a compact centered dialog (a full-width bottom sheet reads as broken on a
+          desktop). Native / narrow web → the bottom sheet. */}
+      <Modal visible={open} transparent animationType={wide ? 'fade' : 'slide'} onRequestClose={() => setOpen(false)}>
         <Pressable
           onPress={() => setOpen(false)}
-          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(5,6,9,0.72)' }}
+          style={{
+            flex: 1,
+            justifyContent: wide ? 'center' : 'flex-end',
+            alignItems: wide ? 'center' : 'stretch',
+            padding: wide ? theme.spacing.lg : 0,
+            backgroundColor: 'rgba(5,6,9,0.72)',
+          }}
         >
           <Pressable
             onPress={() => {}}
             style={{
               backgroundColor: theme.colors.surface,
-              borderTopLeftRadius: theme.radii.xl,
-              borderTopRightRadius: theme.radii.xl,
               borderWidth: 1,
               borderColor: theme.colors.glassBorder,
-              paddingHorizontal: theme.spacing.lg,
-              paddingTop: theme.spacing.md,
-              paddingBottom: theme.spacing.xxl,
               gap: theme.spacing.lg,
+              ...(wide
+                ? { width: 360, maxWidth: '100%', borderRadius: theme.radii.xl, padding: theme.spacing.xl }
+                : {
+                    borderTopLeftRadius: theme.radii.xl,
+                    borderTopRightRadius: theme.radii.xl,
+                    paddingHorizontal: theme.spacing.lg,
+                    paddingTop: theme.spacing.md,
+                    paddingBottom: theme.spacing.xxl,
+                  }),
             }}
           >
-            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: theme.colors.glassBorder, alignSelf: 'center' }} />
-            <View style={{ flexDirection: 'row', gap: theme.spacing.md, justifyContent: 'center' }}>
-              <Column items={HOURS} selected={dh} render={(h) => String(h)} onSelect={setDh} />
-              <Column items={minutes} selected={dm} render={(m) => pad(m)} onSelect={setDm} />
-              <Column items={['am', 'pm'] as const} selected={dap} render={(x) => (x === 'am' ? am : pm)} onSelect={setDap} />
+            {!wide ? (
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: theme.colors.glassBorder, alignSelf: 'center' }} />
+            ) : null}
+            <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <Column items={HOURS} selected={dh} render={(h) => String(h)} onSelect={setDh} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Column items={minutes} selected={dm} render={(m) => pad(m)} onSelect={setDm} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Column items={['am', 'pm'] as const} selected={dap} render={(x) => (x === 'am' ? am : pm)} onSelect={setDap} />
+              </View>
             </View>
             <Button title={t('common.done')} onPress={commit} fullWidth />
           </Pressable>

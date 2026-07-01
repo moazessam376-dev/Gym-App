@@ -18,6 +18,21 @@ export type NotificationType =
   | 'plan_published'
   | 'pr_achieved'
   | 'client_note'
+  | 'coach_request'
+  | 'call_requested'
+  | 'call_accepted'
+  | 'call_declined'
+  | 'call_incoming';
+
+/** The subset of types the user can toggle in settings. Call notifications default ON and
+ *  are intentionally NOT surfaced as toggles — you shouldn't be able to silence an incoming
+ *  call (the DB pref columns still exist, they just stay on). */
+export type NotificationPrefKey =
+  | 'message'
+  | 'coach_comment'
+  | 'plan_published'
+  | 'pr_achieved'
+  | 'client_note'
   | 'coach_request';
 
 export type NotificationRow = {
@@ -105,6 +120,10 @@ const ICONS: Record<NotificationType, IconName> = {
   pr_achieved: 'trophy',
   client_note: 'clipboard',
   coach_request: 'user-plus',
+  call_requested: 'phone',
+  call_accepted: 'calendar',
+  call_declined: 'x-circle',
+  call_incoming: 'video',
 };
 
 // Per-type semantic accent (brand notification colors): chat = purple, coach note =
@@ -117,6 +136,10 @@ export const NOTIFICATION_COLORS: Record<NotificationType, string> = {
   pr_achieved: '#3FD98A', // positive
   client_note: '#F5B544', // amber — an athlete's note to the coach
   coach_request: '#5BC8E8', // sky — a client asking to join the coach
+  call_requested: '#5BC8E8', // sky — a client asking their coach for a call
+  call_accepted: '#3FD98A', // positive — coach confirmed
+  call_declined: '#F5556B', // danger — coach couldn't take it
+  call_incoming: '#3FD9C0', // Signal cyan — an active incoming call
 };
 
 function str(params: Record<string, unknown>, key: string): string {
@@ -174,6 +197,30 @@ export function describeNotification(
         title: t('notifications.coachRequest.title'),
         body: t('notifications.coachRequest.body', { name: actor }),
       };
+    case 'call_requested':
+      return {
+        icon: ICONS.call_requested,
+        title: t('notifications.callRequested.title'),
+        body: t('notifications.callRequested.body', { name: actor }),
+      };
+    case 'call_incoming':
+      return {
+        icon: ICONS.call_incoming,
+        title: t('notifications.callIncoming.title'),
+        body: t('notifications.callIncoming.body', { name: actor }),
+      };
+    case 'call_accepted':
+      return {
+        icon: ICONS.call_accepted,
+        title: t('notifications.callAccepted.title'),
+        body: t('notifications.callAccepted.body', { name: actor }),
+      };
+    case 'call_declined':
+      return {
+        icon: ICONS.call_declined,
+        title: t('notifications.callDeclined.title'),
+        body: t('notifications.callDeclined.body', { name: actor }),
+      };
     default:
       return { icon: 'notifications', title: '', body: '' };
   }
@@ -200,6 +247,14 @@ export function notificationHref(row: NotificationRow): Href | null {
     case 'coach_request':
       // Coach taps → their request inbox.
       return '/coach/requests';
+    case 'call_requested':
+      // Coach taps → the calls hub (requests tab).
+      return '/coach/calls';
+    case 'call_incoming':
+    case 'call_accepted':
+    case 'call_declined':
+      // Client taps → their calls list.
+      return '/calls';
     default:
       return null;
   }
@@ -207,7 +262,7 @@ export function notificationHref(row: NotificationRow): Href | null {
 
 // ── Per-user preferences (one boolean per event type, default ON) ─────────────
 
-export type NotificationPrefs = Record<NotificationType, boolean>;
+export type NotificationPrefs = Record<NotificationPrefKey, boolean>;
 
 const DEFAULT_PREFS: NotificationPrefs = {
   message: true,
