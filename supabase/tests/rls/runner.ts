@@ -107,6 +107,7 @@ const migrationFiles = [
   '0083_calls.sql',
   '0084_transformation_submissions.sql',
   '0085_coach_availability.sql',
+  '0086_transformation_card_fields.sql',
 ];
 
 const baseUrl =

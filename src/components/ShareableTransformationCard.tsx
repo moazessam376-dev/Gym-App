@@ -1,11 +1,12 @@
-// ShareableTransformationCard (Engagement E3, redesigned to the "1B / Frame" mockup) — a
-// Raptor-branded before/after card for the public coach showcase, built to be SCREENSHOTTED
-// and posted to social. Image-led editorial layout: full-bleed before/after photos split by a
-// glowing cyan divider, a top scrim (TRANSFORMATION tag + client name + weeks badge), and a
-// bottom stats band (body-fat / lean-mass deltas + tier rank-up + coach credit + RAPTOR mark).
-// The same design renders at three social ratios (Square 1:1, Portrait 4:5, Story 9:16); the
-// coach picks one and shares it. A native capture→share button exports the card directly; on
-// web the user screenshots (view-shot has no reliable web path), so the button is hidden there.
+// ShareableTransformationCard (Engagement E3, "1B / Frame" mockup) — a Raptor-branded
+// before/after card for the public showcase, built to be SCREENSHOTTED + posted to social.
+// Image-led editorial layout: full-bleed before/after photos split by a glowing cyan divider
+// (SIDE-by-side or STACKed top/bottom), a top scrim (TRANSFORMATION tag + client name + a
+// VERIFIED badge when the numbers are app-backed + weeks badge), and a compact stats band
+// (body-fat / lean-mass deltas + tier rank-up + coach credit + RAPTOR mark). Renders at three
+// social ratios (Square 1:1, Portrait 4:5, Story 9:16). Per-photo framing (scale + pan) is
+// applied via the shared frameStyle so it matches the editor. Native capture→share exports the
+// card; web hides the button (view-shot has no reliable web path).
 // Module-scope component → its OWN useTranslation (CLAUDE.md §13 / i18n rule).
 import { Fragment, useRef, useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
@@ -16,8 +17,9 @@ import * as Sharing from 'expo-sharing';
 import { theme } from '@/theme';
 import { TIER_COLORS, type TierId } from '@/lib/leagues';
 import { forwardChevron } from '@/lib/rtl';
+import { frameStyle } from '@/lib/photoFrame';
 import { Icon, Segmented, Text, SignedImage } from '@/components/ui';
-import type { CoachTransformation } from '@/lib/public-profiles';
+import type { CoachTransformation, PhotoFrame } from '@/lib/public-profiles';
 
 type Ratio = 'square' | 'portrait' | 'story';
 const ASPECT: Record<Ratio, number> = { square: 1, portrait: 4 / 5, story: 9 / 16 }; // width / height
@@ -39,29 +41,53 @@ function TierPill({ tid, label }: { tid: TierId; label: string }) {
   );
 }
 
-export function ShareableTransformationCard({ item, coachName }: { item: CoachTransformation; coachName?: string | null }) {
+/** One photo cell: a cover image with an optional framing transform (measured on layout), plus
+ *  a corner BEFORE/AFTER label so it reads in both side + stacked layouts. */
+function PhotoCell({ mediaId, frame, label, labelColor }: { mediaId: string | null; frame: PhotoFrame | null; label: string; labelColor: string }) {
+  const [sz, setSz] = useState({ w: 0, h: 0 });
+  const framed = frame && frame.scale > 1.001;
+  return (
+    <View
+      style={{ flex: 1, backgroundColor: theme.colors.surface, overflow: 'hidden' }}
+      onLayout={framed ? (e) => setSz({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height }) : undefined}
+    >
+      {mediaId ? (
+        framed && sz.w > 0 ? (
+          <SignedImage mediaId={mediaId} resizeMode="cover" style={frameStyle(frame, sz.w, sz.h)} />
+        ) : (
+          <SignedImage mediaId={mediaId} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
+        )
+      ) : null}
+      <View style={{ position: 'absolute', left: 10, bottom: 10, backgroundColor: 'rgba(8,9,12,0.55)', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 7 }}>
+        <Text style={{ fontFamily: theme.fontFamily.monoRegular, fontSize: 10, letterSpacing: 1.5, color: labelColor }}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
+export function ShareableTransformationCard({
+  item,
+  coachName,
+  shareable = true,
+}: {
+  item: CoachTransformation;
+  coachName?: string | null;
+  shareable?: boolean;
+}) {
   const { t } = useTranslation();
   const shotRef = useRef<View>(null);
   const [ratio, setRatio] = useState<Ratio>('portrait');
 
   const bfPct = item.body_fat_delta_bp == null ? null : Math.round((item.body_fat_delta_bp / 100) * 10) / 10;
   const lmKg = kg(item.lean_mass_delta_grams);
+  const isStack = item.layout === 'stack';
 
   const stats: { value: string; unit?: string; label: string; color: string }[] = [];
   if (bfPct != null) {
-    stats.push({
-      value: `${bfPct >= 0 ? '−' : '+'}${Math.abs(bfPct)}%`,
-      label: t('athleteProfile.bodyFat'),
-      color: bfPct >= 0 ? theme.colors.success : theme.colors.danger,
-    });
+    stats.push({ value: `${bfPct >= 0 ? '−' : '+'}${Math.abs(bfPct)}%`, label: t('athleteProfile.bodyFat'), color: bfPct >= 0 ? theme.colors.success : theme.colors.danger });
   }
   if (lmKg != null) {
-    stats.push({
-      value: `${lmKg >= 0 ? '+' : '−'}${Math.abs(lmKg)}`,
-      unit: 'kg',
-      label: t('athleteProfile.leanMass'),
-      color: lmKg >= 0 ? theme.colors.success : theme.colors.danger,
-    });
+    stats.push({ value: `${lmKg >= 0 ? '+' : '−'}${Math.abs(lmKg)}`, unit: 'kg', label: t('athleteProfile.leanMass'), color: lmKg >= 0 ? theme.colors.success : theme.colors.danger });
   }
 
   const tierBefore = item.tier_before as TierId | null;
@@ -88,114 +114,47 @@ export function ShareableTransformationCard({ item, coachName }: { item: CoachTr
       <View
         ref={shotRef}
         collapsable={false}
-        style={{
-          width: CARD_W,
-          aspectRatio: ASPECT[ratio],
-          backgroundColor: ONYX,
-          borderRadius: 20,
-          borderWidth: 1,
-          borderColor: theme.colors.glassBorder,
-          overflow: 'hidden',
-        }}
+        style={{ width: CARD_W, aspectRatio: ASPECT[ratio], backgroundColor: ONYX, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.glassBorder, overflow: 'hidden' }}
       >
-        {/* Photo hero — grows to fill everything above the stats band */}
-        <View style={{ flex: 1, flexDirection: 'row', position: 'relative' }}>
-          {[
-            { id: item.before_media_id },
-            { id: item.after_media_id },
-          ].map((side, i) => (
-            <Fragment key={i}>
-              {i === 1 ? (
-                <View
-                  style={{
-                    width: 2,
-                    alignSelf: 'stretch',
-                    backgroundColor: theme.colors.primary,
-                    shadowColor: theme.colors.primary,
-                    shadowOpacity: 0.7,
-                    shadowRadius: 8,
-                    shadowOffset: { width: 0, height: 0 },
-                  }}
-                />
-              ) : null}
-              <View style={{ flex: 1, backgroundColor: theme.colors.surface }}>
-                {side.id ? (
-                  <SignedImage mediaId={side.id} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                ) : null}
-              </View>
-            </Fragment>
-          ))}
+        {/* Photo hero — side-by-side (row) or stacked (column); grows above the stats band */}
+        <View style={{ flex: 1, flexDirection: isStack ? 'column' : 'row', position: 'relative' }}>
+          <PhotoCell mediaId={item.before_media_id} frame={item.before_frame} label={t('coachProfile.before').toUpperCase()} labelColor={BEFORE_GREY} />
+          <View
+            style={{
+              ...(isStack ? { height: 2, alignSelf: 'stretch' } : { width: 2, alignSelf: 'stretch' }),
+              backgroundColor: theme.colors.primary,
+              shadowColor: theme.colors.primary,
+              shadowOpacity: 0.7,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 0 },
+            }}
+          />
+          <PhotoCell mediaId={item.after_media_id} frame={item.after_frame} label={t('coachProfile.after').toUpperCase()} labelColor={theme.colors.primary} />
 
-          {/* Top scrim: tag + name + weeks */}
+          {/* Top scrim: tag + name (+ verified badge) + weeks */}
           <LinearGradient
             colors={[SCRIM_DARK, SCRIM_MID, 'transparent']}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              paddingHorizontal: 14,
-              paddingTop: 13,
-              paddingBottom: 18,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-            }}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 14, paddingTop: 13, paddingBottom: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}
           >
             <View style={{ flex: 1, paddingRight: 8 }}>
-              <Text style={{ fontFamily: mono, fontSize: 9, letterSpacing: 2, color: theme.colors.primary }}>
-                {t('coachProfile.cardTag').toUpperCase()}
-              </Text>
-              <Text
-                numberOfLines={1}
-                style={{ fontFamily: theme.fontFamily.displayBold, fontSize: 26, color: theme.colors.text, letterSpacing: -0.5, marginTop: 3 }}
-              >
+              <Text style={{ fontFamily: mono, fontSize: 9, letterSpacing: 2, color: theme.colors.primary }}>{t('coachProfile.cardTag').toUpperCase()}</Text>
+              <Text numberOfLines={1} style={{ fontFamily: theme.fontFamily.displayBold, fontSize: 26, lineHeight: 30, color: theme.colors.text, letterSpacing: -0.5, marginTop: 3 }}>
                 {item.client_first_name ?? ''}
               </Text>
+              {item.verified ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4, marginTop: 5, backgroundColor: 'rgba(63,217,192,0.16)', borderRadius: 6, paddingVertical: 2, paddingHorizontal: 6 }}>
+                  <Icon name="check-circle" size={10} color={theme.colors.primary} />
+                  <Text style={{ fontFamily: monoB, fontSize: 8, letterSpacing: 1.5, color: theme.colors.primary }}>{t('coachProfile.verified').toUpperCase()}</Text>
+                </View>
+              ) : null}
             </View>
             {item.duration_weeks != null ? (
-              <View
-                style={{
-                  backgroundColor: 'rgba(8,9,12,0.5)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.16)',
-                  borderRadius: 10,
-                  paddingVertical: 6,
-                  paddingHorizontal: 9,
-                }}
-              >
-                <Text style={{ fontFamily: monoB, fontSize: 13, color: theme.colors.text }}>
-                  {t('coachProfile.weeksShort', { count: item.duration_weeks })}
-                </Text>
+              <View style={{ backgroundColor: 'rgba(8,9,12,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 9 }}>
+                <Text style={{ fontFamily: monoB, fontSize: 13, color: theme.colors.text }}>{t('coachProfile.weeksShort', { count: item.duration_weeks })}</Text>
               </View>
             ) : null}
-          </LinearGradient>
-
-          {/* Bottom scrim: BEFORE / AFTER labels */}
-          <LinearGradient
-            colors={['transparent', 'rgba(8,9,12,0.82)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              paddingHorizontal: 14,
-              paddingTop: 16,
-              paddingBottom: 10,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Text style={{ fontFamily: mono, fontSize: 10, letterSpacing: 1.5, color: BEFORE_GREY }}>
-              {t('coachProfile.before').toUpperCase()}
-            </Text>
-            <Text style={{ fontFamily: mono, fontSize: 10, letterSpacing: 1.5, color: theme.colors.primary }}>
-              {t('coachProfile.after').toUpperCase()}
-            </Text>
           </LinearGradient>
         </View>
 
@@ -205,17 +164,13 @@ export function ShareableTransformationCard({ item, coachName }: { item: CoachTr
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               {stats.map((s, i) => (
                 <Fragment key={i}>
-                  {i > 0 ? (
-                    <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: theme.colors.glassBorder, marginHorizontal: 12 }} />
-                  ) : null}
+                  {i > 0 ? <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: theme.colors.glassBorder, marginHorizontal: 12 }} /> : null}
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontFamily: monoB, fontSize: 20, color: s.color }}>
                       {s.value}
                       {s.unit ? <Text style={{ fontFamily: mono, fontSize: 12, color: theme.colors.textMuted }}>{` ${s.unit}`}</Text> : null}
                     </Text>
-                    <Text style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: 1.2, color: theme.colors.textMuted, textTransform: 'uppercase', marginTop: 2 }}>
-                      {s.label}
-                    </Text>
+                    <Text style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: 1.2, color: theme.colors.textMuted, textTransform: 'uppercase', marginTop: 2 }}>{s.label}</Text>
                   </View>
                 </Fragment>
               ))}
@@ -224,9 +179,7 @@ export function ShareableTransformationCard({ item, coachName }: { item: CoachTr
 
           {hasTier ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={{ fontFamily: mono, fontSize: 8, letterSpacing: 2, color: theme.colors.textMuted, textTransform: 'uppercase' }}>
-                {tierChanged ? t('coachProfile.rankUp') : t('coachProfile.rank')}
-              </Text>
+              <Text style={{ fontFamily: mono, fontSize: 8, letterSpacing: 2, color: theme.colors.textMuted, textTransform: 'uppercase' }}>{tierChanged ? t('coachProfile.rankUp') : t('coachProfile.rank')}</Text>
               {tierChanged ? (
                 <>
                   <TierPill tid={tierBefore!} label={t(`leaderboards.tier.${tierBefore}`)} />
@@ -243,10 +196,7 @@ export function ShareableTransformationCard({ item, coachName }: { item: CoachTr
 
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
             {coachName ? (
-              <Text
-                numberOfLines={1}
-                style={{ flex: 1, fontFamily: mono, fontSize: 8.5, letterSpacing: 1, color: theme.colors.textMuted, textTransform: 'uppercase' }}
-              >
+              <Text numberOfLines={1} style={{ flex: 1, fontFamily: mono, fontSize: 8.5, letterSpacing: 1, color: theme.colors.textMuted, textTransform: 'uppercase' }}>
                 {t('coachProfile.coachedBy', { name: coachName })}
               </Text>
             ) : (
@@ -254,19 +204,7 @@ export function ShareableTransformationCard({ item, coachName }: { item: CoachTr
             )}
             <View style={{ alignItems: 'flex-end', gap: 2 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <View
-                  style={{
-                    width: 9,
-                    height: 9,
-                    backgroundColor: theme.colors.primary,
-                    borderRadius: 2,
-                    transform: [{ rotate: '45deg' }],
-                    shadowColor: theme.colors.primary,
-                    shadowOpacity: 0.6,
-                    shadowRadius: 8,
-                    shadowOffset: { width: 0, height: 0 },
-                  }}
-                />
+                <View style={{ width: 9, height: 9, backgroundColor: theme.colors.primary, borderRadius: 2, transform: [{ rotate: '45deg' }], shadowColor: theme.colors.primary, shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }} />
                 <Text style={{ fontFamily: monoB, fontSize: 12, letterSpacing: 3, color: theme.colors.primary }}>RAPTOR</Text>
               </View>
               <Text style={{ fontFamily: mono, fontSize: 7.5, letterSpacing: 1, color: '#5C616E' }}>train.raptor.app</Text>
@@ -286,16 +224,10 @@ export function ShareableTransformationCard({ item, coachName }: { item: CoachTr
           value={ratio}
           onChange={(v) => setRatio(v as Ratio)}
         />
-        {Platform.OS !== 'web' ? (
-          <Pressable
-            onPress={onShare}
-            accessibilityRole="button"
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: theme.spacing.sm }}
-          >
+        {shareable && Platform.OS !== 'web' ? (
+          <Pressable onPress={onShare} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: theme.spacing.sm }}>
             <Icon name="send" size={15} color={theme.colors.primary} />
-            <Text variant="caption" color={theme.colors.primary}>
-              {t('coachProfile.share')}
-            </Text>
+            <Text variant="caption" color={theme.colors.primary}>{t('coachProfile.share')}</Text>
           </Pressable>
         ) : null}
       </View>

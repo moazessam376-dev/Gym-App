@@ -27,6 +27,30 @@ export type PublicCoachProfile = {
   median_goal_progress: number | null;
 };
 
+/** Per-photo framing transform stored on a transformation card: uniform `scale` (>=1) + a
+ *  normalized pan offset `x`/`y` in [-1,1] (fraction of the overflow). Null = plain cover. */
+export type PhotoFrame = { scale: number; x: number; y: number };
+
+export type TransformationLayout = 'side' | 'stack';
+
+/** The editable fields of a transformation card, shared by the coach card + client submission
+ *  writers. Any non-null stat override / date makes the card SELF-REPORTED (not verified). */
+export type TransformationCardInput = {
+  caption: string | null;
+  beforeMediaId: string | null;
+  afterMediaId: string | null;
+  durationWeeksOverride: number | null;
+  bodyFatDeltaBpOverride: number | null;
+  leanMassDeltaGramsOverride: number | null;
+  tierBeforeOverride: TierId | null;
+  tierAfterOverride: TierId | null;
+  measurementStartedAt: string | null; // 'YYYY-MM-DD'
+  measurementEndedAt: string | null; // 'YYYY-MM-DD'
+  layout: TransformationLayout;
+  beforeFrame: PhotoFrame | null;
+  afterFrame: PhotoFrame | null;
+};
+
 // A coach's curated before/after showcase card (consent-filtered, field-allowlist; E3).
 export type CoachTransformation = {
   transformation_id: string;
@@ -42,7 +66,37 @@ export type CoachTransformation = {
   tier_before: TierId | null;
   tier_after: TierId | null;
   goal: AthleteGoal | null;
+  verified: boolean; // stats fully from verified body_metrics, no manual override
+  layout: TransformationLayout;
+  before_frame: PhotoFrame | null;
+  after_frame: PhotoFrame | null;
 };
+
+/** Defensively coerce a jsonb frame ({scale,x,y}) — null if malformed. */
+function coerceFrame(v: unknown): PhotoFrame | null {
+  if (!v || typeof v !== 'object') return null;
+  const f = v as Record<string, unknown>;
+  const n = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
+  const scale = n(f.scale);
+  const x = n(f.x);
+  const y = n(f.y);
+  return scale != null && x != null && y != null ? { scale, x, y } : null;
+}
+
+/** Normalize one transformation row from either transformations RPC (shared shape). */
+function mapTransformationRow(
+  r: CoachTransformation & { ffmi_before: number | string | null; ffmi_after: number | string | null },
+): CoachTransformation {
+  return {
+    ...r,
+    ffmi_before: r.ffmi_before == null ? null : Number(r.ffmi_before),
+    ffmi_after: r.ffmi_after == null ? null : Number(r.ffmi_after),
+    verified: !!r.verified,
+    layout: r.layout === 'stack' ? 'stack' : 'side',
+    before_frame: coerceFrame(r.before_frame),
+    after_frame: coerceFrame(r.after_frame),
+  };
+}
 
 export type AthleteTopPr = {
   exercise_name: string;
@@ -125,12 +179,15 @@ export async function getPublicCoachProfile(coachId: string): Promise<PublicCoac
 export async function getCoachTransformations(coachId: string): Promise<CoachTransformation[]> {
   const { data, error } = await supabase.rpc('get_coach_transformations', { p_coach_id: coachId });
   if (error) throw error;
-  // ffmi_before/after are numeric → strings; the integer deltas/weeks come back as numbers.
-  return (data ?? []).map((r: CoachTransformation & { ffmi_before: number | string | null; ffmi_after: number | string | null }) => ({
-    ...r,
-    ffmi_before: r.ffmi_before == null ? null : Number(r.ffmi_before),
-    ffmi_after: r.ffmi_after == null ? null : Number(r.ffmi_after),
-  })) as CoachTransformation[];
+  return (data ?? []).map(mapTransformationRow);
+}
+
+/** A client's OWN featured transformation card(s) — for their athlete profile + self view/share
+ *  (gated server-side on the athlete's public flag or self + transformation-sharing consent). */
+export async function getAthleteTransformations(athleteId: string): Promise<CoachTransformation[]> {
+  const { data, error } = await supabase.rpc('get_athlete_transformations', { p_athlete_id: athleteId });
+  if (error) throw error;
+  return (data ?? []).map(mapTransformationRow);
 }
 
 /** A public athlete profile — field-allowlist + consent-gated (null if not public). */

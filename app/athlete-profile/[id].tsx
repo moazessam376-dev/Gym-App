@@ -5,12 +5,15 @@
 // The sensitive raw fields (birth date, injuries, height, sex) are never selected by the RPC.
 import { View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { textStart } from '../../src/lib/rtl';
 import { usePublicAthleteProfile } from '../../src/lib/queries/profiles';
 import { usePublicAchievements } from '../../src/lib/queries/achievements';
+import { getAthleteTransformations } from '../../src/lib/public-profiles';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
 import { TrophyGrid } from '../../src/components/TrophyGrid';
+import { ShareableTransformationCard } from '../../src/components/ShareableTransformationCard';
 import { Icon, Screen, Text, GlassCard, Badge, TierChip, Sparkline, EmptyState, ScreenLoader } from '../../src/components/ui';
 import { theme } from '../../src/theme';
 
@@ -25,6 +28,7 @@ export default function AthleteProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const profileQ = usePublicAthleteProfile(id);
   const trophiesQ = usePublicAchievements(id);
+  const cardsQ = useQuery({ queryKey: ['athlete-transformations', id], queryFn: () => getAthleteTransformations(id!), enabled: !!id });
 
   const header = <Stack.Screen options={{ title: t('publicProfile.athleteTitle') }} />;
 
@@ -174,6 +178,18 @@ export default function AthleteProfileScreen() {
               ) : null}
             </View>
           </GlassCard>
+        </View>
+      ) : null}
+
+      {/* Featured transformation card(s) — the branded before/after (verified when app-backed). */}
+      {(cardsQ.data ?? []).length > 0 ? (
+        <View style={{ gap: theme.spacing.sm }}>
+          <Text variant="label" muted style={textStart}>{t('coachProfile.transformations')}</Text>
+          {(cardsQ.data ?? []).map((card) => (
+            <View key={card.transformation_id} style={{ alignItems: 'center' }}>
+              <ShareableTransformationCard item={card} />
+            </View>
+          ))}
         </View>
       ) : null}
 

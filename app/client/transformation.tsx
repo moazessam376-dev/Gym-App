@@ -1,9 +1,9 @@
-// Client → before/after builder (athlete side of E3, 0084). The client picks a BEFORE and
-// an AFTER photo — from their existing progress photos or a new upload — adds a caption, and
-// SENDS it to their coach. It arrives as a PENDING submission the coach reviews; on approval
-// it's featured on the coach's public showcase. Sending sets transformation-sharing consent
-// (revocable anytime in Public presence). Reuses the secure media pipeline + RLS throughout.
-import { useCallback, useEffect, useState } from 'react';
+// Client → before/after builder (athlete side of E3). The client uses the shared
+// TransformationEditor (frame photos, layout, manual stats/dates, live branded preview) to
+// build a card and SEND it to their coach as a PENDING submission; on approval it's featured.
+// Photos come from a new upload OR an existing progress photo (the SourcePicker). Sending sets
+// transformation-sharing consent. Once a card is featured, the client sees + SHARES it here too.
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -15,6 +15,7 @@ import { queryClient } from '../../src/lib/query';
 import { confirmDestructive } from '../../src/lib/confirm';
 import { captureAndUploadPhoto } from '../../src/lib/upload';
 import { listMediaFor, type Media } from '../../src/lib/media';
+import { getAthleteTransformations, type TransformationCardInput } from '../../src/lib/public-profiles';
 import {
   listMySubmissions,
   createSubmission,
@@ -23,10 +24,10 @@ import {
   copyProgressPhotoToTransformation,
   type SubmissionStatus,
 } from '../../src/lib/transformation-submissions';
-import { Icon, Screen, Text, GlassCard, Button, Input, SignedImage, EmptyState, Badge, useToast } from '../../src/components/ui';
+import { Icon, Screen, Text, GlassCard, Button, SignedImage, EmptyState, Badge, useToast } from '../../src/components/ui';
+import { ShareableTransformationCard } from '../../src/components/ShareableTransformationCard';
+import { TransformationEditor } from '../../src/components/transformations/TransformationEditor';
 import { theme } from '../../src/theme';
-
-type Slot = 'before' | 'after';
 
 const STATUS_TONE: Record<SubmissionStatus, 'warning' | 'success' | 'neutral'> = {
   pending: 'warning',
@@ -42,89 +43,69 @@ export default function ClientTransformationBuilder() {
 
   const coachQ = useMyCoach(userId);
   const coach = coachQ.data ?? null;
+  const submissionsQ = useQuery({ queryKey: ['my-transformation-submissions', userId], queryFn: () => listMySubmissions(userId!), enabled: !!userId });
+  const myCardQ = useQuery({ queryKey: ['athlete-transformations', userId], queryFn: () => getAthleteTransformations(userId!), enabled: !!userId });
 
-  const submissionsQ = useQuery({
-    queryKey: ['my-transformation-submissions', userId],
-    queryFn: () => listMySubmissions(userId!),
-    enabled: !!userId,
-  });
-
-  const [beforeId, setBeforeId] = useState<string | null>(null);
-  const [afterId, setAfterId] = useState<string | null>(null);
-  const [caption, setCaption] = useState('');
-  const [picker, setPicker] = useState<Slot | null>(null);
-  const [working, setWorking] = useState(false); // upload/copy in flight
-  const [sending, setSending] = useState(false);
-
-  const setSlot = (slot: Slot, id: string | null) => (slot === 'before' ? setBeforeId : setAfterId)(id);
-
-  const reset = useCallback(() => {
-    setBeforeId(null);
-    setAfterId(null);
-    setCaption('');
-  }, []);
+  const [editorKey, setEditorKey] = useState(0);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [working, setWorking] = useState(false);
+  const resolverRef = useRef<((id: string | null) => void) | null>(null);
 
   if (role && role !== 'client') return <Redirect href="/" />;
 
-  async function uploadNew(slot: Slot) {
+  // Promise-based photo pick: the editor awaits this; the SourcePicker resolves it.
+  const pickPhoto = () =>
+    new Promise<string | null>((resolve) => {
+      resolverRef.current = resolve;
+      setPickerOpen(true);
+    });
+  const resolvePick = (id: string | null) => {
+    resolverRef.current?.(id);
+    resolverRef.current = null;
+    setPickerOpen(false);
+  };
+
+  const uploadNew = async () => {
     setWorking(true);
     try {
-      // squareCrop opens the pan + pinch-zoom editor (1:1) so the client can frame the shot.
-      const res = await captureAndUploadPhoto({ source: 'library', kind: 'transformation', squareCrop: true });
-      if ('mediaId' in res) {
-        setSlot(slot, res.mediaId);
-        setPicker(null);
-      } else if ('limited' in res) {
-        toast.show(t('publicProfile.photoError'), 'error');
+      const res = await captureAndUploadPhoto({ source: 'library', kind: 'transformation' });
+      if ('mediaId' in res) resolvePick(res.mediaId);
+      else {
+        if ('limited' in res) toast.show(t('transformationEditor.photoLimit'), 'error');
+        resolvePick(null);
       }
     } catch {
-      toast.show(t('publicProfile.photoError'), 'error');
+      toast.show(t('transformationEditor.photoError'), 'error');
+      resolvePick(null);
     } finally {
       setWorking(false);
     }
-  }
+  };
 
-  async function chooseExisting(slot: Slot, progressMediaId: string) {
+  const chooseExisting = async (progressMediaId: string) => {
     setWorking(true);
     try {
       const newId = await copyProgressPhotoToTransformation(progressMediaId);
-      if (newId) {
-        setSlot(slot, newId);
-        setPicker(null);
-      } else {
-        toast.show(t('publicProfile.photoError'), 'error');
-      }
+      resolvePick(newId);
+      if (!newId) toast.show(t('transformationEditor.photoError'), 'error');
     } catch {
-      toast.show(t('publicProfile.photoError'), 'error');
+      toast.show(t('transformationEditor.photoError'), 'error');
+      resolvePick(null);
     } finally {
       setWorking(false);
     }
-  }
+  };
 
-  async function onSend() {
-    if (!userId || !coach || !beforeId || !afterId) return;
-    setSending(true);
-    try {
-      await createSubmission({
-        clientId: userId,
-        coachId: coach.id,
-        caption: caption.trim() || null,
-        beforeMediaId: beforeId,
-        afterMediaId: afterId,
-      });
-      // Sending is explicit consent to be featured (revocable in Public presence).
-      await setTransformationConsent(userId, true).catch(() => {});
-      await queryClient.invalidateQueries({ queryKey: ['my-transformation-submissions', userId] });
-      toast.show(t('clientTransformation.sent'));
-      reset();
-    } catch {
-      toast.show(t('common.saveFailed'), 'error');
-    } finally {
-      setSending(false);
-    }
-  }
+  const onSave = async (input: TransformationCardInput) => {
+    if (!userId || !coach) return;
+    await createSubmission({ clientId: userId, coachId: coach.id, ...input });
+    await setTransformationConsent(userId, true).catch(() => {});
+    await queryClient.invalidateQueries({ queryKey: ['my-transformation-submissions', userId] });
+    toast.show(t('clientTransformation.sent'));
+    setEditorKey((k) => k + 1); // reset the editor for the next submission
+  };
 
-  async function onWithdraw(id: string) {
+  const onWithdraw = (id: string) => async () => {
     const ok = await confirmDestructive(t('clientTransformation.withdrawTitle'), t('clientTransformation.withdrawBody'), t('clientTransformation.withdraw'));
     if (!ok) return;
     try {
@@ -133,102 +114,66 @@ export default function ClientTransformationBuilder() {
     } catch {
       toast.show(t('common.error'), 'error');
     }
-  }
+  };
 
   const submissions = submissionsQ.data ?? [];
-  const canSend = !!coach && !!beforeId && !!afterId && !sending && !working;
+  const myCards = myCardQ.data ?? [];
+  const firstName = (session?.user?.user_metadata?.full_name as string | undefined)?.split(' ')[0] ?? null;
 
   return (
     <Screen gradient padded={false} edges={['bottom']}>
       <Stack.Screen options={{ title: t('clientTransformation.title') }} />
       <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }} keyboardShouldPersistTaps="handled">
-        <Text variant="body" muted style={textStart}>
-          {t('clientTransformation.help')}
-        </Text>
+        <Text variant="body" muted style={textStart}>{t('clientTransformation.help')}</Text>
 
         {!coach ? (
           <EmptyState icon="people-outline" title={t('clientTransformation.noCoachTitle')} subtitle={t('clientTransformation.noCoachSub')} />
         ) : (
           <>
-            {/* Builder */}
-            <GlassCard style={{ gap: theme.spacing.md }}>
-              <Text variant="label" muted style={textStart}>
-                {t('clientTransformation.createTitle')}
-              </Text>
-              <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-                {(['before', 'after'] as const).map((slot) => {
-                  const id = slot === 'before' ? beforeId : afterId;
-                  return (
-                    <Pressable key={slot} onPress={() => !working && setPicker(slot)} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
-                      {id ? (
-                        <SignedImage mediaId={id} style={{ width: '100%', height: 130, borderRadius: theme.radii.md }} />
-                      ) : (
-                        <View
-                          style={{
-                            width: '100%',
-                            height: 130,
-                            borderRadius: theme.radii.md,
-                            backgroundColor: theme.colors.glass,
-                            borderWidth: 1,
-                            borderColor: theme.colors.glassBorder,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Icon name="camera" size={22} color={theme.colors.textMuted} />
-                        </View>
-                      )}
-                      <Text variant="label" muted>
-                        {slot === 'before' ? t('coachProfile.before') : t('coachProfile.after')}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+            {/* My featured card(s): view + share. */}
+            {myCards.length > 0 ? (
+              <View style={{ gap: theme.spacing.sm }}>
+                <Text variant="label" muted style={textStart}>{t('clientTransformation.myCard')}</Text>
+                {myCards.map((card) => (
+                  <View key={card.transformation_id} style={{ alignItems: 'center' }}>
+                    <ShareableTransformationCard item={card} coachName={coach.full_name ?? undefined} />
+                  </View>
+                ))}
               </View>
+            ) : null}
 
-              <Input value={caption} onChangeText={setCaption} placeholder={t('coachProfile.captionPlaceholder')} maxLength={200} />
-
-              <Text variant="caption" muted style={textStart}>
-                {t('clientTransformation.consentNote')}
-              </Text>
-              <Button
-                title={sending ? t('clientTransformation.sending') : t('clientTransformation.send')}
-                onPress={onSend}
-                loading={sending}
-                disabled={!canSend}
+            {/* Builder */}
+            <View style={{ gap: theme.spacing.sm }}>
+              <Text variant="label" muted style={textStart}>{t('clientTransformation.createTitle')}</Text>
+              <TransformationEditor
+                key={editorKey}
+                mode="client"
+                clientFirstName={firstName}
+                coachName={coach.full_name ?? undefined}
+                pickPhoto={pickPhoto}
+                onSave={onSave}
+                saveLabel={t('clientTransformation.send')}
               />
-            </GlassCard>
+            </View>
 
             {/* My submissions */}
             {submissions.length > 0 ? (
               <View style={{ gap: theme.spacing.sm }}>
-                <Text variant="label" muted style={textStart}>
-                  {t('clientTransformation.mySubmissions')}
-                </Text>
+                <Text variant="label" muted style={textStart}>{t('clientTransformation.mySubmissions')}</Text>
                 {submissions.map((s) => (
                   <GlassCard key={s.id} style={{ gap: theme.spacing.sm }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                       <Badge label={t(`clientTransformation.status.${s.status}`)} tone={STATUS_TONE[s.status]} />
                       <View style={{ flex: 1 }} />
                       {s.status !== 'approved' ? (
-                        <Pressable onPress={() => onWithdraw(s.id)} hitSlop={8}>
-                          <Icon name="trash" size={18} color={theme.colors.danger} />
-                        </Pressable>
+                        <Pressable onPress={onWithdraw(s.id)} hitSlop={8}><Icon name="trash" size={18} color={theme.colors.danger} /></Pressable>
                       ) : null}
                     </View>
                     <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                      {s.before_media_id ? (
-                        <SignedImage mediaId={s.before_media_id} style={{ width: 64, height: 64, borderRadius: theme.radii.sm }} />
-                      ) : null}
-                      {s.after_media_id ? (
-                        <SignedImage mediaId={s.after_media_id} style={{ width: 64, height: 64, borderRadius: theme.radii.sm }} />
-                      ) : null}
+                      {s.before_media_id ? <SignedImage mediaId={s.before_media_id} style={{ width: 64, height: 64, borderRadius: theme.radii.sm }} /> : null}
+                      {s.after_media_id ? <SignedImage mediaId={s.after_media_id} style={{ width: 64, height: 64, borderRadius: theme.radii.sm }} /> : null}
                     </View>
-                    {s.caption ? (
-                      <Text variant="caption" muted style={textStart}>
-                        {s.caption}
-                      </Text>
-                    ) : null}
+                    {s.caption ? <Text variant="caption" muted style={textStart}>{s.caption}</Text> : null}
                   </GlassCard>
                 ))}
               </View>
@@ -237,33 +182,26 @@ export default function ClientTransformationBuilder() {
         )}
       </ScrollView>
 
-      {/* Photo-source picker: upload new OR pick from existing progress photos. */}
-      <SourcePicker
-        slot={picker}
-        ownerId={userId}
-        working={working}
-        onUploadNew={uploadNew}
-        onChooseExisting={chooseExisting}
-        onClose={() => !working && setPicker(null)}
-      />
+      {/* Photo source: upload new OR reuse an existing progress photo. */}
+      <SourcePicker visible={pickerOpen} ownerId={userId} working={working} onUploadNew={uploadNew} onChooseExisting={chooseExisting} onClose={() => resolvePick(null)} />
     </Screen>
   );
 }
 
 /** Bottom-sheet modal: "Upload new" or a grid of the client's existing progress photos. */
 function SourcePicker({
-  slot,
+  visible,
   ownerId,
   working,
   onUploadNew,
   onChooseExisting,
   onClose,
 }: {
-  slot: Slot | null;
+  visible: boolean;
   ownerId?: string;
   working: boolean;
-  onUploadNew: (slot: Slot) => void;
-  onChooseExisting: (slot: Slot, mediaId: string) => void;
+  onUploadNew: () => void;
+  onChooseExisting: (mediaId: string) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -271,67 +209,40 @@ function SourcePicker({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!slot || !ownerId) return;
+    if (!visible || !ownerId) return;
     setLoading(true);
     listMediaFor(ownerId, 'progress_photo')
       .then(setPhotos)
       .catch(() => setPhotos([]))
       .finally(() => setLoading(false));
-  }, [slot, ownerId]);
+  }, [visible, ownerId]);
 
   return (
-    <Modal visible={slot != null} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.overlay }} onPress={onClose}>
-        <Pressable
-          style={{
-            backgroundColor: theme.colors.surface,
-            borderTopLeftRadius: 18,
-            borderTopRightRadius: 18,
-            padding: theme.spacing.lg,
-            paddingBottom: theme.spacing.xl,
-            gap: theme.spacing.md,
-            maxHeight: '70%',
-          }}
-          onPress={() => {}}
-        >
-          <Text variant="title" style={textStart}>
-            {t('clientTransformation.choosePhoto')}
-          </Text>
-
-          <Button
-            title={t('clientTransformation.uploadNew')}
-            onPress={() => slot && onUploadNew(slot)}
-            variant="secondary"
-            disabled={working}
-          />
-
-          <Text variant="label" muted style={textStart}>
-            {t('clientTransformation.fromProgressPhotos')}
-          </Text>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.overlay }} onPress={() => !working && onClose()}>
+        <Pressable style={{ backgroundColor: theme.colors.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: theme.spacing.lg, paddingBottom: theme.spacing.xl, gap: theme.spacing.md, maxHeight: '70%' }} onPress={() => {}}>
+          <Text variant="title" style={textStart}>{t('clientTransformation.choosePhoto')}</Text>
+          <Button title={t('clientTransformation.uploadNew')} onPress={onUploadNew} variant="secondary" disabled={working} />
+          <Text variant="label" muted style={textStart}>{t('clientTransformation.fromProgressPhotos')}</Text>
           {loading ? (
             <ActivityIndicator color={theme.colors.primary} />
           ) : photos.length === 0 ? (
-            <Text variant="caption" muted style={textStart}>
-              {t('clientTransformation.noProgressPhotos')}
-            </Text>
+            <Text variant="caption" muted style={textStart}>{t('clientTransformation.noProgressPhotos')}</Text>
           ) : (
             <ScrollView keyboardShouldPersistTaps="handled">
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
                 {photos.map((p) => (
-                  <Pressable key={p.id} onPress={() => slot && !working && onChooseExisting(slot, p.id)} disabled={working}>
+                  <Pressable key={p.id} onPress={() => !working && onChooseExisting(p.id)} disabled={working}>
                     <SignedImage mediaId={p.id} style={{ width: 96, height: 96, borderRadius: theme.radii.sm }} />
                   </Pressable>
                 ))}
               </View>
             </ScrollView>
           )}
-
           {working ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
               <ActivityIndicator color={theme.colors.primary} />
-              <Text variant="caption" muted>
-                {t('clientTransformation.preparing')}
-              </Text>
+              <Text variant="caption" muted>{t('clientTransformation.preparing')}</Text>
             </View>
           ) : null}
         </Pressable>
