@@ -49,15 +49,17 @@ export function frameStyle(
   const f = frame ?? { scale: 1, x: 0, y: 0 };
   const scale = Math.max(0.2, f.scale); // defensive floor on stored values
   const { bw, bh } = coverBox(w, h, scale, nat);
-  const ox = (bw - w) / 2; // horizontal overflow each side when centered
+  const ox = (bw - w) / 2; // overflow each side when centered (NEGATIVE = a gap: zoomed out)
   const oy = (bh - h) / 2;
-  // An axis with NO overflow (zoomed out below cover) is centered — pan doesn't apply.
+  // -o*(1+p) positions the box in BOTH regimes: overflow (o>0: p=-1 pins the image's edge,
+  // pan slides the crop) and gap (o<0: p=-1/+1 pins the photo to the cell's edges, pan
+  // slides the photo within the cell) — so a zoomed-OUT photo is still positionable.
   return {
     position: 'absolute',
     width: bw,
     height: bh,
-    left: ox > 0 ? -ox * (1 + f.x) : -ox,
-    top: oy > 0 ? -oy * (1 + f.y) : -oy,
+    left: -ox * (1 + f.x),
+    top: -oy * (1 + f.y),
   };
 }
 
@@ -72,13 +74,15 @@ export function panBy(
   nat?: NaturalSize | null,
 ): PhotoFrame {
   if (w <= 0 || h <= 0) return frame;
-  const { bw, bh } = coverBox(w, h, Math.max(1, frame.scale), nat);
+  const { bw, bh } = coverBox(w, h, Math.max(0.2, frame.scale), nat);
   const ox = (bw - w) / 2;
   const oy = (bh - h) / 2;
   const clamp = (v: number) => Math.max(-1, Math.min(1, v));
+  // Same dual-regime basis as frameStyle: negative overflow (a gap) flips the divisor's
+  // sign, which keeps drag-follows-finger in both directions. Only an exact fit freezes.
   return {
     scale: frame.scale,
-    x: ox > 0 ? clamp(frame.x - dx / ox) : frame.x,
-    y: oy > 0 ? clamp(frame.y - dy / oy) : frame.y,
+    x: Math.abs(ox) > 0.5 ? clamp(frame.x - dx / ox) : frame.x,
+    y: Math.abs(oy) > 0.5 ? clamp(frame.y - dy / oy) : frame.y,
   };
 }

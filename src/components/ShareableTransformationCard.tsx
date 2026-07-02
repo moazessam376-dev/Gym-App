@@ -55,6 +55,27 @@ const BEFORE_GREY = '#C3C6CE';
 
 const kg = (g: number | null) => (g == null ? null : Math.round((g / 1000) * 10) / 10);
 
+/** True when the frame is zoomed OUT below cover — the photo no longer fills its cell,
+ *  so a blurred copy of the same photo backfills the gap (the WhatsApp look). */
+export function needsBackfill(frame: PhotoFrame | null | undefined): boolean {
+  return (frame?.scale ?? 1) < 0.999;
+}
+
+/** The blurred full-bleed backfill layer + a dim overlay for contrast. */
+function BlurBackfill({ mediaId }: { mediaId: string }) {
+  return (
+    <>
+      <SignedImage
+        mediaId={mediaId}
+        resizeMode="cover"
+        blurRadius={22}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)' }} />
+    </>
+  );
+}
+
 /** 'YYYY-MM-DD' → a compact localized chip ("Jan 15"); null on malformed input. */
 function dateChip(takenOn: string | null, locale: string): string | null {
   if (!takenOn || !/^\d{4}-\d{2}-\d{2}$/.test(takenOn)) return null;
@@ -152,7 +173,10 @@ function PhotoCell({
     >
       {photo?.media_id ? (
         sz.w > 0 ? (
-          <SignedImage mediaId={photo.media_id} resizeMode="cover" style={frameStyle(frame, sz.w, sz.h, nat)} onNaturalSize={(w, h) => setNat({ w, h })} />
+          <>
+            {needsBackfill(frame) ? <BlurBackfill mediaId={photo.media_id} /> : null}
+            <SignedImage mediaId={photo.media_id} resizeMode="cover" style={frameStyle(frame, sz.w, sz.h, nat)} onNaturalSize={(w, h) => setNat({ w, h })} />
+          </>
         ) : (
           <SignedImage mediaId={photo.media_id} resizeMode="cover" style={{ width: '100%', height: '100%' }} onNaturalSize={(w, h) => setNat({ w, h })} />
         )
@@ -267,7 +291,10 @@ function SliderHero({ before, after, beforeLabel, afterLabel, edit, busySlot }: 
   const renderPhoto = (p: TransformationPhoto | null, onNat: (w: number, h: number) => void, nat: NaturalSize | null) =>
     p?.media_id ? (
       sz.w > 0 && sz.h > 0 ? (
-        <SignedImage mediaId={p.media_id} resizeMode="cover" style={frameStyle(p.frame, sz.w, sz.h, nat)} onNaturalSize={onNat} />
+        <>
+          {needsBackfill(p.frame) ? <BlurBackfill mediaId={p.media_id} /> : null}
+          <SignedImage mediaId={p.media_id} resizeMode="cover" style={frameStyle(p.frame, sz.w, sz.h, nat)} onNaturalSize={onNat} />
+        </>
       ) : (
         <SignedImage mediaId={p.media_id} resizeMode="cover" style={{ width: '100%', height: '100%' }} onNaturalSize={onNat} />
       )
