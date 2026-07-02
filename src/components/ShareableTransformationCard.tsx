@@ -1,25 +1,27 @@
-// ShareableTransformationCard (Engagement E3, "1B / Frame" mockup) — a Raptor-branded
-// before/after card for the public showcase, built to be SCREENSHOTTED + posted to social.
-// Image-led editorial layout: full-bleed before/after photos split by a glowing cyan divider
-// (SIDE-by-side or STACKed top/bottom), a top scrim (TRANSFORMATION tag + client name + a
-// VERIFIED badge when the numbers are app-backed + weeks badge), and a compact stats band
-// (body-fat / lean-mass deltas + tier rank-up + coach credit + RAPTOR mark). Renders at three
-// social ratios (Square 1:1, Portrait 4:5, Story 9:16). Per-photo framing (scale + pan) is
-// applied via the shared frameStyle so it matches the editor. Native capture→share exports the
-// card; web hides the button (view-shot has no reliable web path).
-// Module-scope component → its OWN useTranslation (CLAUDE.md §13 / i18n rule).
+// ShareableTransformationCard (Engagement E3 "1B / Frame" + 0087 Transformation Manager) —
+// a Raptor-branded transformation card for the public showcase, built to be SAVED + posted
+// to social. Image-led editorial layout: full-bleed photos split by glowing cyan dividers,
+// a top scrim (TRANSFORMATION tag + client name + a VERIFIED badge when the numbers are
+// app-backed + weeks badge), and a compact stats band (body-fat / lean-mass deltas + tier
+// rank-up + coach credit + RAPTOR mark). Renders at three social ratios (1:1, 4:5, 9:16).
+//
+// 0087 layouts render from `item.photos` (ordered cells, each with its own frame and an
+// optional presentation-only taken_on date chip):
+//   side / stack — the classic 2-photo pair · slider — 2 photos with a draggable reveal
+//   handle · strip — 3 photos in a row · grid — 4 photos, 2×2.
+// "Save photo" works on every device via cardCapture (native share sheet incl. Save Image;
+// web = PNG download). Module-scope components → their OWN useTranslation (i18n rule).
 import { Fragment, useRef, useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { PanResponder, Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
-import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
 import { theme } from '@/theme';
 import { TIER_COLORS, type TierId } from '@/lib/leagues';
 import { forwardChevron } from '@/lib/rtl';
 import { frameStyle } from '@/lib/photoFrame';
-import { Icon, Segmented, Text, SignedImage } from '@/components/ui';
-import type { CoachTransformation, PhotoFrame } from '@/lib/public-profiles';
+import { captureCard } from '@/lib/cardCapture';
+import { Icon, Segmented, Text, SignedImage, useToast } from '@/components/ui';
+import type { CoachTransformation, TransformationPhoto } from '@/lib/public-profiles';
 
 type Ratio = 'square' | 'portrait' | 'story';
 const ASPECT: Record<Ratio, number> = { square: 1, portrait: 4 / 5, story: 9 / 16 }; // width / height
@@ -31,6 +33,19 @@ const BEFORE_GREY = '#C3C6CE';
 
 const kg = (g: number | null) => (g == null ? null : Math.round((g / 1000) * 10) / 10);
 
+/** 'YYYY-MM-DD' → a compact localized chip ("Jan 15"); null on malformed input. */
+function dateChip(takenOn: string | null, locale: string): string | null {
+  if (!takenOn || !/^\d{4}-\d{2}-\d{2}$/.test(takenOn)) return null;
+  const [y, m, d] = takenOn.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  if (Number.isNaN(date.getTime())) return null;
+  try {
+    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  } catch {
+    return takenOn;
+  }
+}
+
 function TierPill({ tid, label }: { tid: TierId; label: string }) {
   return (
     <View style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 7 }}>
@@ -41,25 +56,138 @@ function TierPill({ tid, label }: { tid: TierId; label: string }) {
   );
 }
 
-/** One photo cell: a cover image with an optional framing transform (measured on layout), plus
- *  a corner BEFORE/AFTER label so it reads in both side + stacked layouts. */
-function PhotoCell({ mediaId, frame, label, labelColor }: { mediaId: string | null; frame: PhotoFrame | null; label: string; labelColor: string }) {
+/** The glowing cyan divider between photo cells. */
+function Divider({ horizontal }: { horizontal?: boolean }) {
+  return (
+    <View
+      style={{
+        ...(horizontal ? { height: 2, alignSelf: 'stretch' as const } : { width: 2, alignSelf: 'stretch' as const }),
+        backgroundColor: theme.colors.primary,
+        shadowColor: theme.colors.primary,
+        shadowOpacity: 0.7,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 0 },
+      }}
+    />
+  );
+}
+
+/** One photo cell: a cover image with an optional framing transform, plus a corner chip —
+ *  a taken-on date when set, else an optional BEFORE/AFTER-style label. */
+function PhotoCell({
+  photo,
+  label,
+  labelColor,
+}: {
+  photo: TransformationPhoto | null;
+  label?: string | null;
+  labelColor?: string;
+}) {
+  const { i18n } = useTranslation();
   const [sz, setSz] = useState({ w: 0, h: 0 });
+  const frame = photo?.frame ?? null;
   const framed = frame && frame.scale > 1.001;
+  const chip = dateChip(photo?.taken_on ?? null, i18n.language)?.toUpperCase() ?? label ?? null;
   return (
     <View
       style={{ flex: 1, backgroundColor: theme.colors.surface, overflow: 'hidden' }}
       onLayout={framed ? (e) => setSz({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height }) : undefined}
     >
-      {mediaId ? (
+      {photo?.media_id ? (
         framed && sz.w > 0 ? (
-          <SignedImage mediaId={mediaId} resizeMode="cover" style={frameStyle(frame, sz.w, sz.h)} />
+          <SignedImage mediaId={photo.media_id} resizeMode="cover" style={frameStyle(frame, sz.w, sz.h)} />
         ) : (
-          <SignedImage mediaId={mediaId} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
+          <SignedImage mediaId={photo.media_id} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
         )
       ) : null}
-      <View style={{ position: 'absolute', left: 10, bottom: 10, backgroundColor: 'rgba(8,9,12,0.55)', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 7 }}>
-        <Text style={{ fontFamily: theme.fontFamily.monoRegular, fontSize: 10, letterSpacing: 1.5, color: labelColor }}>{label}</Text>
+      {chip ? (
+        <View style={{ position: 'absolute', left: 8, bottom: 8, backgroundColor: 'rgba(8,9,12,0.55)', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 7 }}>
+          <Text style={{ fontFamily: theme.fontFamily.monoRegular, fontSize: 10, letterSpacing: 1.5, color: labelColor ?? BEFORE_GREY }}>{chip}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** Slider layout (0087): the BEFORE photo as the base layer, the AFTER photo clipped in from
+ *  the right, split by a draggable glowing handle. The DRAG surface is the handle only (not
+ *  the whole hero) so the card keeps scrolling normally inside lists. */
+function SliderHero({ before, after, beforeLabel, afterLabel }: {
+  before: TransformationPhoto | null;
+  after: TransformationPhoto | null;
+  beforeLabel: string;
+  afterLabel: string;
+}) {
+  const { i18n } = useTranslation();
+  const [sz, setSz] = useState({ w: 0, h: 0 });
+  const w = sz.w;
+  const [reveal, setReveal] = useState(0.5); // fraction of the width where AFTER begins
+  const wRef = useRef(w);
+  wRef.current = w;
+  const revealRef = useRef(reveal);
+  revealRef.current = reveal;
+  const startReveal = useRef(0.5);
+
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        startReveal.current = revealRef.current;
+      },
+      onPanResponderMove: (_e, g) => {
+        if (wRef.current <= 0) return;
+        const next = startReveal.current + g.dx / wRef.current;
+        setReveal(Math.max(0.06, Math.min(0.94, next)));
+      },
+    }),
+  ).current;
+
+  const splitX = w * reveal;
+  const beforeChip = dateChip(before?.taken_on ?? null, i18n.language)?.toUpperCase() ?? beforeLabel;
+  const afterChip = dateChip(after?.taken_on ?? null, i18n.language)?.toUpperCase() ?? afterLabel;
+  const renderPhoto = (p: TransformationPhoto | null) =>
+    p?.media_id ? (
+      p.frame && p.frame.scale > 1.001 && sz.w > 0 && sz.h > 0 ? (
+        <SignedImage mediaId={p.media_id} resizeMode="cover" style={frameStyle(p.frame, sz.w, sz.h)} />
+      ) : (
+        <SignedImage mediaId={p.media_id} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
+      )
+    ) : null;
+
+  return (
+    <View
+      style={{ flex: 1, backgroundColor: theme.colors.surface, overflow: 'hidden' }}
+      onLayout={(e) => setSz({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+    >
+      {/* Base layer: BEFORE fills the hero. */}
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: w > 0 ? w : '100%', overflow: 'hidden' }}>
+        {renderPhoto(before)}
+      </View>
+      {/* Overlay: AFTER clipped to the right of the handle, image kept aligned. */}
+      {w > 0 ? (
+        <View style={{ position: 'absolute', top: 0, bottom: 0, left: splitX, right: 0, overflow: 'hidden' }}>
+          <View style={{ position: 'absolute', top: 0, bottom: 0, left: -splitX, width: w }}>{renderPhoto(after)}</View>
+        </View>
+      ) : null}
+      {/* Split line + drag handle. */}
+      {w > 0 ? (
+        <>
+          <View style={{ position: 'absolute', top: 0, bottom: 0, left: splitX - 1, width: 2, backgroundColor: theme.colors.primary, shadowColor: theme.colors.primary, shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } }} />
+          <View
+            {...responder.panHandlers}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            style={{ position: 'absolute', top: '50%', left: splitX - 13, marginTop: -13, width: 26, height: 26, borderRadius: 13, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 2 } }}
+          >
+            <Icon name="chevrons-left-right" size={13} color={theme.colors.onPrimary} />
+          </View>
+        </>
+      ) : null}
+      <View style={{ position: 'absolute', left: 8, bottom: 8, backgroundColor: 'rgba(8,9,12,0.55)', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 7 }}>
+        <Text style={{ fontFamily: theme.fontFamily.monoRegular, fontSize: 10, letterSpacing: 1.5, color: BEFORE_GREY }}>{beforeChip}</Text>
+      </View>
+      <View style={{ position: 'absolute', right: 8, bottom: 8, backgroundColor: 'rgba(8,9,12,0.55)', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 7 }}>
+        <Text style={{ fontFamily: theme.fontFamily.monoRegular, fontSize: 10, letterSpacing: 1.5, color: theme.colors.primary }}>{afterChip}</Text>
       </View>
     </View>
   );
@@ -75,12 +203,13 @@ export function ShareableTransformationCard({
   shareable?: boolean;
 }) {
   const { t } = useTranslation();
+  const toast = useToast();
   const shotRef = useRef<View>(null);
   const [ratio, setRatio] = useState<Ratio>('portrait');
+  const [saving, setSaving] = useState(false);
 
   const bfPct = item.body_fat_delta_bp == null ? null : Math.round((item.body_fat_delta_bp / 100) * 10) / 10;
   const lmKg = kg(item.lean_mass_delta_grams);
-  const isStack = item.layout === 'stack';
 
   const stats: { value: string; unit?: string; label: string; color: string }[] = [];
   if (bfPct != null) {
@@ -95,18 +224,75 @@ export function ShareableTransformationCard({
   const tierChanged = !!(tierBefore && tierAfter && tierBefore !== tierAfter);
   const hasTier = !!(tierBefore || tierAfter);
 
-  const onShare = async () => {
-    if (Platform.OS === 'web') return;
-    try {
-      const uri = await captureRef(shotRef, { format: 'png', quality: 1 });
-      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri);
-    } catch {
-      /* capture/share unavailable (e.g. stale dev client) — no-op, the card still renders */
-    }
+  const photos = item.photos;
+  const beforeLabel = t('coachProfile.before').toUpperCase();
+  const afterLabel = t('coachProfile.after').toUpperCase();
+  const at = (i: number): TransformationPhoto | null => photos[i] ?? null;
+
+  const onSavePhoto = async () => {
+    setSaving(true);
+    const outcome = await captureCard(shotRef, `${item.client_first_name ?? 'transformation'}-card`);
+    setSaving(false);
+    if (outcome === 'downloaded') toast.show(t('transformationEditor.photoSaved'));
+    else if (outcome === 'failed') toast.show(t('transformationEditor.captureFailed'), 'error');
+    // 'shared' → the OS sheet was its own feedback.
   };
 
   const mono = theme.fontFamily.monoRegular;
   const monoB = theme.fontFamily.monoBold;
+
+  /** The photo hero for the card's layout. side/stack/strip = cells + dividers along one
+   *  axis; grid = 2×2 nested rows (no CSS grid — web rule); slider = the reveal overlay. */
+  const renderHero = () => {
+    switch (item.layout) {
+      case 'slider':
+        return <SliderHero before={at(0)} after={at(1)} beforeLabel={beforeLabel} afterLabel={afterLabel} />;
+      case 'strip':
+        return (
+          <>
+            <PhotoCell photo={at(0)} label={beforeLabel} labelColor={BEFORE_GREY} />
+            <Divider />
+            <PhotoCell photo={at(1)} />
+            <Divider />
+            <PhotoCell photo={at(2)} label={afterLabel} labelColor={theme.colors.primary} />
+          </>
+        );
+      case 'grid':
+        return (
+          <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, flexDirection: 'row' }}>
+              <PhotoCell photo={at(0)} label={beforeLabel} labelColor={BEFORE_GREY} />
+              <Divider />
+              <PhotoCell photo={at(1)} />
+            </View>
+            <Divider horizontal />
+            <View style={{ flex: 1, flexDirection: 'row' }}>
+              <PhotoCell photo={at(2)} />
+              <Divider />
+              <PhotoCell photo={at(3)} label={afterLabel} labelColor={theme.colors.primary} />
+            </View>
+          </View>
+        );
+      case 'stack':
+        return (
+          <>
+            <PhotoCell photo={at(0)} label={beforeLabel} labelColor={BEFORE_GREY} />
+            <Divider horizontal />
+            <PhotoCell photo={at(1)} label={afterLabel} labelColor={theme.colors.primary} />
+          </>
+        );
+      default: // side
+        return (
+          <>
+            <PhotoCell photo={at(0)} label={beforeLabel} labelColor={BEFORE_GREY} />
+            <Divider />
+            <PhotoCell photo={at(1)} label={afterLabel} labelColor={theme.colors.primary} />
+          </>
+        );
+    }
+  };
+
+  const heroDirection = item.layout === 'stack' || item.layout === 'grid' ? 'column' : 'row';
 
   return (
     <View style={{ width: CARD_W }}>
@@ -116,26 +302,16 @@ export function ShareableTransformationCard({
         collapsable={false}
         style={{ width: CARD_W, aspectRatio: ASPECT[ratio], backgroundColor: ONYX, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.glassBorder, overflow: 'hidden' }}
       >
-        {/* Photo hero — side-by-side (row) or stacked (column); grows above the stats band */}
-        <View style={{ flex: 1, flexDirection: isStack ? 'column' : 'row', position: 'relative' }}>
-          <PhotoCell mediaId={item.before_media_id} frame={item.before_frame} label={t('coachProfile.before').toUpperCase()} labelColor={BEFORE_GREY} />
-          <View
-            style={{
-              ...(isStack ? { height: 2, alignSelf: 'stretch' } : { width: 2, alignSelf: 'stretch' }),
-              backgroundColor: theme.colors.primary,
-              shadowColor: theme.colors.primary,
-              shadowOpacity: 0.7,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 0 },
-            }}
-          />
-          <PhotoCell mediaId={item.after_media_id} frame={item.after_frame} label={t('coachProfile.after').toUpperCase()} labelColor={theme.colors.primary} />
+        {/* Photo hero — grows above the stats band */}
+        <View style={{ flex: 1, flexDirection: heroDirection, position: 'relative' }}>
+          {renderHero()}
 
           {/* Top scrim: tag + name (+ verified badge) + weeks */}
           <LinearGradient
             colors={[SCRIM_DARK, SCRIM_MID, 'transparent']}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
+            pointerEvents="none"
             style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 14, paddingTop: 13, paddingBottom: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}
           >
             <View style={{ flex: 1, paddingRight: 8 }}>
@@ -213,7 +389,7 @@ export function ShareableTransformationCard({
         </View>
       </View>
 
-      {/* ── Footer (NOT captured): pick a social ratio + share ───────────────────── */}
+      {/* ── Footer (NOT captured): pick a social ratio + save the photo ──────────── */}
       <View style={{ marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
         <Segmented
           options={[
@@ -224,10 +400,10 @@ export function ShareableTransformationCard({
           value={ratio}
           onChange={(v) => setRatio(v as Ratio)}
         />
-        {shareable && Platform.OS !== 'web' ? (
-          <Pressable onPress={onShare} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: theme.spacing.sm }}>
-            <Icon name="send" size={15} color={theme.colors.primary} />
-            <Text variant="caption" color={theme.colors.primary}>{t('coachProfile.share')}</Text>
+        {shareable ? (
+          <Pressable disabled={saving} onPress={onSavePhoto} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: theme.spacing.sm, opacity: saving ? 0.5 : 1 }}>
+            <Icon name="download" size={15} color={theme.colors.primary} />
+            <Text variant="caption" color={theme.colors.primary}>{t('transformationEditor.savePhoto')}</Text>
           </Pressable>
         ) : null}
       </View>
