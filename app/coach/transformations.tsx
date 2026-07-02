@@ -3,7 +3,7 @@
 // per-client card timelines (tap a thumb to edit, dashed tile to add), and a "feature a new
 // client" chip row. Pending client submissions are approved (featured) or dismissed here.
 // On wide web + coach this route renders the desktop portal view instead (same hooks).
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
@@ -32,7 +32,13 @@ export default function CoachTransformationsManager() {
     return (
       <Screen gradient padded={false} edges={['bottom']}>
         <Stack.Screen options={{ title: t('coachProfile.manageTransformations') }} />
-        <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }} keyboardShouldPersistTaps="handled">
+        {/* automaticallyAdjustKeyboardInsets: keep the focused input (esp. the caption at the
+            bottom of the form) visible above the iOS keyboard. */}
+        <ScrollView
+          contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
             <Pressable onPress={m.closeEditor} hitSlop={8}><Icon name="chevron-back" size={22} color={theme.colors.text} /></Pressable>
             <Text variant="bodyStrong" style={[{ flex: 1 }, textStart]}>{m.editor.clientFirstName ?? ''}</Text>

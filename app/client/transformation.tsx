@@ -4,7 +4,7 @@
 // Photos come from a new upload OR an existing progress photo (the SourcePicker). Sending sets
 // transformation-sharing consent. Once a card is featured, the client sees + SHARES it here too.
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -124,7 +124,11 @@ export default function ClientTransformationBuilder() {
   return (
     <Screen gradient padded={false} edges={['bottom']}>
       <Stack.Screen options={{ title: t('clientTransformation.title') }} />
-      <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+      >
         <Text variant="body" muted style={textStart}>{t('clientTransformation.help')}</Text>
 
         {!coach ? (
