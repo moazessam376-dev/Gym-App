@@ -1,136 +1,60 @@
-// Coach transformations editor (Engagement E3). The coach curates before/after showcase cards
-// for clients who CONSENTED (athlete_profile.allow_transformation_sharing). Pick a client →
-// the full TransformationEditor (frame photos, layout, manual stats/dates, live branded-card
-// preview) → save. Existing cards render as the real branded card with Edit/Delete. Client
-// submissions await review here (approve features them, dismiss clears them).
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+// Transformation Manager (0087, "Transformation Manager" mockup) — the coach curates
+// MULTIPLE before/after cards per consenting client. KPI tiles, a Pending|Published split,
+// per-client card timelines (tap a thumb to edit, dashed tile to add), and a "feature a new
+// client" chip row. Pending client submissions are approved (featured) or dismissed here.
+// On wide web + coach this route renders the desktop portal view instead (same hooks).
+import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, Stack } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { textStart } from '../../src/lib/rtl';
-import { queryClient } from '../../src/lib/query';
-import { confirmDestructive } from '../../src/lib/confirm';
-import {
-  listMyTransformations,
-  listConsentingClients,
-  upsertTransformation,
-  deleteTransformation,
-  type ConsentingClient,
-  type MyTransformation,
-} from '../../src/lib/coach-transformations';
-import { getCoachTransformations, type TransformationCardInput } from '../../src/lib/public-profiles';
-import { listPendingSubmissions, resolveSubmission } from '../../src/lib/transformation-submissions';
+import { useChrome } from '../../src/lib/chrome';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
-import { Icon, Screen, Text, GlassCard, Button, SignedImage, EmptyState, Badge, useToast } from '../../src/components/ui';
-import { ShareableTransformationCard } from '../../src/components/ShareableTransformationCard';
+import { Icon, Screen, Text, GlassCard, KpiTile, Segmented, EmptyState } from '../../src/components/ui';
 import { TransformationEditor } from '../../src/components/transformations/TransformationEditor';
+import { useTransformationManager } from '../../src/components/transformations/useTransformationManager';
+import { PendingSubmissionCard, CardThumb, AddCardTile, FeatureClientChip } from '../../src/components/transformations/ManagerParts';
+import { TransformationsDesktop } from '../../src/components/coach/web/TransformationsDesktop';
 import { theme } from '../../src/theme';
 
-type EditorTarget = {
-  clientId: string;
-  clientFirstName: string | null;
-  initial?: Partial<TransformationCardInput> & { bodyFatLostPct?: number | null; leanMassGainedKg?: number | null };
-};
-
-/** A stored raw card row → the editor's initial values. */
-function rawToInitial(row: MyTransformation): EditorTarget['initial'] {
-  return {
-    caption: row.caption,
-    beforeMediaId: row.before_media_id,
-    afterMediaId: row.after_media_id,
-    bodyFatLostPct: row.body_fat_delta_bp_override != null ? row.body_fat_delta_bp_override / 100 : null,
-    leanMassGainedKg: row.lean_mass_delta_grams_override != null ? row.lean_mass_delta_grams_override / 1000 : null,
-    tierBeforeOverride: row.tier_before_override,
-    tierAfterOverride: row.tier_after_override,
-    measurementStartedAt: row.measurement_started_at,
-    measurementEndedAt: row.measurement_ended_at,
-    layout: row.layout,
-    beforeFrame: row.before_frame,
-    afterFrame: row.after_frame,
-  };
-}
-
-export default function CoachTransformationsEditor() {
+export default function CoachTransformationsManager() {
   const { t } = useTranslation();
-  const { role, session } = useAuth();
-  const userId = session?.user?.id;
-  const toast = useToast();
-
-  const rawQ = useQuery({ queryKey: ['my-transformations', userId], queryFn: () => listMyTransformations(userId!), enabled: !!userId });
-  const cardsQ = useQuery({ queryKey: ['coach-transformations', userId], queryFn: () => getCoachTransformations(userId!), enabled: !!userId });
-  const clientsQ = useQuery({ queryKey: ['consenting-clients', userId], queryFn: () => listConsentingClients(userId!), enabled: !!userId });
-  const pendingQ = useQuery({ queryKey: ['pending-transformation-submissions', userId], queryFn: () => listPendingSubmissions(userId!), enabled: !!userId });
-
-  const [editor, setEditor] = useState<EditorTarget | null>(null);
-  const [resolving, setResolving] = useState<string | null>(null);
-
-  const invalidate = useCallback(async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['my-transformations', userId] }),
-      queryClient.invalidateQueries({ queryKey: ['coach-transformations', userId] }),
-    ]);
-  }, [userId]);
+  const { role } = useAuth();
+  const { active: chromeActive } = useChrome();
+  const m = useTransformationManager();
 
   if (role && role !== 'coach') return <Redirect href="/" />;
-
-  const onSave = async (input: TransformationCardInput) => {
-    if (!userId || !editor) return;
-    await upsertTransformation({ coachId: userId, clientId: editor.clientId, ...input });
-    await invalidate();
-    toast.show(t('common.saved'));
-    setEditor(null);
-  };
-
-  const onDelete = (id: string) => async () => {
-    const ok = await confirmDestructive(t('coachProfile.deleteTitle'), t('coachProfile.deleteMessage'), t('common.delete'));
-    if (!ok) return;
-    try {
-      await deleteTransformation(id);
-      await invalidate();
-      toast.show(t('common.saved'));
-    } catch {
-      toast.show(t('common.error'), 'error');
-    }
-  };
-
-  const onResolve = (id: string, action: 'approve' | 'dismiss') => async () => {
-    setResolving(id);
-    try {
-      await resolveSubmission(id, action);
-      await queryClient.invalidateQueries({ queryKey: ['pending-transformation-submissions', userId] });
-      if (action === 'approve') await invalidate();
-      toast.show(action === 'approve' ? t('coachProfile.submissionApproved') : t('coachProfile.submissionDismissed'));
-    } catch {
-      toast.show(t('common.error'), 'error');
-    } finally {
-      setResolving(null);
-    }
-  };
-
-  const clients = clientsQ.data ?? [];
-  const raw = rawQ.data ?? [];
-  const cards = cardsQ.data ?? [];
-  const pending = pendingQ.data ?? [];
-  const coachName = session?.user?.user_metadata?.full_name as string | undefined;
+  // Desktop portal variant — AFTER all hooks (web.md rules-of-hooks).
+  if (chromeActive) return <TransformationsDesktop />;
 
   // ── Editing / creating a card ──────────────────────────────────────────────────
-  if (editor) {
+  if (m.editor) {
     return (
       <Screen gradient padded={false} edges={['bottom']}>
         <Stack.Screen options={{ title: t('coachProfile.manageTransformations') }} />
-        <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }} keyboardShouldPersistTaps="handled">
+        {/* automaticallyAdjustKeyboardInsets: keep the focused input (esp. the caption at the
+            bottom of the form) visible above the iOS keyboard. */}
+        <ScrollView
+          contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-            <Pressable onPress={() => setEditor(null)} hitSlop={8}><Icon name="chevron-back" size={22} color={theme.colors.text} /></Pressable>
-            <Text variant="bodyStrong" style={[{ flex: 1 }, textStart]}>{editor.clientFirstName ?? ''}</Text>
+            <Pressable onPress={m.closeEditor} hitSlop={8}><Icon name="chevron-back" size={22} color={theme.colors.text} /></Pressable>
+            <Text variant="bodyStrong" style={[{ flex: 1 }, textStart]}>{m.editor.clientFirstName ?? ''}</Text>
+            {m.editor.id ? (
+              <Pressable onPress={m.onDeleteCurrent} hitSlop={8}>
+                <Text variant="caption" color={theme.colors.danger}>{t('transformationManager.deleteCard')}</Text>
+              </Pressable>
+            ) : null}
           </View>
           <TransformationEditor
             mode="coach"
-            clientFirstName={editor.clientFirstName}
-            coachName={coachName}
-            initial={editor.initial}
-            onSave={onSave}
+            clientId={m.editor.clientId}
+            clientFirstName={m.editor.clientFirstName}
+            coachName={m.coachName}
+            initial={m.editor.initial}
+            onSave={m.onSave}
             saveLabel={t('common.save')}
           />
         </ScrollView>
@@ -144,74 +68,97 @@ export default function CoachTransformationsEditor() {
       <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }} keyboardShouldPersistTaps="handled">
         <Text variant="body" muted style={textStart}>{t('coachProfile.transformationsHelp')}</Text>
 
-        {/* Pending client submissions: approve features it, dismiss clears it. */}
-        {pending.length > 0 ? (
-          <View style={{ gap: theme.spacing.sm }}>
-            <Text variant="label" muted style={textStart}>{t('coachProfile.pendingSubmissions')}</Text>
-            {pending.map((sub) => (
-              <GlassCard key={sub.id} style={{ gap: theme.spacing.sm, borderColor: theme.colors.primary }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <ProfileAvatar name={sub.client_name} avatarMediaId={sub.client_avatar_media_id} size={28} />
-                  <Text variant="bodyStrong" style={[{ flex: 1 }, textStart]}>{sub.client_name ?? ''}</Text>
-                  <Badge label={t('clientTransformation.status.pending')} tone="warning" />
-                </View>
-                <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                  {sub.before_media_id ? <SignedImage mediaId={sub.before_media_id} style={{ width: 80, height: 80, borderRadius: theme.radii.sm }} /> : null}
-                  {sub.after_media_id ? <SignedImage mediaId={sub.after_media_id} style={{ width: 80, height: 80, borderRadius: theme.radii.sm }} /> : null}
-                </View>
-                {sub.caption ? <Text variant="caption" muted style={textStart}>{sub.caption}</Text> : null}
-                <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                  <Button title={t('coachProfile.approveFeature')} onPress={onResolve(sub.id, 'approve')} loading={resolving === sub.id} disabled={resolving != null} style={{ flex: 1 }} />
-                  <Button title={t('coachProfile.dismiss')} variant="secondary" onPress={onResolve(sub.id, 'dismiss')} disabled={resolving != null} style={{ flex: 1 }} />
-                </View>
-              </GlassCard>
-            ))}
-          </View>
+        {/* KPI tiles — real query counts only (no fabricated stats). */}
+        <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+          <KpiTile value={m.raw.length} label={t('transformationManager.kpiPublished')} tone="neutral" />
+          <KpiTile value={m.pending.length} label={t('transformationManager.kpiPending')} tone="warning" />
+          <KpiTile value={m.clients.length} label={t('transformationManager.kpiConsenting')} tone="neutral" />
+        </View>
+
+        <Segmented
+          options={[
+            { value: 'pending', label: t('transformationManager.tabPending') },
+            { value: 'published', label: t('transformationManager.tabPublished') },
+          ]}
+          value={m.tab}
+          onChange={(v) => m.setTab(v as 'pending' | 'published')}
+        />
+
+        {/* ── Pending tab ── */}
+        {m.tab === 'pending' ? (
+          m.pending.length === 0 ? (
+            <EmptyState icon="check-circle" title={t('transformationManager.pendingEmptyTitle')} subtitle={t('transformationManager.pendingEmptySub')} />
+          ) : (
+            <View style={{ gap: theme.spacing.md }}>
+              {m.pending.map((sub) => (
+                <PendingSubmissionCard
+                  key={sub.id}
+                  sub={sub}
+                  busy={m.resolving === sub.id}
+                  disabled={m.resolving != null}
+                  onApprove={m.onResolve(sub.id, 'approve')}
+                  onDismiss={m.onResolve(sub.id, 'dismiss')}
+                />
+              ))}
+            </View>
+          )
         ) : null}
 
-        {/* Existing cards — the real branded card + Edit / Delete. */}
-        {cards.map((card) => {
-          const rawRow = raw.find((r) => r.id === card.transformation_id);
-          return (
-            <View key={card.transformation_id} style={{ gap: theme.spacing.sm, alignItems: 'center' }}>
-              <ShareableTransformationCard item={card} coachName={coachName} />
-              <View style={{ flexDirection: 'row', gap: theme.spacing.sm, alignSelf: 'stretch' }}>
-                <Button
-                  title={t('common.edit')}
-                  variant="secondary"
-                  style={{ flex: 1 }}
-                  onPress={() => rawRow && setEditor({ clientId: rawRow.client_id, clientFirstName: card.client_first_name, initial: rawToInitial(rawRow) })}
-                />
-                <Button title={t('common.delete')} variant="ghost" style={{ flex: 1 }} onPress={onDelete(card.transformation_id)} />
-              </View>
-            </View>
-          );
-        })}
+        {/* ── Published tab: per-client timelines + feature-a-new-client chips ── */}
+        {m.tab === 'published' ? (
+          <View style={{ gap: theme.spacing.lg }}>
+            {m.loading ? <ActivityIndicator color={theme.colors.primary} /> : null}
+            {!m.loading && m.timelines.length === 0 ? (
+              <EmptyState icon="sparkles" title={t('transformationManager.noCardsTitle')} subtitle={t('transformationManager.noCardsSub')} />
+            ) : null}
 
-        {/* Add new — pick a consenting client to open the editor. */}
-        <View style={{ gap: theme.spacing.sm }}>
-          <Text variant="label" muted style={textStart}>{t('coachProfile.addTransformation')}</Text>
-          {clientsQ.isLoading ? (
-            <ActivityIndicator color={theme.colors.primary} />
-          ) : clients.length === 0 ? (
-            <EmptyState icon="people-outline" title={t('coachProfile.noConsentingClients')} subtitle={t('coachProfile.noConsentingClientsSub')} />
-          ) : (
-            <GlassCard style={{ gap: theme.spacing.md }}>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
-                {clients.map((c: ConsentingClient) => (
-                  <Pressable
-                    key={c.user_id}
-                    onPress={() => setEditor({ clientId: c.user_id, clientFirstName: c.full_name?.split(' ')[0] ?? null })}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: theme.spacing.sm, borderRadius: theme.radii.md, borderWidth: 1, borderColor: theme.colors.glassBorder, backgroundColor: theme.colors.glass }}
-                  >
-                    <ProfileAvatar name={c.full_name} avatarMediaId={c.avatar_media_id} size={24} />
-                    <Text variant="caption">{c.full_name ?? ''}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </GlassCard>
-          )}
-        </View>
+            {m.timelines.map((g) => (
+              <GlassCard key={g.clientId} style={{ gap: theme.spacing.md }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <ProfileAvatar name={g.clientName} avatarMediaId={g.avatarMediaId} size={32} />
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyStrong" style={textStart}>{g.clientName ?? ''}</Text>
+                    <Text style={[{ fontFamily: theme.fontFamily.monoRegular, fontSize: 11, color: theme.colors.textMuted }, textStart]}>
+                      {t('transformationManager.cardCount', { count: g.rows.length })}
+                    </Text>
+                  </View>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: theme.spacing.md }}>
+                  {g.rows.map((row) => (
+                    <CardThumb key={row.id} row={row} card={m.cardById.get(row.id)} width={150} onPress={() => m.openEdit(row)} />
+                  ))}
+                  <AddCardTile width={110} minHeight={120} onPress={() => m.openNew(g.clientId, g.clientName?.split(' ')[0] ?? null)} />
+                </ScrollView>
+              </GlassCard>
+            ))}
+
+            {/* Feature a new client — non-consenting clients show an ASK chip, not hidden. */}
+            <View style={{ gap: theme.spacing.sm }}>
+              <Text variant="label" muted style={textStart}>{t('coachProfile.addTransformation')}</Text>
+              {m.featureCandidates.length === 0 ? (
+                m.timelines.length > 0 ? (
+                  <Text variant="caption" muted style={textStart}>{t('transformationManager.allClientsFeatured')}</Text>
+                ) : (
+                  <EmptyState icon="people-outline" title={t('coachProfile.noConsentingClients')} subtitle={t('coachProfile.noConsentingClientsSub')} />
+                )
+              ) : (
+                <GlassCard style={{ gap: theme.spacing.md }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
+                    {m.featureCandidates.map((c) => (
+                      <FeatureClientChip
+                        key={c.user_id}
+                        candidate={c}
+                        onOpen={() => m.openNew(c.user_id, c.full_name?.split(' ')[0] ?? null)}
+                        onAsk={() => void m.onAsk(c.user_id)}
+                      />
+                    ))}
+                  </View>
+                  <Text variant="caption" muted style={textStart}>{t('transformationManager.consentHint')}</Text>
+                </GlassCard>
+              )}
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
     </Screen>
   );

@@ -31,10 +31,60 @@ export type PublicCoachProfile = {
  *  normalized pan offset `x`/`y` in [-1,1] (fraction of the overflow). Null = plain cover. */
 export type PhotoFrame = { scale: number; x: number; y: number };
 
-export type TransformationLayout = 'side' | 'stack';
+export type TransformationLayout = 'side' | 'stack' | 'slider' | 'strip' | 'grid';
+
+/** Photos a layout renders (0087): the 2-photo layouts + 3-photo strip + 4-photo grid. */
+export const LAYOUT_PHOTO_COUNT: Record<TransformationLayout, number> = {
+  side: 2,
+  stack: 2,
+  slider: 2,
+  strip: 3,
+  grid: 4,
+};
+
+export function coerceLayout(v: unknown): TransformationLayout {
+  return v === 'stack' || v === 'slider' || v === 'strip' || v === 'grid' ? v : 'side';
+}
+
+/** One photo of a card (0087 transformation_photos), ordered by position. `taken_on` is
+ *  presentation-only (a date chip on strip/grid cells) — stats never derive from it. */
+export type TransformationPhoto = {
+  media_id: string | null;
+  taken_on: string | null; // 'YYYY-MM-DD'
+  frame: PhotoFrame | null;
+  position: number;
+};
+
+/** Editor-side shape of one photo slot (camelCase input twin of TransformationPhoto). */
+export type TransformationPhotoInput = {
+  mediaId: string | null;
+  takenOn: string | null; // 'YYYY-MM-DD'
+  frame: PhotoFrame | null;
+};
+
+/** Card presentation options (0088 `style` jsonb). Defaults (null row) = scrim on, title
+ *  on the photo. `title: 'band'` moves the tag/name/verified/weeks into the stats band so
+ *  nothing covers the athlete's face at Square/Portrait ratios. */
+export type CardStyle = {
+  scrim: boolean;
+  title: 'top' | 'band';
+};
+
+export const DEFAULT_CARD_STYLE: CardStyle = { scrim: true, title: 'top' };
+
+export function coerceCardStyle(v: unknown): CardStyle {
+  if (!v || typeof v !== 'object') return { ...DEFAULT_CARD_STYLE };
+  const s = v as Record<string, unknown>;
+  return {
+    scrim: s.scrim !== false,
+    title: s.title === 'band' ? 'band' : 'top',
+  };
+}
 
 /** The editable fields of a transformation card, shared by the coach card + client submission
- *  writers. Any non-null stat override / date makes the card SELF-REPORTED (not verified). */
+ *  writers. Any non-null stat override / date makes the card SELF-REPORTED (not verified).
+ *  `photos` / metric picks are the coach-card additions (0087); the client submission path
+ *  still writes only the before/after pair. */
 export type TransformationCardInput = {
   caption: string | null;
   beforeMediaId: string | null;
@@ -49,6 +99,13 @@ export type TransformationCardInput = {
   layout: TransformationLayout;
   beforeFrame: PhotoFrame | null;
   afterFrame: PhotoFrame | null;
+  /** Ordered 2–4 photo slots (coach cards). When present, wins over before/after. */
+  photos?: TransformationPhotoInput[];
+  /** Explicit verified-scan pick (coach cards): two of the client's coach-verified body_metrics. */
+  beforeMetricId?: string | null;
+  afterMetricId?: string | null;
+  /** Presentation options (0088); null/omitted = defaults. */
+  cardStyle?: CardStyle | null;
 };
 
 // A coach's curated before/after showcase card (consent-filtered, field-allowlist; E3).
@@ -70,6 +127,11 @@ export type CoachTransformation = {
   layout: TransformationLayout;
   before_frame: PhotoFrame | null;
   after_frame: PhotoFrame | null;
+  /** Ordered photo cells (0087). Never empty after mapping: legacy 2-photo rows are
+   *  synthesized from before/after when the child rows are absent. */
+  photos: TransformationPhoto[];
+  /** Presentation options (0088), coerced with defaults. */
+  style: CardStyle;
 };
 
 /** Defensively coerce a jsonb frame ({scale,x,y}) — null if malformed. */
@@ -83,19 +145,51 @@ function coerceFrame(v: unknown): PhotoFrame | null {
   return scale != null && x != null && y != null ? { scale, x, y } : null;
 }
 
+/** Defensively coerce the RPC's jsonb photos array; [] if malformed. */
+export function coercePhotos(v: unknown): TransformationPhoto[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((p): p is Record<string, unknown> => !!p && typeof p === 'object')
+    .map((p) => ({
+      media_id: typeof p.media_id === 'string' ? p.media_id : null,
+      taken_on: typeof p.taken_on === 'string' ? p.taken_on : null,
+      frame: coerceFrame(p.frame),
+      position: typeof p.position === 'number' ? p.position : 0,
+    }))
+    .sort((a, b) => a.position - b.position);
+}
+
+/** Legacy fallback: a 2-photo array from the before/after mirror columns. */
+export function synthesizePhotos(row: {
+  before_media_id: string | null;
+  after_media_id: string | null;
+  before_frame: PhotoFrame | null;
+  after_frame: PhotoFrame | null;
+}): TransformationPhoto[] {
+  return [
+    { media_id: row.before_media_id, taken_on: null, frame: row.before_frame, position: 0 },
+    { media_id: row.after_media_id, taken_on: null, frame: row.after_frame, position: 1 },
+  ];
+}
+
 /** Normalize one transformation row from either transformations RPC (shared shape). */
 function mapTransformationRow(
   r: CoachTransformation & { ffmi_before: number | string | null; ffmi_after: number | string | null },
 ): CoachTransformation {
-  return {
+  const before_frame = coerceFrame(r.before_frame);
+  const after_frame = coerceFrame(r.after_frame);
+  const photos = coercePhotos(r.photos);
+  const base = {
     ...r,
     ffmi_before: r.ffmi_before == null ? null : Number(r.ffmi_before),
     ffmi_after: r.ffmi_after == null ? null : Number(r.ffmi_after),
     verified: !!r.verified,
-    layout: r.layout === 'stack' ? 'stack' : 'side',
-    before_frame: coerceFrame(r.before_frame),
-    after_frame: coerceFrame(r.after_frame),
+    layout: coerceLayout(r.layout),
+    before_frame,
+    after_frame,
+    style: coerceCardStyle(r.style),
   };
+  return { ...base, photos: photos.length >= 2 ? photos : synthesizePhotos(base) };
 }
 
 export type AthleteTopPr = {

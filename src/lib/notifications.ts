@@ -22,7 +22,9 @@ export type NotificationType =
   | 'call_requested'
   | 'call_accepted'
   | 'call_declined'
-  | 'call_incoming';
+  | 'call_incoming'
+  | 'transformation_featured'
+  | 'transformation_requested';
 
 /** The subset of types the user can toggle in settings. Call notifications default ON and
  *  are intentionally NOT surfaced as toggles — you shouldn't be able to silence an incoming
@@ -124,6 +126,8 @@ const ICONS: Record<NotificationType, IconName> = {
   call_accepted: 'calendar',
   call_declined: 'x-circle',
   call_incoming: 'video',
+  transformation_featured: 'sparkles',
+  transformation_requested: 'image',
 };
 
 // Per-type semantic accent (brand notification colors): chat = purple, coach note =
@@ -140,6 +144,8 @@ export const NOTIFICATION_COLORS: Record<NotificationType, string> = {
   call_accepted: '#3FD98A', // positive — coach confirmed
   call_declined: '#F5556B', // danger — coach couldn't take it
   call_incoming: '#3FD9C0', // Signal cyan — an active incoming call
+  transformation_featured: '#3FD98A', // positive — a celebration, like a PR
+  transformation_requested: '#5BC8E8', // sky — the coach asking something of the client
 };
 
 function str(params: Record<string, unknown>, key: string): string {
@@ -221,6 +227,18 @@ export function describeNotification(
         title: t('notifications.callDeclined.title'),
         body: t('notifications.callDeclined.body', { name: actor }),
       };
+    case 'transformation_featured':
+      return {
+        icon: ICONS.transformation_featured,
+        title: t('notifications.transformationFeatured.title'),
+        body: t('notifications.transformationFeatured.body', { name: actor }),
+      };
+    case 'transformation_requested':
+      return {
+        icon: ICONS.transformation_requested,
+        title: t('notifications.transformationRequested.title'),
+        body: t('notifications.transformationRequested.body', { name: actor }),
+      };
     default:
       return { icon: 'notifications', title: '', body: '' };
   }
@@ -255,6 +273,10 @@ export function notificationHref(row: NotificationRow): Href | null {
     case 'call_declined':
       // Client taps → their calls list.
       return '/calls';
+    case 'transformation_featured':
+    case 'transformation_requested':
+      // Client taps → their transformation builder (see the featured card / start one).
+      return '/client/transformation';
     default:
       return null;
   }

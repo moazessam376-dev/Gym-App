@@ -4,7 +4,7 @@
 // Photos come from a new upload OR an existing progress photo (the SourcePicker). Sending sets
 // transformation-sharing consent. Once a card is featured, the client sees + SHARES it here too.
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -49,6 +49,7 @@ export default function ClientTransformationBuilder() {
   const [editorKey, setEditorKey] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [working, setWorking] = useState(false);
+  const [sentView, setSentView] = useState(false);
   const resolverRef = useRef<((id: string | null) => void) | null>(null);
 
   if (role && role !== 'client') return <Redirect href="/" />;
@@ -101,8 +102,8 @@ export default function ClientTransformationBuilder() {
     await createSubmission({ clientId: userId, coachId: coach.id, ...input });
     await setTransformationConsent(userId, true).catch(() => {});
     await queryClient.invalidateQueries({ queryKey: ['my-transformation-submissions', userId] });
-    toast.show(t('clientTransformation.sent'));
     setEditorKey((k) => k + 1); // reset the editor for the next submission
+    setSentView(true); // the "sent for review" confirmation replaces the silent reset
   };
 
   const onWithdraw = (id: string) => async () => {
@@ -123,7 +124,11 @@ export default function ClientTransformationBuilder() {
   return (
     <Screen gradient padded={false} edges={['bottom']}>
       <Stack.Screen options={{ title: t('clientTransformation.title') }} />
-      <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+      >
         <Text variant="body" muted style={textStart}>{t('clientTransformation.help')}</Text>
 
         {!coach ? (
@@ -142,19 +147,30 @@ export default function ClientTransformationBuilder() {
               </View>
             ) : null}
 
-            {/* Builder */}
-            <View style={{ gap: theme.spacing.sm }}>
-              <Text variant="label" muted style={textStart}>{t('clientTransformation.createTitle')}</Text>
-              <TransformationEditor
-                key={editorKey}
-                mode="client"
-                clientFirstName={firstName}
-                coachName={coach.full_name ?? undefined}
-                pickPhoto={pickPhoto}
-                onSave={onSave}
-                saveLabel={t('clientTransformation.send')}
-              />
-            </View>
+            {/* Builder — or the "sent for review" confirmation right after a submit */}
+            {sentView ? (
+              <GlassCard style={{ alignItems: 'center', gap: theme.spacing.md, paddingVertical: theme.spacing.xl }}>
+                <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(63,217,192,0.14)', borderWidth: 1, borderColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="check-circle" size={26} color={theme.colors.primary} />
+                </View>
+                <Text variant="title">{t('clientTransformation.sentTitle')}</Text>
+                <Text variant="caption" muted style={{ textAlign: 'center', maxWidth: 280 }}>{t('clientTransformation.sentBody')}</Text>
+                <Button title={t('clientTransformation.sendAnother')} variant="secondary" onPress={() => setSentView(false)} />
+              </GlassCard>
+            ) : (
+              <View style={{ gap: theme.spacing.sm }}>
+                <Text variant="label" muted style={textStart}>{t('clientTransformation.createTitle')}</Text>
+                <TransformationEditor
+                  key={editorKey}
+                  mode="client"
+                  clientFirstName={firstName}
+                  coachName={coach.full_name ?? undefined}
+                  pickPhoto={pickPhoto}
+                  onSave={onSave}
+                  saveLabel={t('clientTransformation.send')}
+                />
+              </View>
+            )}
 
             {/* My submissions */}
             {submissions.length > 0 ? (

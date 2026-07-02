@@ -536,7 +536,28 @@
     "photoError": "مش قادرين نضيف الصورة دي. جرّب واحدة تانية.",
     "verifiedHint": "موثّق — الأرقام جاية من بيانات التطبيق.",
     "selfReportedHint": "غير موثّق — إنت اللي دخّلت الأرقام دي.",
-    "clientSaveNote": "الكوتش بيراجعها قبل ما تتنشر."
+    "clientSaveNote": "الكوتش بيراجعها قبل ما تتنشر.",
+    "layoutSlider": "سلايدر",
+    "layoutStrip": "شريط",
+    "layoutGrid": "شبكة",
+    "photoN": "صورة {{n}}",
+    "photosNeeded": "التصميم ده محتاج {{count}} صور",
+    "replacePhoto": "غيّر الصورة",
+    "takenOn": "اتصوّرت يوم",
+    "scanBefore": "سكان قبل",
+    "scanAfter": "سكان بعد",
+    "scanReadout": "−{{bf}}٪ دهون · +{{lm}} كجم عضل في {{weeks}} أسبوع",
+    "savePhoto": "احفظ الصورة",
+    "photoSaved": "الصورة اتحفظت",
+    "captureFailed": "مقدرناش نجهّز الصورة. جرّب تاني.",
+    "tapToEditHint": "دوس على أي صورة في الكارت عشان تضيفها أو تظبطها.",
+    "dragHint": "اسحب الصورة على الكارت عشان تظبط مكانها — و − / + للتقريب.",
+    "editDone": "تم",
+    "resetFrame": "رجّع الأصل",
+    "cardStyleTitle": "شكل الكارت",
+    "titleOnPhoto": "الاسم على الصورة",
+    "titleBelow": "الاسم تحت الصور",
+    "topFade": "تظليل فوق"
   },
   "clientTransformation": {
     "title": "قبل وبعد",
@@ -557,11 +578,42 @@
     "withdraw": "اسحب",
     "withdrawTitle": "سحب الطلب",
     "withdrawBody": "تشيل الطلب ده؟",
+    "sentTitle": "اتبعت للمراجعة",
+    "sentBody": "كوتشك هيتبلّغ. هتشوفها هنا أول ما تتوافق.",
+    "sendAnother": "ابعت واحدة تانية",
     "status": {
       "pending": "في انتظار المراجعة",
       "approved": "معروض",
       "dismissed": "مش مستخدم"
     }
+  },
+  "transformationManager": {
+    "kpiPublished": "كروت منشورة",
+    "kpiPending": "في انتظار المراجعة",
+    "kpiConsenting": "عملاء موافقين",
+    "tabPending": "للمراجعة",
+    "tabPublished": "منشور",
+    "pendingEmptyTitle": "مفيش حاجة مستنياك",
+    "pendingEmptySub": "أي طلبات جديدة من عملائك هتوصل هنا للمراجعة.",
+    "noCardsTitle": "لسه مفيش تحوّلات",
+    "noCardsSub": "اعرض قصة عميل من تحت ودي هتظهر هنا — وعلى بروفايلك العام.",
+    "cardCount_zero": "{{count}} كارت",
+    "cardCount_one": "كارت واحد",
+    "cardCount_two": "كارتين",
+    "cardCount_few": "{{count}} كروت",
+    "cardCount_many": "{{count}} كارت",
+    "cardCount_other": "{{count}} كارت",
+    "addCard": "أضف كارت",
+    "allClientsFeatured": "كل العملاء الموافقين عندهم كروت — تقدر تضيف كمان من التايم لاين فوق.",
+    "consentHint": "العرض محتاج موافقة العميل على المشاركة — اللي لسه ما وافقوش هيظهر جنبهم زرار اطلب بيبعتلهم إشعار.",
+    "askToShare": "اطلب",
+    "selfChip": "ذاتي",
+    "sentLabel": "اتبعت {{when}}",
+    "deleteCard": "احذف الكارت",
+    "saveCard": "احفظ التحوّل",
+    "requestFromClient": "اطلب تحوّل",
+    "requestSent": "الطلب اتبعت — هيوصله إشعار.",
+    "requestTooSoon": "إنت لسه طالب قريب — جرّب تاني بعد كام يوم."
   },
   "performance": {
     "label": "الأداء",
@@ -1100,6 +1152,14 @@
     "callDeclined": {
       "title": "المكالمة اترفضت",
       "body": "{{name}} مش هيقدر ياخد مكالمتك المرة دي"
+    },
+    "transformationFeatured": {
+      "title": "اتعرضت على البروفايل! 🎉",
+      "body": "{{name}} عرض التحوّل بتاعك على بروفايله العام"
+    },
+    "transformationRequested": {
+      "title": "شارك التحوّل بتاعك",
+      "body": "{{name}} نفسه يعرض قبل وبعد بتاعتك — اعملها من صور التقدّم"
     },
     "settingsTitle": "إعدادات الإشعارات",
     "settingsSub": "اختار تتبلّغ بإيه.",
@@ -1680,6 +1740,8 @@
     }
   },
   "nav": {
+    "transformations": "التحوّلات",
+    "myTransformation": "قبل وبعد",
     "inviteClient": "ادعُ عميل",
     "coachRequests": "طلبات التدريب",
     "acceptInvite": "اقبل دعوة",
@@ -1729,6 +1791,7 @@
     "clients": "العملاء",
     "leaderboard": "المتصدرين",
     "analytics": "التحليلات",
+    "transformations": "التحوّلات",
     "templates": "القوالب",
     "newPlan": "خطة جديدة",
     "messages": "الرسائل",

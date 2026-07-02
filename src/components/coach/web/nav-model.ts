@@ -13,7 +13,7 @@ export type NavItem = {
   /** Adds a "soon" chip (deferred feature). */
   soon?: boolean;
   /** live count badge source. */
-  badge?: 'unread' | 'invites' | 'attention';
+  badge?: 'unread' | 'invites' | 'attention' | 'submissions';
 };
 
 export type NavSection = { titleKey: string; items: NavItem[] };
@@ -34,6 +34,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'clients', labelKey: 'webnav.clients', icon: 'users', route: '/clients', match: startsAny('/clients', '/coach/client'), badge: 'attention' },
       { key: 'leaderboard', labelKey: 'webnav.leaderboard', icon: 'trophy', route: '/board', match: startsAny('/board', '/leaderboards') },
       { key: 'analytics', labelKey: 'webnav.analytics', icon: 'bar-chart', route: '/performance', match: startsAny('/performance') },
+      { key: 'transformations', labelKey: 'webnav.transformations', icon: 'sparkles', route: '/coach/transformations', match: startsAny('/coach/transformations'), badge: 'submissions' },
     ],
   },
   {

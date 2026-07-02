@@ -38,6 +38,24 @@ landed on `main`. The forward roadmap (re-sequenced) lives in
 ---
 
 ## Log (newest first)
+- **2026-07-02 (later)** — **Transformation Manager SHIPPED**: PR #57 merged; migrations
+  `0087` + `0088_transformation_card_style` applied to prod (advisors clean). Founder
+  device-test rounds folded in: card-first mobile editing (drag-on-card + WhatsApp-style
+  Move & Scale panel with ghosted overflow), pan-without-zoom natural-size frame math, web
+  upload fix, ask-to-share chips for non-consenting clients, iOS keyboard insets on the
+  caption, square-corner export (rounded PNG showed notched edges on WhatsApp/IG), and
+  0088 card style (title on-photo vs below-photos + optional top fade). **Old builds'
+  coach-editor Save is broken until the app update ships. Next free migration = 0089.**
+- **2026-07-02** — **Transformation Manager** (PR #57, `cc/transformation-manager`): migration
+  `0087` (multi-card — unique(coach,client) dropped; `transformation_photos` 2–4 photo child
+  table + taken_on chips; slider/strip/grid layouts; before/after_metric_id verified-scan pick;
+  `media_select` recreated via `is_public_transformation_media` DEFINER helper — **fixes the 0078
+  RLS re-entry bug** that kept public showcase photos unreadable to third parties;
+  `transformation_featured` trigger notification + `request_transformation` nudge RPC).
+  App: N-photo card + slider + cross-device Save-photo (html2canvas web), editor photo slots +
+  scan picker, mobile manager (KPIs/tabs/timelines), `TransformationsDesktop` portal view,
+  sidebar item + pending badge, client sent-state + coach nudge. i18n en+ar parity OK; tsc clean.
+  0087 dry-ran on prod (begin…rollback). **NEXT free migration = 0088.**
 - **2026-06-28** — **Pilot hardening** from the GLM 5-2 review (`GYM_APP_PILOT_REVIEW.md`),
   all claims re-verified against the code first (plan: `silly-puzzling-starfish.md`). On
   `cc/security-hardening` (off the `fix/workout-note-hide-vs-delete` base, which carries 0060):

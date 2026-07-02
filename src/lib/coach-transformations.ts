@@ -1,9 +1,23 @@
 // Coach transformations — the WRITE side (the coach's curate editor). Reads/writes go
 // through coach_transformations RLS (coach_id = auth.uid(), and a coach may only feature a
-// client they actually coach via the WITH CHECK in 0077). The PUBLIC showcase read path is
-// the separate get_coach_transformations RPC (src/lib/public-profiles.ts).
+// client they actually coach via the WITH CHECK in 0077). 0087: a client can have MULTIPLE
+// cards (insert, not upsert) and a card owns ordered transformation_photos child rows —
+// before/after_media_id stay as a denormalized first/last mirror so pre-0087 builds and
+// legacy rows keep working. The PUBLIC showcase read path is the separate
+// get_coach_transformations RPC (src/lib/public-profiles.ts).
 import { supabase } from './supabase';
-import type { PhotoFrame, TransformationCardInput, TransformationLayout } from './public-profiles';
+import {
+  coerceCardStyle,
+  coerceLayout,
+  coercePhotos,
+  synthesizePhotos,
+  type CardStyle,
+  type PhotoFrame,
+  type TransformationCardInput,
+  type TransformationLayout,
+  type TransformationPhoto,
+  type TransformationPhotoInput,
+} from './public-profiles';
 import type { TierId } from './leagues';
 
 export type MyTransformation = {
@@ -24,10 +38,14 @@ export type MyTransformation = {
   layout: TransformationLayout;
   before_frame: PhotoFrame | null;
   after_frame: PhotoFrame | null;
+  before_metric_id: string | null;
+  after_metric_id: string | null;
+  photos: TransformationPhoto[];
+  style: CardStyle;
 };
 
 const EDIT_COLS =
-  'id, client_id, caption, before_media_id, after_media_id, duration_weeks_override, body_fat_delta_bp_override, lean_mass_delta_grams_override, tier_before_override, tier_after_override, measurement_started_at, measurement_ended_at, layout, before_frame, after_frame';
+  'id, client_id, caption, before_media_id, after_media_id, duration_weeks_override, body_fat_delta_bp_override, lean_mass_delta_grams_override, tier_before_override, tier_after_override, measurement_started_at, measurement_ended_at, layout, before_frame, after_frame, before_metric_id, after_metric_id, style';
 
 /** A coach's clients who have consented to be featured (allow_transformation_sharing). */
 export type ConsentingClient = { user_id: string; full_name: string | null; avatar_media_id: string | null };
@@ -43,13 +61,18 @@ function one<T>(embed: T | T[] | null | undefined): T | null {
 export async function listMyTransformations(coachId: string): Promise<MyTransformation[]> {
   const { data, error } = await supabase
     .from('coach_transformations')
-    .select(`${EDIT_COLS}, client:profiles!client_id(full_name)`)
+    .select(
+      `${EDIT_COLS}, client:profiles!client_id(full_name), photos:transformation_photos(media_id, taken_on, frame, position)`,
+    )
     .eq('coach_id', coachId)
     .order('featured_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map((r) => {
     const client = one<{ full_name: string | null }>(r.client);
-    return {
+    const before_frame = (r.before_frame ?? null) as PhotoFrame | null;
+    const after_frame = (r.after_frame ?? null) as PhotoFrame | null;
+    const photos = coercePhotos(r.photos);
+    const base = {
       id: r.id,
       client_id: r.client_id,
       caption: r.caption,
@@ -63,10 +86,14 @@ export async function listMyTransformations(coachId: string): Promise<MyTransfor
       tier_after_override: (r.tier_after_override ?? null) as TierId | null,
       measurement_started_at: r.measurement_started_at,
       measurement_ended_at: r.measurement_ended_at,
-      layout: (r.layout === 'stack' ? 'stack' : 'side') as TransformationLayout,
-      before_frame: (r.before_frame ?? null) as PhotoFrame | null,
-      after_frame: (r.after_frame ?? null) as PhotoFrame | null,
+      layout: coerceLayout(r.layout),
+      before_frame,
+      after_frame,
+      before_metric_id: (r.before_metric_id ?? null) as string | null,
+      after_metric_id: (r.after_metric_id ?? null) as string | null,
+      style: coerceCardStyle(r.style),
     };
+    return { ...base, photos: photos.length >= 2 ? photos : synthesizePhotos(base) };
   });
 }
 
@@ -83,31 +110,106 @@ export async function listConsentingClients(coachId: string): Promise<Consenting
     .map((r) => ({ user_id: r.user_id, full_name: r.profile?.full_name ?? null, avatar_media_id: r.profile?.avatar_media_id ?? null }));
 }
 
-/** Create or update (one per coach+client) a featured transformation. Fields are allowlisted
- *  explicitly (§4 — never spread untrusted input). */
-export async function upsertTransformation(input: { coachId: string; clientId: string } & TransformationCardInput): Promise<void> {
-  const { error } = await supabase.from('coach_transformations').upsert(
-    {
+/** First/last of the editor's photo slots → the denormalized before/after mirror columns. */
+function mirrorColumns(input: TransformationCardInput): {
+  before_media_id: string | null;
+  after_media_id: string | null;
+  before_frame: PhotoFrame | null;
+  after_frame: PhotoFrame | null;
+} {
+  const photos = input.photos;
+  if (photos && photos.length >= 2) {
+    const first = photos[0];
+    const last = photos[photos.length - 1];
+    return {
+      before_media_id: first.mediaId,
+      after_media_id: last.mediaId,
+      before_frame: first.frame,
+      after_frame: last.frame,
+    };
+  }
+  return {
+    before_media_id: input.beforeMediaId,
+    after_media_id: input.afterMediaId,
+    before_frame: input.beforeFrame,
+    after_frame: input.afterFrame,
+  };
+}
+
+/** The parent-row column payload (allowlisted explicitly — §4, never spread input). */
+function parentPayload(input: TransformationCardInput) {
+  return {
+    caption: input.caption,
+    ...mirrorColumns(input),
+    duration_weeks_override: input.durationWeeksOverride,
+    body_fat_delta_bp_override: input.bodyFatDeltaBpOverride,
+    lean_mass_delta_grams_override: input.leanMassDeltaGramsOverride,
+    tier_before_override: input.tierBeforeOverride,
+    tier_after_override: input.tierAfterOverride,
+    measurement_started_at: input.measurementStartedAt,
+    measurement_ended_at: input.measurementEndedAt,
+    layout: input.layout,
+    before_metric_id: input.beforeMetricId ?? null,
+    after_metric_id: input.afterMetricId ?? null,
+    style: input.cardStyle ?? null,
+  };
+}
+
+/** The ordered photo child rows for a card (position = slot index). */
+function photoRows(cardId: string, photos: TransformationPhotoInput[]) {
+  return photos.map((p, i) => ({
+    transformation_id: cardId,
+    media_id: p.mediaId,
+    position: i,
+    taken_on: p.takenOn,
+    frame: p.frame,
+  }));
+}
+
+/** Create a NEW featured card (0087 multi-card: always an insert). The parent insert and the
+ *  photo rows are two steps; if the photos fail we delete the parent so no half-card ships
+ *  (pilot-accepted atomicity — the documented upgrade path is a single RPC). */
+export async function createTransformation(
+  input: { coachId: string; clientId: string } & TransformationCardInput,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('coach_transformations')
+    .insert({
       coach_id: input.coachId,
       client_id: input.clientId,
-      caption: input.caption,
-      before_media_id: input.beforeMediaId,
-      after_media_id: input.afterMediaId,
       featured_at: new Date().toISOString(),
-      duration_weeks_override: input.durationWeeksOverride,
-      body_fat_delta_bp_override: input.bodyFatDeltaBpOverride,
-      lean_mass_delta_grams_override: input.leanMassDeltaGramsOverride,
-      tier_before_override: input.tierBeforeOverride,
-      tier_after_override: input.tierAfterOverride,
-      measurement_started_at: input.measurementStartedAt,
-      measurement_ended_at: input.measurementEndedAt,
-      layout: input.layout,
-      before_frame: input.beforeFrame,
-      after_frame: input.afterFrame,
-    },
-    { onConflict: 'coach_id,client_id' },
-  );
+      ...parentPayload(input),
+    })
+    .select('id')
+    .single();
   if (error) throw error;
+  const photos = input.photos ?? [];
+  if (photos.length > 0) {
+    const { error: photoErr } = await supabase.from('transformation_photos').insert(photoRows(data.id, photos));
+    if (photoErr) {
+      await supabase.from('coach_transformations').delete().eq('id', data.id);
+      throw photoErr;
+    }
+  }
+}
+
+/** Update an existing card in place (photos are replaced wholesale: delete + reinsert). */
+export async function updateTransformation(
+  id: string,
+  input: TransformationCardInput,
+): Promise<void> {
+  const { error } = await supabase
+    .from('coach_transformations')
+    .update({ featured_at: new Date().toISOString(), ...parentPayload(input) })
+    .eq('id', id);
+  if (error) throw error;
+  const { error: delErr } = await supabase.from('transformation_photos').delete().eq('transformation_id', id);
+  if (delErr) throw delErr;
+  const photos = input.photos ?? [];
+  if (photos.length > 0) {
+    const { error: photoErr } = await supabase.from('transformation_photos').insert(photoRows(id, photos));
+    if (photoErr) throw photoErr;
+  }
 }
 
 export async function deleteTransformation(id: string): Promise<void> {
