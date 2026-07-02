@@ -50,6 +50,8 @@ export default function ClientTransformationBuilder() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [working, setWorking] = useState(false);
   const [sentView, setSentView] = useState(false);
+  // A framing/slider drag is in progress → freeze the ScrollView so it doesn't scroll.
+  const [frameDragging, setFrameDragging] = useState(false);
   const resolverRef = useRef<((id: string | null) => void) | null>(null);
 
   if (role && role !== 'client') return <Redirect href="/" />;
@@ -128,6 +130,7 @@ export default function ClientTransformationBuilder() {
         contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        scrollEnabled={!frameDragging}
       >
         <Text variant="body" muted style={textStart}>{t('clientTransformation.help')}</Text>
 
@@ -168,6 +171,7 @@ export default function ClientTransformationBuilder() {
                   pickPhoto={pickPhoto}
                   onSave={onSave}
                   saveLabel={t('clientTransformation.send')}
+                  onGestureActive={setFrameDragging}
                 />
               </View>
             )}

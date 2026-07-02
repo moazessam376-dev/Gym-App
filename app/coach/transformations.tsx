@@ -3,6 +3,7 @@
 // per-client card timelines (tap a thumb to edit, dashed tile to add), and a "feature a new
 // client" chip row. Pending client submissions are approved (featured) or dismissed here.
 // On wide web + coach this route renders the desktop portal view instead (same hooks).
+import { useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +23,9 @@ export default function CoachTransformationsManager() {
   const { role } = useAuth();
   const { active: chromeActive } = useChrome();
   const m = useTransformationManager();
+  // A framing/slider drag is in progress → freeze the ScrollView (the drag was scrolling
+  // the page whenever the finger wasn't perfectly straight).
+  const [frameDragging, setFrameDragging] = useState(false);
 
   if (role && role !== 'coach') return <Redirect href="/" />;
   // Desktop portal variant — AFTER all hooks (web.md rules-of-hooks).
@@ -38,6 +42,7 @@ export default function CoachTransformationsManager() {
           contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          scrollEnabled={!frameDragging}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
             <Pressable onPress={m.closeEditor} hitSlop={8}><Icon name="chevron-back" size={22} color={theme.colors.text} /></Pressable>
@@ -56,6 +61,7 @@ export default function CoachTransformationsManager() {
             initial={m.editor.initial}
             onSave={m.onSave}
             saveLabel={t('common.save')}
+            onGestureActive={setFrameDragging}
           />
         </ScrollView>
       </Screen>

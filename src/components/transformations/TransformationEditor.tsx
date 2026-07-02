@@ -8,13 +8,14 @@
 // date or tier makes it SELF-REPORTED. The parent supplies onSave (the actual
 // insert/update/submission). Module-scope sub-components get their OWN useTranslation.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, PanResponder, Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { theme } from '@/theme';
 import { textStart } from '@/lib/rtl';
 import { TIER_COLORS, type TierId } from '@/lib/leagues';
-import { frameStyle, panBy, type NaturalSize } from '@/lib/photoFrame';
+import { frameStyle, MIN_FRAME_SCALE, MAX_FRAME_SCALE, type NaturalSize } from '@/lib/photoFrame';
+import { createFrameGesture } from '@/lib/frameGestures';
 import { captureAndUploadPhoto } from '@/lib/upload';
 import { listBodyMetrics, type BodyMetric } from '@/lib/body-metrics';
 import {
@@ -82,22 +83,19 @@ function PhotoFramePicker({
   frameRef.current = frame;
   const onFrameRef = useRef(onFrame);
   onFrameRef.current = onFrame;
-  const startFrame = useRef(frame);
 
+  // Pan + pinch-zoom; refuses ScrollView termination.
   const responder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        startFrame.current = frameRef.current;
-      },
-      onPanResponderMove: (_e, g) => {
-        onFrameRef.current(panBy(startFrame.current, g.dx, g.dy, szRef.current.w, szRef.current.h, natRef.current));
-      },
+    createFrameGesture({
+      frame: () => frameRef.current,
+      size: () => szRef.current,
+      nat: () => natRef.current,
+      onFrame: (f) => onFrameRef.current(f),
     }),
   ).current;
 
-  const zoom = (delta: number) => onFrame({ ...frame, scale: Math.max(1, Math.min(3, Math.round((frame.scale + delta) * 100) / 100)) });
+  const zoom = (delta: number) =>
+    onFrame({ ...frame, scale: Math.max(MIN_FRAME_SCALE, Math.min(MAX_FRAME_SCALE, Math.round((frame.scale + delta) * 100) / 100)) });
 
   return (
     <View style={{ flex: 1, gap: 6 }}>
@@ -147,12 +145,14 @@ function MoveAndScale({
   cellW,
   cellH,
   onFrame,
+  onActive,
 }: {
   mediaId: string;
   frame: PhotoFrame;
   cellW: number;
   cellH: number;
   onFrame: (f: PhotoFrame) => void;
+  onActive?: (active: boolean) => void;
 }) {
   const [panelW, setPanelW] = useState(0);
   const [nat, setNat] = useState<NaturalSize | null>(null);
@@ -174,18 +174,15 @@ function MoveAndScale({
   stateRef.current = { frame, cropW, cropH, nat };
   const onFrameRef = useRef(onFrame);
   onFrameRef.current = onFrame;
-  const startFrame = useRef(frame);
+  const onActiveRef = useRef(onActive);
+  onActiveRef.current = onActive;
   const responder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        startFrame.current = stateRef.current.frame;
-      },
-      onPanResponderMove: (_e, g) => {
-        const s = stateRef.current;
-        onFrameRef.current(panBy(startFrame.current, g.dx, g.dy, s.cropW, s.cropH, s.nat));
-      },
+    createFrameGesture({
+      frame: () => stateRef.current.frame,
+      size: () => ({ w: stateRef.current.cropW, h: stateRef.current.cropH }),
+      nat: () => stateRef.current.nat,
+      onFrame: (f) => onFrameRef.current(f),
+      onActive: (a) => onActiveRef.current?.(a),
     }),
   ).current;
 
@@ -304,6 +301,9 @@ export type TransformationEditorProps = {
    *  from the live item streamed through onPreviewItem. */
   previewMode?: 'inline' | 'external';
   onPreviewItem?: (item: CoachTransformation) => void;
+  /** A framing/slider drag is in progress — the host screen should freeze its ScrollView
+   *  (scrollEnabled={!active}) so the drag doesn't scroll the page. */
+  onGestureActive?: (active: boolean) => void;
 };
 
 function initialSlots(initial: TransformationEditorProps['initial'], count: number): PhotoSlot[] {
@@ -322,7 +322,7 @@ function initialSlots(initial: TransformationEditorProps['initial'], count: numb
   return slots.slice(0, Math.max(count, slots.length));
 }
 
-export function TransformationEditor({ mode, clientId, clientFirstName, coachName, initial, onSave, saveLabel, pickPhoto, previewMode = 'inline', onPreviewItem }: TransformationEditorProps) {
+export function TransformationEditor({ mode, clientId, clientFirstName, coachName, initial, onSave, saveLabel, pickPhoto, previewMode = 'inline', onPreviewItem, onGestureActive }: TransformationEditorProps) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
 
@@ -602,6 +602,7 @@ export function TransformationEditor({ mode, clientId, clientFirstName, coachNam
                     if (cur && Math.abs(cur.w - s.w) < 1 && Math.abs(cur.h - s.h) < 1) return prev;
                     return { ...prev, [i]: s };
                   }),
+                onGestureActive,
               }}
             />
           </View>
@@ -616,14 +617,15 @@ export function TransformationEditor({ mode, clientId, clientFirstName, coachNam
                   cellW={cellSizes[selectedSlot]?.w ?? 1}
                   cellH={cellSizes[selectedSlot]?.h ?? 1}
                   onFrame={(f) => setSlot(selectedSlot, { frame: f })}
+                  onActive={onGestureActive}
                 />
               ) : null}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                 <Text variant="label" muted style={[{ flex: 1 }, textStart]}>{slotLabel(selectedSlot)}</Text>
-                <Pressable onPress={() => { const s = slots[selectedSlot]; if (s) setSlot(selectedSlot, { frame: { ...s.frame, scale: Math.max(1, Math.round((s.frame.scale - 0.25) * 100) / 100) } }); }} hitSlop={8} style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
+                <Pressable onPress={() => { const s = slots[selectedSlot]; if (s) setSlot(selectedSlot, { frame: { ...s.frame, scale: Math.max(MIN_FRAME_SCALE, Math.round((s.frame.scale - 0.25) * 100) / 100) } }); }} hitSlop={8} style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
                   <Text variant="title" color={theme.colors.text}>−</Text>
                 </Pressable>
-                <Pressable onPress={() => { const s = slots[selectedSlot]; if (s) setSlot(selectedSlot, { frame: { ...s.frame, scale: Math.min(3, Math.round((s.frame.scale + 0.25) * 100) / 100) } }); }} hitSlop={8} style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
+                <Pressable onPress={() => { const s = slots[selectedSlot]; if (s) setSlot(selectedSlot, { frame: { ...s.frame, scale: Math.min(MAX_FRAME_SCALE, Math.round((s.frame.scale + 0.25) * 100) / 100) } }); }} hitSlop={8} style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
                   <Text variant="title" color={theme.colors.text}>+</Text>
                 </Pressable>
                 <Pressable onPress={() => setSlot(selectedSlot, { frame: DEFAULT_FRAME })} hitSlop={8}>

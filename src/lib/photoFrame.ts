@@ -15,6 +15,16 @@ import type { PhotoFrame } from './public-profiles';
 
 export type NaturalSize = { w: number; h: number };
 
+// Zoom bounds. scale < 1 zooms OUT below cover — the photo letterboxes inside the cell
+// (bars in the cell background), like WhatsApp's move & scale. 0.4 is far enough to see
+// any whole photo; 3 is the crop ceiling.
+export const MIN_FRAME_SCALE = 0.4;
+export const MAX_FRAME_SCALE = 3;
+
+export function clampScale(s: number): number {
+  return Math.max(MIN_FRAME_SCALE, Math.min(MAX_FRAME_SCALE, Math.round(s * 1000) / 1000));
+}
+
 /** The cover-fit box (image aspect preserved, fully covering the cell) at `scale`. */
 function coverBox(w: number, h: number, scale: number, nat?: NaturalSize | null): { bw: number; bh: number } {
   if (nat && nat.w > 0 && nat.h > 0) {
@@ -37,11 +47,18 @@ export function frameStyle(
     return { position: 'absolute', left: 0, top: 0, width: undefined, height: undefined };
   }
   const f = frame ?? { scale: 1, x: 0, y: 0 };
-  const scale = Math.max(1, f.scale);
+  const scale = Math.max(0.2, f.scale); // defensive floor on stored values
   const { bw, bh } = coverBox(w, h, scale, nat);
   const ox = (bw - w) / 2; // horizontal overflow each side when centered
   const oy = (bh - h) / 2;
-  return { position: 'absolute', width: bw, height: bh, left: -ox * (1 + f.x), top: -oy * (1 + f.y) };
+  // An axis with NO overflow (zoomed out below cover) is centered — pan doesn't apply.
+  return {
+    position: 'absolute',
+    width: bw,
+    height: bh,
+    left: ox > 0 ? -ox * (1 + f.x) : -ox,
+    top: oy > 0 ? -oy * (1 + f.y) : -oy,
+  };
 }
 
 /** Convert a drag delta (px) within a cell into a new normalized pan, so the image follows
