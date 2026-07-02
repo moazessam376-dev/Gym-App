@@ -347,6 +347,9 @@ export function ShareableTransformationCard({
   const shotRef = useRef<View>(null);
   const [ratio, setRatio] = useState<Ratio>('portrait');
   const [saving, setSaving] = useState(false);
+  // Square the corners for the exported frame only: a rounded PNG shows notched edges on
+  // WhatsApp/Instagram story backgrounds. In-app keeps the rounded card.
+  const [capturing, setCapturing] = useState(false);
 
   const bfPct = item.body_fat_delta_bp == null ? null : Math.round((item.body_fat_delta_bp / 100) * 10) / 10;
   const lmKg = kg(item.lean_mass_delta_grams);
@@ -371,7 +374,11 @@ export function ShareableTransformationCard({
 
   const onSavePhoto = async () => {
     setSaving(true);
+    setCapturing(true);
+    // Two frames so the square-corner re-render is committed before the capture reads pixels.
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
     const outcome = await captureCard(shotRef, `${item.client_first_name ?? 'transformation'}-card`);
+    setCapturing(false);
     setSaving(false);
     if (outcome === 'downloaded') toast.show(t('transformationEditor.photoSaved'));
     else if (outcome === 'failed') toast.show(t('transformationEditor.captureFailed'), 'error');
@@ -443,7 +450,15 @@ export function ShareableTransformationCard({
       <View
         ref={shotRef}
         collapsable={false}
-        style={{ width: CARD_W, aspectRatio: ASPECT[ratio], backgroundColor: ONYX, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.glassBorder, overflow: 'hidden' }}
+        style={{
+          width: CARD_W,
+          aspectRatio: ASPECT[ratio],
+          backgroundColor: ONYX,
+          borderRadius: capturing ? 0 : 20,
+          borderWidth: capturing ? 0 : 1,
+          borderColor: theme.colors.glassBorder,
+          overflow: 'hidden',
+        }}
       >
         {/* Photo hero — grows above the stats band */}
         <View style={{ flex: 1, flexDirection: heroDirection, position: 'relative' }}>
