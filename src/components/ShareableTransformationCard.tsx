@@ -24,7 +24,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '@/theme';
 import { TIER_COLORS, type TierId } from '@/lib/leagues';
 import { forwardChevron } from '@/lib/rtl';
-import { frameStyle, panBy, type NaturalSize } from '@/lib/photoFrame';
+import { frameStyle, type NaturalSize } from '@/lib/photoFrame';
+import { createFrameGesture } from '@/lib/frameGestures';
 import { captureCard } from '@/lib/cardCapture';
 import { Icon, Segmented, Text, SignedImage, useToast } from '@/components/ui';
 import type { CoachTransformation, PhotoFrame, TransformationPhoto } from '@/lib/public-profiles';
@@ -40,6 +41,8 @@ export type CardEditController = {
   onFrame: (i: number, f: PhotoFrame) => void;
   /** Reports each cell's measured size (the Move & Scale panel matches its aspect). */
   onCellLayout?: (i: number, size: { w: number; h: number }) => void;
+  /** A framing/slider drag is in progress → the host screen freezes its ScrollView. */
+  onGestureActive?: (active: boolean) => void;
 };
 
 type Ratio = 'square' | 'portrait' | 'story';
@@ -116,7 +119,7 @@ function PhotoCell({
   const chip = dateChip(photo?.taken_on ?? null, i18n.language)?.toUpperCase() ?? label ?? null;
   const selected = edit?.selected === index;
 
-  // Refs so the (single) PanResponder always sees current values.
+  // Refs so the (single) gesture recognizer always sees current values.
   const szRef = useRef(sz);
   szRef.current = sz;
   const natRef = useRef(nat);
@@ -125,18 +128,15 @@ function PhotoCell({
   frameRef.current = frame ?? { scale: 1, x: 0, y: 0 };
   const editRef = useRef(edit);
   editRef.current = edit;
-  const startFrame = useRef<PhotoFrame>({ scale: 1, x: 0, y: 0 });
 
+  // Pan + pinch-zoom; refuses ScrollView termination + reports activity upward.
   const responder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        startFrame.current = frameRef.current;
-      },
-      onPanResponderMove: (_e, g) => {
-        editRef.current?.onFrame(index, panBy(startFrame.current, g.dx, g.dy, szRef.current.w, szRef.current.h, natRef.current));
-      },
+    createFrameGesture({
+      frame: () => frameRef.current,
+      size: () => szRef.current,
+      nat: () => natRef.current,
+      onFrame: (f) => editRef.current?.onFrame(index, f),
+      onActive: (a) => editRef.current?.onGestureActive?.(a),
     }),
   ).current;
 
@@ -213,43 +213,51 @@ function SliderHero({ before, after, beforeLabel, afterLabel, edit, busySlot }: 
   const startReveal = useRef(0.5);
 
   const selected = edit && edit.selected != null && edit.selected <= 1 ? edit.selected : null;
+  const editStateRef = useRef({ edit, selected, before, after, natBefore, natAfter });
+  editStateRef.current = { edit, selected, before, after, natBefore, natAfter };
+  const szRef = useRef(sz);
+  szRef.current = sz;
 
+  // The reveal handle: refuses ScrollView termination + freezes the host scroll while
+  // dragging (a not-perfectly-horizontal drag was scrolling the page mid-slide).
   const responder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
       onPanResponderGrant: () => {
         startReveal.current = revealRef.current;
+        editStateRef.current.edit?.onGestureActive?.(true);
       },
       onPanResponderMove: (_e, g) => {
         if (wRef.current <= 0) return;
         const next = startReveal.current + g.dx / wRef.current;
         setReveal(Math.max(0.06, Math.min(0.94, next)));
       },
+      onPanResponderRelease: () => editStateRef.current.edit?.onGestureActive?.(false),
+      onPanResponderTerminate: () => editStateRef.current.edit?.onGestureActive?.(false),
     }),
   ).current;
 
-  // Edit-mode pan for the SELECTED photo (frame reframing, not the reveal).
-  const szRef = useRef(sz);
-  szRef.current = sz;
-  const editStateRef = useRef({ edit, selected, before, after, natBefore, natAfter });
-  editStateRef.current = { edit, selected, before, after, natBefore, natAfter };
-  const startFrame = useRef<PhotoFrame>({ scale: 1, x: 0, y: 0 });
+  // Edit-mode pan + pinch for the SELECTED photo (frame reframing, not the reveal).
   const frameResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
+    createFrameGesture({
+      frame: () => {
         const s = editStateRef.current;
         const p = s.selected === 0 ? s.before : s.after;
-        startFrame.current = p?.frame ?? { scale: 1, x: 0, y: 0 };
+        return p?.frame ?? { scale: 1, x: 0, y: 0 };
       },
-      onPanResponderMove: (_e, g) => {
+      size: () => szRef.current,
+      nat: () => {
         const s = editStateRef.current;
-        if (s.selected == null || !s.edit) return;
-        const nat = s.selected === 0 ? s.natBefore : s.natAfter;
-        s.edit.onFrame(s.selected, panBy(startFrame.current, g.dx, g.dy, szRef.current.w, szRef.current.h, nat));
+        return s.selected === 0 ? s.natBefore : s.natAfter;
       },
+      onFrame: (f) => {
+        const s = editStateRef.current;
+        if (s.selected != null && s.edit) s.edit.onFrame(s.selected, f);
+      },
+      onActive: (a) => editStateRef.current.edit?.onGestureActive?.(a),
     }),
   ).current;
 

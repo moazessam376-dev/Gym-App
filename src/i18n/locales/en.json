@@ -959,7 +959,7 @@
     "photoSaved": "Photo saved",
     "captureFailed": "Couldn't render the photo. Try again.",
     "tapToEditHint": "Tap a photo on the card to add or adjust it.",
-    "dragHint": "Drag the photo on the card to reposition it — use − / + to zoom.",
+    "dragHint": "Drag to reposition — pinch (or − / +) to zoom in and out.",
     "editDone": "Done",
     "resetFrame": "Reset",
     "cardStyleTitle": "Card style",
