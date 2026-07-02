@@ -19,7 +19,6 @@ integrated by Claude Code; `cc/*` are Claude-Code-authored. Status: `todo` →
 
 | Task | Owner | Branch | Spec | Status | PR |
 |------|-------|--------|------|--------|----|
-| Transformation Manager (mockup): multi-card + 2–4-photo layouts + scan picker + desktop view + notify/nudge | Claude Code | `cc/transformation-manager` | `~/.claude/plans/i-want-to-plan-snuggly-engelbart.md` | PR open, CI pending; **migration 0087 NOT applied to prod** (founder-gated; must ship with the app update — constraint drop breaks old builds' coach Save) | [#57](https://github.com/moazessam376-dev/Gym-App/pull/57) |
 | Pilot hardening (GLM review): security + coach IA + seed + profile/@handle/discover | Claude Code | `cc/security-hardening` | `~/.claude/plans/silly-puzzling-starfish.md` · `GYM_APP_PILOT_REVIEW.md` | in-progress | — |
 
 ## Up next (assign an owner before starting)
@@ -39,6 +38,14 @@ landed on `main`. The forward roadmap (re-sequenced) lives in
 ---
 
 ## Log (newest first)
+- **2026-07-02 (later)** — **Transformation Manager SHIPPED**: PR #57 merged; migrations
+  `0087` + `0088_transformation_card_style` applied to prod (advisors clean). Founder
+  device-test rounds folded in: card-first mobile editing (drag-on-card + WhatsApp-style
+  Move & Scale panel with ghosted overflow), pan-without-zoom natural-size frame math, web
+  upload fix, ask-to-share chips for non-consenting clients, iOS keyboard insets on the
+  caption, square-corner export (rounded PNG showed notched edges on WhatsApp/IG), and
+  0088 card style (title on-photo vs below-photos + optional top fade). **Old builds'
+  coach-editor Save is broken until the app update ships. Next free migration = 0089.**
 - **2026-07-02** — **Transformation Manager** (PR #57, `cc/transformation-manager`): migration
   `0087` (multi-card — unique(coach,client) dropped; `transformation_photos` 2–4 photo child
   table + taken_on chips; slider/strip/grid layouts; before/after_metric_id verified-scan pick;
