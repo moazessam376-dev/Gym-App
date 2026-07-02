@@ -6,7 +6,7 @@
 // athlete; coach_id = auth.uid() for the coach). The approve/dismiss transition is the
 // coach-only SECURITY DEFINER RPC — clients never feature their own card.
 import { supabase } from './supabase';
-import type { PhotoFrame, TransformationCardInput, TransformationLayout } from './public-profiles';
+import { coerceLayout, type PhotoFrame, type TransformationCardInput, type TransformationLayout } from './public-profiles';
 import type { TierId } from './leagues';
 
 export type SubmissionStatus = 'pending' | 'approved' | 'dismissed';
@@ -62,7 +62,7 @@ function mapSubmissionRow(r: any): MySubmission {
     tier_after_override: (r.tier_after_override ?? null) as TierId | null,
     measurement_started_at: r.measurement_started_at ?? null,
     measurement_ended_at: r.measurement_ended_at ?? null,
-    layout: (r.layout === 'stack' ? 'stack' : 'side') as TransformationLayout,
+    layout: coerceLayout(r.layout) as TransformationLayout,
     before_frame: (r.before_frame ?? null) as PhotoFrame | null,
     after_frame: (r.after_frame ?? null) as PhotoFrame | null,
   };
@@ -150,6 +150,20 @@ export async function setTransformationConsent(clientId: string, value: boolean)
     .update({ allow_transformation_sharing: value })
     .eq('user_id', clientId);
   if (error) throw error;
+}
+
+/**
+ * Coach → client nudge (0087): ask a client to submit a transformation. SECURITY DEFINER
+ * RPC fenced on is_coach_of, deduped server-side to one request per client per 7 days.
+ * Returns 'too_soon' instead of throwing for the dedupe case so the UI can toast it.
+ */
+export async function requestTransformation(clientId: string): Promise<'sent' | 'too_soon'> {
+  const { error } = await supabase.rpc('request_transformation', { p_client: clientId });
+  if (error) {
+    if ((error.message ?? '').includes('too_soon')) return 'too_soon';
+    throw error;
+  }
+  return 'sent';
 }
 
 /**

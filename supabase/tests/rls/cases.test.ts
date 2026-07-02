@@ -3377,6 +3377,206 @@ describe('transformation submissions (0084) — client→coach, coach-approves (
   });
 });
 
+describe('transformation manager (0087) — multi-card, photo rows, public media fix, scan pick, nudge (§2)', () => {
+  // Seeded verified InBody readings (0026 seed): A1 baseline (60d ago) + latest (5d ago); B1's own.
+  const A1_METRIC_BASE = 'b0d70001-0000-0000-0000-000000000001';
+  const A1_METRIC_LATEST = 'b0d70002-0000-0000-0000-000000000002';
+  const B1_METRIC = 'b0d70003-0000-0000-0000-000000000003';
+
+  it('approving two submissions from the SAME client creates two cards (multi-card, not upsert) and notifies the client each time', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role service_role');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+      const s1 = await c.query("insert into public.transformation_submissions (client_id, coach_id, caption, status) values ($1, $2, 'cut #1', 'pending') returning id", [CLIENT_A1.sub, COACH_A.sub]);
+      const s2 = await c.query("insert into public.transformation_submissions (client_id, coach_id, caption, status) values ($1, $2, 'cut #2', 'pending') returning id", [CLIENT_A1.sub, COACH_A.sub]);
+      const asId = (id: string, role: string) => c.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: id, role: 'authenticated', user_role: role })]);
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(COACH_A.sub, 'coach');
+      await c.query('select public.resolve_transformation_submission($1, $2)', [s1.rows[0].id, 'approve']);
+      await c.query('select public.resolve_transformation_submission($1, $2)', [s2.rows[0].id, 'approve']);
+      await c.query('reset role'); await c.query('set local role service_role'); await c.query("select set_config('request.jwt.claims', '{}', true)");
+      const cards = await c.query('select id from public.coach_transformations where coach_id = $1 and client_id = $2', [COACH_A.sub, CLIENT_A1.sub]);
+      expect(cards.rows.length).toBe(2); // the first approval was NOT clobbered
+      // The AFTER INSERT trigger notified the featured client once per card.
+      const notes = await c.query("select id from public.notifications where recipient_id = $1 and type = 'transformation_featured'", [CLIENT_A1.sub]);
+      expect(notes.rows.length).toBe(2);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('transformation_photos is fenced to the card’s coach; the featured client reads; other tenants and anon see none', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role service_role');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+      const card = await c.query('insert into public.coach_transformations (coach_id, client_id) values ($1, $2) returning id', [COACH_A.sub, CLIENT_A1.sub]);
+      const cardId = card.rows[0].id as string;
+      const asId = (id: string, role: string) => c.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: id, role: 'authenticated', user_role: role })]);
+      // The card's coach adds a photo row.
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(COACH_A.sub, 'coach');
+      const ins = await c.query("insert into public.transformation_photos (transformation_id, position, taken_on) values ($1, 0, '2026-01-15')", [cardId]);
+      expect(ins.rowCount).toBe(1);
+      // A foreign coach cannot attach photos to someone else's card.
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(COACH_B_ID, 'coach');
+      await c.query('savepoint sp_foreign_photo');
+      await expect(c.query('insert into public.transformation_photos (transformation_id, position) values ($1, 1)', [cardId])).rejects.toThrow();
+      await c.query('rollback to savepoint sp_foreign_photo');
+      // The featured client reads the rows about them; another client and anon see none.
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(CLIENT_A1.sub, 'client');
+      const own = await c.query('select id from public.transformation_photos where transformation_id = $1', [cardId]);
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(CLIENT_B1, 'client');
+      const foreign = await c.query('select id from public.transformation_photos where transformation_id = $1', [cardId]);
+      await c.query('reset role'); await c.query('set local role anon'); await c.query("select set_config('request.jwt.claims', '{}', true)");
+      const anon = await c.query('select id from public.transformation_photos');
+      expect(own.rows.length).toBe(1);
+      expect(foreign.rows).toHaveLength(0);
+      expect(anon.rows).toHaveLength(0);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('a transformation photo referenced ONLY via transformation_photos is publicly readable while consent holds — and stops when consent is revoked', async () => {
+    // This also codifies the 0087 FIX of the 0078 bug: the membership check now runs in a
+    // SECURITY DEFINER helper, so an UNRELATED authenticated viewer (neither the card's
+    // coach nor the client) can read the bytes of a consented, public-coach showcase photo.
+    const MEDIA_ID = 'ed000087-0000-0000-0000-000000000087';
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role service_role');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+      await c.query(
+        "insert into public.media (id, owner_id, kind, status, bucket, path, mime_type, size_bytes) values ($1, $2, 'transformation', 'ready', 'media', $3, 'image/jpeg', 111)",
+        [MEDIA_ID, CLIENT_A1.sub, `${CLIENT_A1.sub}/tm-photo.jpg`],
+      );
+      await c.query('update public.athlete_profile set allow_transformation_sharing = true where user_id = $1', [CLIENT_A1.sub]);
+      const card = await c.query('insert into public.coach_transformations (coach_id, client_id) values ($1, $2) returning id', [COACH_A.sub, CLIENT_A1.sub]);
+      await c.query('insert into public.transformation_photos (transformation_id, media_id, position) values ($1, $2, 0)', [card.rows[0].id, MEDIA_ID]);
+      const asId = (id: string, role: string) => c.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: id, role: 'authenticated', user_role: role })]);
+      // Unrelated viewer (Client B1) — Coach A is public + A1 consents → readable.
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(CLIENT_B1, 'client');
+      const consented = await c.query('select id from public.media where id = $1', [MEDIA_ID]);
+      expect(consented.rows).toHaveLength(1);
+      // Consent revoked → the same viewer loses access immediately.
+      await c.query('reset role'); await c.query('set local role service_role'); await c.query("select set_config('request.jwt.claims', '{}', true)");
+      await c.query('update public.athlete_profile set allow_transformation_sharing = false where user_id = $1', [CLIENT_A1.sub]);
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(CLIENT_B1, 'client');
+      const revoked = await c.query('select id from public.media where id = $1', [MEDIA_ID]);
+      expect(revoked.rows).toHaveLength(0);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('get_coach_transformations returns the exact column allowlist incl. an ordered photos array', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role service_role');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+      await c.query('update public.athlete_profile set allow_transformation_sharing = true where user_id = $1', [CLIENT_A1.sub]);
+      const card = await c.query('insert into public.coach_transformations (coach_id, client_id) values ($1, $2) returning id', [COACH_A.sub, CLIENT_A1.sub]);
+      const cardId = card.rows[0].id as string;
+      await c.query("insert into public.transformation_photos (transformation_id, position, taken_on) values ($1, 1, '2026-04-15'), ($1, 0, '2026-01-15')", [cardId]);
+      const asId = (id: string, role: string) => c.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: id, role: 'authenticated', user_role: role })]);
+      // An unrelated authenticated viewer can call it (Coach A is a PUBLIC coach).
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(CLIENT_B1, 'client');
+      const r = await c.query('select * from public.get_coach_transformations($1)', [COACH_A.sub]);
+      const row = r.rows.find((x) => x.transformation_id === cardId);
+      expect(row).toBeTruthy();
+      // The SELECT column list IS the public contract — no raw override/metric columns leak.
+      expect(Object.keys(row).sort()).toEqual(
+        [
+          'transformation_id', 'client_first_name', 'caption', 'before_media_id', 'after_media_id',
+          'duration_weeks', 'body_fat_delta_bp', 'lean_mass_delta_grams', 'ffmi_before', 'ffmi_after',
+          'tier_before', 'tier_after', 'goal', 'verified', 'layout', 'before_frame', 'after_frame',
+          'photos',
+        ].sort(),
+      );
+      expect(Array.isArray(row.photos)).toBe(true);
+      expect(row.photos.map((p: { position: number }) => p.position)).toEqual([0, 1]); // ordered
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('picked scans drive the deltas (not first/last); a FOREIGN metric id fails closed to null stats + unverified', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query('set local role service_role');
+      await c.query("select set_config('request.jwt.claims', '{}', true)");
+      await c.query('update public.athlete_profile set allow_transformation_sharing = true where user_id = $1', [CLIENT_A1.sub]);
+      // Pick the scans REVERSED (before = latest, after = baseline) to prove the pick wins
+      // over the default first/last ordering: deltas flip sign vs the auto computation.
+      const picked = await c.query(
+        'insert into public.coach_transformations (coach_id, client_id, before_metric_id, after_metric_id) values ($1, $2, $3, $4) returning id',
+        [COACH_A.sub, CLIENT_A1.sub, A1_METRIC_LATEST, A1_METRIC_BASE],
+      );
+      const foreign = await c.query(
+        'insert into public.coach_transformations (coach_id, client_id, before_metric_id) values ($1, $2, $3) returning id',
+        [COACH_A.sub, CLIENT_A1.sub, B1_METRIC],
+      );
+      const asId = (id: string, role: string) => c.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: id, role: 'authenticated', user_role: role })]);
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(COACH_A.sub, 'coach');
+      const r = await c.query('select * from public.get_coach_transformations($1)', [COACH_A.sub]);
+      const pickedRow = r.rows.find((x) => x.transformation_id === picked.rows[0].id);
+      const foreignRow = r.rows.find((x) => x.transformation_id === foreign.rows[0].id);
+      // Seed: baseline bf 2560bp/smm 39200g → latest bf 2300bp/smm 39800g. Reversed pick ⇒ −260 / −600.
+      expect(pickedRow.body_fat_delta_bp).toBe(-260);
+      expect(pickedRow.lean_mass_delta_grams).toBe(-600);
+      expect(pickedRow.verified).toBe(true); // scans are coach-verified; no manual override
+      // Another client's metric id matches no row for THIS client → null stats, never foreign data.
+      expect(foreignRow.body_fat_delta_bp).toBeNull();
+      expect(foreignRow.lean_mass_delta_grams).toBeNull();
+      expect(foreignRow.verified).toBe(false);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('request_transformation: the OWN coach nudges once per 7 days; a foreign coach and anon are rejected', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      const asId = (id: string, role: string) => c.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: id, role: 'authenticated', user_role: role })]);
+      await c.query('set local role authenticated'); await asId(COACH_A.sub, 'coach');
+      await c.query('select public.request_transformation($1)', [CLIENT_A1.sub]);
+      // Dedupe: a second nudge inside the window raises too_soon.
+      await c.query('savepoint sp_too_soon');
+      await expect(c.query('select public.request_transformation($1)', [CLIENT_A1.sub])).rejects.toThrow(/too_soon/);
+      await c.query('rollback to savepoint sp_too_soon');
+      // A coach who is NOT this client's coach is fenced out.
+      await c.query('reset role'); await c.query('set local role authenticated'); await asId(COACH_B_ID, 'coach');
+      await c.query('savepoint sp_not_coach');
+      await expect(c.query('select public.request_transformation($1)', [CLIENT_A1.sub])).rejects.toThrow(/not_authorized/);
+      await c.query('rollback to savepoint sp_not_coach');
+      // The notification row landed for the client.
+      await c.query('reset role'); await c.query('set local role service_role'); await c.query("select set_config('request.jwt.claims', '{}', true)");
+      const notes = await c.query("select actor_id from public.notifications where recipient_id = $1 and type = 'transformation_requested'", [CLIENT_A1.sub]);
+      expect(notes.rows.length).toBe(1);
+      expect(notes.rows[0].actor_id).toBe(COACH_A.sub);
+    } finally {
+      await c.query('rollback').catch(() => {});
+      c.release();
+    }
+  });
+
+  it('anon cannot call request_transformation or is_public_transformation_media (execute revoked)', async () => {
+    await expect(asAnon((c) => c.query('select public.request_transformation($1)', [CLIENT_A1.sub]))).rejects.toThrow();
+    await expect(asAnon((c) => c.query('select public.is_public_transformation_media($1)', ['ed000001-0000-0000-0000-000000000001']))).rejects.toThrow();
+  });
+});
+
 describe('voice notes (0043, Phase 18) — audio media readable by chat participants (§2/§7/§8)', () => {
   const ADMIN: Identity = { sub: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userRole: 'admin' };
   const COACH_B: Identity = { sub: COACH_B_ID, userRole: 'coach' };

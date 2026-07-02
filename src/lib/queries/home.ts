@@ -19,6 +19,8 @@ import { getMyName } from '@/lib/profile';
 import { getMyAthleteProfile } from '@/lib/athlete-profile';
 import { getMyLeagueStanding } from '@/lib/leagues';
 import { getMyCoach, listMyClients, listMyInvitations } from '@/lib/invitations';
+import { listMyTransformations } from '@/lib/coach-transformations';
+import { listPendingSubmissions } from '@/lib/transformation-submissions';
 import { listPlansForClient, listWeeks, listDays, listExerciseRows } from '@/lib/plans';
 import {
   getAdherence,
@@ -431,6 +433,9 @@ export async function prefetchHome(userId: string, role: Role): Promise<void> {
     warm(['coach-adherence'], () => getAdherenceOverview());
     warm(['coach-plan-effectiveness'], () => getPlanEffectiveness());
     warm(['analytics-insight'], () => getAnalyticsInsight());
+    // Transformation manager (0087): the sidebar pending badge + the manager screen.
+    warm(['pending-transformation-submissions', userId], () => listPendingSubmissions(userId));
+    warm(['my-transformations', userId], () => listMyTransformations(userId));
   }
   await Promise.allSettled(jobs);
 }
