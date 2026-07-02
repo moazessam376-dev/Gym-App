@@ -7,9 +7,11 @@
 // get_coach_transformations RPC (src/lib/public-profiles.ts).
 import { supabase } from './supabase';
 import {
+  coerceCardStyle,
   coerceLayout,
   coercePhotos,
   synthesizePhotos,
+  type CardStyle,
   type PhotoFrame,
   type TransformationCardInput,
   type TransformationLayout,
@@ -39,10 +41,11 @@ export type MyTransformation = {
   before_metric_id: string | null;
   after_metric_id: string | null;
   photos: TransformationPhoto[];
+  style: CardStyle;
 };
 
 const EDIT_COLS =
-  'id, client_id, caption, before_media_id, after_media_id, duration_weeks_override, body_fat_delta_bp_override, lean_mass_delta_grams_override, tier_before_override, tier_after_override, measurement_started_at, measurement_ended_at, layout, before_frame, after_frame, before_metric_id, after_metric_id';
+  'id, client_id, caption, before_media_id, after_media_id, duration_weeks_override, body_fat_delta_bp_override, lean_mass_delta_grams_override, tier_before_override, tier_after_override, measurement_started_at, measurement_ended_at, layout, before_frame, after_frame, before_metric_id, after_metric_id, style';
 
 /** A coach's clients who have consented to be featured (allow_transformation_sharing). */
 export type ConsentingClient = { user_id: string; full_name: string | null; avatar_media_id: string | null };
@@ -88,6 +91,7 @@ export async function listMyTransformations(coachId: string): Promise<MyTransfor
       after_frame,
       before_metric_id: (r.before_metric_id ?? null) as string | null,
       after_metric_id: (r.after_metric_id ?? null) as string | null,
+      style: coerceCardStyle(r.style),
     };
     return { ...base, photos: photos.length >= 2 ? photos : synthesizePhotos(base) };
   });
@@ -147,6 +151,7 @@ function parentPayload(input: TransformationCardInput) {
     layout: input.layout,
     before_metric_id: input.beforeMetricId ?? null,
     after_metric_id: input.afterMetricId ?? null,
+    style: input.cardStyle ?? null,
   };
 }
 

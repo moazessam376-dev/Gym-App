@@ -72,6 +72,7 @@ export function rawToInitial(row: MyTransformation): EditorTarget['initial'] {
     beforeMetricId: row.before_metric_id,
     afterMetricId: row.after_metric_id,
     photos: row.photos.map((p) => ({ mediaId: p.media_id, takenOn: p.taken_on, frame: p.frame })),
+    cardStyle: row.style,
   };
 }
 

@@ -3499,7 +3499,7 @@ describe('transformation manager (0087) — multi-card, photo rows, public media
           'transformation_id', 'client_first_name', 'caption', 'before_media_id', 'after_media_id',
           'duration_weeks', 'body_fat_delta_bp', 'lean_mass_delta_grams', 'ffmi_before', 'ffmi_after',
           'tier_before', 'tier_after', 'goal', 'verified', 'layout', 'before_frame', 'after_frame',
-          'photos',
+          'photos', 'style',
         ].sort(),
       );
       expect(Array.isArray(row.photos)).toBe(true);

@@ -961,7 +961,11 @@
     "tapToEditHint": "Tap a photo on the card to add or adjust it.",
     "dragHint": "Drag the photo on the card to reposition it — use − / + to zoom.",
     "editDone": "Done",
-    "resetFrame": "Reset"
+    "resetFrame": "Reset",
+    "cardStyleTitle": "Card style",
+    "titleOnPhoto": "Name on photo",
+    "titleBelow": "Name below photos",
+    "topFade": "Top fade"
   },
   "clientTransformation": {
     "title": "Before & after",

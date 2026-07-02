@@ -62,6 +62,25 @@ export type TransformationPhotoInput = {
   frame: PhotoFrame | null;
 };
 
+/** Card presentation options (0088 `style` jsonb). Defaults (null row) = scrim on, title
+ *  on the photo. `title: 'band'` moves the tag/name/verified/weeks into the stats band so
+ *  nothing covers the athlete's face at Square/Portrait ratios. */
+export type CardStyle = {
+  scrim: boolean;
+  title: 'top' | 'band';
+};
+
+export const DEFAULT_CARD_STYLE: CardStyle = { scrim: true, title: 'top' };
+
+export function coerceCardStyle(v: unknown): CardStyle {
+  if (!v || typeof v !== 'object') return { ...DEFAULT_CARD_STYLE };
+  const s = v as Record<string, unknown>;
+  return {
+    scrim: s.scrim !== false,
+    title: s.title === 'band' ? 'band' : 'top',
+  };
+}
+
 /** The editable fields of a transformation card, shared by the coach card + client submission
  *  writers. Any non-null stat override / date makes the card SELF-REPORTED (not verified).
  *  `photos` / metric picks are the coach-card additions (0087); the client submission path
@@ -85,6 +104,8 @@ export type TransformationCardInput = {
   /** Explicit verified-scan pick (coach cards): two of the client's coach-verified body_metrics. */
   beforeMetricId?: string | null;
   afterMetricId?: string | null;
+  /** Presentation options (0088); null/omitted = defaults. */
+  cardStyle?: CardStyle | null;
 };
 
 // A coach's curated before/after showcase card (consent-filtered, field-allowlist; E3).
@@ -109,6 +130,8 @@ export type CoachTransformation = {
   /** Ordered photo cells (0087). Never empty after mapping: legacy 2-photo rows are
    *  synthesized from before/after when the child rows are absent. */
   photos: TransformationPhoto[];
+  /** Presentation options (0088), coerced with defaults. */
+  style: CardStyle;
 };
 
 /** Defensively coerce a jsonb frame ({scale,x,y}) — null if malformed. */
@@ -164,6 +187,7 @@ function mapTransformationRow(
     layout: coerceLayout(r.layout),
     before_frame,
     after_frame,
+    style: coerceCardStyle(r.style),
   };
   return { ...base, photos: photos.length >= 2 ? photos : synthesizePhotos(base) };
 }

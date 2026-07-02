@@ -109,6 +109,7 @@ const migrationFiles = [
   '0085_coach_availability.sql',
   '0086_transformation_card_fields.sql',
   '0087_transformation_manager.sql',
+  '0088_transformation_card_style.sql',
 ];
 
 const baseUrl =

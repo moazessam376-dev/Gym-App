@@ -137,6 +137,87 @@ function PhotoFramePicker({
   );
 }
 
+// ── WhatsApp-style "Move & Scale" panel (shown while a card photo is selected) ─────
+// A large drag surface with the CELL-shaped crop window outlined and the photo's
+// overflow GHOSTED around it, so you can see what you're positioning against — the
+// card cell itself updates live with the same frame state.
+function MoveAndScale({
+  mediaId,
+  frame,
+  cellW,
+  cellH,
+  onFrame,
+}: {
+  mediaId: string;
+  frame: PhotoFrame;
+  cellW: number;
+  cellH: number;
+  onFrame: (f: PhotoFrame) => void;
+}) {
+  const [panelW, setPanelW] = useState(0);
+  const [nat, setNat] = useState<NaturalSize | null>(null);
+
+  const aspect = cellW > 0 && cellH > 0 ? cellW / cellH : 1;
+  const maxW = panelW * 0.68;
+  const maxH = 260;
+  let cropW = maxW;
+  let cropH = aspect > 0 ? maxW / aspect : maxW;
+  if (cropH > maxH) {
+    cropH = maxH;
+    cropW = maxH * aspect;
+  }
+  const panelH = Math.round(Math.min(340, cropH + 72));
+  const cropX = (panelW - cropW) / 2;
+  const cropY = (panelH - cropH) / 2;
+
+  const stateRef = useRef({ frame, cropW, cropH, nat });
+  stateRef.current = { frame, cropW, cropH, nat };
+  const onFrameRef = useRef(onFrame);
+  onFrameRef.current = onFrame;
+  const startFrame = useRef(frame);
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        startFrame.current = stateRef.current.frame;
+      },
+      onPanResponderMove: (_e, g) => {
+        const s = stateRef.current;
+        onFrameRef.current(panBy(startFrame.current, g.dx, g.dy, s.cropW, s.cropH, s.nat));
+      },
+    }),
+  ).current;
+
+  const g = frameStyle(frame, cropW, cropH, nat);
+  const gLeft = typeof g.left === 'number' ? g.left : 0;
+  const gTop = typeof g.top === 'number' ? g.top : 0;
+  const gW = typeof g.width === 'number' ? g.width : cropW;
+  const gH = typeof g.height === 'number' ? g.height : cropH;
+
+  return (
+    <View
+      onLayout={(e) => setPanelW(e.nativeEvent.layout.width)}
+      style={{ width: '100%', height: panelH, borderRadius: theme.radii.md, overflow: 'hidden', backgroundColor: '#000', borderWidth: 1, borderColor: theme.colors.glassBorder }}
+      {...responder.panHandlers}
+    >
+      {panelW > 0 && cropW > 0 ? (
+        <>
+          {/* Ghost: the whole photo at its frame position — the overflow you're hiding. */}
+          <View pointerEvents="none" style={{ position: 'absolute', left: cropX + gLeft, top: cropY + gTop, width: gW, height: gH, opacity: 0.35 }}>
+            <SignedImage mediaId={mediaId} resizeMode="cover" style={{ width: '100%', height: '100%' }} onNaturalSize={(w, h) => setNat({ w, h })} />
+          </View>
+          {/* Bright: exactly what the card cell shows. */}
+          <View pointerEvents="none" style={{ position: 'absolute', left: cropX, top: cropY, width: cropW, height: cropH, overflow: 'hidden' }}>
+            <SignedImage mediaId={mediaId} resizeMode="cover" style={frameStyle(frame, cropW, cropH, nat)} />
+          </View>
+          <View pointerEvents="none" style={{ position: 'absolute', left: cropX, top: cropY, width: cropW, height: cropH, borderWidth: 1.5, borderColor: theme.colors.primary }} />
+        </>
+      ) : null}
+    </View>
+  );
+}
+
 // ── Tier chooser ─────────────────────────────────────────────────────────────────
 function TierRow({ label, value, onChange }: { label: string; value: TierId | null; onChange: (v: TierId | null) => void }) {
   const { t } = useTranslation();
@@ -260,6 +341,11 @@ export function TransformationEditor({ mode, clientId, clientFirstName, coachNam
   const [saving, setSaving] = useState(false);
   // Card-first editing (inline mode): the slot currently selected for reframing on the card.
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  // Measured card-cell sizes (Move & Scale matches the selected cell's aspect).
+  const [cellSizes, setCellSizes] = useState<Record<number, { w: number; h: number }>>({});
+  // Card presentation (0088): title placement + top-fade toggle.
+  const [styleTitleBand, setStyleTitleBand] = useState(initial?.cardStyle?.title === 'band');
+  const [styleScrim, setStyleScrim] = useState(initial?.cardStyle?.scrim !== false);
 
   const layouts = mode === 'coach' ? COACH_LAYOUTS : CLIENT_LAYOUTS;
   const slotCount = LAYOUT_PHOTO_COUNT[layout];
@@ -374,8 +460,9 @@ export function TransformationEditor({ mode, clientId, clientFirstName, coachNam
         frame: s.frame,
         position: i,
       })),
+      style: { scrim: styleScrim, title: styleTitleBand ? 'band' : 'top' },
     }),
-    [clientFirstName, caption, slots, slotCount, previewStats, tierBefore, tierAfter, hasOverride, layout],
+    [clientFirstName, caption, slots, slotCount, previewStats, tierBefore, tierAfter, hasOverride, layout, styleScrim, styleTitleBand],
   );
 
   const onPreviewItemRef = useRef(onPreviewItem);
@@ -414,6 +501,8 @@ export function TransformationEditor({ mode, clientId, clientFirstName, coachNam
         photos,
         beforeMetricId: scanBeforeId,
         afterMetricId: scanAfterId,
+        // Store null for the defaults so untouched rows stay clean.
+        cardStyle: !styleScrim || styleTitleBand ? { scrim: styleScrim, title: styleTitleBand ? 'band' : 'top' } : null,
       });
     } catch {
       // A save failure at this point is almost always a stale session / RLS (media already
@@ -458,6 +547,39 @@ export function TransformationEditor({ mode, clientId, clientFirstName, coachNam
         </View>
       </View>
 
+      {/* Card style (0088): title placement (the top overlay can cover a face at Square/
+          Portrait) + the top fade as an option, not a mandate. */}
+      <View style={{ gap: 6 }}>
+        <Text variant="label" muted style={textStart}>{t('transformationEditor.cardStyleTitle')}</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {[false, true].map((band) => {
+            const on = styleTitleBand === band;
+            return (
+              <Pressable
+                key={String(band)}
+                onPress={() => setStyleTitleBand(band)}
+                style={{ paddingVertical: 7, paddingHorizontal: 13, borderRadius: theme.radii.sm, borderWidth: 1, borderColor: on ? theme.colors.primary : theme.colors.glassBorder, backgroundColor: on ? theme.colors.primary : 'transparent' }}
+              >
+                <Text style={{ fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13, color: on ? theme.colors.onPrimary : theme.colors.textMuted }}>
+                  {band ? t('transformationEditor.titleBelow') : t('transformationEditor.titleOnPhoto')}
+                </Text>
+              </Pressable>
+            );
+          })}
+          {!styleTitleBand ? (
+            <Pressable
+              onPress={() => setStyleScrim((v) => !v)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 13, borderRadius: theme.radii.sm, borderWidth: 1, borderColor: styleScrim ? theme.colors.primary : theme.colors.glassBorder, backgroundColor: styleScrim ? 'rgba(63,217,192,0.14)' : 'transparent' }}
+            >
+              {styleScrim ? <Icon name="check" size={13} color={theme.colors.primary} /> : null}
+              <Text style={{ fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13, color: styleScrim ? theme.colors.primary : theme.colors.textMuted }}>
+                {t('transformationEditor.topFade')}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+
       {/* Photos. INLINE mode: the live card IS the editing surface — tap a cell to add or
           select a photo, drag on the card to reframe it (WYSIWYG, no scroll-to-preview).
           EXTERNAL mode (desktop): the slot grid; the parent shows the live card in a rail. */}
@@ -474,11 +596,28 @@ export function TransformationEditor({ mode, clientId, clientFirstName, coachNam
                 onSelect: (i) => setSelectedSlot((s) => (s === i ? null : i)),
                 onPick: (i) => void pick(i)(),
                 onFrame: (i, f) => setSlot(i, { frame: f }),
+                onCellLayout: (i, s) =>
+                  setCellSizes((prev) => {
+                    const cur = prev[i];
+                    if (cur && Math.abs(cur.w - s.w) < 1 && Math.abs(cur.h - s.h) < 1) return prev;
+                    return { ...prev, [i]: s };
+                  }),
               }}
             />
           </View>
           {selectedSlot != null ? (
             <View style={{ gap: theme.spacing.sm }}>
+              {/* WhatsApp-style Move & Scale: the crop window with the photo's overflow
+                  ghosted around it — a big drag surface; the card cell updates live too. */}
+              {slots[selectedSlot]?.mediaId ? (
+                <MoveAndScale
+                  mediaId={slots[selectedSlot]!.mediaId!}
+                  frame={slots[selectedSlot]!.frame}
+                  cellW={cellSizes[selectedSlot]?.w ?? 1}
+                  cellH={cellSizes[selectedSlot]?.h ?? 1}
+                  onFrame={(f) => setSlot(selectedSlot, { frame: f })}
+                />
+              ) : null}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
                 <Text variant="label" muted style={[{ flex: 1 }, textStart]}>{slotLabel(selectedSlot)}</Text>
                 <Pressable onPress={() => { const s = slots[selectedSlot]; if (s) setSlot(selectedSlot, { frame: { ...s.frame, scale: Math.max(1, Math.round((s.frame.scale - 0.25) * 100) / 100) } }); }} hitSlop={8} style={{ paddingHorizontal: 12, paddingVertical: 4 }}>

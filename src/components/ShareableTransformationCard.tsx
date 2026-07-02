@@ -38,6 +38,8 @@ export type CardEditController = {
   onSelect: (i: number) => void;
   onPick: (i: number) => void;
   onFrame: (i: number, f: PhotoFrame) => void;
+  /** Reports each cell's measured size (the Move & Scale panel matches its aspect). */
+  onCellLayout?: (i: number, size: { w: number; h: number }) => void;
 };
 
 type Ratio = 'square' | 'portrait' | 'story';
@@ -141,7 +143,11 @@ function PhotoCell({
   const body = (
     <View
       style={{ flex: 1, backgroundColor: theme.colors.surface, overflow: 'hidden' }}
-      onLayout={(e) => setSz({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+      onLayout={(e) => {
+        const s = { w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height };
+        setSz(s);
+        edit?.onCellLayout?.(index, s);
+      }}
       {...(selected && photo?.media_id ? responder.panHandlers : {})}
     >
       {photo?.media_id ? (
@@ -262,7 +268,13 @@ function SliderHero({ before, after, beforeLabel, afterLabel, edit, busySlot }: 
   return (
     <View
       style={{ flex: 1, backgroundColor: theme.colors.surface, overflow: 'hidden' }}
-      onLayout={(e) => setSz({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+      onLayout={(e) => {
+        const s = { w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height };
+        setSz(s);
+        // Slider photos share the hero cell; report both slots at the hero size.
+        edit?.onCellLayout?.(0, s);
+        edit?.onCellLayout?.(1, s);
+      }}
       {...(selected != null ? frameResponder.panHandlers : {})}
     >
       {/* Base layer: BEFORE fills the hero. */}
@@ -327,6 +339,58 @@ function SliderHero({ before, after, beforeLabel, afterLabel, edit, busySlot }: 
         <Text style={{ fontFamily: theme.fontFamily.monoRegular, fontSize: 10, letterSpacing: 1.5, color: theme.colors.primary }}>{afterChip}</Text>
       </View>
     </View>
+  );
+}
+
+/** The photo-hero title block (tag + name + verified + weeks) with an optional fade. */
+function TitleOverlay({ item, scrim }: { item: CoachTransformation; scrim: boolean }) {
+  const { t } = useTranslation();
+  const mono = theme.fontFamily.monoRegular;
+  const monoB = theme.fontFamily.monoBold;
+  const inner = (
+    <>
+      <View style={{ flex: 1, paddingRight: 8 }}>
+        <Text style={{ fontFamily: mono, fontSize: 9, letterSpacing: 2, color: theme.colors.primary }}>{t('coachProfile.cardTag').toUpperCase()}</Text>
+        <Text numberOfLines={1} style={{ fontFamily: theme.fontFamily.displayBold, fontSize: 26, lineHeight: 30, color: theme.colors.text, letterSpacing: -0.5, marginTop: 3 }}>
+          {item.client_first_name ?? ''}
+        </Text>
+        {item.verified ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4, marginTop: 5, backgroundColor: 'rgba(63,217,192,0.16)', borderRadius: 6, paddingVertical: 2, paddingHorizontal: 6 }}>
+            <Icon name="check-circle" size={10} color={theme.colors.primary} />
+            <Text style={{ fontFamily: monoB, fontSize: 8, letterSpacing: 1.5, color: theme.colors.primary }}>{t('coachProfile.verified').toUpperCase()}</Text>
+          </View>
+        ) : null}
+      </View>
+      {item.duration_weeks != null ? (
+        <View style={{ backgroundColor: 'rgba(8,9,12,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 9 }}>
+          <Text style={{ fontFamily: monoB, fontSize: 13, color: theme.colors.text }}>{t('coachProfile.weeksShort', { count: item.duration_weeks })}</Text>
+        </View>
+      ) : null}
+    </>
+  );
+  const box = {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 14,
+    paddingTop: 13,
+    paddingBottom: 18,
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'flex-start' as const,
+  };
+  if (!scrim) {
+    return (
+      <View pointerEvents="none" style={box}>
+        {inner}
+      </View>
+    );
+  }
+  return (
+    <LinearGradient colors={[SCRIM_DARK, SCRIM_MID, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} pointerEvents="none" style={box}>
+      {inner}
+    </LinearGradient>
   );
 }
 
@@ -464,36 +528,39 @@ export function ShareableTransformationCard({
         <View style={{ flex: 1, flexDirection: heroDirection, position: 'relative' }}>
           {renderHero()}
 
-          {/* Top scrim: tag + name (+ verified badge) + weeks */}
-          <LinearGradient
-            colors={[SCRIM_DARK, SCRIM_MID, 'transparent']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            pointerEvents="none"
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 14, paddingTop: 13, paddingBottom: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}
-          >
-            <View style={{ flex: 1, paddingRight: 8 }}>
-              <Text style={{ fontFamily: mono, fontSize: 9, letterSpacing: 2, color: theme.colors.primary }}>{t('coachProfile.cardTag').toUpperCase()}</Text>
-              <Text numberOfLines={1} style={{ fontFamily: theme.fontFamily.displayBold, fontSize: 26, lineHeight: 30, color: theme.colors.text, letterSpacing: -0.5, marginTop: 3 }}>
-                {item.client_first_name ?? ''}
-              </Text>
-              {item.verified ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4, marginTop: 5, backgroundColor: 'rgba(63,217,192,0.16)', borderRadius: 6, paddingVertical: 2, paddingHorizontal: 6 }}>
-                  <Icon name="check-circle" size={10} color={theme.colors.primary} />
-                  <Text style={{ fontFamily: monoB, fontSize: 8, letterSpacing: 1.5, color: theme.colors.primary }}>{t('coachProfile.verified').toUpperCase()}</Text>
-                </View>
-              ) : null}
-            </View>
-            {item.duration_weeks != null ? (
-              <View style={{ backgroundColor: 'rgba(8,9,12,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 9 }}>
-                <Text style={{ fontFamily: monoB, fontSize: 13, color: theme.colors.text }}>{t('coachProfile.weeksShort', { count: item.duration_weeks })}</Text>
-              </View>
-            ) : null}
-          </LinearGradient>
+          {/* Top overlay: tag + name (+ verified badge) + weeks. style.title='band' moves all
+              of this below the photos (nothing covers the athlete); style.scrim toggles the
+              fade behind it. */}
+          {item.style.title === 'top' ? (
+            <TitleOverlay item={item} scrim={item.style.scrim} />
+          ) : null}
         </View>
 
         {/* Stats band — kept compact so the photo hero stays dominant even at the Square ratio */}
         <View style={{ backgroundColor: ONYX, paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
+          {item.style.title === 'band' ? (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: mono, fontSize: 9, letterSpacing: 2, color: theme.colors.primary }}>{t('coachProfile.cardTag').toUpperCase()}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                  <Text numberOfLines={1} style={{ fontFamily: theme.fontFamily.displayBold, fontSize: 20, lineHeight: 24, color: theme.colors.text, letterSpacing: -0.4 }}>
+                    {item.client_first_name ?? ''}
+                  </Text>
+                  {item.verified ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(63,217,192,0.16)', borderRadius: 6, paddingVertical: 2, paddingHorizontal: 6 }}>
+                      <Icon name="check-circle" size={10} color={theme.colors.primary} />
+                      <Text style={{ fontFamily: monoB, fontSize: 8, letterSpacing: 1.5, color: theme.colors.primary }}>{t('coachProfile.verified').toUpperCase()}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+              {item.duration_weeks != null ? (
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 9 }}>
+                  <Text style={{ fontFamily: monoB, fontSize: 13, color: theme.colors.text }}>{t('coachProfile.weeksShort', { count: item.duration_weeks })}</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
           {stats.length > 0 ? (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               {stats.map((s, i) => (

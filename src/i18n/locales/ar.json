@@ -553,7 +553,11 @@
     "tapToEditHint": "دوس على أي صورة في الكارت عشان تضيفها أو تظبطها.",
     "dragHint": "اسحب الصورة على الكارت عشان تظبط مكانها — و − / + للتقريب.",
     "editDone": "تم",
-    "resetFrame": "رجّع الأصل"
+    "resetFrame": "رجّع الأصل",
+    "cardStyleTitle": "شكل الكارت",
+    "titleOnPhoto": "الاسم على الصورة",
+    "titleBelow": "الاسم تحت الصور",
+    "topFade": "تظليل فوق"
   },
   "clientTransformation": {
     "title": "قبل وبعد",
