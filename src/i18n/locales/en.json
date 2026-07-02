@@ -957,7 +957,11 @@
     "scanReadout": "−{{bf}}% body fat · +{{lm}}kg lean mass over {{weeks}} weeks",
     "savePhoto": "Save photo",
     "photoSaved": "Photo saved",
-    "captureFailed": "Couldn't render the photo. Try again."
+    "captureFailed": "Couldn't render the photo. Try again.",
+    "tapToEditHint": "Tap a photo on the card to add or adjust it.",
+    "dragHint": "Drag the photo on the card to reposition it — use − / + to zoom.",
+    "editDone": "Done",
+    "resetFrame": "Reset"
   },
   "clientTransformation": {
     "title": "Before & after",
@@ -1001,7 +1005,8 @@
     "cardCount_other": "{{count}} cards",
     "addCard": "Add card",
     "allClientsFeatured": "Every consenting client already has a card — add more from their timeline above.",
-    "consentHint": "Only clients who've allowed transformation sharing appear here.",
+    "consentHint": "Featuring needs the client's sharing consent — clients who haven't allowed it yet show an Ask button that sends them a notification.",
+    "askToShare": "Ask",
     "selfChip": "Self",
     "sentLabel": "Sent {{when}}",
     "deleteCard": "Delete card",

@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { theme } from '@/theme';
 import { textStart } from '@/lib/rtl';
 import { TIER_COLORS, type TierId } from '@/lib/leagues';
-import { frameStyle, panBy } from '@/lib/photoFrame';
+import { frameStyle, panBy, type NaturalSize } from '@/lib/photoFrame';
 import { captureAndUploadPhoto } from '@/lib/upload';
 import { listBodyMetrics, type BodyMetric } from '@/lib/body-metrics';
 import {
@@ -73,8 +73,11 @@ function PhotoFramePicker({
 }) {
   const { t } = useTranslation();
   const [sz, setSz] = useState({ w: 0, h: 0 });
+  const [nat, setNat] = useState<NaturalSize | null>(null);
   const szRef = useRef(sz);
   szRef.current = sz;
+  const natRef = useRef(nat);
+  natRef.current = nat;
   const frameRef = useRef(frame);
   frameRef.current = frame;
   const onFrameRef = useRef(onFrame);
@@ -89,13 +92,12 @@ function PhotoFramePicker({
         startFrame.current = frameRef.current;
       },
       onPanResponderMove: (_e, g) => {
-        onFrameRef.current(panBy(startFrame.current, g.dx, g.dy, szRef.current.w, szRef.current.h));
+        onFrameRef.current(panBy(startFrame.current, g.dx, g.dy, szRef.current.w, szRef.current.h, natRef.current));
       },
     }),
   ).current;
 
   const zoom = (delta: number) => onFrame({ ...frame, scale: Math.max(1, Math.min(3, Math.round((frame.scale + delta) * 100) / 100)) });
-  const framed = frame.scale > 1.001;
 
   return (
     <View style={{ flex: 1, gap: 6 }}>
@@ -106,10 +108,10 @@ function PhotoFramePicker({
         {...(mediaId ? responder.panHandlers : {})}
       >
         {mediaId ? (
-          framed && sz.w > 0 ? (
-            <SignedImage mediaId={mediaId} resizeMode="cover" style={frameStyle(frame, sz.w, sz.h)} />
+          sz.w > 0 ? (
+            <SignedImage mediaId={mediaId} resizeMode="cover" style={frameStyle(frame, sz.w, sz.h, nat)} onNaturalSize={(w, h) => setNat({ w, h })} />
           ) : (
-            <SignedImage mediaId={mediaId} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
+            <SignedImage mediaId={mediaId} resizeMode="cover" style={{ width: '100%', height: '100%' }} onNaturalSize={(w, h) => setNat({ w, h })} />
           )
         ) : busy ? (
           <ActivityIndicator color={theme.colors.primary} />
@@ -256,6 +258,8 @@ export function TransformationEditor({ mode, clientId, clientFirstName, coachNam
   const [scanAfterId, setScanAfterId] = useState<string | null>(initial?.afterMetricId ?? null);
   const [uploading, setUploading] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  // Card-first editing (inline mode): the slot currently selected for reframing on the card.
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
 
   const layouts = mode === 'coach' ? COACH_LAYOUTS : CLIENT_LAYOUTS;
   const slotCount = LAYOUT_PHOTO_COUNT[layout];
@@ -279,6 +283,7 @@ export function TransformationEditor({ mode, clientId, clientFirstName, coachNam
       while (copy.length < n) copy.push({ mediaId: null, takenOn: '', frame: DEFAULT_FRAME });
       return copy;
     });
+    setSelectedSlot((s) => (s != null && s >= n ? null : s));
   };
 
   const setSlot = (i: number, patch: Partial<PhotoSlot>) =>
@@ -453,39 +458,97 @@ export function TransformationEditor({ mode, clientId, clientFirstName, coachNam
         </View>
       </View>
 
-      {/* Photos + framing (+ per-photo dates on strip/grid) */}
-      <View style={{ gap: theme.spacing.md }}>
-        {slotRows.map((row) => (
-          <View key={row[0]} style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-            {row.map((i) => (
-              <View key={i} style={{ flex: 1, gap: 6 }}>
-                <PhotoFramePicker
-                  label={slotLabel(i)}
-                  mediaId={slots[i]?.mediaId ?? null}
-                  frame={slots[i]?.frame ?? DEFAULT_FRAME}
-                  busy={uploading === i}
-                  onPick={pick(i)}
-                  onFrame={(f) => setSlot(i, { frame: f })}
+      {/* Photos. INLINE mode: the live card IS the editing surface — tap a cell to add or
+          select a photo, drag on the card to reframe it (WYSIWYG, no scroll-to-preview).
+          EXTERNAL mode (desktop): the slot grid; the parent shows the live card in a rail. */}
+      {previewMode === 'inline' ? (
+        <View style={{ gap: theme.spacing.sm }}>
+          <View style={{ alignItems: 'center' }}>
+            <ShareableTransformationCard
+              item={previewItem}
+              coachName={coachName}
+              shareable={false}
+              edit={{
+                selected: selectedSlot,
+                busySlot: uploading,
+                onSelect: (i) => setSelectedSlot((s) => (s === i ? null : i)),
+                onPick: (i) => void pick(i)(),
+                onFrame: (i, f) => setSlot(i, { frame: f }),
+              }}
+            />
+          </View>
+          {selectedSlot != null ? (
+            <View style={{ gap: theme.spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                <Text variant="label" muted style={[{ flex: 1 }, textStart]}>{slotLabel(selectedSlot)}</Text>
+                <Pressable onPress={() => { const s = slots[selectedSlot]; if (s) setSlot(selectedSlot, { frame: { ...s.frame, scale: Math.max(1, Math.round((s.frame.scale - 0.25) * 100) / 100) } }); }} hitSlop={8} style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
+                  <Text variant="title" color={theme.colors.text}>−</Text>
+                </Pressable>
+                <Pressable onPress={() => { const s = slots[selectedSlot]; if (s) setSlot(selectedSlot, { frame: { ...s.frame, scale: Math.min(3, Math.round((s.frame.scale + 0.25) * 100) / 100) } }); }} hitSlop={8} style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
+                  <Text variant="title" color={theme.colors.text}>+</Text>
+                </Pressable>
+                <Pressable onPress={() => setSlot(selectedSlot, { frame: DEFAULT_FRAME })} hitSlop={8}>
+                  <Text variant="caption" muted>{t('transformationEditor.resetFrame')}</Text>
+                </Pressable>
+                <Pressable onPress={() => void pick(selectedSlot)()} hitSlop={8}>
+                  <Text variant="caption" muted>{t('transformationEditor.replacePhoto')}</Text>
+                </Pressable>
+                <Pressable onPress={() => setSelectedSlot(null)} hitSlop={8} style={{ paddingVertical: 6, paddingHorizontal: 14, borderRadius: theme.radii.sm, backgroundColor: theme.colors.primary }}>
+                  <Text style={{ fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13, color: theme.colors.onPrimary }}>{t('transformationEditor.editDone')}</Text>
+                </Pressable>
+              </View>
+              {showTakenOn ? (
+                <Input
+                  label={t('transformationEditor.takenOn')}
+                  value={slots[selectedSlot]?.takenOn ?? ''}
+                  onChangeText={(v) => setSlot(selectedSlot, { takenOn: v })}
+                  autoCapitalize="none"
+                  placeholder="2026-01-15"
+                  mono
                 />
-                {showTakenOn ? (
-                  <Input
-                    label={t('transformationEditor.takenOn')}
-                    value={slots[i]?.takenOn ?? ''}
-                    onChangeText={(v) => setSlot(i, { takenOn: v })}
-                    autoCapitalize="none"
-                    placeholder="2026-01-15"
-                    mono
-                  />
-                ) : null}
+              ) : null}
+              <Text variant="caption" muted style={textStart}>{t('transformationEditor.dragHint')}</Text>
+            </View>
+          ) : (
+            <Text variant="caption" muted style={{ textAlign: 'center' }}>{t('transformationEditor.tapToEditHint')}</Text>
+          )}
+        </View>
+      ) : (
+        <>
+          <View style={{ gap: theme.spacing.md }}>
+            {slotRows.map((row) => (
+              <View key={row[0]} style={{ flexDirection: 'row', gap: theme.spacing.md }}>
+                {row.map((i) => (
+                  <View key={i} style={{ flex: 1, gap: 6 }}>
+                    <PhotoFramePicker
+                      label={slotLabel(i)}
+                      mediaId={slots[i]?.mediaId ?? null}
+                      frame={slots[i]?.frame ?? DEFAULT_FRAME}
+                      busy={uploading === i}
+                      onPick={pick(i)}
+                      onFrame={(f) => setSlot(i, { frame: f })}
+                    />
+                    {showTakenOn ? (
+                      <Input
+                        label={t('transformationEditor.takenOn')}
+                        value={slots[i]?.takenOn ?? ''}
+                        onChangeText={(v) => setSlot(i, { takenOn: v })}
+                        autoCapitalize="none"
+                        placeholder="2026-01-15"
+                        mono
+                      />
+                    ) : null}
+                  </View>
+                ))}
+                {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
               </View>
             ))}
-            {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
           </View>
-        ))}
-      </View>
-      {anyPhoto ? (
-        <Text variant="caption" muted style={textStart}>{t('transformationEditor.frameHint')}</Text>
-      ) : null}
+          {anyPhoto ? (
+            <Text variant="caption" muted style={textStart}>{t('transformationEditor.frameHint')}</Text>
+          ) : null}
+        </>
+      )}
 
       {/* Stats & dates */}
       <GlassCard style={{ gap: theme.spacing.md }}>
@@ -543,13 +606,7 @@ export function TransformationEditor({ mode, clientId, clientFirstName, coachNam
         </Text>
       </View>
 
-      {/* Live preview (desktop renders it externally in the sticky rail) */}
-      {previewMode === 'inline' ? (
-        <View style={{ alignItems: 'center', gap: theme.spacing.sm }}>
-          <Text variant="label" muted>{t('transformationEditor.preview')}</Text>
-          <ShareableTransformationCard item={previewItem} coachName={coachName} shareable={false} />
-        </View>
-      ) : null}
+      {/* Inline mode's live preview IS the editable card above; desktop renders it in the rail. */}
 
       <Button title={saveLabel} onPress={save} loading={saving} disabled={slots.slice(0, slotCount).some((s) => !s.mediaId)} />
       {mode === 'client' ? (

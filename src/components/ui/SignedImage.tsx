@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, View, type ImageStyle, type StyleProp } from 'react-native';
 import { Icon } from './Icon';
 import { getSignedUrl } from '@/lib/media';
@@ -11,6 +11,9 @@ export type SignedImageProps = {
   resizeMode?: 'cover' | 'contain';
   /** Re-mint trigger (e.g. bump on pull-to-refresh) — signed URLs are short-lived. */
   refreshKey?: number;
+  /** Reports the photo's natural pixel size once known (the framing math needs it).
+   *  Uses Image.getSize (works on native AND react-native-web). */
+  onNaturalSize?: (w: number, h: number) => void;
 };
 
 // Signed URLs live ~60s server-side; cache the minted URL just long enough to
@@ -23,24 +26,41 @@ const cache = new Map<string, { url: string; at: number }>();
  * are served — no public bucket). Shows a spinner while resolving and a fallback
  * glyph if the row is unreadable/expired (the Edge Function 404s an unauthorized id).
  */
-export function SignedImage({ mediaId, style, resizeMode = 'cover', refreshKey = 0 }: SignedImageProps) {
+export function SignedImage({ mediaId, style, resizeMode = 'cover', refreshKey = 0, onNaturalSize }: SignedImageProps) {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const onNaturalSizeRef = useRef(onNaturalSize);
+  onNaturalSizeRef.current = onNaturalSize;
 
   useEffect(() => {
     let active = true;
     setFailed(false);
 
+    const report = (u: string) => {
+      if (!onNaturalSizeRef.current) return;
+      Image.getSize(
+        u,
+        (w, h) => {
+          if (active) onNaturalSizeRef.current?.(w, h);
+        },
+        () => {},
+      );
+    };
+
     const cached = cache.get(mediaId);
     if (cached && Date.now() - cached.at < TTL_MS && refreshKey === 0) {
       setUrl(cached.url);
+      report(cached.url);
       return;
     }
     setUrl(null);
     getSignedUrl(mediaId)
       .then((u) => {
         cache.set(mediaId, { url: u, at: Date.now() });
-        if (active) setUrl(u);
+        if (active) {
+          setUrl(u);
+          report(u);
+        }
       })
       .catch(() => {
         if (active) setFailed(true);

@@ -13,7 +13,8 @@ import {
   type ConsentingClient,
   type MyTransformation,
 } from '@/lib/coach-transformations';
-import { resolveSubmission } from '@/lib/transformation-submissions';
+import { resolveSubmission, requestTransformation } from '@/lib/transformation-submissions';
+import { useMyClients } from '@/lib/queries/home';
 import {
   useMyTransformations,
   useCoachTransformationCards,
@@ -39,6 +40,18 @@ export type ClientTimelineGroup = {
   clientName: string | null;
   avatarMediaId: string | null;
   rows: MyTransformation[];
+};
+
+/** A client in the "feature a new client" row. Non-consenting clients show with an
+ *  ASK affordance instead of being silently hidden (the "why do I only see Taha" fix —
+ *  featuring requires the client's allow_transformation_sharing consent by design). */
+export type FeatureCandidate = {
+  user_id: string;
+  full_name: string | null;
+  avatar_media_id: string | null;
+  consented: boolean;
+  /** Nudge already sent this session (chip flips to a checkmark). */
+  asked: boolean;
 };
 
 /** A stored raw card row → the editor's initial values. */
@@ -73,10 +86,12 @@ export function useTransformationManager() {
   const cardsQ = useCoachTransformationCards(userId);
   const clientsQ = useConsentingClients(userId);
   const pendingQ = usePendingSubmissions(userId);
+  const allClientsQ = useMyClients();
 
   const [tab, setTab] = useState<ManagerTab>('pending');
   const [editor, setEditor] = useState<EditorTarget | null>(null);
   const [resolving, setResolving] = useState<string | null>(null);
+  const [askedIds, setAskedIds] = useState<Set<string>>(new Set());
 
   const raw = rawQ.data ?? [];
   const cards = cardsQ.data ?? [];
@@ -114,6 +129,38 @@ export function useTransformationManager() {
     const withCards = new Set(raw.map((r) => r.client_id));
     return clients.filter((c) => !withCards.has(c.user_id));
   }, [clients, raw]);
+
+  /** EVERY card-less client — consenting ones open the editor, the rest get an ASK chip. */
+  const featureCandidates = useMemo<FeatureCandidate[]>(() => {
+    const withCards = new Set(raw.map((r) => r.client_id));
+    const consentingById = new Map(clients.map((c) => [c.user_id, c]));
+    return (allClientsQ.data ?? [])
+      .filter((c) => !withCards.has(c.id))
+      .map((c) => {
+        const consenting = consentingById.get(c.id);
+        return {
+          user_id: c.id,
+          full_name: c.full_name,
+          avatar_media_id: consenting?.avatar_media_id ?? null,
+          consented: !!consenting,
+          asked: askedIds.has(c.id),
+        };
+      });
+  }, [allClientsQ.data, clients, raw, askedIds]);
+
+  /** Nudge a non-consenting client to submit (dedupe is server-side, 7 days). */
+  const onAsk = useCallback(
+    async (clientId: string) => {
+      try {
+        const res = await requestTransformation(clientId);
+        setAskedIds((prev) => new Set(prev).add(clientId));
+        toast.show(res === 'too_soon' ? t('transformationManager.requestTooSoon') : t('transformationManager.requestSent'), res === 'too_soon' ? 'error' : undefined);
+      } catch {
+        toast.show(t('common.error'), 'error');
+      }
+    },
+    [toast, t],
+  );
 
   const invalidate = useCallback(() => invalidateTransformations(userId), [userId]);
 
@@ -186,6 +233,8 @@ export function useTransformationManager() {
     pending,
     timelines,
     clientsWithoutCards,
+    featureCandidates,
+    onAsk,
     tab,
     setTab,
     editor,

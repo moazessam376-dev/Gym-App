@@ -9,12 +9,11 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/lib/auth-context';
 import { textStart } from '../../src/lib/rtl';
 import { useChrome } from '../../src/lib/chrome';
-import type { ConsentingClient } from '../../src/lib/coach-transformations';
 import { ProfileAvatar } from '../../src/components/ProfileAvatar';
 import { Icon, Screen, Text, GlassCard, KpiTile, Segmented, EmptyState } from '../../src/components/ui';
 import { TransformationEditor } from '../../src/components/transformations/TransformationEditor';
 import { useTransformationManager } from '../../src/components/transformations/useTransformationManager';
-import { PendingSubmissionCard, CardThumb, AddCardTile } from '../../src/components/transformations/ManagerParts';
+import { PendingSubmissionCard, CardThumb, AddCardTile, FeatureClientChip } from '../../src/components/transformations/ManagerParts';
 import { TransformationsDesktop } from '../../src/components/coach/web/TransformationsDesktop';
 import { theme } from '../../src/theme';
 
@@ -127,25 +126,25 @@ export default function CoachTransformationsManager() {
               </GlassCard>
             ))}
 
-            {/* Feature a new client (consented, no card yet) */}
+            {/* Feature a new client — non-consenting clients show an ASK chip, not hidden. */}
             <View style={{ gap: theme.spacing.sm }}>
               <Text variant="label" muted style={textStart}>{t('coachProfile.addTransformation')}</Text>
-              {m.clients.length === 0 ? (
-                <EmptyState icon="people-outline" title={t('coachProfile.noConsentingClients')} subtitle={t('coachProfile.noConsentingClientsSub')} />
-              ) : m.clientsWithoutCards.length === 0 ? (
-                <Text variant="caption" muted style={textStart}>{t('transformationManager.allClientsFeatured')}</Text>
+              {m.featureCandidates.length === 0 ? (
+                m.timelines.length > 0 ? (
+                  <Text variant="caption" muted style={textStart}>{t('transformationManager.allClientsFeatured')}</Text>
+                ) : (
+                  <EmptyState icon="people-outline" title={t('coachProfile.noConsentingClients')} subtitle={t('coachProfile.noConsentingClientsSub')} />
+                )
               ) : (
                 <GlassCard style={{ gap: theme.spacing.md }}>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
-                    {m.clientsWithoutCards.map((c: ConsentingClient) => (
-                      <Pressable
+                    {m.featureCandidates.map((c) => (
+                      <FeatureClientChip
                         key={c.user_id}
-                        onPress={() => m.openNew(c.user_id, c.full_name?.split(' ')[0] ?? null)}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: theme.spacing.sm, borderRadius: theme.radii.md, borderWidth: 1, borderColor: theme.colors.glassBorder, backgroundColor: theme.colors.glass }}
-                      >
-                        <ProfileAvatar name={c.full_name} avatarMediaId={c.avatar_media_id} size={24} />
-                        <Text variant="caption">{c.full_name ?? ''}</Text>
-                      </Pressable>
+                        candidate={c}
+                        onOpen={() => m.openNew(c.user_id, c.full_name?.split(' ')[0] ?? null)}
+                        onAsk={() => void m.onAsk(c.user_id)}
+                      />
                     ))}
                   </View>
                   <Text variant="caption" muted style={textStart}>{t('transformationManager.consentHint')}</Text>

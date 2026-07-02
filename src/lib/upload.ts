@@ -7,6 +7,7 @@
 // JPEG (this converts HEIC→JPEG AND drops EXIF on-device as defense-in-depth; the
 // server strips again regardless) → read the file as raw bytes (a Blob uploads as 0
 // bytes through supabase-js on RN) → uploadMedia.
+import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { File } from 'expo-file-system';
@@ -85,7 +86,12 @@ export async function captureAndUploadPhoto(args: {
 
   // Read the sanitized file as raw bytes. On React Native a Blob/File uploads as 0
   // bytes through supabase-js, so we pass a Uint8Array (its documented RN path).
-  const bytes = await new File(out.uri).bytes();
+  // expo-file-system's File is NATIVE-only — on web the manipulator returns a
+  // blob:/data: URL, which fetch() reads directly.
+  const bytes =
+    Platform.OS === 'web'
+      ? new Uint8Array(await (await fetch(out.uri)).arrayBuffer())
+      : await new File(out.uri).bytes();
 
   const res = await uploadMedia({ file: bytes, mimeType: 'image/jpeg', kind });
   if ('dailyLimit' in res) return { limited: 'daily' };

@@ -10,7 +10,13 @@
 //   side / stack — the classic 2-photo pair · slider — 2 photos with a draggable reveal
 //   handle · strip — 3 photos in a row · grid — 4 photos, 2×2.
 // "Save photo" works on every device via cardCapture (native share sheet incl. Save Image;
-// web = PNG download). Module-scope components → their OWN useTranslation (i18n rule).
+// web = PNG download).
+//
+// EDIT MODE (the mobile editor): pass `edit` and the card becomes the editing surface —
+// tap an empty cell to add a photo, tap a filled one to select it, then drag ON the card
+// to reframe it live (WYSIWYG — no separate slot grid, no scroll-to-preview). Cells track
+// each photo's natural size so panning works at base zoom (a non-square photo already
+// overflows its cell). Module-scope components → their OWN useTranslation (i18n rule).
 import { Fragment, useRef, useState } from 'react';
 import { PanResponder, Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -18,10 +24,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '@/theme';
 import { TIER_COLORS, type TierId } from '@/lib/leagues';
 import { forwardChevron } from '@/lib/rtl';
-import { frameStyle } from '@/lib/photoFrame';
+import { frameStyle, panBy, type NaturalSize } from '@/lib/photoFrame';
 import { captureCard } from '@/lib/cardCapture';
 import { Icon, Segmented, Text, SignedImage, useToast } from '@/components/ui';
-import type { CoachTransformation, TransformationPhoto } from '@/lib/public-profiles';
+import type { CoachTransformation, PhotoFrame, TransformationPhoto } from '@/lib/public-profiles';
+
+/** Editing hooks for the card-as-editing-surface mode (the editor owns the state). */
+export type CardEditController = {
+  /** The slot currently in reframe mode (drag pans it); null = browsing. */
+  selected: number | null;
+  /** Slot with an upload in flight (spinner). */
+  busySlot: number | null;
+  onSelect: (i: number) => void;
+  onPick: (i: number) => void;
+  onFrame: (i: number, f: PhotoFrame) => void;
+};
 
 type Ratio = 'square' | 'portrait' | 'story';
 const ASPECT: Record<Ratio, number> = { square: 1, portrait: 4 / 5, story: 9 / 16 }; // width / height
@@ -73,53 +90,114 @@ function Divider({ horizontal }: { horizontal?: boolean }) {
 }
 
 /** One photo cell: a cover image with an optional framing transform, plus a corner chip —
- *  a taken-on date when set, else an optional BEFORE/AFTER-style label. */
+ *  a taken-on date when set, else an optional BEFORE/AFTER-style label. In edit mode the
+ *  cell is tappable (add / select) and, while selected, drag pans the photo in place. */
 function PhotoCell({
   photo,
   label,
   labelColor,
+  index = 0,
+  edit,
+  busy = false,
 }: {
   photo: TransformationPhoto | null;
   label?: string | null;
   labelColor?: string;
+  index?: number;
+  edit?: CardEditController;
+  busy?: boolean;
 }) {
   const { i18n } = useTranslation();
   const [sz, setSz] = useState({ w: 0, h: 0 });
+  const [nat, setNat] = useState<NaturalSize | null>(null);
   const frame = photo?.frame ?? null;
-  const framed = frame && frame.scale > 1.001;
   const chip = dateChip(photo?.taken_on ?? null, i18n.language)?.toUpperCase() ?? label ?? null;
-  return (
+  const selected = edit?.selected === index;
+
+  // Refs so the (single) PanResponder always sees current values.
+  const szRef = useRef(sz);
+  szRef.current = sz;
+  const natRef = useRef(nat);
+  natRef.current = nat;
+  const frameRef = useRef<PhotoFrame>(frame ?? { scale: 1, x: 0, y: 0 });
+  frameRef.current = frame ?? { scale: 1, x: 0, y: 0 };
+  const editRef = useRef(edit);
+  editRef.current = edit;
+  const startFrame = useRef<PhotoFrame>({ scale: 1, x: 0, y: 0 });
+
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        startFrame.current = frameRef.current;
+      },
+      onPanResponderMove: (_e, g) => {
+        editRef.current?.onFrame(index, panBy(startFrame.current, g.dx, g.dy, szRef.current.w, szRef.current.h, natRef.current));
+      },
+    }),
+  ).current;
+
+  const body = (
     <View
       style={{ flex: 1, backgroundColor: theme.colors.surface, overflow: 'hidden' }}
-      onLayout={framed ? (e) => setSz({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height }) : undefined}
+      onLayout={(e) => setSz({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+      {...(selected && photo?.media_id ? responder.panHandlers : {})}
     >
       {photo?.media_id ? (
-        framed && sz.w > 0 ? (
-          <SignedImage mediaId={photo.media_id} resizeMode="cover" style={frameStyle(frame, sz.w, sz.h)} />
+        sz.w > 0 ? (
+          <SignedImage mediaId={photo.media_id} resizeMode="cover" style={frameStyle(frame, sz.w, sz.h, nat)} onNaturalSize={(w, h) => setNat({ w, h })} />
         ) : (
-          <SignedImage mediaId={photo.media_id} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
+          <SignedImage mediaId={photo.media_id} resizeMode="cover" style={{ width: '100%', height: '100%' }} onNaturalSize={(w, h) => setNat({ w, h })} />
         )
+      ) : edit ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+          <Icon name={busy ? 'hourglass' : 'camera'} size={22} color={theme.colors.textMuted} />
+          {!busy ? <Icon name="plus" size={14} color={theme.colors.textMuted} /> : null}
+        </View>
       ) : null}
       {chip ? (
         <View style={{ position: 'absolute', left: 8, bottom: 8, backgroundColor: 'rgba(8,9,12,0.55)', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 7 }}>
           <Text style={{ fontFamily: theme.fontFamily.monoRegular, fontSize: 10, letterSpacing: 1.5, color: labelColor ?? BEFORE_GREY }}>{chip}</Text>
         </View>
       ) : null}
+      {selected ? (
+        <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderWidth: 2, borderColor: theme.colors.primary }} />
+      ) : null}
     </View>
+  );
+
+  if (!edit) return body;
+  // Tap = add (empty) or select-to-reframe (filled). While selected the responder owns
+  // touches, so the Pressable only matters in the browsing state.
+  return (
+    <Pressable
+      style={{ flex: 1 }}
+      disabled={busy || selected}
+      onPress={() => (photo?.media_id ? edit.onSelect(index) : edit.onPick(index))}
+    >
+      {body}
+    </Pressable>
   );
 }
 
 /** Slider layout (0087): the BEFORE photo as the base layer, the AFTER photo clipped in from
  *  the right, split by a draggable glowing handle. The DRAG surface is the handle only (not
- *  the whole hero) so the card keeps scrolling normally inside lists. */
-function SliderHero({ before, after, beforeLabel, afterLabel }: {
+ *  the whole hero) so the card keeps scrolling normally inside lists. In edit mode: tap the
+ *  left/right half to select that photo (empty half = add); while one is selected, drag
+ *  anywhere on the hero pans IT (the reveal handle hides until Done). */
+function SliderHero({ before, after, beforeLabel, afterLabel, edit, busySlot }: {
   before: TransformationPhoto | null;
   after: TransformationPhoto | null;
   beforeLabel: string;
   afterLabel: string;
+  edit?: CardEditController;
+  busySlot?: number | null;
 }) {
   const { i18n } = useTranslation();
   const [sz, setSz] = useState({ w: 0, h: 0 });
+  const [natBefore, setNatBefore] = useState<NaturalSize | null>(null);
+  const [natAfter, setNatAfter] = useState<NaturalSize | null>(null);
   const w = sz.w;
   const [reveal, setReveal] = useState(0.5); // fraction of the width where AFTER begins
   const wRef = useRef(w);
@@ -127,6 +205,8 @@ function SliderHero({ before, after, beforeLabel, afterLabel }: {
   const revealRef = useRef(reveal);
   revealRef.current = reveal;
   const startReveal = useRef(0.5);
+
+  const selected = edit && edit.selected != null && edit.selected <= 1 ? edit.selected : null;
 
   const responder = useRef(
     PanResponder.create({
@@ -143,15 +223,39 @@ function SliderHero({ before, after, beforeLabel, afterLabel }: {
     }),
   ).current;
 
+  // Edit-mode pan for the SELECTED photo (frame reframing, not the reveal).
+  const szRef = useRef(sz);
+  szRef.current = sz;
+  const editStateRef = useRef({ edit, selected, before, after, natBefore, natAfter });
+  editStateRef.current = { edit, selected, before, after, natBefore, natAfter };
+  const startFrame = useRef<PhotoFrame>({ scale: 1, x: 0, y: 0 });
+  const frameResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        const s = editStateRef.current;
+        const p = s.selected === 0 ? s.before : s.after;
+        startFrame.current = p?.frame ?? { scale: 1, x: 0, y: 0 };
+      },
+      onPanResponderMove: (_e, g) => {
+        const s = editStateRef.current;
+        if (s.selected == null || !s.edit) return;
+        const nat = s.selected === 0 ? s.natBefore : s.natAfter;
+        s.edit.onFrame(s.selected, panBy(startFrame.current, g.dx, g.dy, szRef.current.w, szRef.current.h, nat));
+      },
+    }),
+  ).current;
+
   const splitX = w * reveal;
   const beforeChip = dateChip(before?.taken_on ?? null, i18n.language)?.toUpperCase() ?? beforeLabel;
   const afterChip = dateChip(after?.taken_on ?? null, i18n.language)?.toUpperCase() ?? afterLabel;
-  const renderPhoto = (p: TransformationPhoto | null) =>
+  const renderPhoto = (p: TransformationPhoto | null, onNat: (w: number, h: number) => void, nat: NaturalSize | null) =>
     p?.media_id ? (
-      p.frame && p.frame.scale > 1.001 && sz.w > 0 && sz.h > 0 ? (
-        <SignedImage mediaId={p.media_id} resizeMode="cover" style={frameStyle(p.frame, sz.w, sz.h)} />
+      sz.w > 0 && sz.h > 0 ? (
+        <SignedImage mediaId={p.media_id} resizeMode="cover" style={frameStyle(p.frame, sz.w, sz.h, nat)} onNaturalSize={onNat} />
       ) : (
-        <SignedImage mediaId={p.media_id} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
+        <SignedImage mediaId={p.media_id} resizeMode="cover" style={{ width: '100%', height: '100%' }} onNaturalSize={onNat} />
       )
     ) : null;
 
@@ -159,19 +263,49 @@ function SliderHero({ before, after, beforeLabel, afterLabel }: {
     <View
       style={{ flex: 1, backgroundColor: theme.colors.surface, overflow: 'hidden' }}
       onLayout={(e) => setSz({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+      {...(selected != null ? frameResponder.panHandlers : {})}
     >
       {/* Base layer: BEFORE fills the hero. */}
       <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: w > 0 ? w : '100%', overflow: 'hidden' }}>
-        {renderPhoto(before)}
+        {renderPhoto(before, (nw, nh) => setNatBefore({ w: nw, h: nh }), natBefore)}
       </View>
       {/* Overlay: AFTER clipped to the right of the handle, image kept aligned. */}
       {w > 0 ? (
         <View style={{ position: 'absolute', top: 0, bottom: 0, left: splitX, right: 0, overflow: 'hidden' }}>
-          <View style={{ position: 'absolute', top: 0, bottom: 0, left: -splitX, width: w }}>{renderPhoto(after)}</View>
+          <View style={{ position: 'absolute', top: 0, bottom: 0, left: -splitX, width: w }}>
+            {renderPhoto(after, (nw, nh) => setNatAfter({ w: nw, h: nh }), natAfter)}
+          </View>
         </View>
       ) : null}
-      {/* Split line + drag handle. */}
-      {w > 0 ? (
+      {/* Edit mode, browsing: left/right halves select (or add) that photo. */}
+      {edit && selected == null ? (
+        <>
+          <Pressable
+            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%' }}
+            disabled={busySlot === 0}
+            onPress={() => (before?.media_id ? edit.onSelect(0) : edit.onPick(0))}
+          >
+            {!before?.media_id ? (
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name={busySlot === 0 ? 'hourglass' : 'camera'} size={22} color={theme.colors.textMuted} />
+              </View>
+            ) : null}
+          </Pressable>
+          <Pressable
+            style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%' }}
+            disabled={busySlot === 1}
+            onPress={() => (after?.media_id ? edit.onSelect(1) : edit.onPick(1))}
+          >
+            {!after?.media_id ? (
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name={busySlot === 1 ? 'hourglass' : 'camera'} size={22} color={theme.colors.textMuted} />
+              </View>
+            ) : null}
+          </Pressable>
+        </>
+      ) : null}
+      {/* Split line + drag handle (hidden while reframing a photo). */}
+      {w > 0 && selected == null ? (
         <>
           <View style={{ position: 'absolute', top: 0, bottom: 0, left: splitX - 1, width: 2, backgroundColor: theme.colors.primary, shadowColor: theme.colors.primary, shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } }} />
           <View
@@ -182,6 +316,9 @@ function SliderHero({ before, after, beforeLabel, afterLabel }: {
             <Icon name="chevrons-left-right" size={13} color={theme.colors.onPrimary} />
           </View>
         </>
+      ) : null}
+      {selected != null ? (
+        <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderWidth: 2, borderColor: theme.colors.primary }} />
       ) : null}
       <View style={{ position: 'absolute', left: 8, bottom: 8, backgroundColor: 'rgba(8,9,12,0.55)', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 7 }}>
         <Text style={{ fontFamily: theme.fontFamily.monoRegular, fontSize: 10, letterSpacing: 1.5, color: BEFORE_GREY }}>{beforeChip}</Text>
@@ -197,10 +334,13 @@ export function ShareableTransformationCard({
   item,
   coachName,
   shareable = true,
+  edit,
 }: {
   item: CoachTransformation;
   coachName?: string | null;
   shareable?: boolean;
+  /** Turns the card into the editing surface (tap to add/select, drag to reframe). */
+  edit?: CardEditController;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -244,49 +384,52 @@ export function ShareableTransformationCard({
   /** The photo hero for the card's layout. side/stack/strip = cells + dividers along one
    *  axis; grid = 2×2 nested rows (no CSS grid — web rule); slider = the reveal overlay. */
   const renderHero = () => {
+    const cell = (i: number, lbl?: string | null, lblColor?: string) => (
+      <PhotoCell photo={at(i)} label={lbl} labelColor={lblColor} index={i} edit={edit} busy={edit?.busySlot === i} />
+    );
     switch (item.layout) {
       case 'slider':
-        return <SliderHero before={at(0)} after={at(1)} beforeLabel={beforeLabel} afterLabel={afterLabel} />;
+        return <SliderHero before={at(0)} after={at(1)} beforeLabel={beforeLabel} afterLabel={afterLabel} edit={edit} busySlot={edit?.busySlot} />;
       case 'strip':
         return (
           <>
-            <PhotoCell photo={at(0)} label={beforeLabel} labelColor={BEFORE_GREY} />
+            {cell(0, beforeLabel, BEFORE_GREY)}
             <Divider />
-            <PhotoCell photo={at(1)} />
+            {cell(1)}
             <Divider />
-            <PhotoCell photo={at(2)} label={afterLabel} labelColor={theme.colors.primary} />
+            {cell(2, afterLabel, theme.colors.primary)}
           </>
         );
       case 'grid':
         return (
           <View style={{ flex: 1 }}>
             <View style={{ flex: 1, flexDirection: 'row' }}>
-              <PhotoCell photo={at(0)} label={beforeLabel} labelColor={BEFORE_GREY} />
+              {cell(0, beforeLabel, BEFORE_GREY)}
               <Divider />
-              <PhotoCell photo={at(1)} />
+              {cell(1)}
             </View>
             <Divider horizontal />
             <View style={{ flex: 1, flexDirection: 'row' }}>
-              <PhotoCell photo={at(2)} />
+              {cell(2)}
               <Divider />
-              <PhotoCell photo={at(3)} label={afterLabel} labelColor={theme.colors.primary} />
+              {cell(3, afterLabel, theme.colors.primary)}
             </View>
           </View>
         );
       case 'stack':
         return (
           <>
-            <PhotoCell photo={at(0)} label={beforeLabel} labelColor={BEFORE_GREY} />
+            {cell(0, beforeLabel, BEFORE_GREY)}
             <Divider horizontal />
-            <PhotoCell photo={at(1)} label={afterLabel} labelColor={theme.colors.primary} />
+            {cell(1, afterLabel, theme.colors.primary)}
           </>
         );
       default: // side
         return (
           <>
-            <PhotoCell photo={at(0)} label={beforeLabel} labelColor={BEFORE_GREY} />
+            {cell(0, beforeLabel, BEFORE_GREY)}
             <Divider />
-            <PhotoCell photo={at(1)} label={afterLabel} labelColor={theme.colors.primary} />
+            {cell(1, afterLabel, theme.colors.primary)}
           </>
         );
     }

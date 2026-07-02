@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { theme } from '@/theme';
 import { textStart } from '@/lib/rtl';
 import { relativeTimeParts } from '@/lib/notifications';
+import type { FeatureCandidate } from './useTransformationManager';
 import type { MyTransformation } from '@/lib/coach-transformations';
 import type { PendingSubmission } from '@/lib/transformation-submissions';
 import type { CoachTransformation, TransformationLayout, TransformationPhoto } from '@/lib/public-profiles';
@@ -129,6 +130,53 @@ export function AddCardTile({ width = 170, minHeight = 140, onPress }: { width?:
     >
       <Icon name="plus" size={20} color={theme.colors.textMuted} />
       <Text variant="caption" muted>{t('transformationManager.addCard')}</Text>
+    </Pressable>
+  );
+}
+
+/** One "feature a new client" chip. A consenting client opens the editor; a client who
+ *  hasn't allowed sharing yet shows an ASK pill instead (sends the nudge notification) —
+ *  they're visible-but-gated rather than silently hidden. */
+export function FeatureClientChip({
+  candidate,
+  onOpen,
+  onAsk,
+}: {
+  candidate: FeatureCandidate;
+  onOpen: () => void;
+  onAsk: () => void;
+}) {
+  const { t } = useTranslation();
+  const c = candidate;
+  return (
+    <Pressable
+      onPress={c.consented ? onOpen : c.asked ? undefined : onAsk}
+      disabled={!c.consented && c.asked}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: 6,
+        paddingStart: 6,
+        paddingEnd: theme.spacing.md,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: theme.colors.glassBorder,
+        backgroundColor: theme.colors.surfaceElevated,
+        opacity: c.consented || c.asked ? 1 : 0.85,
+      }}
+    >
+      <ProfileAvatar name={c.full_name} avatarMediaId={c.avatar_media_id} size={24} />
+      <Text variant="caption" color={c.consented ? undefined : theme.colors.textMuted}>{c.full_name ?? ''}</Text>
+      {!c.consented ? (
+        c.asked ? (
+          <Icon name="check-circle" size={14} color={theme.colors.primary} />
+        ) : (
+          <View style={{ borderRadius: 999, paddingVertical: 2, paddingHorizontal: 8, backgroundColor: 'rgba(63,217,192,0.14)', borderWidth: 1, borderColor: theme.colors.primary }}>
+            <Text style={{ fontFamily: theme.fontFamily.bodySemiBold, fontSize: 11, color: theme.colors.primary }}>{t('transformationManager.askToShare')}</Text>
+          </View>
+        )
+      ) : null}
     </Pressable>
   );
 }
