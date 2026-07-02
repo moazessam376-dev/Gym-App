@@ -21,9 +21,10 @@ export async function captureCard(
   if (!ref.current) return 'failed';
   try {
     if (Platform.OS === 'web') {
-      // RN-web backs a View with a real DOM node; refs expose it directly.
+      // RN-web backs a View with a real DOM node; refs expose it directly. Guard on a
+      // DOM method existing (web.md pattern) in case the ref is a component instance.
       const node = ref.current as unknown as HTMLElement;
-      if (!node) return 'failed';
+      if (!node || typeof node.getBoundingClientRect !== 'function') return 'failed';
       const html2canvas = (await import('html2canvas')).default;
       const canvas = await html2canvas(node, {
         useCORS: true,

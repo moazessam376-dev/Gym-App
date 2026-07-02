@@ -364,6 +364,11 @@ begin
   if not found or s.coach_id <> auth.uid() then
     raise exception 'not_authorized' using errcode = 'P0001';
   end if;
+  -- Approve is an INSERT now (multi-card), so resolving twice would duplicate the card —
+  -- an already-resolved submission is a silent no-op (double-tap / retry safe).
+  if s.status <> 'pending' then
+    return;
+  end if;
 
   if p_action = 'approve' then
     insert into public.coach_transformations

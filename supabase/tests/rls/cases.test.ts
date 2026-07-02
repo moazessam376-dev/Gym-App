@@ -3395,9 +3395,11 @@ describe('transformation manager (0087) — multi-card, photo rows, public media
       await c.query('reset role'); await c.query('set local role authenticated'); await asId(COACH_A.sub, 'coach');
       await c.query('select public.resolve_transformation_submission($1, $2)', [s1.rows[0].id, 'approve']);
       await c.query('select public.resolve_transformation_submission($1, $2)', [s2.rows[0].id, 'approve']);
+      // Re-approving an already-approved submission is a no-op (would duplicate the card).
+      await c.query('select public.resolve_transformation_submission($1, $2)', [s1.rows[0].id, 'approve']);
       await c.query('reset role'); await c.query('set local role service_role'); await c.query("select set_config('request.jwt.claims', '{}', true)");
       const cards = await c.query('select id from public.coach_transformations where coach_id = $1 and client_id = $2', [COACH_A.sub, CLIENT_A1.sub]);
-      expect(cards.rows.length).toBe(2); // the first approval was NOT clobbered
+      expect(cards.rows.length).toBe(2); // the first approval was NOT clobbered; the re-approve added nothing
       // The AFTER INSERT trigger notified the featured client once per card.
       const notes = await c.query("select id from public.notifications where recipient_id = $1 and type = 'transformation_featured'", [CLIENT_A1.sub]);
       expect(notes.rows.length).toBe(2);
