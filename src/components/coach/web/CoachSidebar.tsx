@@ -10,6 +10,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
 import { useMyName, useMyInvitations, useConversationPreviews, useCoachAdherence } from '@/lib/queries/home';
+import { usePendingSubmissions } from '@/lib/queries/transformations';
 import { needsAttention } from '@/lib/analytics';
 import { SIDEBAR_WIDTH } from '@/lib/useBreakpoint';
 import { Avatar, Badge, Icon, Text, type IconName } from '@/components/ui';
@@ -77,13 +78,15 @@ export function CoachSidebar() {
   const invitesQ = useMyInvitations();
   const previewsQ = useConversationPreviews();
   const adherenceQ = useCoachAdherence();
+  const submissionsQ = usePendingSubmissions(session?.user?.id);
 
   const name = nameQ.data ?? null;
   const pendingInvites = invitesQ.data?.filter((i) => i.status === 'pending').length ?? 0;
   const unread = (previewsQ.data ?? []).reduce((a, c) => a + c.unread_count, 0);
   const attention = needsAttention(adherenceQ.data ?? []).length;
+  const submissions = submissionsQ.data?.length ?? 0;
 
-  const counts: Record<string, number> = { unread, invites: pendingInvites, attention };
+  const counts: Record<string, number> = { unread, invites: pendingInvites, attention, submissions };
 
   return (
     <View

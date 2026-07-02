@@ -944,7 +944,20 @@
     "photoError": "Couldn't add that photo. Try another.",
     "verifiedHint": "Verified — the numbers come from the app's data.",
     "selfReportedHint": "Self-reported — you entered these numbers.",
-    "clientSaveNote": "Your coach reviews it before it's featured."
+    "clientSaveNote": "Your coach reviews it before it's featured.",
+    "layoutSlider": "Slider",
+    "layoutStrip": "Strip",
+    "layoutGrid": "Grid",
+    "photoN": "Photo {{n}}",
+    "photosNeeded": "This layout needs {{count}} photos",
+    "replacePhoto": "Replace",
+    "takenOn": "Taken on",
+    "scanBefore": "Before scan",
+    "scanAfter": "After scan",
+    "scanReadout": "−{{bf}}% body fat · +{{lm}}kg lean mass over {{weeks}} weeks",
+    "savePhoto": "Save photo",
+    "photoSaved": "Photo saved",
+    "captureFailed": "Couldn't render the photo. Try again."
   },
   "clientTransformation": {
     "title": "Before & after",
@@ -965,11 +978,37 @@
     "withdraw": "Withdraw",
     "withdrawTitle": "Withdraw submission",
     "withdrawBody": "Remove this submission?",
+    "sentTitle": "Sent for review",
+    "sentBody": "Your coach will be notified. You'll see it here once it's approved.",
+    "sendAnother": "Submit another",
     "status": {
       "pending": "Pending review",
       "approved": "Featured",
       "dismissed": "Not used"
     }
+  },
+  "transformationManager": {
+    "kpiPublished": "Published cards",
+    "kpiPending": "Pending review",
+    "kpiConsenting": "Consenting clients",
+    "tabPending": "Pending review",
+    "tabPublished": "Published",
+    "pendingEmptyTitle": "You're all caught up",
+    "pendingEmptySub": "New submissions from clients will land here for review.",
+    "noCardsTitle": "No transformations yet",
+    "noCardsSub": "Feature a client's story below and it'll show up here — and on your public profile.",
+    "cardCount_one": "{{count}} card",
+    "cardCount_other": "{{count}} cards",
+    "addCard": "Add card",
+    "allClientsFeatured": "Every consenting client already has a card — add more from their timeline above.",
+    "consentHint": "Only clients who've allowed transformation sharing appear here.",
+    "selfChip": "Self",
+    "sentLabel": "Sent {{when}}",
+    "deleteCard": "Delete card",
+    "saveCard": "Save transformation",
+    "requestFromClient": "Ask for a transformation",
+    "requestSent": "Request sent — they'll get a notification.",
+    "requestTooSoon": "You already asked recently — try again in a few days."
   },
   "performance": {
     "label": "PERFORMANCE",
@@ -1072,6 +1111,14 @@
     "callDeclined": {
       "title": "Call declined",
       "body": "{{name}} couldn't take your call this time"
+    },
+    "transformationFeatured": {
+      "title": "You've been featured! 🎉",
+      "body": "{{name}} featured your transformation on their public profile"
+    },
+    "transformationRequested": {
+      "title": "Share your transformation",
+      "body": "{{name}} would love to feature your before & after — build one from your progress photos"
     },
     "settingsTitle": "Notification settings",
     "settingsSub": "Choose what you get notified about.",
@@ -1652,6 +1699,8 @@
     }
   },
   "nav": {
+    "transformations": "Transformations",
+    "myTransformation": "Before & after",
     "inviteClient": "Invite a client",
     "coachRequests": "Coaching requests",
     "acceptInvite": "Accept an invite",
@@ -1701,6 +1750,7 @@
     "clients": "Clients",
     "leaderboard": "Leaderboard",
     "analytics": "Analytics",
+    "transformations": "Transformations",
     "templates": "Templates",
     "newPlan": "New Plan",
     "messages": "Messages",

@@ -28,6 +28,7 @@ import {
 import { getStreak, listSessions, type WorkoutSession } from '../../../src/lib/sessions';
 import { readCache, writeCache } from '../../../src/lib/screen-cache';
 import { startAndJoinCall } from '../../../src/lib/calls';
+import { requestTransformation } from '../../../src/lib/transformation-submissions';
 import { useChrome } from '../../../src/lib/chrome';
 import { ClientDetailDesktop } from '../../../src/components/coach/web/ClientDetailDesktop';
 import { Icon, IconButton, Screen, Text, Avatar, GlassCard, Badge, Button, Chip, DeltaChip, Input, Segmented, EmptyState, LineChart, useToast } from '../../../src/components/ui';
@@ -609,6 +610,22 @@ export default function ClientDetail() {
                 onPress={() =>
                   router.push({ pathname: '/coach/body-metric', params: { clientId: id, clientName: name ?? '' } })
                 }
+              />
+              {/* Nudge (0087): ask this client to submit a before/after — notifies them with
+                  a deep link into their transformation builder (server-deduped to 1/7 days). */}
+              <Button
+                title={t('transformationManager.requestFromClient')}
+                variant="ghost"
+                style={{ marginTop: theme.spacing.sm }}
+                left={<Icon name="sparkles" size={18} color={theme.colors.text} />}
+                onPress={async () => {
+                  try {
+                    const res = await requestTransformation(id);
+                    toast.show(res === 'too_soon' ? t('transformationManager.requestTooSoon') : t('transformationManager.requestSent'), res === 'too_soon' ? 'error' : undefined);
+                  } catch {
+                    toast.show(t('common.error'), 'error');
+                  }
+                }}
               />
             </GlassCard>
           </>
