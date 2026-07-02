@@ -19,6 +19,7 @@ integrated by Claude Code; `cc/*` are Claude-Code-authored. Status: `todo` →
 
 | Task | Owner | Branch | Spec | Status | PR |
 |------|-------|--------|------|--------|----|
+| Transformation Manager (mockup): multi-card + 2–4-photo layouts + scan picker + desktop view + notify/nudge | Claude Code | `cc/transformation-manager` | `~/.claude/plans/i-want-to-plan-snuggly-engelbart.md` | PR open, CI pending; **migration 0087 NOT applied to prod** (founder-gated; must ship with the app update — constraint drop breaks old builds' coach Save) | [#57](https://github.com/moazessam376-dev/Gym-App/pull/57) |
 | Pilot hardening (GLM review): security + coach IA + seed + profile/@handle/discover | Claude Code | `cc/security-hardening` | `~/.claude/plans/silly-puzzling-starfish.md` · `GYM_APP_PILOT_REVIEW.md` | in-progress | — |
 
 ## Up next (assign an owner before starting)
@@ -38,6 +39,16 @@ landed on `main`. The forward roadmap (re-sequenced) lives in
 ---
 
 ## Log (newest first)
+- **2026-07-02** — **Transformation Manager** (PR #57, `cc/transformation-manager`): migration
+  `0087` (multi-card — unique(coach,client) dropped; `transformation_photos` 2–4 photo child
+  table + taken_on chips; slider/strip/grid layouts; before/after_metric_id verified-scan pick;
+  `media_select` recreated via `is_public_transformation_media` DEFINER helper — **fixes the 0078
+  RLS re-entry bug** that kept public showcase photos unreadable to third parties;
+  `transformation_featured` trigger notification + `request_transformation` nudge RPC).
+  App: N-photo card + slider + cross-device Save-photo (html2canvas web), editor photo slots +
+  scan picker, mobile manager (KPIs/tabs/timelines), `TransformationsDesktop` portal view,
+  sidebar item + pending badge, client sent-state + coach nudge. i18n en+ar parity OK; tsc clean.
+  0087 dry-ran on prod (begin…rollback). **NEXT free migration = 0088.**
 - **2026-06-28** — **Pilot hardening** from the GLM 5-2 review (`GYM_APP_PILOT_REVIEW.md`),
   all claims re-verified against the code first (plan: `silly-puzzling-starfish.md`). On
   `cc/security-hardening` (off the `fix/workout-note-hide-vs-delete` base, which carries 0060):
