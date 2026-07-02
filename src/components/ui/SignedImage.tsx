@@ -14,6 +14,9 @@ export type SignedImageProps = {
   /** Reports the photo's natural pixel size once known (the framing math needs it).
    *  Uses Image.getSize (works on native AND react-native-web). */
   onNaturalSize?: (w: number, h: number) => void;
+  /** Gaussian blur (RN native prop; RN-Web maps it to a CSS filter). Used for the
+   *  fill-behind-a-zoomed-out-photo effect on transformation cards. */
+  blurRadius?: number;
 };
 
 // Signed URLs live ~60s server-side; cache the minted URL just long enough to
@@ -26,7 +29,7 @@ const cache = new Map<string, { url: string; at: number }>();
  * are served — no public bucket). Shows a spinner while resolving and a fallback
  * glyph if the row is unreadable/expired (the Edge Function 404s an unauthorized id).
  */
-export function SignedImage({ mediaId, style, resizeMode = 'cover', refreshKey = 0, onNaturalSize }: SignedImageProps) {
+export function SignedImage({ mediaId, style, resizeMode = 'cover', refreshKey = 0, onNaturalSize, blurRadius }: SignedImageProps) {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const onNaturalSizeRef = useRef(onNaturalSize);
@@ -93,6 +96,7 @@ export function SignedImage({ mediaId, style, resizeMode = 'cover', refreshKey =
       source={{ uri: url }}
       style={style}
       resizeMode={resizeMode}
+      blurRadius={blurRadius}
       onError={() => setFailed(true)}
     />
   );

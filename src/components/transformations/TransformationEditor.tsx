@@ -27,7 +27,7 @@ import {
   type CoachTransformation,
 } from '@/lib/public-profiles';
 import { Button, GlassCard, Icon, Input, SignedImage, Text, useToast } from '@/components/ui';
-import { ShareableTransformationCard } from '@/components/ShareableTransformationCard';
+import { ShareableTransformationCard, needsBackfill } from '@/components/ShareableTransformationCard';
 import { LAYOUT_LABEL_KEY } from './layoutLabels';
 
 const TIERS = Object.keys(TIER_COLORS) as TierId[];
@@ -107,7 +107,15 @@ function PhotoFramePicker({
       >
         {mediaId ? (
           sz.w > 0 ? (
-            <SignedImage mediaId={mediaId} resizeMode="cover" style={frameStyle(frame, sz.w, sz.h, nat)} onNaturalSize={(w, h) => setNat({ w, h })} />
+            <>
+              {needsBackfill(frame) ? (
+                <>
+                  <SignedImage mediaId={mediaId} resizeMode="cover" blurRadius={22} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+                  <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)' }} />
+                </>
+              ) : null}
+              <SignedImage mediaId={mediaId} resizeMode="cover" style={frameStyle(frame, sz.w, sz.h, nat)} onNaturalSize={(w, h) => setNat({ w, h })} />
+            </>
           ) : (
             <SignedImage mediaId={mediaId} resizeMode="cover" style={{ width: '100%', height: '100%' }} onNaturalSize={(w, h) => setNat({ w, h })} />
           )
@@ -204,8 +212,14 @@ function MoveAndScale({
           <View pointerEvents="none" style={{ position: 'absolute', left: cropX + gLeft, top: cropY + gTop, width: gW, height: gH, opacity: 0.35 }}>
             <SignedImage mediaId={mediaId} resizeMode="cover" style={{ width: '100%', height: '100%' }} onNaturalSize={(w, h) => setNat({ w, h })} />
           </View>
-          {/* Bright: exactly what the card cell shows. */}
+          {/* Bright: exactly what the card cell shows (incl. the blur backfill when zoomed out). */}
           <View pointerEvents="none" style={{ position: 'absolute', left: cropX, top: cropY, width: cropW, height: cropH, overflow: 'hidden' }}>
+            {needsBackfill(frame) ? (
+              <>
+                <SignedImage mediaId={mediaId} resizeMode="cover" blurRadius={22} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)' }} />
+              </>
+            ) : null}
             <SignedImage mediaId={mediaId} resizeMode="cover" style={frameStyle(frame, cropW, cropH, nat)} />
           </View>
           <View pointerEvents="none" style={{ position: 'absolute', left: cropX, top: cropY, width: cropW, height: cropH, borderWidth: 1.5, borderColor: theme.colors.primary }} />
